@@ -45,14 +45,19 @@ CATEGORY_SLUGS = {
     "Crypto & Blockchain Security": "crypto",
     "Cybercrime, Darknet & Leaks": "cybercrime",
     "DFIR & Forensics": "dfir",
+    "General Security & Blogs": "general",
     "General Security": "general",
-    "Government & CERT": "government",
+    "Government, CERT & Advisories": "government",
+    "Government, CERT": "government",
     "Leaks & Breaches": "leaks",
     "Malware": "malware",
     "Threat Intel": "threat_intel",
     "Malware Analysis": "malware_analysis",
+    "OSINT, Communities & Subreddits": "osint",
     "OSINT & Communities": "osint",
+    "Podcasts & YouTube": "podcasts",
     "Podcasts": "podcasts",
+    "Vendors & Product Blogs": "vendors",
     "Vendors": "vendors",
     "Vulnerabilities & CVEs": "vulns",
     "Exploits": "exploits",
@@ -62,55 +67,55 @@ CATEGORY_SLUGS = {
 # -------------------------------
 # Keyword-based smart grouping
 # -------------------------------
-SMART_GROUP_RULES = [
+SMART_GROUP_RULES: List[Tuple[str, List[str]]] = [
     ("Ransomware", [
         "ransomware", "ransom note", "double extortion",
-        "locker", "crypto-locker", "ransom demand"
+        "locker", "crypto-locker", "ransom demand",
     ]),
     ("Vulnerabilities / CVEs", [
         "cve-", "vulnerability", "vulnerabilities",
         "remote code execution", "rce",
         "privilege escalation", "buffer overflow",
-        "out-of-bounds write", "sql injection"
+        "out-of-bounds write", "sql injection",
     ]),
     ("Exploit / PoC", [
         "exploit", "poc released", "proof-of-concept",
-        "exploit code", "weaponized", "exploit available"
+        "exploit code", "weaponized", "exploit available",
     ]),
     ("Windows / Microsoft", [
         "windows", "exchange server", "office 365",
-        "msrc", "sharepoint", "outlook"
+        "msrc", "sharepoint", "outlook",
     ]),
     ("Linux / Unix", [
         "linux", "ubuntu", "debian", "centos",
-        "red hat", "rhel", "suse"
+        "red hat", "rhel", "suse",
     ]),
     ("Cloud / SaaS", [
         "aws", "azure", "gcp", "google cloud",
         "cloudflare", "okta", "auth0", "saas",
-        "s3 bucket"
+        "s3 bucket",
     ]),
     ("Threat Actors / APT", [
         " apt ", " apt-", "apt group",
         "lazarus", "sandworm", "fin7", "apt29",
         "apt28", "charming kitten", "oilrig",
-        "turla", "cozy bear", "fancy bear"
+        "turla", "cozy bear", "fancy bear",
     ]),
     ("Malware / Payloads", [
         "malware", "trojan", "backdoor",
         "infostealer", "info-stealer", "stealer",
         " rat ", "remote access trojan", "botnet",
-        "loader", "dropper"
+        "loader", "dropper",
     ]),
     ("Data Breaches / Leaks", [
         "data breach", "data leak", "leaked data",
         "database leaked", "records exposed",
-        "credentials leaked", "credential dump"
+        "credentials leaked", "credential dump",
     ]),
     ("Phishing / Social Engineering", [
         "phishing", "spear-phishing", "spear phishing",
         "social engineering", "credential harvesting",
-        "smishing", "vishing"
+        "smishing", "vishing",
     ]),
 ]
 
@@ -122,7 +127,7 @@ def slugify(text: str) -> str:
     return text or "unknown"
 
 
-def normalize_category(group_title: str):
+def normalize_category(group_title: str) -> Tuple[str, str]:
     label = (group_title or "General").strip()
     slug = CATEGORY_SLUGS.get(label)
     if not slug:
@@ -166,7 +171,7 @@ def compute_smart_groups(title: str, summary: str) -> list[str]:
 
     # Deduplicate while preserving order
     seen = set()
-    deduped = []
+    deduped: list[str] = []
     for g in groups:
         if g not in seen:
             seen.add(g)
@@ -191,7 +196,7 @@ def iter_opml_feeds(opml_path: Path) -> Iterable[Tuple[str, str, str]]:
             yield group_title, feed_title, xml_url
 
 
-def main():
+def main() -> None:
     if not OPML_PATH.exists():
         raise SystemExit(f"OPML file not found: {OPML_PATH}")
 
@@ -207,7 +212,18 @@ def main():
         type_slug, type_label = normalize_category(group_title)
         print(f"[INFO] Fetching feed: {feed_title} ({xml_url}) [{type_label}]")
 
-        parsed = feedparser.parse(xml_url)
+        # --- robust fetch: don't let one broken feed kill the whole job
+        try:
+            parsed = feedparser.parse(xml_url)
+        except Exception as e:  # network / TLS errors, RemoteDisconnected, etc.
+            print(f"[WARN] Failed to fetch feed {feed_title} ({xml_url}): {e!r}")
+            continue
+
+        if getattr(parsed, "bozo", False) and getattr(parsed, "bozo_exception", None):
+            print(
+                f"[WARN] Bozo parsing feed {feed_title} ({xml_url}): "
+                f"{parsed.bozo_exception!r}"
+            )
 
         for entry in parsed.entries:
             link = getattr(entry, "link", None)
