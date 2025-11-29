@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-\"\"\"
+"""
 Build a consolidated JSON file with recent security news.
 
 - Reads an OPML file containing RSS feeds (sec_feeds.xml)
@@ -13,7 +13,7 @@ Build a consolidated JSON file with recent security news.
 - Writes data/news_recent.json
 
 This script is meant to be run from the repo root (S33R).
-\"\"\"
+"""
 
 import os
 import json
