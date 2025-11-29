@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""
+\"\"\"
 Build a consolidated JSON file with recent security news.
 
 - Reads an OPML file containing RSS feeds (sec_feeds.xml)
@@ -8,296 +8,252 @@ Build a consolidated JSON file with recent security news.
 - Fetches all feeds using feedparser
 - Keeps only last N days (default: 30)
 - Deduplicates by link
-- Cleans HTML from summaries (no raw <p>, <img>, <!-- SC_OFF -->, etc.)
+- Cleans HTML from summaries
+- Enriches items with keyword-based "smart_groups"
 - Writes data/news_recent.json
 
 This script is meant to be run from the repo root (S33R).
-"""
+\"\"\"
 
+import os
 import json
-import time
-import re
 import html
+import re
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Dict, Any, List, Optional, Iterable, Tuple
 import xml.etree.ElementTree as ET
+from typing import Iterable, List, Optional, Tuple
 
-import feedparser  # type: ignore
+import feedparser
 
-ROOT = Path(__file__).resolve().parent.parent
-OPML_PATH = ROOT / "sec_feeds.xml"
-OUTPUT_PATH = ROOT / "data" / "news_recent.json"
-DAYS_BACK = 30
-MAX_SUMMARY_LEN = 500  # caracteres (depois de limpar HTML)
+try:
+    from bs4 import BeautifulSoup  # Optional, nicer HTML cleanup
+except ImportError:  # pragma: no cover
+    BeautifulSoup = None
 
-# Mapeia os grupos reais do sec_feeds.xml para as categorias usadas no front-end
-GROUP_CATEGORY_MAP: Dict[str, str] = {
+# -------------------------------
+# Configuration
+# -------------------------------
+BASE_DIR = Path(__file__).resolve().parent.parent
+OPML_PATH = BASE_DIR / "sec_feeds.xml"
+OUTPUT_PATH = BASE_DIR / "data" / "news_recent.json"
+
+DAYS_BACK = int(os.environ.get("DAYS_BACK", "30"))
+
+# Map OPML group titles to internal type slugs
+CATEGORY_SLUGS = {
     "Crypto & Blockchain Security": "crypto",
     "Cybercrime, Darknet & Leaks": "cybercrime",
     "DFIR & Forensics": "dfir",
-    "General Security & Blogs": "general",
-    "Government, CERT & Advisories": "gov_cert",
+    "General Security": "general",
+    "Government & CERT": "government",
     "Leaks & Breaches": "leaks",
-    "Malware & Threat Research": "malware",  # base (subgrupos refinam)
-    "OSINT, Communities & Subreddits": "osint",
-    "Podcasts & YouTube": "podcasts",
-    "Vendors & Product Blogs": "vendors",
-    "Vulnerabilities, CVEs & Exploits": "vulns",  # base (subgrupos refinam)
-
-    # Subgrupos internos
-    "Threat Intel & APT Campaigns": "threat_intel",
-    "Malware Analysis & Research": "malware_analysis",
-    "Exploits & PoCs": "exploits",
-    "Vulnerability Advisories & Research": "vuln_advisories",
+    "Malware": "malware",
+    "Threat Intel": "threat_intel",
+    "Malware Analysis": "malware_analysis",
+    "OSINT & Communities": "osint",
+    "Podcasts": "podcasts",
+    "Vendors": "vendors",
+    "Vulnerabilities & CVEs": "vulns",
+    "Exploits": "exploits",
+    "Vulnerability Advisories": "vuln_advisories",
 }
 
-# Regex simples para limpar HTML
-TAG_RE = re.compile(r"<[^>]+>")
-COMMENT_RE = re.compile(r"<!--.*?-->", re.DOTALL)
+# -------------------------------
+# Keyword-based smart grouping
+# -------------------------------
+SMART_GROUP_RULES = [
+    ("Ransomware", [
+        "ransomware", "ransom note", "double extortion",
+        "locker", "crypto-locker", "ransom demand"
+    ]),
+    ("Vulnerabilities / CVEs", [
+        "cve-", "vulnerability", "vulnerabilities",
+        "remote code execution", "rce",
+        "privilege escalation", "buffer overflow",
+        "out-of-bounds write", "sql injection"
+    ]),
+    ("Exploit / PoC", [
+        "exploit", "poc released", "proof-of-concept",
+        "exploit code", "weaponized", "exploit available"
+    ]),
+    ("Windows / Microsoft", [
+        "windows", "exchange server", "office 365",
+        "msrc", "sharepoint", "outlook"
+    ]),
+    ("Linux / Unix", [
+        "linux", "ubuntu", "debian", "centos",
+        "red hat", "rhel", "suse"
+    ]),
+    ("Cloud / SaaS", [
+        "aws", "azure", "gcp", "google cloud",
+        "cloudflare", "okta", "auth0", "saas",
+        "s3 bucket"
+    ]),
+    ("Threat Actors / APT", [
+        " apt ", " apt-", "apt group",
+        "lazarus", "sandworm", "fin7", "apt29",
+        "apt28", "charming kitten", "oilrig",
+        "turla", "cozy bear", "fancy bear"
+    ]),
+    ("Malware / Payloads", [
+        "malware", "trojan", "backdoor",
+        "infostealer", "info-stealer", "stealer",
+        " rat ", "remote access trojan", "botnet",
+        "loader", "dropper"
+    ]),
+    ("Data Breaches / Leaks", [
+        "data breach", "data leak", "leaked data",
+        "database leaked", "records exposed",
+        "credentials leaked", "credential dump"
+    ]),
+    ("Phishing / Social Engineering", [
+        "phishing", "spear-phishing", "spear phishing",
+        "social engineering", "credential harvesting",
+        "smishing", "vishing"
+    ]),
+]
 
 
-def clean_html(text: str) -> str:
-    """Remove tags e comentários HTML, normaliza espaços e limita tamanho."""
-    if not text:
+def slugify(text: str) -> str:
+    text = text.strip().lower()
+    text = re.sub(r"[^a-z0-9]+", "-", text)
+    text = re.sub(r"-+", "-", text).strip("-")
+    return text or "unknown"
+
+
+def normalize_category(group_title: str):
+    label = (group_title or "General").strip()
+    slug = CATEGORY_SLUGS.get(label)
+    if not slug:
+        slug = slugify(label)
+    return slug, label
+
+
+def clean_html_summary(raw: str) -> str:
+    if not raw:
         return ""
+    raw = html.unescape(raw)
 
-    # Remove comentários HTML (ex: <!-- SC_OFF --> ... <!-- SC_ON -->)
-    text = COMMENT_RE.sub(" ", text)
-
-    # Remove tags <p>, <img>, <div>, etc.
-    text = TAG_RE.sub(" ", text)
-
-    # Decodifica entidades (&nbsp;, &#32;, etc.)
-    text = html.unescape(text)
-
-    # Normaliza espaços
-    text = re.sub(r"\s+", " ", text).strip()
-
-    # Limita tamanho para não explodir o card (especialmente Reddit)
-    if len(text) > MAX_SUMMARY_LEN:
-        text = text[:MAX_SUMMARY_LEN].rstrip() + "…"
+    if BeautifulSoup is not None:
+        soup = BeautifulSoup(raw, "html.parser")
+        text = soup.get_text(separator=" ", strip=True)
+    else:
+        text = re.sub(r"<[^>]+>", " ", raw)
+        text = re.sub(r"\s+", " ", text).strip()
 
     return text
 
 
-def guess_category_from_title(title: str) -> str:
-    """
-    Fallback leve caso o grupo não esteja mapeado explicitamente.
-    Usa só como último recurso.
-    """
-    t = title.lower()
-    if "crypto" in t or "blockchain" in t:
-        return "crypto"
-    if "darknet" in t or "cybercrime" in t:
-        return "cybercrime"
-    if "dfir" in t or "forensic" in t:
-        return "dfir"
-    if "osint" in t:
-        return "osint"
-    if "podcast" in t or "youtube" in t:
-        return "podcasts"
-    if "vendor" in t or "product" in t:
-        return "vendors"
-    if "exploit" in t or "0day" in t:
-        return "exploits"
-    if "advisories" in t or "advisory" in t:
-        return "vuln_advisories"
-    if "vuln" in t or "cve" in t:
-        return "vulns"
-    if "malware analysis" in t or "reverse" in t:
-        return "malware_analysis"
-    if "malware" in t or "ransomware" in t:
-        return "malware"
-    if "cert" in t or "government" in t or "gov" in t:
-        return "gov_cert"
-    if "leak" in t or "breach" in t:
-        return "leaks"
-    if "threat" in t or "apt" in t or "intel" in t:
-        return "threat_intel"
-    return "general"
+def parse_published(entry) -> Optional[datetime]:
+    dt_struct = getattr(entry, "published_parsed", None) or getattr(
+        entry, "updated_parsed", None
+    )
+    if not dt_struct:
+        return None
+    return datetime(*dt_struct[:6], tzinfo=timezone.utc)
 
 
-def _iter_feeds_from_node(
-    node: ET.Element,
-    ancestors_titles: List[str],
-    current_cat: Optional[str],
-) -> Iterable[Tuple[str, str, str]]:
-    """
-    Caminha recursivamente na árvore de <outline>, respeitando a estrutura.
+def compute_smart_groups(title: str, summary: str) -> list[str]:
+    text = f"{title or ''} {summary or ''}".lower()
+    groups: list[str] = []
 
-    - Atualiza a categoria com base em GROUP_CATEGORY_MAP quando encontra
-      um título conhecido (ex: "Threat Intel & APT Campaigns").
-    - Quando encontra um outline com xmlUrl (RSS), emite (feed_title, xmlUrl, category).
-    """
-    title = node.attrib.get("title") or node.attrib.get("text") or ""
-    if title:
-        ancestors_titles = ancestors_titles + [title]
-    else:
-        ancestors_titles = list(ancestors_titles)
+    for label, keywords in SMART_GROUP_RULES:
+        for kw in keywords:
+            if kw.lower() in text:
+                groups.append(label)
+                break
 
-    new_cat = current_cat
-
-    # Se o grupo estiver mapeado explicitamente, sobrescreve categoria
-    if title in GROUP_CATEGORY_MAP:
-        new_cat = GROUP_CATEGORY_MAP[title]
-    elif new_cat is None:
-        # Se ainda não há categoria definida, tenta deduzir dos títulos
-        joined = " / ".join(ancestors_titles)
-        new_cat = guess_category_from_title(joined)
-
-    xml_url = node.attrib.get("xmlUrl")
-    if xml_url:
-        feed_title = title or xml_url
-        yield (feed_title, xml_url, new_cat or "general")
-
-    # Recurse nos filhos
-    for child in node.findall("outline"):
-        yield from _iter_feeds_from_node(child, ancestors_titles, new_cat)
+    # Deduplicate while preserving order
+    seen = set()
+    deduped = []
+    for g in groups:
+        if g not in seen:
+            seen.add(g)
+            deduped.append(g)
+    return deduped
 
 
-def parse_opml(path: Path) -> List[Tuple[str, str, str]]:
-    """
-    Lê o sec_feeds.xml e retorna uma lista de
-    (feed_title, xmlUrl, category_code),
-    com categoria baseada na estrutura real do arquivo.
-    """
-    tree = ET.parse(path)
+def iter_opml_feeds(opml_path: Path) -> Iterable[Tuple[str, str, str]]:
+    tree = ET.parse(opml_path)
     root = tree.getroot()
     body = root.find("body")
     if body is None:
         return []
 
-    feeds: List[Tuple[str, str, str]] = []
-    seen_urls: set[str] = set()
-
-    for top in body.findall("outline"):
-        for title, xml_url, cat in _iter_feeds_from_node(top, [], None):
-            if xml_url in seen_urls:
+    for group in body.findall("outline"):
+        group_title = group.attrib.get("title") or group.attrib.get("text") or "General"
+        for feed in group.findall("outline"):
+            xml_url = feed.attrib.get("xmlUrl")
+            if not xml_url:
                 continue
-            seen_urls.add(xml_url)
-            feeds.append((title, xml_url, cat or "general"))
-
-    return feeds
+            feed_title = feed.attrib.get("title") or feed.attrib.get("text") or xml_url
+            yield group_title, feed_title, xml_url
 
 
-def parse_entry(entry, source_title: str, category: str) -> Optional[Dict[str, Any]]:
-    title = getattr(entry, "title", None) or entry.get("title")
-    link = getattr(entry, "link", None) or entry.get("link")
-    if not title or not link:
-        return None
-
-    summary_raw = (
-        getattr(entry, "summary", None)
-        or entry.get("summary")
-        or entry.get("description")
-        or ""
-    )
-    summary = clean_html(summary_raw)
-
-    published = None
-    if getattr(entry, "published_parsed", None):
-        published = datetime.fromtimestamp(
-            time.mktime(entry.published_parsed), tz=timezone.utc
-        )
-    elif getattr(entry, "updated_parsed", None):
-        published = datetime.fromtimestamp(
-            time.mktime(entry.updated_parsed), tz=timezone.utc
-        )
-    else:
-        raw_date = entry.get("published") or entry.get("updated")
-        if raw_date:
-            try:
-                published = datetime.fromisoformat(raw_date)
-                if published.tzinfo is None:
-                    published = published.replace(tzinfo=timezone.utc)
-            except Exception:
-                published = None
-
-    return {
-        "title": title,
-        "link": link,
-        "summary": summary,
-        "source": source_title,
-        "category": category,
-        "published": published.isoformat() if published else None,
-    }
-
-
-def main() -> None:
+def main():
     if not OPML_PATH.exists():
         raise SystemExit(f"OPML file not found: {OPML_PATH}")
 
+    now = datetime.now(timezone.utc)
+    cutoff = now - timedelta(days=DAYS_BACK)
+
+    items_by_link: dict[str, dict] = {}
+
     print(f"[INFO] Using OPML: {OPML_PATH}")
-    feeds = parse_opml(OPML_PATH)
-    print(f"[INFO] Found {len(feeds)} feeds")
+    print(f"[INFO] Collecting items from the last {DAYS_BACK} days (>= {cutoff.isoformat()})")
 
-    cutoff = datetime.now(timezone.utc) - timedelta(days=DAYS_BACK)
-    all_items: Dict[str, Dict[str, Any]] = {}
+    for group_title, feed_title, xml_url in iter_opml_feeds(OPML_PATH):
+        type_slug, type_label = normalize_category(group_title)
+        print(f"[INFO] Fetching feed: {feed_title} ({xml_url}) [{type_label}]")
 
-    for idx, (feed_title, xml_url, category) in enumerate(feeds, start=1):
-        print(f"[{idx}/{len(feeds)}] Fetching {feed_title} :: {xml_url} (cat={category})")
-
-        # Protege contra RemoteDisconnected, timeouts, etc.
-        try:
-            parsed = feedparser.parse(xml_url)
-        except Exception as e:
-            print(f"  [ERROR] Failed fetching feed: {xml_url} ({e})")
-            continue
-
-        if getattr(parsed, "bozo", False):
-            print(
-                f"  [WARN] Problem parsing feed: {xml_url} "
-                f"({getattr(parsed, 'bozo_exception', 'bozo')})"
-            )
+        parsed = feedparser.parse(xml_url)
 
         for entry in parsed.entries:
-            item = parse_entry(entry, source_title=feed_title, category=category)
-            if not item:
+            link = getattr(entry, "link", None)
+            title = getattr(entry, "title", "").strip()
+            summary_raw = getattr(entry, "summary", "") or getattr(entry, "description", "")
+
+            if not link or not title:
                 continue
 
-            pub_str = item.get("published")
-            if pub_str:
-                try:
-                    pub_dt = datetime.fromisoformat(pub_str)
-                    if pub_dt.tzinfo is None:
-                        pub_dt = pub_dt.replace(tzinfo=timezone.utc)
-                except Exception:
-                    pub_dt = None
+            pub_dt = parse_published(entry)
+            if not pub_dt:
+                pub_iso = None
+                pub_ts = None
             else:
-                pub_dt = None
-
-            # Aplica cutoff de data se tivermos published
-            if pub_dt and pub_dt < cutoff:
-                continue
-
-            # Dedup pela URL "normalizada"
-            link = item["link"].rstrip("/")
-            existing = all_items.get(link)
-            if existing:
-                existing_dt = None
-                if existing.get("published"):
-                    try:
-                        existing_dt = datetime.fromisoformat(existing["published"])
-                    except Exception:
-                        existing_dt = None
-                if existing_dt and pub_dt and pub_dt <= existing_dt:
+                if pub_dt < cutoff:
                     continue
+                pub_iso = pub_dt.isoformat()
+                pub_ts = int(pub_dt.timestamp())
 
-            all_items[link] = item
+            summary = clean_html_summary(summary_raw)
+            smart_groups = compute_smart_groups(title, summary)
 
-    items_list: List[Dict[str, Any]] = list(all_items.values())
+            item = {
+                "title": title,
+                "summary": summary,
+                "link": link,
+                "source": feed_title,
+                "type": type_slug,
+                "type_label": type_label,
+                "published": pub_iso,
+                "published_ts": pub_ts,
+                "smart_groups": smart_groups,
+            }
 
-    def sort_key(x: Dict[str, Any]):
-        p = x.get("published")
-        if not p:
-            return 0.0
-        try:
-            return datetime.fromisoformat(p).timestamp()
-        except Exception:
-            return 0.0
+            existing = items_by_link.get(link)
+            if existing is None:
+                items_by_link[link] = item
+            else:
+                if (item["published_ts"] or 0) > (existing.get("published_ts") or 0):
+                    items_by_link[link] = item
 
-    items_list.sort(key=sort_key, reverse=True)
+    items_list = list(items_by_link.values())
+    items_list.sort(
+        key=lambda x: x["published_ts"] if x["published_ts"] is not None else 0,
+        reverse=True,
+    )
 
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     out_data = {

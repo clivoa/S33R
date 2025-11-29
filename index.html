@@ -14,28 +14,47 @@
         <div class="badge badge-live">LIVE FEED</div>
         <h1 class="site-title">S33R Security News Feed</h1>
         <p class="site-subtitle muted">
-          A security news board that aggregates items from multiple public RSS sources.
-          Everything is fetched in your browser &mdash; nothing is stored on the server.
+          Curated security news from multiple public RSS sources, pre-aggregated as JSON and rendered with filters, search, and smart groups.
         </p>
-      </div>
-
-      <div class="header-meta">
-        <div class="meta-item">
-          <span class="meta-label">Last JSON update</span>
-          <span class="meta-value" id="meta-last-update">loading...</span>
-        </div>
-        <div class="meta-item">
-          <span class="meta-label">Time window</span>
-          <span class="meta-value" id="meta-window">last 24 hours</span>
-        </div>
       </div>
     </header>
 
     <main class="layout">
-      <!-- SEARCH + FILTERS -->
-      <section class="controls">
-        <div class="filters-row">
-          <div class="search-group">
+      <aside class="sidebar">
+        <section class="sidebar-section">
+          <h2 class="sidebar-title">Categories</h2>
+          <div id="category-filters" class="pill-group">
+            <button class="pill pill-active" data-type="all">All</button>
+            <button class="pill" data-type="crypto">Crypto</button>
+            <button class="pill" data-type="cybercrime">Cybercrime, Darknet</button>
+            <button class="pill" data-type="dfir">DFIR</button>
+            <button class="pill" data-type="general">General Security</button>
+            <button class="pill" data-type="government">Government, CERT</button>
+            <button class="pill" data-type="leaks">Leaks</button>
+            <button class="pill" data-type="malware">Malware</button>
+            <button class="pill" data-type="threat_intel">Threat Intel</button>
+            <button class="pill" data-type="malware_analysis">Malware Analysis</button>
+            <button class="pill" data-type="osint">OSINT, Communities</button>
+            <button class="pill" data-type="podcasts">Podcasts</button>
+            <button class="pill" data-type="vendors">Vendors</button>
+            <button class="pill" data-type="vulns">Vulnerabilities, CVEs</button>
+            <button class="pill" data-type="exploits">Exploits</button>
+            <button class="pill" data-type="vuln_advisories">Vulnerability Advisories</button>
+          </div>
+        </section>
+
+        <section class="sidebar-section">
+          <h2 class="sidebar-title">Smart groups</h2>
+          <p class="sidebar-help">
+            Items are automatically tagged based on keywords in title and summary
+            (e.g., Ransomware, Exploit / PoC, Threat Actors / APT, Cloud / SaaS).
+          </p>
+        </section>
+      </aside>
+
+      <section class="main-content">
+        <section class="filters-bar">
+          <div class="filters-left">
             <label for="news-search-input" class="filter-label">Search</label>
             <div class="search-input-wrapper">
               <input
@@ -48,83 +67,55 @@
             </div>
           </div>
 
-          <div class="sort-group">
-            <label for="sort-select" class="filter-label">Sort</label>
-            <select id="sort-select" class="filter-input">
-              <option value="latest">Newest first</option>
-              <option value="oldest">Oldest first</option>
-              <option value="source">Source A–Z</option>
-            </select>
+          <div class="filters-right">
+            <div class="filter-group">
+              <label for="sort-select" class="filter-label">Sort</label>
+              <select id="sort-select" class="filter-input">
+                <option value="latest" selected>Latest first</option>
+                <option value="oldest">Oldest first</option>
+                <option value="source">Source (A–Z)</option>
+              </select>
+            </div>
+
+            <div class="filter-group recent-only-group">
+              <label class="checkbox-label">
+                <input id="recent-only-checkbox" type="checkbox" checked />
+                <span>Recent only (last 30 days)</span>
+              </label>
+            </div>
           </div>
-        </div>
+        </section>
 
-        <div class="filters-row categories-row">
-          <span class="filter-label">Category</span>
-          <div class="news-type-bar" id="category-bar">
-            <button class="news-type-btn active" data-type="all">All</button>
-            <button class="news-type-btn" data-type="crypto">Crypto</button>
-            <button class="news-type-btn" data-type="cybercrime">Cybercrime, Darknet</button>
-            <button class="news-type-btn" data-type="dfir">DFIR</button>
-            <button class="news-type-btn" data-type="general">General Security</button>
-            <button class="news-type-btn" data-type="gov_cert">Government, CERT</button>
-            <button class="news-type-btn" data-type="leaks">Leaks</button>
-            <button class="news-type-btn" data-type="malware">Malware</button>
-            <button class="news-type-btn" data-type="threat_intel">Threat Intel</button>
-            <button class="news-type-btn" data-type="malware_analysis">Malware Analysis</button>
-            <button class="news-type-btn" data-type="osint">OSINT, Communities</button>
-            <button class="news-type-btn" data-type="podcasts">Podcasts</button>
-            <button class="news-type-btn" data-type="vendors">Vendors</button>
-            <button class="news-type-btn" data-type="vulns">Vulnerabilities, CVEs</button>
-            <button class="news-type-btn" data-type="exploits">Exploits</button>
-            <button class="news-type-btn" data-type="vuln_advisories">Vulnerability Advisories</button>
+        <section class="status-bar">
+          <div class="status-left">
+            <span class="status-title">Latest headlines</span>
+            <span id="stats-text" class="status-meta"></span>
           </div>
-        </div>
-      </section>
+          <div class="status-right">
+            <span id="generated-info" class="status-meta"></span>
+          </div>
+        </section>
 
-      <!-- LATEST HEADLINES + RECENT ONLY -->
-      <section class="status-bar">
-        <div class="status-left">
-          <span class="status-title">Latest headlines</span>
-          <span class="status-pill">BETA</span>
-          <span id="stats-text" class="status-stats"></span>
-        </div>
-        <div class="status-right">
-          <label class="checkbox-label checkbox-inline">
-            <input type="checkbox" id="recent-only-checkbox" checked />
-            <span class="checkbox-custom"></span>
-            <span class="checkbox-text">Recent only (last 24 hours)</span>
-          </label>
-        </div>
-      </section>
-      <div class="status-subline">
-        <span id="status-text">Loading news feeds...</span>
-      </div>
-
-      <!-- NEWS LIST -->
-      <section class="news-list-container">
-        <div id="news-list" class="news-list"></div>
-        <div id="loading-indicator" class="loading-indicator">
-          <div class="spinner"></div>
-          <span>Loading news…</span>
-        </div>
-        <div id="end-of-results" class="end-of-results hidden">
-          <span>No more results.</span>
-        </div>
+        <section>
+          <div id="loading-indicator" class="loading">
+            <div class="spinner"></div>
+            <span>Loading news from JSON cache...</span>
+          </div>
+          <div id="news-list" class="news-list"></div>
+        </section>
       </section>
     </main>
   </div>
 
   <script>
-    // ====================== CONFIG ======================
-    const JSON_URL = "data/news_recent.json";
-    const PAGE_SIZE = 30;
+    const NEWS_JSON_URL = "data/news_recent.json";
 
     const TYPE_LABELS = {
       crypto: "Crypto",
       cybercrime: "Cybercrime, Darknet",
       dfir: "DFIR",
       general: "General Security",
-      gov_cert: "Government, CERT",
+      government: "Government, CERT",
       leaks: "Leaks",
       malware: "Malware",
       threat_intel: "Threat Intel",
@@ -134,131 +125,107 @@
       vendors: "Vendors",
       vulns: "Vulnerabilities, CVEs",
       exploits: "Exploits",
-      vuln_advisories: "Vulnerability Advisories"
+      vuln_advisories: "Vulnerability Advisories",
     };
 
-    // ====================== STATE ======================
     const state = {
-      items: [],        // todos do JSON
-      filtered: [],     // após filtros
-      renderedCount: 0, // quantos já estão na tela
-      currentType: "all",
-      query: "",
-      recentOnly: true,
+      allItems: [],
+      filteredItems: [],
+      visibleCount: 0,
+      batchSize: 30,
+      category: "all",
+      search: "",
       sort: "latest",
-      isLoading: false
+      recentOnly: true,
+      daysBack: 30,
+      generatedAt: null,
     };
 
-    let listEl, loadingEl, endOfResultsEl, statusEl, statsEl, lastUpdateEl, windowEl;
-    let hasUserScrolled = false;
-
-    // ====================== HELPERS ======================
-    function parseDate(value) {
-      if (!value) return null;
-      const d = new Date(value);
-      if (isNaN(d.getTime())) return null;
-      return d;
-    }
-
-    function formatDate(d) {
-      if (!d) return "no date";
+    function formatDate(ts) {
+      if (!ts) return "Unknown date";
+      const d = new Date(ts * 1000);
       return d.toLocaleString(undefined, {
         year: "numeric",
         month: "short",
         day: "2-digit",
         hour: "2-digit",
-        minute: "2-digit"
+        minute: "2-digit",
       });
     }
 
-    function humanCount(n) {
-      if (n == null) return "";
-      if (n >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, "") + "k";
-      return String(n);
+    function createSmartGroupBadges(item) {
+      const groups = item.smart_groups || [];
+      if (!groups.length) return null;
+
+      const container = document.createElement("div");
+      container.className = "smart-groups";
+
+      groups.forEach((label) => {
+        const badge = document.createElement("span");
+        badge.className = "smart-group-badge";
+        badge.textContent = label;
+        container.appendChild(badge);
+      });
+
+      return container;
     }
 
-    function computeThresholdDays(days) {
-      const ms = days * 24 * 60 * 60 * 1000;
-      return new Date(Date.now() - ms);
-    }
-
-    function normalizeItem(raw) {
-      const published =
-        parseDate(raw.published) ||
-        parseDate(raw.pubDate) ||
-        parseDate(raw.date) ||
-        null;
-
-      return {
-        title: raw.title || "Untitled",
-        link: raw.link || raw.url || "#",
-        source: raw.source || raw.source_title || "Unknown source",
-        summary: raw.summary || raw.description || "",
-        category: raw.category || raw.type || "general",
-        published,
-        published_raw: raw.published || raw.pubDate || raw.date || null
-      };
-    }
-
-    // ====================== RENDERING ======================
-    function clearList() {
-      listEl.innerHTML = "";
-      state.renderedCount = 0;
-      endOfResultsEl.classList.add("hidden");
-      updateStats();
-    }
-
-    function createCard(item) {
+    function createNewsCard(item) {
       const card = document.createElement("article");
       card.className = "card";
 
       const top = document.createElement("div");
       top.className = "card-top";
 
-      const sourceSpan = document.createElement("span");
-      sourceSpan.className = "card-source";
-      sourceSpan.textContent = item.source;
+      const src = document.createElement("span");
+      src.className = "card-source";
+      src.textContent = item.source || "Unknown source";
 
       const metaRight = document.createElement("div");
       metaRight.className = "card-meta-right";
 
-      if (item.category && item.category !== "all") {
+      if (item.type) {
         const categoryBadge = document.createElement("span");
         categoryBadge.className = "card-category";
-        const label = TYPE_LABELS[item.category] || item.category;
+        const label = TYPE_LABELS[item.type] || item.type;
         categoryBadge.textContent = label;
         metaRight.appendChild(categoryBadge);
       }
 
       const dateSpan = document.createElement("span");
       dateSpan.className = "card-date";
-      dateSpan.textContent = formatDate(item.published);
+      if (item.published_ts) {
+        dateSpan.textContent = formatDate(item.published_ts);
+      } else {
+        dateSpan.textContent = "Unknown date";
+      }
       metaRight.appendChild(dateSpan);
 
-      top.appendChild(sourceSpan);
+      top.appendChild(src);
       top.appendChild(metaRight);
 
-      const title = document.createElement("h2");
-      title.className = "card-title";
-      const link = document.createElement("a");
-      link.href = item.link || "#";
-      link.target = "_blank";
-      link.rel = "noopener noreferrer";
-      link.textContent = item.title;
-      title.appendChild(link);
+      const titleEl = document.createElement("h2");
+      titleEl.className = "card-title";
+      titleEl.textContent = item.title || "Untitled";
 
-      const body = document.createElement("p");
-      body.className = "card-body-text";
-      body.textContent =
-        item.summary && item.summary.trim().length > 0
-          ? item.summary.trim()
-          : "No summary available for this entry.";
+      const body = document.createElement("div");
+      body.className = "card-body";
+
+      const summaryEl = document.createElement("p");
+      summaryEl.className = "card-body-text";
+      summaryEl.textContent = item.summary || "No summary available.";
+      body.appendChild(summaryEl);
+
+      const smartGroupsEl = createSmartGroupBadges(item);
+      if (smartGroupsEl) {
+        body.appendChild(smartGroupsEl);
+      }
 
       const footer = document.createElement("div");
       footer.className = "card-footer";
 
       const btn = document.createElement("a");
-      btn.className = "card-link-btn";
+      btn.className = "btn-link";
       btn.href = item.link || "#";
       btn.target = "_blank";
       btn.rel = "noopener noreferrer";
@@ -267,7 +234,7 @@
       footer.appendChild(btn);
 
       card.appendChild(top);
-      card.appendChild(title);
+      card.appendChild(titleEl);
       card.appendChild(body);
       card.appendChild(footer);
 
@@ -275,197 +242,153 @@
     }
 
     function updateStats() {
-      const total = state.filtered ? state.filtered.length : 0;
-      const shown = state.renderedCount || 0;
+      const total = state.filteredItems.length;
+      const shown = Math.min(state.visibleCount, total);
+      const statsEl = document.getElementById("stats-text");
+      statsEl.textContent = total
+        ? `Showing ${shown} of ${total} items`
+        : "No results for current filters.";
 
-      const stats = document.getElementById("stats-text");
-      stats.textContent = `${humanCount(shown)} of ${humanCount(total)} articles shown`;
-    }
-
-    function setStatus(msg) {
-      statusEl.textContent = msg;
-    }
-
-    function renderMore() {
-      if (state.isLoading) return;
-      if (!state.filtered || state.filtered.length === 0) {
-        clearList();
-        document.getElementById("loading-indicator").classList.add("hidden");
-        endOfResultsEl.classList.remove("hidden");
-        endOfResultsEl.textContent = "No results for current filters.";
-        return;
-      }
-
-      if (state.renderedCount >= state.filtered.length) {
-        document.getElementById("loading-indicator").classList.add("hidden");
-        endOfResultsEl.classList.remove("hidden");
-        endOfResultsEl.textContent = "No more results.";
-        updateStats();
-        return;
-      }
-
-      state.isLoading = true;
-      document.getElementById("loading-indicator").classList.remove("hidden");
-
-      const nextItems = state.filtered.slice(
-        state.renderedCount,
-        state.renderedCount + PAGE_SIZE
-      );
-
-      for (const item of nextItems) {
-        const card = createCard(item);
-        listEl.appendChild(card);
-      }
-
-      state.renderedCount += nextItems.length;
-      state.isLoading = false;
-
-      if (state.renderedCount >= state.filtered.length) {
-        document.getElementById("loading-indicator").classList.add("hidden");
-        endOfResultsEl.classList.remove("hidden");
-        endOfResultsEl.textContent = "No more results.";
+      const genInfo = document.getElementById("generated-info");
+      if (state.generatedAt) {
+        const d = new Date(state.generatedAt);
+        genInfo.textContent = `JSON generated at ${d.toLocaleString()} (window: last ${state.daysBack} days)`;
       } else {
-        document.getElementById("loading-indicator").classList.add("hidden");
+        genInfo.textContent = "";
       }
-
-      updateStats();
     }
 
-    // ====================== FILTERING ======================
-    function applyFilters(resetRendered) {
-      let items = state.items.slice();
+    function applyFilters(resetVisible) {
+      const cat = state.category;
+      const search = state.search.trim().toLowerCase();
+      const recentOnly = state.recentOnly;
 
-      // Category
-      if (state.currentType && state.currentType !== "all") {
-        items = items.filter((i) => i.category === state.currentType);
-      }
+      const now = Date.now() / 1000;
+      const THIRTY_DAYS = 30 * 24 * 60 * 60;
+      const cutoff = now - THIRTY_DAYS;
 
-      // Recent only (last 24 hours)
-      if (state.recentOnly) {
-        const threshold = new Date(Date.now() - 24 * 60 * 60 * 1000); // 1 day
-        items = items.filter((i) => i.published && i.published >= threshold);
-      }
+      let result = state.allItems.filter((item) => {
+        if (cat !== "all" && item.type !== cat) {
+          return false;
+        }
 
+        if (recentOnly && item.published_ts && item.published_ts < cutoff) {
+          return false;
+        }
 
-      // Search query
-      const q = (state.query || "").trim().toLowerCase();
-      if (q.length > 0) {
-        items = items.filter((i) => {
-          const haystack = [
-            i.title || "",
-            i.summary || "",
-            i.source || ""
+        if (search) {
+          const hay = [
+            item.title || "",
+            item.summary || "",
+            item.source || "",
           ]
             .join(" ")
             .toLowerCase();
-          return haystack.includes(q);
-        });
-      }
 
-      // Sort
-      if (state.sort === "latest") {
-        items.sort((a, b) => {
-          const ad = a.published ? a.published.getTime() : 0;
-          const bd = b.published ? b.published.getTime() : 0;
-          return bd - ad;
-        });
-      } else if (state.sort === "oldest") {
-        items.sort((a, b) => {
-          const ad = a.published ? a.published.getTime() : 0;
-          const bd = b.published ? b.published.getTime() : 0;
-          return ad - bd;
-        });
-      } else if (state.sort === "source") {
-        items.sort((a, b) => {
-          const as = (a.source || "").toLowerCase();
-          const bs = (b.source || "").toLowerCase();
-          if (as < bs) return -1;
-          if (as > bs) return 1;
-          const ad = a.published ? a.published.getTime() : 0;
-          const bd = b.published ? b.published.getTime() : 0;
-          return bd - ad;
-        });
-      }
-
-      state.filtered = items;
-
-      if (resetRendered) {
-        clearList();
-      }
-      renderMore();
-    }
-
-    // ====================== DATA LOADING ======================
-    async function loadJson() {
-      setStatus("Loading prebuilt JSON…");
-      document.getElementById("loading-indicator").classList.remove("hidden");
-
-      const cacheBuster = Date.now();
-      const url = `${JSON_URL}?v=${cacheBuster}`;
-
-      const res = await fetch(url, { cache: "no-store" });
-      if (!res.ok) {
-        throw new Error(`Failed to fetch JSON: ${res.status}`);
-      }
-      const data = await res.json();
-
-      const itemsArray = Array.isArray(data) ? data : data.items || [];
-      state.items = itemsArray.map(normalizeItem);
-
-      // Last update + window
-      if (data.generated_at) {
-        const d = parseDate(data.generated_at);
-        if (d) {
-          lastUpdateEl.textContent = formatDate(d);
-        } else {
-          lastUpdateEl.textContent = data.generated_at;
+          if (!hay.includes(search)) {
+            return false;
+          }
         }
-      } else {
-        lastUpdateEl.textContent = "unknown";
+
+        return true;
+      });
+
+      if (state.sort === "latest") {
+        result.sort((a, b) => (b.published_ts || 0) - (a.published_ts || 0));
+      } else if (state.sort === "oldest") {
+        result.sort((a, b) => (a.published_ts || 0) - (b.published_ts || 0));
+      } else if (state.sort === "source") {
+        result.sort((a, b) => (a.source || "").localeCompare(b.source || ""));
       }
 
-      if (data.days_back) {
-        document.getElementById("meta-window").textContent =
-          `last ${data.days_back} days`;
+      state.filteredItems = result;
+
+      if (resetVisible) {
+        state.visibleCount = Math.min(state.batchSize, state.filteredItems.length);
       }
 
-      setStatus("Ready.");
-      applyFilters(true);
+      renderList();
+      updateStats();
     }
 
-    // ====================== EVENTS ======================
-    function setupEvents() {
-      // Category buttons
-      const buttons = document.querySelectorAll(".news-type-btn");
-      buttons.forEach((btn) => {
-        btn.addEventListener("click", () => {
-          buttons.forEach((b) => b.classList.remove("active"));
-          btn.classList.add("active");
-          state.currentType = btn.dataset.type || "all";
-          applyFilters(true);
+    function renderList() {
+      const listEl = document.getElementById("news-list");
+      listEl.innerHTML = "";
+
+      const total = state.filteredItems.length;
+      const limit = Math.min(state.visibleCount, total);
+
+      for (let i = 0; i < limit; i++) {
+        const item = state.filteredItems[i];
+        const card = createNewsCard(item);
+        listEl.appendChild(card);
+      }
+
+      const loadingEl = document.getElementById("loading-indicator");
+      loadingEl.classList.add("hidden");
+    }
+
+    function handleScroll() {
+      const listEl = document.getElementById("news-list");
+      const scrollContainer = window;
+
+      const scrollTop = scrollContainer.scrollY || scrollContainer.pageYOffset || 0;
+      const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+      const rect = listEl.getBoundingClientRect();
+      const offsetTop = rect.top + scrollTop;
+
+      const distanceFromBottom = offsetTop + listEl.offsetHeight - (scrollTop + viewportHeight);
+
+      if (distanceFromBottom < 300) {
+        if (state.visibleCount < state.filteredItems.length) {
+          state.visibleCount += state.batchSize;
+          renderList();
+          updateStats();
+        }
+      }
+    }
+
+    function initEvents() {
+      // Category pills
+      const catContainer = document.getElementById("category-filters");
+      catContainer.addEventListener("click", (ev) => {
+        const btn = ev.target.closest("button[data-type]");
+        if (!btn) return;
+        const type = btn.getAttribute("data-type");
+
+        Array.from(catContainer.querySelectorAll("button[data-type]")).forEach((b) => {
+          b.classList.toggle("pill-active", b === btn);
         });
+
+        state.category = type || "all";
+        applyFilters(true);
       });
 
       // Search
       const searchInput = document.getElementById("news-search-input");
       const searchBtn = document.getElementById("news-search-btn");
 
-      searchBtn.addEventListener("click", () => {
-        state.query = searchInput.value || "";
+      function doSearch() {
+        state.search = searchInput.value || "";
         applyFilters(true);
+      }
+
+      searchBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        doSearch();
       });
 
-      searchInput.addEventListener("keydown", (ev) => {
-        if (ev.key === "Enter") {
-          state.query = searchInput.value || "";
-          applyFilters(true);
+      searchInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          doSearch();
         }
       });
 
       // Recent only
       const recentCheckbox = document.getElementById("recent-only-checkbox");
       recentCheckbox.addEventListener("change", () => {
-        state.recentOnly = recentCheckbox.checked;
+        state.recentOnly = !!recentCheckbox.checked;
         applyFilters(true);
       });
 
@@ -476,40 +399,38 @@
         applyFilters(true);
       });
 
-      // Infinite scroll (só ativa depois que o usuário realmente rolar)
-      windowEl.addEventListener("scroll", () => {
-        const y = windowEl.scrollY || windowEl.pageYOffset || 0;
-
-        if (y <= 0 && !hasUserScrolled) {
-          return;
-        }
-        hasUserScrolled = true;
-
-        const scrollPosition = y + windowEl.innerHeight;
-        const threshold = document.documentElement.scrollHeight - 400;
-
-        if (scrollPosition >= threshold) {
-          renderMore();
-        }
-      });
+      // Infinite scroll
+      window.addEventListener("scroll", handleScroll);
     }
 
-    // ====================== INIT ======================
-    document.addEventListener("DOMContentLoaded", () => {
-      listEl = document.getElementById("news-list");
-      loadingEl = document.getElementById("loading-indicator");
-      endOfResultsEl = document.getElementById("end-of-results");
-      statusEl = document.getElementById("status-text");
-      statsEl = document.getElementById("stats-text");
-      lastUpdateEl = document.getElementById("meta-last-update");
-      windowEl = window;
+    async function init() {
+      const loadingEl = document.getElementById("loading-indicator");
+      loadingEl.classList.remove("hidden");
 
-      setupEvents();
+      try {
+        const res = await fetch(NEWS_JSON_URL);
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}`);
+        }
+        const data = await res.json();
 
-      loadJson().catch((err) => {
-        console.error("Error loading news JSON", err);
-        setStatus("Error while loading news JSON.");
-        document.getElementById("loading-indicator").classList.add("hidden");
+        state.daysBack = data.days_back || 30;
+        state.generatedAt = data.generated_at || null;
+        state.allItems = Array.isArray(data.items) ? data.items : [];
+
+        // Normalize types for safety
+        state.allItems.forEach((item) => {
+          if (!item.type && item.type_label) {
+            item.type = item.type_label.toLowerCase().replace(/s+/g, "_");
+          }
+        });
+
+        applyFilters(true);
+        initEvents();
+      } catch (err) {
+        console.error("Failed to load news JSON", err);
+        loadingEl.classList.add("hidden");
+        const listEl = document.getElementById("news-list");
         listEl.innerHTML = "";
         const errCard = document.createElement("div");
         errCard.className = "card";
@@ -518,8 +439,10 @@
         p.textContent = "Error while loading news feeds. Please try again later.";
         errCard.appendChild(p);
         listEl.appendChild(errCard);
-      });
-    });
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", init);
   </script>
 </body>
 </html>
