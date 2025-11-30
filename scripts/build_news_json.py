@@ -71,54 +71,197 @@ CATEGORY_SLUGS = {
 # Keyword-based smart grouping
 # -------------------------------
 SMART_GROUP_RULES: List[Tuple[str, List[str]]] = [
+
+    # === Ransomware ===
     ("Ransomware", [
-        "ransomware", "ransom note", "double extortion",
-        "locker", "crypto-locker", "ransom demand",
-    ]),
+
+    # General terms
+    "ransomware", "ransom note", "double extortion",
+    "locker", "crypto-locker", "ransom demand", "ransom gang",
+    "extortion", "data exfiltration extortion",
+
+    # MITRE groups known for ransomware operations
+    "wizard spider",         # Ryuk
+    "royal",                 # Royal Ransomware (ex-Wizard Spider splinter)
+    "fin12",                 # Known ransomware affiliate
+    "muddled libra",         # Ransomware extortion/social engineering
+    "scattered spider",      # Also involved in ransomware breaches
+    "black basta",           # Known ransomware gang
+    "hellokitty",            # HelloKitty/FiveHands
+
+    # Well-known ransomware gangs (not always MITRE groups but widely referenced)
+    "lockbit", "lockbit 3.0", "lockbit 2.0",
+    "alphv", "blackcat", "alphv/blackcat",
+    "clop", "cl0p", "clop ransomware",
+    "conti", "conti leaks",
+    "emotet", # precursor/access vector for ransomware ops
+    "ryuk",
+    "maze", "maze cartel",
+    "egregor",
+    "revictim",
+    "play ransomware",
+    "akira",
+    "blackbyte",
+    "ragnar locker",
+    "darkside",
+    "babuk",
+    "hive",
+    "royal ransomware",
+    "nokoyawa",
+    "cuba ransomware",
+    "mount locker",
+    "phobos ransomware",
+    "vice society",
+    "bianlian",
+    "redkite",
+    "snatch ransomware",
+
+    # Ransomware affiliates & IABs linked to MITRE groups
+    "fin7",           # sometimes tied in supply-chain / IAB
+    "fin13",
+    "lazarus",        # has used faux-ransomware in ops
+    "apt41",          # double-extortion impersonation cases
+
+    # Common indicators / operational language
+    "leak site", "ransom negotiation", "ransom portal",
+    "ransomware-as-a-service", "raas",
+    "affiliate program", "affiliate ransomware",
+]),
+
+    # === Vulnerabilities / CVEs ===
     ("Vulnerabilities / CVEs", [
         "cve-", "vulnerability", "vulnerabilities",
         "remote code execution", "rce",
         "privilege escalation", "buffer overflow",
         "out-of-bounds write", "sql injection",
+        "authentication bypass", "zero-day", "0day",
     ]),
+
+    # === Exploit / PoC ===
     ("Exploit / PoC", [
         "exploit", "poc released", "proof-of-concept",
         "exploit code", "weaponized", "exploit available",
+        "exploit toolkit", "exploit released",
     ]),
+
+    # === Microsoft Ecosystem ===
     ("Windows / Microsoft", [
         "windows", "exchange server", "office 365",
         "msrc", "sharepoint", "outlook",
+        "active directory", "adfs", "ntlm",
+        "ms defender", "intune",
     ]),
+
+    # === Linux Ecosystem ===
     ("Linux / Unix", [
         "linux", "ubuntu", "debian", "centos",
-        "red hat", "rhel", "suse",
+        "red hat", "rhel", "suse", "unix",
+        "systemd", "kernel module",
     ]),
+
+    # === Cloud / SaaS ===
     ("Cloud / SaaS", [
         "aws", "azure", "gcp", "google cloud",
         "cloudflare", "okta", "auth0", "saas",
-        "s3 bucket",
+        "s3 bucket", "cloud misconfiguration",
+        "iam role", "cloudtrail", "kubernetes", "k8s",
     ]),
+
+    # === Threat Actors / APT ===
     ("Threat Actors / APT", [
         " apt ", " apt-", "apt group",
         "lazarus", "sandworm", "fin7", "apt29",
         "apt28", "charming kitten", "oilrig",
         "turla", "cozy bear", "fancy bear",
+        "wizard spider", "black basta", "lockbit",
+        "muddled libra",
     ]),
+
+    # === Malware / Payloads ===
     ("Malware / Payloads", [
         "malware", "trojan", "backdoor",
         "infostealer", "info-stealer", "stealer",
         " rat ", "remote access trojan", "botnet",
-        "loader", "dropper",
+        "loader", "dropper", "rootkit", "worm",
+        "keylogger", "banking trojan",
     ]),
+
+    # === Data Breaches / Leaks ===
     ("Data Breaches / Leaks", [
         "data breach", "data leak", "leaked data",
         "database leaked", "records exposed",
         "credentials leaked", "credential dump",
+        "publicly exposed", "open database",
     ]),
+
+    # === Phishing / Social Engineering ===
     ("Phishing / Social Engineering", [
         "phishing", "spear-phishing", "spear phishing",
         "social engineering", "credential harvesting",
-        "smishing", "vishing",
+        "smishing", "vishing", "impersonation",
+        "brand impersonation",
+    ]),
+
+    # === Vendor Security Intelligence (Novo!) ===
+    ("Vendor Security Intelligence", [
+        # EDR/AV vendors
+        "crowdstrike", "falcon", "sentinelone", "sentinel one",
+        "palo alto", "cortex xdr", "unit 42",
+        "microsoft defender", "mdr microsoft", "ms defender",
+        "symantec", "broadcom security",
+        "trend micro",
+
+        # Networking & FW vendors
+        "cisco", "asa firewall", "talos",
+        "fortinet", "fortigate", "fortios",
+        "checkpoint", "juniper",
+
+        # IR & Threat intel vendors
+        "mandiant", "fireeye", "google cloud sec",
+        "kaspersky", "securelist", "bitdefender",
+        "eset", "secureworks", "sophos",
+
+        # Cloud & CDN vendors
+        "cloudflare", "akamai", "fastly",
+
+        # Identity vendors
+        "okta", "auth0", "duo security",
+
+        # Email & anti-phish vendors
+        "proofpoint", "mimecast",
+
+        # Other relevant vendors
+        "vmware", "broadcom", "1password", "lastpass",
+    ]),
+
+    # === Supply Chain Security / Dependency Attacks ===
+    ("Supply Chain & Dependency Attacks", [
+        "supply chain attack", "dependency hijack",
+        "package compromise", "typosquatting",
+        "npm package", "pypi", "malicious package",
+        "software supply chain", "backdoored library",
+    ]),
+
+    # === Crypto / Blockchain Security ===
+    ("Crypto / Blockchain Security", [
+        "crypto scam", "blockchain hack", "defi exploit",
+        "smart contract vulnerability", "rug pull",
+        "crypto theft", "exchange hacked",
+        "web3", "metamask", "ledger",
+    ]),
+
+    # === Darknet / Cybercrime Ops ===
+    ("Cybercrime / Darknet", [
+        "darknet", "dark web", "crime forum",
+        "underground marketplace", "stealer logs",
+        "initial access broker", "iab", "ransom gang leak site",
+    ]),
+
+    # === DFIR / Incident Response ===
+    ("DFIR / Incident Response", [
+        "dfir", "forensic", "incident response",
+        "memory analysis", "disk image", "timeline analysis",
+        "ioc", "tactics techniques", "mitre att&ck",
     ]),
 ]
 

@@ -32,6 +32,9 @@
       display: flex;
       justify-content: center;
       margin-bottom: 18px;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
     }
 
     .overview-controls select {
@@ -41,7 +44,23 @@
       padding: 6px 10px;
       border-radius: var(--radius);
       font-size: 14px;
-      min-width: 100px;
+      min-width: 110px;
+    }
+
+    .overview-controls button {
+      background: var(--accent);
+      border: none;
+      color: #0b0c10;
+      padding: 6px 10px;
+      border-radius: var(--radius);
+      font-size: 13px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .overview-controls button:disabled {
+      opacity: 0.4;
+      cursor: default;
     }
 
     .overview-grid {
@@ -60,8 +79,9 @@
     .overview-card {
       background: var(--bg-elevated);
       border-radius: var(--radius-xl);
-      border: 1px solid var(--border-color);
-      padding: 14px 16px 12px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+      padding: 18px 20px 16px;
     }
 
     .overview-card-title {
@@ -74,17 +94,35 @@
     .overview-meta {
       font-size: 12px;
       color: var(--text-muted);
-      margin-bottom: 6px;
+      margin-bottom: 8px;
+      line-height: 1.5;
     }
 
-    .overview-list {
+    .overview-meta b {
+      color: var(--text-primary);
+    }
+
+    .overview-list,
+    .overview-list-full {
       font-size: 12px;
       color: var(--text-muted);
       margin-top: 6px;
+      padding-left: 18px;
     }
 
-    .overview-list li {
+    .overview-list li,
+    .overview-list-full li {
       margin-bottom: 2px;
+    }
+
+    .sources-toggle-btn {
+      margin-top: 6px;
+      font-size: 11px;
+      background: transparent;
+      border: none;
+      color: var(--accent);
+      cursor: pointer;
+      padding: 0;
     }
 
     canvas {
@@ -97,23 +135,37 @@
         padding-top: 40px;
       }
     }
+
+    /* Tooltip for charts */
+    #chart-tooltip {
+      position: absolute;
+      padding: 4px 8px;
+      font-size: 11px;
+      background: rgba(0, 0, 0, 0.9);
+      color: #f8f8f2;
+      border-radius: 6px;
+      pointer-events: none;
+      display: none;
+      z-index: 50;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      white-space: nowrap;
+    }
   </style>
 </head>
 <body>
 
   <!-- Minimal Navbar -->
- <div class="minimal-navbar">
-  <a href="index.html" class="minimal-nav-link">News</a>
+  <div class="minimal-navbar">
+    <a href="index.html" class="minimal-nav-link">News</a>
 
-  <div class="minimal-dropdown">
-    <span class="minimal-nav-link dropdown-toggle">Archive ▾</span>
-    <div class="dropdown-menu">
-      <a href="archive.html">Archive List</a>
-      <a href="archive-overview.html">Year Overview</a>
+    <div class="minimal-dropdown">
+      <span class="minimal-nav-link dropdown-toggle">Archive ▾</span>
+      <div class="dropdown-menu">
+        <a href="archive.html">Archive List</a>
+        <a href="archive-overview.html">Year Overview</a>
+      </div>
     </div>
   </div>
-</div>
-
 
   <div class="overview-container">
     <h1 class="overview-title">S33R Archive – Year Overview</h1>
@@ -122,9 +174,11 @@
     </p>
 
     <div class="overview-controls">
+      <button id="prev-year-btn" title="Previous year">←</button>
       <select id="year-select">
         <option value="">Select year...</option>
       </select>
+      <button id="next-year-btn" title="Next year">→</button>
     </div>
 
     <div id="overview-meta" class="overview-meta"></div>
@@ -139,14 +193,33 @@
         <div class="overview-card-title">Top sources in year</div>
         <canvas id="sources-chart" width="450" height="260"></canvas>
         <ul id="sources-list" class="overview-list"></ul>
+        <button id="toggle-sources" class="sources-toggle-btn" type="button">
+          Show full list ▼
+        </button>
+        <ul id="sources-list-full" class="overview-list-full" style="display:none;"></ul>
       </div>
     </div>
   </div>
 
+  <!-- Tooltip -->
+  <div id="chart-tooltip"></div>
+
   <script>
     const candidateYears = [2023, 2024, 2025, 2026, 2027];
+    const monthLabelsShort = ["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"];
+    const monthNames = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+
+    const yearCache = {};
     let currentYear = null;
-    let yearItems = [];
+    let availableYears = [];
+    let monthlyCountsForTooltip = [];
+    const tooltipEl = document.getElementById("chart-tooltip");
+
+    const monthlyCanvas = document.getElementById("monthly-chart");
+    const sourcesCanvas = document.getElementById("sources-chart");
+
+    const prevYearBtn = document.getElementById("prev-year-btn");
+    const nextYearBtn = document.getElementById("next-year-btn");
 
     async function fetchJSON(path) {
       try {
@@ -160,14 +233,29 @@
 
     async function loadYears() {
       const select = document.getElementById("year-select");
+      let latest = null;
+
       for (const y of candidateYears) {
         const data = await fetchJSON(`data/archive/yearly/${y}.json`);
         if (Array.isArray(data) && data.length > 0) {
+          yearCache[y] = data;
+          availableYears.push(y);
+
           const opt = document.createElement("option");
           opt.value = y;
           opt.textContent = y;
           select.appendChild(opt);
+          latest = y;
         }
+      }
+
+      if (latest) {
+        select.value = latest;
+        currentYear = latest;
+        updateYearButtons();
+        updateYearOverview(latest);
+      } else {
+        updateYearButtons();
       }
     }
 
@@ -207,6 +295,7 @@
 
       return {
         monthlyCounts,
+        sourceCounts,
         topSources,
         totalItems: items.length,
         totalSources: Object.keys(sourceCounts).length,
@@ -226,7 +315,7 @@
       const ctx = canvas.getContext("2d");
       clearCanvas(canvas);
 
-      const labels = ["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"];
+      const labels = monthLabelsShort;
       const padding = { top: 20, right: 16, bottom: 26, left: 26 };
       const w = canvas.width;
       const h = canvas.height;
@@ -234,8 +323,9 @@
       const chartH = h - padding.top - padding.bottom;
 
       const maxVal = Math.max(1, Math.max(...counts));
-      const barWidth = chartW / counts.length * 0.6;
-      const gap = chartW / counts.length * 0.4;
+      const slotWidth = chartW / counts.length;
+      const barWidth = slotWidth * 0.6;
+      const gap = slotWidth * 0.4;
 
       ctx.font = "11px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
       ctx.fillStyle = "#888";
@@ -248,11 +338,11 @@
 
       // X axis labels + bars
       counts.forEach((val, i) => {
-        const x = padding.left + i * (barWidth + gap) + gap * 0.2;
+        const x = padding.left + i * slotWidth + gap * 0.2;
         const barHeight = chartH * (val / maxVal);
         const y = padding.top + (chartH - barHeight);
 
-        // bar
+        // bar gradient
         const grad = ctx.createLinearGradient(0, y, 0, y + barHeight);
         grad.addColorStop(0, "#ff79c6");
         grad.addColorStop(1, "#bd93f9");
@@ -331,10 +421,16 @@
         metaEl.textContent = "";
         return;
       }
-      metaEl.textContent =
-        `Year ${year}: ${stats.totalItems} items, ` +
-        `${stats.totalSources} sources, ` +
-        `range ${stats.rangeStart} → ${stats.rangeEnd}`;
+
+      const avg = Math.round(stats.totalItems / 12);
+      const maxMonthIdx = stats.monthlyCounts.indexOf(Math.max(...stats.monthlyCounts));
+      const mostActiveMonth = maxMonthIdx >= 0 ? monthNames[maxMonthIdx] : "N/A";
+
+      metaEl.innerHTML =
+        `Year <b>${year}</b>: ${stats.totalItems} items, ` +
+        `${stats.totalSources} sources, avg <b>${avg}</b> items/month<br>` +
+        `Most active month: <b>${mostActiveMonth}</b><br>` +
+        `Data range: ${stats.rangeStart} → ${stats.rangeEnd}`;
     }
 
     function renderSourcesList(topSources) {
@@ -348,40 +444,160 @@
       });
     }
 
+    function renderFullSourceList(sourceCounts) {
+      const ul = document.getElementById("sources-list-full");
+      ul.innerHTML = "";
+      if (!sourceCounts || Object.keys(sourceCounts).length === 0) return;
+
+      Object.entries(sourceCounts)
+        .sort((a, b) => b[1] - a[1])
+        .forEach(([src, count]) => {
+          const li = document.createElement("li");
+          li.textContent = `${src}: ${count}`;
+          ul.appendChild(li);
+        });
+    }
+
     async function updateYearOverview(year) {
-      const data = await fetchJSON(`data/archive/yearly/${year}.json`);
-      const canvasMonthly = document.getElementById("monthly-chart");
-      const canvasSources = document.getElementById("sources-chart");
+      const canvasMonthly = monthlyCanvas;
+      const canvasSources = sourcesCanvas;
       clearCanvas(canvasMonthly);
       clearCanvas(canvasSources);
       document.getElementById("sources-list").innerHTML = "";
+      document.getElementById("sources-list-full").innerHTML = "";
       document.getElementById("overview-meta").textContent = "";
+
+      if (!year) return;
+
+      let data = yearCache[year];
+      if (!data) {
+        data = await fetchJSON(`data/archive/yearly/${year}.json`);
+        if (Array.isArray(data)) {
+          yearCache[year] = data;
+        }
+      }
 
       if (!Array.isArray(data) || data.length === 0) {
         document.getElementById("overview-meta").textContent = "No data for this year.";
         return;
       }
 
-      yearItems = data;
-      const stats = extractYearStats(yearItems);
+      const stats = extractYearStats(data);
+
+      // save monthly counts for tooltip calc
+      monthlyCountsForTooltip = stats.monthlyCounts.slice();
 
       drawMonthlyChart(canvasMonthly, stats.monthlyCounts);
       drawSourcesChart(canvasSources, stats.topSources);
       renderOverviewMeta(year, stats);
       renderSourcesList(stats.topSources);
+      renderFullSourceList(stats.sourceCounts);
+    }
+
+    function updateYearButtons() {
+      if (!currentYear || availableYears.length === 0) {
+        prevYearBtn.disabled = true;
+        nextYearBtn.disabled = true;
+        return;
+      }
+      const idx = availableYears.indexOf(Number(currentYear));
+      prevYearBtn.disabled = idx <= 0;
+      nextYearBtn.disabled = idx === -1 || idx >= availableYears.length - 1;
     }
 
     document.getElementById("year-select").addEventListener("change", (e) => {
       const y = e.target.value;
       currentYear = y || null;
+      updateYearButtons();
       if (!currentYear) {
         document.getElementById("overview-meta").textContent = "";
-        clearCanvas(document.getElementById("monthly-chart"));
-        clearCanvas(document.getElementById("sources-chart"));
+        clearCanvas(monthlyCanvas);
+        clearCanvas(sourcesCanvas);
         document.getElementById("sources-list").innerHTML = "";
+        document.getElementById("sources-list-full").innerHTML = "";
         return;
       }
       updateYearOverview(currentYear);
+    });
+
+    prevYearBtn.addEventListener("click", () => {
+      if (!currentYear) return;
+      const idx = availableYears.indexOf(Number(currentYear));
+      if (idx > 0) {
+        const prev = availableYears[idx - 1];
+        currentYear = prev;
+        document.getElementById("year-select").value = prev;
+        updateYearButtons();
+        updateYearOverview(prev);
+      }
+    });
+
+    nextYearBtn.addEventListener("click", () => {
+      if (!currentYear) return;
+      const idx = availableYears.indexOf(Number(currentYear));
+      if (idx !== -1 && idx < availableYears.length - 1) {
+        const next = availableYears[idx + 1];
+        currentYear = next;
+        document.getElementById("year-select").value = next;
+        updateYearButtons();
+        updateYearOverview(next);
+      }
+    });
+
+    // Toggle full sources list
+    document.getElementById("toggle-sources").addEventListener("click", () => {
+      const full = document.getElementById("sources-list-full");
+      const btn = document.getElementById("toggle-sources");
+      if (full.style.display === "none" || full.style.display === "") {
+        full.style.display = "block";
+        btn.textContent = "Hide full list ▲";
+      } else {
+        full.style.display = "none";
+        btn.textContent = "Show full list ▼";
+      }
+    });
+
+    // Tooltip for monthly chart
+    monthlyCanvas.addEventListener("mousemove", (e) => {
+      if (!monthlyCountsForTooltip || monthlyCountsForTooltip.length === 0) {
+        tooltipEl.style.display = "none";
+        return;
+      }
+
+      const rect = monthlyCanvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+
+      const padding = { top: 20, right: 16, bottom: 26, left: 26 };
+      const w = monthlyCanvas.width;
+      const h = monthlyCanvas.height;
+      const chartW = w - padding.left - padding.right;
+      const chartH = h - padding.top - padding.bottom;
+      const slotWidth = chartW / monthlyCountsForTooltip.length;
+      const barWidth = slotWidth * 0.6;
+      const gap = slotWidth * 0.4;
+
+      if (x < padding.left || x > w - padding.right || y < padding.top || y > h - padding.bottom) {
+        tooltipEl.style.display = "none";
+        return;
+      }
+
+      const idx = Math.floor((x - padding.left) / slotWidth);
+      if (idx < 0 || idx >= monthlyCountsForTooltip.length) {
+        tooltipEl.style.display = "none";
+        return;
+      }
+
+      const count = monthlyCountsForTooltip[idx];
+      const label = monthNames[idx];
+      tooltipEl.style.display = "block";
+      tooltipEl.textContent = `${label}: ${count} items`;
+      tooltipEl.style.left = (e.pageX + 12) + "px";
+      tooltipEl.style.top = (e.pageY + 12) + "px";
+    });
+
+    monthlyCanvas.addEventListener("mouseleave", () => {
+      tooltipEl.style.display = "none";
     });
 
     loadYears();
