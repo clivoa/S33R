@@ -46,6 +46,20 @@ jobs:
  
           for file in $CHANGED; do
             echo "Processing $file"
+
+            # 1) Se o arquivo não existe mais (foi deletado), apenas ignorar
+            if [ ! -f "$file" ]; then
+              echo "File $file no longer exists, skipping."
+              continue
+            fi
+
+            # 2) (Opcional) Ignorar arquivos temporários promo_filtered_*.json
+            case "$file" in
+              data/archive/promo_filtered_*.json)
+                echo "Skipping transient promo file $file"
+                continue
+                ;;
+            esac
  
             # Conteúdo codificado SEM quebras de linha
             BASE64_CONTENT="$(base64 -w 0 "$file" | tr -d '\n')"
