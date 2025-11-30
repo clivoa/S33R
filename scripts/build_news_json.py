@@ -24,7 +24,10 @@ from pathlib import Path
 import xml.etree.ElementTree as ET
 from typing import Iterable, List, Optional, Tuple
 
+from email.utils import parsedate_to_datetime  # <-- NOVO
+
 import feedparser
+
 
 try:
     from bs4 import BeautifulSoup  # Optional, nicer HTML cleanup
@@ -151,12 +154,54 @@ def clean_html_summary(raw: str) -> str:
 
 
 def parse_published(entry) -> Optional[datetime]:
+    """Return a timezone-aware datetime for a feed entry.
+    Tries feedparser's *_parsed fields first, then falls back to date strings.
+    If no timezone is present, assumes UTC.
+    """
+    # 1) Tenta primeiro os campos estruturados do feedparser
     dt_struct = getattr(entry, "published_parsed", None) or getattr(
         entry, "updated_parsed", None
     )
-    if not dt_struct:
-        return None
-    return datetime(*dt_struct[:6], tzinfo=timezone.utc)
+    if dt_struct:
+        return datetime(*dt_struct[:6], tzinfo=timezone.utc)
+
+    # 2) Fallback para campos de data em string
+    candidate_fields = [
+        "published",
+        "updated",
+        "pubDate",
+        "dc:date",
+        "dc_date",
+        "date",
+    ]
+
+    for field in candidate_fields:
+        # feedparser entries se comportam como dict + atributos
+        value = getattr(entry, field, None)
+        if not value and isinstance(entry, dict):
+            value = entry.get(field)
+        if not value:
+            continue
+
+        try:
+            dt = parsedate_to_datetime(str(value))
+        except (TypeError, ValueError):
+            continue
+
+        if dt is None:
+            continue
+
+        # Se não tiver timezone, assume UTC (como você pediu)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        else:
+            # Normaliza para UTC por consistência
+            dt = dt.astimezone(timezone.utc)
+
+        return dt
+
+    # Nada deu certo -> caller decide se ignora o item
+    return None
 
 
 def compute_smart_groups(title: str, summary: str) -> list[str]:
@@ -169,7 +214,7 @@ def compute_smart_groups(title: str, summary: str) -> list[str]:
                 groups.append(label)
                 break
 
-    # Deduplicate while preserving order
+    # Dedup preservando ordem
     seen = set()
     deduped: list[str] = []
     for g in groups:
