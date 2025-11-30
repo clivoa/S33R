@@ -1,3 +1,5 @@
+<img width="1374" height="569" alt="image" src="https://github.com/user-attachments/assets/25ebd1ad-f1a8-4dbb-9ff2-2e1bcc6d9649" />
+
 # S33R Security News Feed
 
 A **GitHub Pages–friendly security news platform** that aggregates, normalizes, archives, and visualizes cybersecurity news from hundreds of public RSS feeds.
