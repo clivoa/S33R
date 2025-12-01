@@ -75,7 +75,10 @@ CATEGORY_SLUGS = {
 CURATED_KEYWORDS: List[str] = [
     # Exploits e vulns críticas
     "zero-day", "zeroday", "0day",
-    "critical vulnerability", "critical exploit",
+    "critical vulnerability", "exploit",
+    "exploit", "cve-", "backdoor", "rce", 
+    "remote code execution", "privilege escalation",
+    "trojan", "wormable", "trojanized",
 
     # Supply chain / impacto grande
     "supply chain attack", "software supply chain",
@@ -85,7 +88,9 @@ CURATED_KEYWORDS: List[str] = [
     "major breach", "data leak", "data leaks", "massive leak",
 
     # Ransom gangs (mais quentes)
-    "ransom gang", "ransomware gang", "new ransomware",
+    "ransom gang", "ransomware", "double extortion", "ransom note",
+
+    # Vendor
 ]
 
 
