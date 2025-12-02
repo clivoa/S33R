@@ -151,11 +151,36 @@ def extract_keywords(item: Dict[str, Any]) -> List[str]:
     ]
 
 
+EXCLUDED_CATEGORIES = {"Curated"}
+
 def extract_categories(item: Dict[str, Any]) -> List[str]:
-    cats = item.get("categories") or item.get("category") or []
+    """
+    Use the same grouping field used by S33R smart groups.
+    Priority:
+    - smart_groups (main field used in news_recent.json)
+    - categories / category (fallbacks, if present)
+    """
+    cats = (
+        item.get("smart_groups")
+        or item.get("categories")
+        or item.get("category")
+        or []
+    )
+
     if isinstance(cats, str):
         cats = [cats]
-    return [str(c).strip() for c in cats if str(c).strip()]
+
+    cleaned = []
+    for c in cats:
+        c = str(c).strip()
+        if not c:
+            continue
+        if c in EXCLUDED_CATEGORIES:
+            continue
+        cleaned.append(c)
+
+    return cleaned
+
 
 
 def extract_mitre_techniques(item: Dict[str, Any]) -> List[str]:
