@@ -49,7 +49,7 @@ jobs:
           REPO="${{ github.repository }}"
 
           ##############################################
-          # 1) Deletar arquivos promo_filtered_* do repo
+          # 1) Delete tracked promo_filtered_* from repo
           ##############################################
           echo "Looking for tracked promo_filtered_*.json to delete..."
           PROMO_FILES=$(git ls-files "data/archive/promo_filtered_*.json" || true)
@@ -81,23 +81,22 @@ jobs:
             echo "No tracked promo_filtered_*.json files found to delete."
           fi
 
-          ###################################################
-          # 2) Commitar arquivos alterados em data/archive/*
-          ###################################################
-          CHANGED=$(git ls-files -m -o --exclude-standard data/archive || true)
+          ###################################################################
+          # 2) Commit changed files in data/archive/* and data/trends.json
+          ###################################################################
+          CHANGED=$(git ls-files -m -o --exclude-standard data/archive data/trends.json || true)
           [ -z "$CHANGED" ] && { echo "No changes detected."; exit 0; }
 
           for file in $CHANGED; do
             echo "Processing $file"
 
-            # Se o arquivo foi removido localmente, ignoramos aqui
-            # (remoção já foi tratada acima via DELETE)
+            # If the file was removed locally, skip here
             if [ ! -f "$file" ]; then
               echo "  -> $file no longer exists locally, skipping in PUT loop."
               continue
             fi
 
-            # Não deve acontecer, mas garantimos que promo_filtered_* não seja recriado
+            # Safety: never recreate promo_filtered_* here
             case "$file" in
               data/archive/promo_filtered_*.json)
                 echo "  -> Skipping transient promo file $file"
