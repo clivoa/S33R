@@ -8,7 +8,8 @@ Gera data/trends.json com métricas de tendências para o trend.html:
 - Contagem por vendor por janela
 - Tendências de termos de ataque (ransomware, supply chain, 0-day, etc.)
 - Top CVEs por janela (para o ranking de CVEs)
-- Linha do tempo de menções a threat actors (por dia)
+- Linha do tempo de menções a threat actors (por dia),
+  incluindo os top_actors por dia para tooltip.
 
 Fonte de dados:
 - data/news_recent.json
@@ -16,7 +17,7 @@ Fonte de dados:
 
 import json
 import re
-from collections import Counter
+from collections import Counter, defaultdict
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, Iterable, List
@@ -34,15 +35,28 @@ WINDOWS = {
 }
 
 STOPWORDS = {
+    # stopwords genéricas de linguagem
     "the", "and", "for", "with", "from", "this", "that", "have", "has",
     "into", "over", "under", "about", "your", "you", "are", "was", "were",
     "will", "their", "they", "them", "its", "our", "out", "but", "not",
     "can", "could", "would", "should", "may", "might", "than", "then",
     "after", "before", "more", "less", "also", "just", "into", "via",
+    # termos muito genéricos de segurança / notícia
     "security", "cyber", "attack", "attacks", "threat", "threats",
-    "vulnerability", "vulnerabilities", "report", "reports", "new",
-    "zero", "day", "days", "research", "team", "blog", "post",
+    "vulnerability", "vulnerabilities", "report", "reports",
+    "blog", "post", "news", "data",
+    # palavras vazias comuns do feed
+    "first", "all", "access", "based", "using", "used", "user", "users",
+    "update", "updated", "updates", "detail", "details",
+    # pedaços de URL / protocolo
+    "http", "https", "www", "com",
 }
+
+KEYWORD_VENDOR_STOPWORDS = {
+    "upguard",
+    # "kaspersky", "crowdstrike", etc. se começarem a poluir
+}
+
 
 # Vendors simples (ajuste conforme necessário)
 VENDOR_KEYWORDS = {
@@ -72,8 +86,10 @@ TRENDING_TERMS = {
     "credential stuffing": "Credential stuffing",
 }
 
-# Threat actors (pode expandir depois)
-# Lista de nomes de threat actors (baseado em threat_actors.txt)
+# =========================================================
+#  Threat actors
+# =========================================================
+# ⚠️ SUBSTITUA ESSA LISTA PELA SUA LISTA COMPLETA (threat_actors.txt)
 THREAT_ACTOR_NAMES = [
     "APT-C-23",
     "APT-C-36",
@@ -469,11 +485,11 @@ THREAT_ACTOR_NAMES = [
     "GALACTIC OCELOT",
 ]
 
-def build_threat_actor_patterns() -> list[str]:
+def build_threat_actor_patterns() -> List[str]:
     """
     Constrói a lista de regexes para detecção de threat actors:
     - padrões genéricos (APTxx, TAxxx, UNCxxx, Storm-xxxx, FINxx, Threat Group-xxxx)
-    - grande alternância com todos os nomes conhecidos (THREAT_ACTOR_NAMES)
+    - um padrão grande com todos os nomes conhecidos (THREAT_ACTOR_NAMES)
     """
     generic_patterns = [
         r"\bAPT ?\d+\b",
@@ -485,11 +501,7 @@ def build_threat_actor_patterns() -> list[str]:
         r"\bThreat Group-\d+\b",
     ]
 
-    # Remover duplicados da lista de nomes
     unique_names = sorted(set(THREAT_ACTOR_NAMES))
-
-    # Monta um único regex com alternância de todos os nomes escapados
-    # Ex: \b(?:Lazarus Group|Wizard Spider|FANCY BEAR|...)\b
     alt = "|".join(re.escape(name) for name in unique_names)
     name_pattern = rf"\b(?:{alt})\b"
 
@@ -498,9 +510,21 @@ def build_threat_actor_patterns() -> list[str]:
 
 THREAT_ACTOR_PATTERNS = build_threat_actor_patterns()
 
+# Mapa canônico: lowercase -> nome oficial
+CANONICAL_TA_MAP = {name.lower(): name for name in THREAT_ACTOR_NAMES}
+
+# Regex único para extrair nomes de threat actors (sem padrões genéricos)
+THREAT_ACTOR_NAME_REGEX = re.compile(
+    r"\b(" + "|".join(re.escape(name) for name in THREAT_ACTOR_NAMES) + r")\b",
+    re.IGNORECASE,
+)
 
 CVE_REGEX = re.compile(r"\bCVE-\d{4}-\d{4,7}\b", re.IGNORECASE)
 
+
+# =========================================================
+#  Utilitários
+# =========================================================
 
 def parse_iso(date_str: str) -> datetime:
     """
@@ -520,38 +544,41 @@ def parse_iso(date_str: str) -> datetime:
 
 
 def load_news() -> List[Dict[str, Any]]:
+    """
+    Carrega news_recent.json aceitando diferentes formatos:
+
+    - Lista na raiz:
+      [ {entry}, {entry}, ... ]
+
+    - Objeto com chave contendo lista:
+      { "entries": [ ... ] } ou "items"/"news"/"results"/"data"
+    """
     print(f"[INFO] Loading {NEWS_RECENT_PATH}...")
     raw = NEWS_RECENT_PATH.read_text(encoding="utf-8")
     data = json.loads(raw)
 
-    # Caso ideal: raiz já é uma lista
+    # Caso ideal: lista na raiz
     if isinstance(data, list):
         return data
 
-    # Caso comum: dicionário com uma chave que contém a lista de entradas
     if isinstance(data, dict):
-        # chaves típicas em formatos "envelopados"
         for key in ("entries", "items", "news", "results", "data"):
             if key in data and isinstance(data[key], list):
                 return data[key]
 
-        # fallback: procura qualquer valor que seja lista de dicts
+        # fallback: qualquer valor que seja lista de dicts
         for v in data.values():
             if isinstance(v, list) and (not v or isinstance(v[0], dict)):
                 return v
 
-        # Se chegou aqui, é um dict mas não achou lista de entradas
         raise RuntimeError(
-            "news_recent.json é um objeto JSON, mas não encontrei uma lista de entradas "
-            "em chaves como 'entries', 'items', 'news', 'results' ou 'data'."
+            "news_recent.json é um objeto, mas não encontrei uma lista de entradas "
+            "em 'entries', 'items', 'news', 'results' ou 'data'."
         )
 
-    # Qualquer outro tipo é erro
     raise RuntimeError(
-        f"news_recent.json tem tipo raiz inesperado: {type(data).__name__} "
-        "(esperava list ou dict)."
+        f"news_recent.json tem tipo raiz inesperado: {type(data).__name__}"
     )
-
 
 
 def normalize_text(entry: Dict[str, Any]) -> str:
@@ -565,21 +592,44 @@ def normalize_text(entry: Dict[str, Any]) -> str:
 
 def tokenize(text: str) -> Iterable[str]:
     """
-    Divide o texto em tokens simples, removendo stopwords e tokens muito curtos.
+    Divide o texto em tokens simples, removendo:
+    - stopwords
+    - tokens muito curtos
+    - números puros / anos (2024, 2025)
+    - pedaços de URL (http, https, www, com)
+    - alguns vendors que já aparecem em outro gráfico
     """
     for token in re.findall(r"[a-zA-Z0-9\-]+", text.lower()):
-        if len(token) < 3:
+        # tamanho mínimo um pouco maior pra pegar termos mais "ricos"
+        if len(token) < 4:
             continue
+
         if token in STOPWORDS:
             continue
+
+        # ignorar números e anos
+        if token.isdigit():
+            continue
+        if re.fullmatch(r"20\d{2}", token):
+            continue
+
+        # pedaços de URL (já cobertos em STOPWORDS, mas por garantia)
+        if token in ("http", "https", "www", "com"):
+            continue
+
+        # vendors que queremos ver só no gráfico de Vendors
+        if token in KEYWORD_VENDOR_STOPWORDS:
+            continue
+
         yield token
+
 
 
 def get_categories(entry: Dict[str, Any]) -> List[str]:
     """
     Tenta obter categorias / smart_groups da entrada.
     """
-    cats = []
+    cats: List[str] = []
 
     sg = entry.get("smart_groups") or entry.get("categories") or entry.get("tags")
     if isinstance(sg, list):
@@ -591,7 +641,7 @@ def get_categories(entry: Dict[str, Any]) -> List[str]:
     if isinstance(cat, str):
         cats.append(cat)
 
-    cleaned = []
+    cleaned: List[str] = []
     for c in cats:
         c = c.strip()
         if c:
@@ -602,6 +652,10 @@ def get_categories(entry: Dict[str, Any]) -> List[str]:
 def within_window(entry_dt: datetime, now: datetime, days: int) -> bool:
     return entry_dt >= (now - timedelta(days=days))
 
+
+# =========================================================
+#  Main
+# =========================================================
 
 def main() -> None:
     news = load_news()
@@ -614,9 +668,14 @@ def main() -> None:
     per_window_vendors: Dict[str, Counter] = {w: Counter() for w in WINDOWS}
     per_window_trends: Dict[str, Counter] = {w: Counter() for w in WINDOWS}
     per_window_cves: Dict[str, Counter] = {w: Counter() for w in WINDOWS}
-    threat_actor_daily_counter = Counter()  # date_str -> notícias que citam actor
 
-    threat_actor_compiled = [re.compile(pat, re.IGNORECASE) for pat in THREAT_ACTOR_PATTERNS]
+    # Threat actors
+    threat_actor_daily_counter = Counter()          # date_str -> qtd notícias com actor
+    threat_actor_daily_names: Dict[str, Counter] = defaultdict(Counter)  # date_str -> Counter(actor_name)
+
+    threat_actor_compiled = [
+        re.compile(pat, re.IGNORECASE) for pat in THREAT_ACTOR_PATTERNS
+    ]
 
     processed = 0
     skipped_no_date = 0
@@ -639,10 +698,16 @@ def main() -> None:
         # Volume diário
         daily_counter[date_only] += 1
 
-        # Threat actors (para timeline diária)
+        # 1) Detecção genérica de threat actor (APTxx, TAxxx, Storm-xxxx, etc.)
         has_actor = any(p.search(text) for p in threat_actor_compiled)
         if has_actor:
             threat_actor_daily_counter[date_only] += 1
+
+        # 2) Extração de nomes concretos para top_actors
+        name_matches = set(m.group(0) for m in THREAT_ACTOR_NAME_REGEX.finditer(text))
+        for raw_name in name_matches:
+            canonical = CANONICAL_TA_MAP.get(raw_name.lower(), raw_name)
+            threat_actor_daily_names[date_only][canonical] += 1
 
         # Categorias
         cats = get_categories(entry)
@@ -730,10 +795,17 @@ def main() -> None:
         for win in WINDOWS
     }
 
-    threat_actor_daily = [
-        {"date": d, "count": int(threat_actor_daily_counter[d])}
-        for d in sorted(threat_actor_daily_counter.keys())
-    ]
+    # Threat actor timeline com top_actors para tooltip
+    threat_actor_daily = []
+    for d in sorted(threat_actor_daily_counter.keys()):
+        total = int(threat_actor_daily_counter[d])
+        names_counter = threat_actor_daily_names.get(d, Counter())
+        top_names = [[name, int(cnt)] for name, cnt in names_counter.most_common(5)]
+        threat_actor_daily.append({
+            "date": d,
+            "count": total,
+            "top_actors": top_names,
+        })
 
     output = {
         "generated_at": now.isoformat(),
