@@ -335,8 +335,13 @@
       const categoriesByWin = trendsData.categories || {};
       const dataObj = categoriesByWin[win] || {};
 
-      const labels = Object.keys(dataObj);
-      const values = Object.values(dataObj);
+      // Remove 'Curated' (case-insensitive) da visualização
+      const filteredEntries = Object.entries(dataObj).filter(
+        ([name]) => name.toLowerCase() !== "curated"
+      );
+
+      const labels = filteredEntries.map(([name]) => name);
+      const values = filteredEntries.map(([, value]) => value);
 
       categoryChart = createOrUpdateChart(
         categoryChart,
@@ -537,6 +542,7 @@
 
       const labels = dataToUse.map(d => d.date);
       const counts = dataToUse.map(d => d.count);
+      const actorDetails = dataToUse.map(d => d.top_actors || []);
 
       threatActorChart = createOrUpdateChart(
         threatActorChart,
@@ -564,6 +570,26 @@
           },
           plugins: {
             legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: function (context) {
+                  const value = context.formattedValue;
+                  const idx = context.dataIndex;
+                  const actors = actorDetails[idx] || [];
+
+                  const lines = [`Mentions: ${value}`];
+
+                  if (actors.length > 0) {
+                    lines.push("Top actors:");
+                    actors.slice(0, 3).forEach(([name, count]) => {
+                      lines.push(`- ${name} (${count})`);
+                    });
+                  }
+
+                  return lines;
+                },
+              },
+            },
           },
         }
       );
