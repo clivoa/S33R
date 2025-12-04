@@ -316,6 +316,7 @@ STRONG_PROMO_PATTERNS: List[str] = [
     "live tracking the best",
     "i'm live-tracking",
     "im live-tracking",
+    "GISEC GLOBAL 2026"
 ]
 
 def is_promotional_entry(title: str, summary_raw: str) -> bool:
