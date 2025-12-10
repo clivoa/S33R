@@ -41,6 +41,7 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 from openai import OpenAI
+from openai import OpenAI, APIError
 
 # -----------------------
 # Configuráveis
@@ -220,6 +221,7 @@ def call_openai_morning_call(
 ) -> str:
     """
     Faz a chamada à OpenAI usando Chat Completions e retorna o texto do morning call.
+    Em caso de insufficient_quota, retorna uma mensagem amigável em vez de quebrar o script.
     """
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
@@ -228,19 +230,33 @@ def call_openai_morning_call(
     client = OpenAI(api_key=api_key)
 
     print(f"[INFO] Calling OpenAI Chat Completions with model={model}...")
-    completion = client.chat.completions.create(
-        model=model,
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ],
-        temperature=0.3,
-        max_tokens=2000,
-    )
-
-    text = completion.choices[0].message.content
-    print("[INFO] OpenAI response received.")
-    return text
+    try:
+        completion = client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+            temperature=0.3,
+            max_tokens=2000,
+        )
+        text = completion.choices[0].message.content
+        print("[INFO] OpenAI response received.")
+        return text
+    except APIError as e:
+        # Se estourar quota, não derruba o pipeline, gera uma mensagem fallback
+        err_code = getattr(e, "code", None)
+        if err_code == "insufficient_quota":
+            print("[ERROR] OpenAI insufficient_quota: cannot generate morning call today.")
+            return (
+                "### Morning call not available\n\n"
+                "The automated SOC morning call could not be generated today due to "
+                "`insufficient_quota` on the OpenAI API key.\n\n"
+                "Please check the OpenAI billing / quota settings and re-run once the "
+                "API is available again.\n"
+            )
+        # outros erros ainda sobem
+        raise
 
 
 def save_output_json(
