@@ -1,0 +1,97 @@
+name: Build SOC Morning Call
+
+on:
+  schedule:
+    # Ajuste o horário como quiser (UTC):
+    # Exemplo: todo dia às 06:15 UTC
+    - cron: "15 6 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  morning-call:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    env:
+      TARGET_BRANCH: main
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          # se você já usa requirements.txt para o projeto, use:
+          if [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          else
+            # fallback mínimo (caso ainda não tenha requirements)
+            pip install openai feedparser
+          fi
+
+      - name: Build SOC morning call JSON
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          # janela de análise (últimas N horas)
+          MORNING_CALL_WINDOW_HOURS: "24"
+          # limite de itens passados para o modelo
+          MORNING_CALL_MAX_ITEMS: "120"
+          # modelo da OpenAI que você quer usar
+          MORNING_CALL_MODEL: "gpt-5.1-mini"
+          # caminhos conforme seu script
+          NEWS_JSON_PATH: "data/news_recent.json"
+          MORNING_CALL_OUTPUT_DIR: "data/archive"
+        run: |
+          python scripts/build_morning_call.py
+
+      - name: Commit changes via GitHub API (branch main)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          BRANCH="main"
+          
+          CHANGED=$(git ls-files -m -o --exclude-standard data/** || true)
+          [ -z "$CHANGED" ] && { echo "No changes detected."; exit 0; }
+ 
+          for file in $CHANGED; do
+            echo "Processing $file"
+ 
+            # Conteúdo codificado SEM quebras de linha
+            BASE64_CONTENT="$(base64 -w 0 "$file" | tr -d '\n')"
+ 
+            # SHA atual (se houver)
+            SHA=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+                     "https://api.github.com/repos/${{ github.repository }}/contents/$file?ref=$BRANCH" \
+                     | jq -r .sha)
+ 
+            if [ "${SHA:-null}" = "null" ] || [ -z "$SHA" ]; then
+              # ---------- ARQUIVO NOVO ----------
+              printf '%s\n' "$BASE64_CONTENT" \
+                | jq -Rs --arg msg "Add $file" --arg branch "$BRANCH" \
+                    '{message:$msg, content:., branch:$branch}' \
+                | curl -sS -X PUT -H "Authorization: token $GITHUB_TOKEN" \
+                        -H "Content-Type: application/json" \
+                        --data-binary @- \
+                        "https://api.github.com/repos/${{ github.repository }}/contents/$file"
+            else
+              # ---------- ATUALIZA EXISTENTE ----------
+              printf '%s\n' "$BASE64_CONTENT" \
+                | jq -Rs --arg msg "Update $file" --arg branch "$BRANCH" --arg sha "$SHA" \
+                    '{message:$msg, content:., branch:$branch, sha:$sha}' \
+                | curl -sS -X PUT -H "Authorization: token $GITHUB_TOKEN" \
+                        -H "Content-Type: application/json" \
+                        --data-binary @- \
+                        "https://api.github.com/repos/${{ github.repository }}/contents/$file"
+            fi
+          done

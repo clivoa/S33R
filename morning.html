@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>S33R – SOC Morning Call</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="page">
+      <!-- Navbar mínima (igual às outras páginas) -->
+      <div class="minimal-navbar">
+        <a href="index.html" class="minimal-nav-link">Live board</a>
+        <a href="archive.html" class="minimal-nav-link">Archive</a>
+        <a href="trends.html" class="minimal-nav-link">Trends</a>
+        <a href="morning.html" class="minimal-nav-link" style="background: rgba(255,255,255,0.06); color: var(--text-primary);">
+          Morning call
+        </a>
+      </div>
+
+      <!-- Header -->
+      <header class="site-header">
+        <div class="site-title-block">
+          <span class="badge badge-live">SOC briefing</span>
+          <h1 class="site-title">Daily SOC Morning Call</h1>
+          <p class="site-subtitle">
+            Curated, AI-assisted morning brief based on the last 24h of security news,
+            focused on operational impact for a critical SOC.
+          </p>
+        </div>
+      </header>
+
+      <!-- Layout principal: sidebar + conteúdo -->
+      <div class="layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+          <section class="sidebar-section">
+            <h2 class="sidebar-title">How this works</h2>
+            <p class="sidebar-help">
+              This page reads the prebuilt
+              <code>morning_call_YYYY-MM-DD.json</code> files under
+              <code>data/archive/</code> — generated daily from curated news items —
+              and renders a SOC-oriented morning call.
+            </p>
+          </section>
+
+          <section class="sidebar-section">
+            <h2 class="sidebar-title">Scope</h2>
+            <p class="sidebar-help">
+              The analysis focuses on:
+            </p>
+            <ul class="sidebar-help" style="padding-left: 18px; margin-top: 6px;">
+              <li>Exploitable &amp; high-impact CVEs</li>
+              <li>Ransomware and active campaigns</li>
+              <li>Critical vendor advisories</li>
+              <li>Financial sector and infra threats</li>
+            </ul>
+          </section>
+
+          <section class="sidebar-section">
+            <h2 class="sidebar-title">Tips for analysts</h2>
+            <p class="sidebar-help">
+              Use this brief as a starting point for:
+            </p>
+            <ul class="sidebar-help" style="padding-left: 18px; margin-top: 6px;">
+              <li>Shift handover discussions</li>
+              <li>Prioritizing hunts &amp; detections</li>
+              <li>Escalation notes for management</li>
+            </ul>
+          </section>
+        </aside>
+
+        <!-- Conteúdo principal -->
+        <main class="main-content">
+          <!-- Barra de controles (reutiliza filters-bar para look & feel) -->
+          <div class="filters-bar">
+            <div class="filters-left">
+              <div class="filter-group">
+                <span class="filter-label">Data source</span>
+                <span class="status-meta">
+                  JSON: <code>data/archive/morning_call_YYYY-MM-DD.json</code><br />
+                  Alias: <code>data/archive/morning_call_latest.json</code>
+                </span>
+              </div>
+            </div>
+
+            <div class="filters-right">
+              <div class="filter-group">
+                <span class="filter-label">Latest</span>
+                <button id="btn-load-latest" class="btn-primary">
+                  Load latest analysis
+                </button>
+              </div>
+
+              <div class="filter-group">
+                <span class="filter-label">History</span>
+                <div class="search-input-wrapper">
+                  <input
+                    type="date"
+                    id="previous-date"
+                    class="filter-input"
+                    />
+                  <button id="btn-load-previous" class="btn-primary">
+                    Load by date
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Status da análise carregada -->
+          <div class="status-bar" id="morning-status" style="margin-top: 4px;">
+            <div class="status-left">
+              <div class="status-title">
+                <span id="status-analysis-date">No analysis loaded</span>
+              </div>
+              <div class="status-meta" id="status-meta-line">
+                Select a date or load the latest morning call.
+              </div>
+            </div>
+            <div class="status-right" id="status-counts">
+              <!-- Populado via JS -->
+            </div>
+          </div>
+
+          <!-- Loading -->
+          <div class="loading" id="loading-block">
+            <div class="spinner"></div>
+            <span id="loading-text">Loading morning call…</span>
+          </div>
+
+          <!-- Highlights (links principais) -->
+          <div class="card" id="highlights-card" style="display: none; margin-top: 4px;">
+            <div class="card-top">
+              <div class="card-source">Key highlights (from curated items)</div>
+            </div>
+            <div class="card-body">
+              <ul id="highlights-list" class="card-body-text" style="padding-left: 18px; margin: 0;">
+                <!-- Populado via JS -->
+              </ul>
+            </div>
+          </div>
+
+          <!-- Texto completo do morning call -->
+          <div class="card" id="morning-card" style="margin-top: 8px;">
+            <div class="card-top">
+              <div class="card-source" id="morning-header-subtitle">
+                Morning call content
+              </div>
+            </div>
+            <div class="card-body">
+              <!-- Mantemos um preformatado simples; se quiser depois podemos plugar um renderer de Markdown -->
+              <pre id="morning-content" class="card-body-text" style="white-space: pre-wrap; margin: 0;">
+No analysis loaded yet. Click "Load latest analysis" to fetch the most recent morning call.
+              </pre>
+            </div>
+          </div>
+        </main>
+      </div>
+
+      <!-- Footer -->
+      <footer class="site-footer">
+        <p>
+          Generated daily from curated security feeds • S33R Security News Feed – SOC Morning Call
+        </p>
+      </footer>
+    </div>
+
+    <script>
+      const LATEST_URL = "data/archive/morning_call_latest.json";
+
+      const statusAnalysisDate = document.getElementById("status-analysis-date");
+      const statusMetaLine = document.getElementById("status-meta-line");
+      const statusCounts = document.getElementById("status-counts");
+      const loadingBlock = document.getElementById("loading-block");
+      const loadingText = document.getElementById("loading-text");
+      const highlightsCard = document.getElementById("highlights-card");
+      const highlightsList = document.getElementById("highlights-list");
+      const morningContent = document.getElementById("morning-content");
+      const morningHeaderSubtitle = document.getElementById("morning-header-subtitle");
+
+      function showLoading(message) {
+        loadingBlock.classList.remove("hidden");
+        loadingText.textContent = message || "Loading morning call…";
+      }
+
+      function hideLoading() {
+        loadingBlock.classList.add("hidden");
+      }
+
+      function formatDateForDisplay(isoDateStr) {
+        if (!isoDateStr) return "Unknown date";
+        // isoDateStr e.g. "2025-12-10"
+        try {
+          const d = new Date(isoDateStr);
+          return d.toISOString().slice(0, 10); // keep YYYY-MM-DD
+        } catch (e) {
+          return isoDateStr;
+        }
+      }
+
+      async function fetchMorningCall(url) {
+        showLoading("Loading morning call…");
+
+        try {
+          const resp = await fetch(url, { cache: "no-cache" });
+
+          if (!resp.ok) {
+            hideLoading();
+            statusAnalysisDate.textContent = "No analysis loaded";
+            statusMetaLine.textContent =
+              "Could not load analysis: HTTP " + resp.status + ". Check if the JSON for this date exists.";
+            statusCounts.textContent = "";
+            highlightsCard.style.display = "none";
+            morningContent.textContent =
+              "No analysis available for this date.\n\n" +
+              "Make sure the file exists under data/archive/morning_call_YYYY-MM-DD.json.";
+            return;
+          }
+
+          const data = await resp.json();
+          hideLoading();
+
+          const analysisDate = data.analysis_date || "";
+          const generatedAt = data.generated_at || "";
+          const windowHours = data.window_hours || 24;
+          const totalAll = data.total_items_in_window_all ?? data.total_items_in_window ?? 0;
+          const totalCurated = data.total_items_in_window_curated ?? data.total_items_in_window ?? 0;
+          const model = data.model || "unknown-model";
+
+          statusAnalysisDate.textContent =
+            "Morning call for " + formatDateForDisplay(analysisDate);
+          statusMetaLine.textContent =
+            "JSON generated at: " + generatedAt + " (window: last " + windowHours + "h, model: " + model + ")";
+
+          statusCounts.textContent =
+            "Items in window: " +
+            totalAll +
+            " total / " +
+            totalCurated +
+            " curated";
+
+          // Highlights
+          const highlights = Array.isArray(data.highlights) ? data.highlights : [];
+          highlightsList.innerHTML = "";
+          if (highlights.length > 0) {
+            highlightsCard.style.display = "block";
+            highlights.forEach((h) => {
+              const li = document.createElement("li");
+              const title = h.title || "(no title)";
+              const link = h.link || "#";
+              const source = h.source || "";
+              const curatedFlag = h.curated ? " [curated]" : "";
+
+              const a = document.createElement("a");
+              a.href = link;
+              a.target = "_blank";
+              a.rel = "noopener noreferrer";
+              a.textContent = title;
+              a.className = "card-title-link";
+
+              li.appendChild(a);
+
+              if (source || curatedFlag) {
+                const metaSpan = document.createElement("span");
+                metaSpan.style.fontSize = "11px";
+                metaSpan.style.color = "var(--text-muted)";
+                metaSpan.style.marginLeft = "6px";
+                metaSpan.textContent = source ? ` (${source}${curatedFlag})` : curatedFlag;
+                li.appendChild(metaSpan);
+              }
+
+              highlightsList.appendChild(li);
+            });
+          } else {
+            highlightsCard.style.display = "none";
+          }
+
+          // Conteúdo principal do morning call (markdown text)
+          const md =
+            data.morning_call_markdown ||
+            data.morning_call_text ||
+            "No morning call text found in JSON.";
+
+          morningHeaderSubtitle.textContent = "Morning call content";
+          morningContent.textContent = md;
+        } catch (err) {
+          console.error(err);
+          hideLoading();
+          statusAnalysisDate.textContent = "No analysis loaded";
+          statusMetaLine.textContent = "Error loading analysis (see console for details).";
+          statusCounts.textContent = "";
+          highlightsCard.style.display = "none";
+          morningContent.textContent = "Error loading morning call JSON.";
+        }
+      }
+
+      document.getElementById("btn-load-latest").addEventListener("click", () => {
+        fetchMorningCall(LATEST_URL);
+      });
+
+      document.getElementById("btn-load-previous").addEventListener("click", () => {
+        const input = document.getElementById("previous-date");
+        const value = input.value; // YYYY-MM-DD
+        if (!value) {
+          alert("Select a date first.");
+          return;
+        }
+
+        const url = `data/archive/morning_call_${value}.json`;
+        fetchMorningCall(url);
+      });
+
+      // Carrega o último automaticamente ao abrir a página
+      window.addEventListener("DOMContentLoaded", () => {
+        fetchMorningCall(LATEST_URL);
+      });
+    </script>
+  </body>
+</html>
