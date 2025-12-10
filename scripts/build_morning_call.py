@@ -55,7 +55,7 @@ DEFAULT_WINDOW_HOURS = int(os.getenv("MORNING_CALL_WINDOW_HOURS", "24"))
 MAX_ITEMS_FOR_CONTEXT = int(os.getenv("MORNING_CALL_MAX_ITEMS", "120"))
 
 # Modelo da OpenAI usado para o morning call
-OPENAI_MODEL = os.getenv("MORNING_CALL_MODEL", "gpt-5.1-mini")
+OPENAI_MODEL = os.getenv("MORNING_CALL_MODEL", "gpt-5.1")
 
 # Onde salvamos os morning calls (segue padrão de promo_filtered_*)
 OUTPUT_BASE_DIR = Path(os.getenv("MORNING_CALL_OUTPUT_DIR", "data/archive"))
