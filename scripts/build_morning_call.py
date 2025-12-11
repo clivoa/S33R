@@ -32,7 +32,7 @@ from openai import OpenAI, APIError
 NEWS_RECENT_PATH = Path(os.getenv("NEWS_JSON_PATH", "data/news_recent.json"))
 
 DEFAULT_WINDOW_HOURS = int(os.getenv("MORNING_CALL_WINDOW_HOURS", "24"))
-MAX_ITEMS_FOR_CONTEXT = int(os.getenv("MORNING_CALL_MAX_ITEMS", "120"))
+MAX_ITEMS_FOR_CONTEXT = int(os.getenv("MORNING_CALL_MAX_ITEMS", "100"))
 OPENAI_MODEL = os.getenv("MORNING_CALL_MODEL", "gpt-5.1")
 OUTPUT_BASE_DIR = Path(os.getenv("MORNING_CALL_OUTPUT_DIR", "data/archive"))
 
@@ -233,24 +233,43 @@ def call_openai_morning_call(model: str, system_prompt: str, user_prompt: str) -
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
             ],
-            max_output_tokens=2000,
+            # aumentamos para dar mais espaço para o texto
+            max_output_tokens=int(os.getenv("MORNING_CALL_MAX_OUTPUT_TOKENS", "3000")),
         )
 
-        # extract text
+        # Responses API: texto principal costuma vir aqui
         try:
-            return resp.output[0].content[0].text.strip()
+            text = resp.output[0].content[0].text.strip()
         except Exception:
-            return "### Morning call unavailable\n(No text returned by GPT-5.1)"
+            text = ""
+
+        if not text:
+            return (
+                "### Morning call unavailable\n\n"
+                "No text returned by the model. Check API logs or try again with a smaller context window."
+            )
+
+        # Heurística simples: se termina em heading/bullet quebrado, avisa que pode estar truncado
+        if text.strip().endswith("-") or text.strip().endswith("–"):
+            text += (
+                "\n\n---\n\n"
+                "**[Note]** The morning call text may have been truncated due to output length limits. "
+                "Consider reducing the number of items in context or increasing `max_output_tokens`."
+            )
+
+        return text
 
     except Exception as e:
-        # tratamento de quota
-        if hasattr(e, "code") and e.code == "insufficient_quota":
+        # se for quota, devolve mensagem amigável
+        if hasattr(e, "code") and getattr(e, "code") == "insufficient_quota":
             print("[WARN] insufficient_quota from OpenAI")
             return (
                 "### Morning call unavailable\n\n"
                 "OpenAI API quota exceeded — morning call could not be generated today."
             )
+        # demais erros, deixa estourar
         raise
+
 
 
 
