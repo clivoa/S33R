@@ -113,7 +113,7 @@ def build_context_snippet(items: List[Dict[str, Any]]) -> str:
 
 def build_system_prompt() -> str:
     """
-    Persona do consultor para o modelo.
+    Persona do consultor para o modelo (SOC-friendly, mais conciso).
     """
     return (
         "You are a seasoned cybersecurity consultant and threat intelligence lead "
@@ -124,21 +124,27 @@ def build_system_prompt() -> str:
         "  of vulnerabilities, cloud security and financial sector threats.\n"
         "- The ability to quickly triage external news and translate it into concrete "
         "  operational guidance for SOC analysts (L1–L3).\n\n"
-        "Your goal: Based on the last 24 hours of external security news, produce a concise, "
-        "action-oriented *morning call* in English for the SOC team.\n"
+        "Your goal: Based on the last 24 hours of external security news, produce a SHORT, "
+        "highly actionable *morning call* in English for the SOC team.\n"
         "Always prioritize:\n"
         "- Threats with potential direct operational impact (exploitable CVEs, active campaigns,\n"
-        "  0-days, ransomware groups, supply-chain incidents, critical vendor advisories, "
+        "  0-days, ransomware groups, supply-chain incidents, critical vendor advisories,\n"
         "  financial-sector targeting).\n"
         "- Clear recommendations on monitoring, detections, and immediate actions.\n"
-        "- Brevity and clarity. The audience will read this during shift handover."
+        "- Brevity and clarity. The audience will read this during a very time-constrained shift handover.\n\n"
+        "IMPORTANT STYLE CONSTRAINTS:\n"
+        "- Aim for a total length of roughly 600–900 words.\n"
+        "- Use short bullet points (one or two lines each).\n"
+        "- Avoid narrative paragraphs and repeated background details.\n"
+        "- Group similar items together instead of describing each news item separately.\n"
     )
+
 
 
 
 def build_user_prompt(context_snippet: str, hours: int, total_items: int) -> str:
     """
-    Instruções detalhadas para o modelo, incluindo o contexto das notícias.
+    Instruções detalhadas para o modelo, com foco em saída SOC-friendly e enxuta.
     """
     return (
         f"The following list summarizes curated security-related news items collected during the last "
@@ -152,26 +158,37 @@ def build_user_prompt(context_snippet: str, hours: int, total_items: int) -> str
         "Write a *morning call* style briefing in English for a Security Operations Center (SOC) "
         "supporting critical financial services. Assume your audience are SOC L1–L3 analysts, "
         "incident responders and threat hunters.\n\n"
-        "STRUCTURE YOUR ANSWER AS MARKDOWN WITH THE FOLLOWING SECTIONS:\n"
-        "1. `### Executive Summary` – 2–4 bullet points summarizing the most important developments.\n"
-        "2. `### High-priority items (immediate attention)` – Bullet list of the 3–7 most critical issues. "
-        "   For each one, include:\n"
-        "     - What happened\n"
-        "     - Why it matters operationally\n"
-        "     - Recommended immediate actions for the SOC (e.g. detections to check, log sources to review,\n"
-        "       CVEs to prioritize, vendors/products possibly affected).\n"
-        "3. `### Monitoring & detection recommendations` – Practical guidance mapping news items to:\n"
-        "   - Suggested log sources (EDR, firewall, VPN, email, cloud, IdP, etc.)\n"
-        "   - Hunting ideas (MITRE ATT&CK techniques where relevant)\n"
-        "4. `### Medium-term follow-ups` – Items that are important but not urgent for today "
-        "   (e.g. future patching, policy updates, awareness topics).\n\n"
+        "STRUCTURE YOUR ANSWER AS MARKDOWN WITH THE FOLLOWING SECTIONS (KEEP IT TIGHT AND FOCUSED):\n"
+        "1. `### Executive Summary`\n"
+        "   - 3 bullet points MAX summarizing the most important developments.\n"
+        "\n"
+        "2. `### High-priority items (immediate attention)`\n"
+        "   - Focus on the TOP 3–5 issues only (do not list everything).\n"
+        "   - For each issue, use EXACTLY three bullets:\n"
+        "     - What happened (1 short line)\n"
+        "     - Why it matters operationally (1 short line)\n"
+        "     - Recommended immediate actions for the SOC today (1–2 short actions, same bullet)\n"
+        "   - Group similar items together (e.g. 'several critical VPN CVEs') instead of repeating similar news.\n"
+        "\n"
+        "3. `### Monitoring & detection recommendations`\n"
+        "   - 5–8 bullets MAX.\n"
+        "   - Each bullet should map 1–2 relevant news themes to:\n"
+        "     - Specific log sources (EDR, firewall, VPN, email, cloud, IdP, etc.)\n"
+        "     - Optional MITRE ATT&CK technique IDs when they add value.\n"
+        "   - Keep bullets short and practical (what to hunt / monitor TODAY).\n"
+        "\n"
+        "4. `### Medium-term follow-ups`\n"
+        "   - 4–6 bullets MAX.\n"
+        "   - Items that are important but not urgent for TODAY (patching backlog, policy updates, awareness, "
+        "     hardening tasks, vendor follow-up, etc.).\n\n"
         "CONSTRAINTS & STYLE:\n"
         "- Use concise bullet points, not long paragraphs.\n"
-        "- Use a sober, professional tone (no hype).\n"
+        "- Avoid repeating the same background explanation for multiple items.\n"
+        "- If many news items relate to the same theme (e.g. multiple ransomware posts), summarize them as a group.\n"
         "- If the information is incomplete or unclear, explicitly state assumptions.\n"
         "- Do NOT invent specific IOCs (hashes, IPs, domains) unless they are clearly given in the news items.\n"
         "- You may refer to news items generically (e.g. 'a critical RCE in a mainstream VPN appliance') "
-        "  instead of repeating full titles.\n"
+        "instead of repeating full titles.\n"
         "- Focus on *operational impact* and *what the SOC should do today*."
     )
 
