@@ -1,110 +1,274 @@
-<img width="1374" height="569" alt="image" src="https://github.com/user-attachments/assets/25ebd1ad-f1a8-4dbb-9ff2-2e1bcc6d9649" />
-
 # S33R Security News Feed
 
-A **GitHub Pages–friendly security news platform** that aggregates, normalizes, archives, and visualizes cybersecurity news from hundreds of public RSS feeds.
+[![Update News JSON](https://github.com/clivoa/S33R/actions/workflows/update_news_json.yml/badge.svg)](https://github.com/clivoa/S33R/actions/workflows/update_news_json.yml)
+[![Build News Archive](https://github.com/clivoa/S33R/actions/workflows/build_news_archive.yml/badge.svg)](https://github.com/clivoa/S33R/actions/workflows/build_news_archive.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+![Python](https://img.shields.io/badge/Python-3.11%2B-brightgreen)
 
-This project delivers:
+A fully automated, open-source–friendly **cybersecurity news aggregation, normalization, archiving, and analytics platform** designed to run entirely on **GitHub Pages** + **GitHub Actions**, without servers or databases.
 
-- A fast, filterable **24h News Feed**
-- A complete **Historical Archive** (monthly + yearly)
-- An **Annual Overview Dashboard** with `<canvas>` charts
-- Automated backend powered by **GitHub Actions + Python**
-- Fully static front-end optimized for GitHub Pages
-
-Everything runs without servers, APIs, or databases — just HTML, CSS, JS, and prebuilt JSON.
+S33R collects content from hundreds of RSS feeds, classifies it using Smart Groups, builds trend analytics, generates historical archives, and provides multiple front-end dashboards for analysts, researchers, and OSINT practitioners.
 
 ---
 
-## 🚀 Features
+## 📌 Executive Summary
 
-### 🔥 Live-style News Feed (`index.html`)
-- Displays only the most recent **24 hours** of security news  
-- Category filters (Crypto, DFIR, Malware, Threat Intel, CVEs, etc.)  
-- Full-text search (title, summary, source)  
-- Infinite scroll (progressive card loading)  
-- Dracula-inspired dark theme  
-- Blazing fast thanks to a **prebuilt JSON cache**
+S33R provides:
 
----
+- A fast, filterable **News Board** fed by a prebuilt JSON cache  
+- **Smart Group classification** for high-signal grouping  
+- **Curated intelligence flags**  
+- **Trend analytics** (keywords, vendors, actor timelines, CVEs, daily volume)  
+- **Historical archive engine** (monthly + yearly JSON)  
+- **Signal-filtered monthly packs**  
+- Optional **automated briefing generation** (LLM-agnostic)  
+- 100% static deployment compatible with GitHub Pages  
 
-### 📦 Historical Archive (`archive.html`)
-Browse all past content with:
+The system targets:
 
-- **Monthly archives** from `/data/archive/monthly/YYYY/YYYY-MM.json`
-- Search within the archive (title, summary, source)
-- Group-by-source toggle
-- Pagination
-- Automatic statistics for any period:
-  - total items  
-  - number of sources  
-  - date range  
-  - top sources  
+- Cybersecurity analysts  
+- Threat intelligence teams  
+- Researchers and educators  
+- OSINT practitioners  
+- Community threat monitoring projects  
 
 ---
 
-### 📊 Annual Overview Dashboard (`archive-overview.html`)
-A fully static dashboard built with **vanilla JS + `<canvas>`**, no libraries:
-
-- Monthly activity chart (bar chart)
-- Top sources (horizontal bar chart)
-- Summary metadata:
-  - total items in the year  
-  - number of sources  
-  - first and last publication date  
-- Loads from `/data/archive/yearly/YYYY.json`
-
-Perfect for analyzing feed performance, seasonality, and content trends.
-
----
-
-## ⚙️ Automated Backend Architecture
-
-Two Python pipelines run via GitHub Actions.
-
----
-
-### **1. build_news_json.py — 24h Feed Generator**
-Creates the file used by the homepage:
+## 🏗 Architecture Overview
 
 ```
+RSS Feeds → Python ETL → JSON Datasets → GitHub Pages → Dashboards (HTML/JS)
+```
+
+### Components
+
+- Python ingestion & data processing  
+- GitHub Actions (automation & scheduling)  
+- Static JSON datasets under `data/`  
+- Dashboards built with HTML + JavaScript + Canvas  
+
+All functionality is delivered without servers or databases.
+
+---
+
+## 🔁 Data Flow
+
+```
+sec_feeds.xml
+     ↓
+build_news_json.py
+     ↓
 data/news_recent.json
+     ↓
+news.html dashboard
+     ↓
+build_news_archive.py → monthly/yearly archive + signal-filtered packs
+     ↓
+build_trends_json.py → data/trends.json
+     ↓
+trend.html analytics dashboard
 ```
 
-Process:
-1. Reads feeds from `sec_feeds.xml` (OPML).
-2. Fetches and normalizes all RSS entries.
-3. Deduplicates by link.
-4. Keeps only entries from the last **24 hours**.
-5. Saves compact JSON for fast front-end lookup.
+Optional:
+```
+curated items → LLM of your choosing → briefing JSON → morning.html
+```
 
-Triggered by:
+## High-Level Architecture
+
+```mermaid
+flowchart LR
+    A[RSS Feeds] --> B[build_news_json.py]
+    B --> C[data/news_recent.json]
+    C --> D[news.html Dashboard]
+
+    C --> E[build_news_archive.py]
+    E --> F[data/archive/monthly & yearly]
+
+    C --> G[build_trends_json.py]
+    G --> H[data/trends.json]
+    H --> I[trend.html Dashboard]
+
+    C --> J[Optional: build_briefing.py]
+    J --> K[data/archive/briefing_latest.json]
+    K --> L[morning.html]
+```
+
+## ETL Pipeline Overview
+
+```mermaid
+sequenceDiagram
+    participant FEEDS as RSS Feeds
+    participant INGEST as build_news_json.py
+    participant RECENT as news_recent.json
+    participant ARCH as build_news_archive.py
+    participant TRENDS as build_trends_json.py
+
+    FEEDS->>INGEST: Fetch + normalize entries
+    INGEST->>RECENT: Write JSON (smart groups, curated)
+    RECENT->>ARCH: Merge into monthly/yearly archives
+    RECENT->>TRENDS: Compute trends (keywords, CVEs, actors)
+```
+
+## Front-End Rendering Flow
+
+```mermaid
+flowchart TD
+    A[news.html] --> B[Fetch news_recent.json]
+    B --> C[Render smart groups]
+    C --> D[Infinite scroll + filters]
+    E[trend.html] --> F[Fetch trends.json]
+    F --> G[Render charts - ChartJS]
+```
+
+
+
+---
+
+## 📦 JSON Outputs
+
+### 🔹 `data/news_recent.json`
+Contains normalized entries enriched with:
+- metadata (`generated_at`, `days_back`, `total_items`)
+- smart groups  
+- curated flag  
+
+### 🔹 `data/archive/*`
+- Monthly and yearly JSON archives  
+- Signal-filtered monthly packs  
+
+### 🔹 `data/trends.json`
+Holds data for:
+- daily volume  
+- smart group distribution  
+- trending keywords  
+- vendor activity  
+- CVE presence  
+- threat actor timelines  
+
+---
+
+## 🧠 Smart Groups Classification Engine
+
+Keyword-driven grouping applied at ingestion:
+
+- Ransomware  
+- CVEs / Vulnerabilities  
+- Exploits / PoC  
+- Threat Actors  
+- Cloud Security  
+- Vendor-specific categories (Microsoft, Cisco, Palo Alto, CrowdStrike…)  
+- Crypto / Web3  
+- Malware families  
+- Supply chain / software components  
+- Initial access techniques  
+
+These categories power both the News Board and Trend Analytics.
+
+---
+
+## 🎯 Curated Intelligence Layer
+
+S33R includes a heuristic system that marks items as **curated** when they match high-signal patterns:
+
+- 0-day vulnerabilities  
+- Active exploitation  
+- Ransomware group announcements  
+- Supply-chain compromise  
+- Large-scale cyberattacks  
+- Cloud/SaaS breach reports  
+
+Curated items can optionally be consumed by an automated briefing generator.
+
+---
+
+## 📊 Trend Analytics (trend.html)
+
+Trend analytics generated by `scripts/build_trends_json.py` include:
+
+- Daily news volume timeline  
+- Top categories (smart groups) per window  
+- Trending keywords (stopword-filtered)  
+- Vendor activity  
+- Trending security terms  
+- CVE occurrence rankings  
+- Threat actor daily timelines  
+
+Supported windows:
+- Last 24h  
+- Last 7 days  
+- Last 30 days  
+- Last 90 days  
+
+The dashboard dynamically updates charts when switching windows.
+
+---
+
+## 🖥 Dashboards
+
+### 📰 `news.html`
+- Live search (updates as you type)  
+- Smart group and category filters  
+- Infinite scroll  
+- Displays generation metadata  
+
+### 📚 `archive.html`
+- Browse monthly and yearly archives  
+- Search historical data  
+- Group entries by source  
+
+### 📈 `trend.html`
+- Chart.js visualizations  
+- Window selector  
+- Insights into vendors, actors, CVEs, keywords  
+
+### ☀️ `morning.html` (Optional)
+Renders an optional daily briefing generated by an LLM chosen by the user.  
+No AI provider is required by default.
+
+---
+
+## 🤖 Optional: Automated Briefing (LLM-agnostic)
+
+S33R supports an optional module for generating a **cybersecurity daily briefing**.
+
+- Disabled by default  
+- Works with **any** LLM provider (OpenAI, Anthropic, Gemini, local models, etc.)  
+- Developers define the persona, structure, tone, and summary rules  
+- Friendly for research, newsletters, or automated reporting workflows  
+
+Outputs:
 
 ```
-.github/workflows/update_news_json.yml
+data/archive/briefing_YYYY-MM-DD.json
+data/archive/briefing_latest.json
+```
+
+Example workflow uses environment variables like:
+
+```yaml
+# Optional
+# LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+# LLM_MODEL: "provider/model-name"
 ```
 
 ---
 
-### **2. build_news_archive.py — Archive Builder**
-Maintains long-term historical storage:
+## ⚙ GitHub Actions Automation
 
-```
-data/archive/
-  yearly/YYYY.json
-  monthly/YYYY/YYYY-MM.json
-```
+### `update_news_json.yml` (Hourly)
+- Builds `news_recent.json`  
+- Creates signal-filtered promo fragments  
 
-Logic:
-- Loads the latest `news_recent.json`
-- Sorts, deduplicates, merges incrementally
-- Commits new/updated JSON files back to the repository
+### `build_news_archive.yml` (Daily)
+- Updates monthly and yearly archives  
+- Consolidates signal-filtered packs  
+- Rebuilds `trends.json`  
 
-Triggered by:
+### `briefing.yml` (Optional)
+- Runs an LLM-powered daily briefing if configured  
 
-```
-.github/workflows/update_news_archive.yml
-```
+All workflows run with standard GitHub Actions runners.
 
 ---
 
@@ -113,107 +277,93 @@ Triggered by:
 ```
 S33R/
 │
-├── index.html                  # Main 24h news feed
-├── archive.html                # Monthly archive UI
-├── archive-overview.html       # Annual visualization dashboard
+├── index.html
+├── news.html
+├── archive.html
+├── archive-overview.html
+├── trend.html
+├── morning.html           # Optional briefing UI
 │
-├── styles.css                  # Dracula-inspired theme
+├── styles.css
 │
 ├── data/
-│   ├── news_recent.json        # Auto-generated (last 24h)
+│   ├── news_recent.json
+│   ├── trends.json
 │   └── archive/
-│       ├── yearly/2025.json
-│       └── monthly/2025/2025-11.json
+│       ├── yearly/
+│       ├── monthly/
+│       └── promo/
+│           └── monthly/
 │
 ├── scripts/
-│   ├── build_news_json.py      # Generates recent JSON cache
-│   └── build_news_archive.py   # Builds monthly/yearly history
+│   ├── build_news_json.py
+│   ├── build_news_archive.py
+│   ├── build_trends_json.py
+│   └── build_briefing.py   # Generic LLM summarizer (optional)
+│
+├── sec_feeds.xml
 │
 └── .github/
     └── workflows/
         ├── update_news_json.yml
-        └── update_news_archive.yml
+        ├── build_news_archive.yml
+        └── briefing.yml     # Optional
 ```
 
 ---
 
-## 🔧 Customization
+## 🧪 Local Development
 
-### Change the time window (default: 24 hours)
-Edit in `scripts/build_news_json.py`:
-
-```python
-DAYS_BACK = 1
-```
-
-### Add or remove RSS feeds  
-Edit:
-
-```
-sec_feeds.xml
-```
-
-(OPML format supports categories, labels, nesting)
-
-### Adjust categories  
-Modify in `index.html`:
-
-- category buttons  
-- `TYPE_LABELS` mapping  
-
-### Tweak styling  
-Edit:
-
-```
-styles.css
-```
-
-The UI uses CSS variables (`--bg-elevated`, `--accent`, etc.) for easy theme mods.
-
----
-
-## 🖥️ Local Preview
-
-Serve the repository locally:
+Clone:
 
 ```bash
+git clone https://github.com/clivoa/S33R.git
 cd S33R
+```
+
+Run pipelines manually:
+
+```bash
+python scripts/build_news_json.py
+python scripts/build_news_archive.py
+python scripts/build_trends_json.py
+```
+
+Serve locally:
+
+```bash
 python -m http.server 8000
 ```
 
-Open:
+---
 
-```
-http://localhost:8000
-```
+## 🧠 Example Use Cases
+
+- OSINT monitoring  
+- Cybersecurity research  
+- CVE/exploit tracking  
+- Vendor advisory analysis  
+- Community threat dashboards  
+- Automated newsletters  
+- Historical dataset building  
 
 ---
 
-## 🧠 Why this architecture?
+## 🛣 Roadmap
 
-- No CORS problems (feeds fetched server-side via Actions)
-- Frontend loads instantly thanks to prebuilt JSON
-- Historical data is always preserved and updated incrementally
-- GitHub Pages works perfectly with static JSON + JS
-- No external dependencies or backend servers
-
----
-
-## 📌 Optional Enhancements (future roadmap)
-
-- Source reliability scoring  
-- Per-category analytics  
-- Tag cloud / topic extraction  
-- User preferences stored in localStorage  
-- Light/dark theme toggle  
+- ML-based feed quality scoring  
+- Automatic topic clustering  
+- Heatmaps for actor/CVE correlation  
+- Bookmarks & saved filters  
+- Multi-tenant feed profiles  
+- Exportable snapshots (PDF/MD)  
 
 ---
 
-## 💬 Feedback & Contributions
+## 📜 License
 
-Issues and PRs are welcome.  
-Feel free to fork, adapt, or reuse this architecture for your own OSINT / Threat Intel dashboards.
+MIT — free for personal, commercial, or research use.
 
 ---
 
-**S33R — Security News. Sorted. Simplified. Static.**
+**S33R — Open Cyber Threat Intelligence, Automated and Accessible.**
