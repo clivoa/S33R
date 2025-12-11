@@ -10,6 +10,28 @@
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
     <style>
+        /* Destaques para labels tipo "What:", "Why it matters:" etc */
+        .mc-label {
+          display: inline-block;
+          padding: 1px 8px;
+          margin-right: 4px;
+          border-radius: 999px;
+          background: rgba(189,147,249,0.22);
+          color: var(--accent-strong);
+          font-size: 11px;
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
+        }
+
+        /* Ajuste leve para o texto logo após a label */
+        .markdown-body li {
+          line-height: 1.6;
+        }
+
+        /* Se a label estiver no começo do parágrafo, dá um respiro */
+        .markdown-body p > .mc-label:first-child {
+          margin-right: 6px;
+        }
 
       /* PRINT-FRIENDLY STYLES */
       @media print {
@@ -128,29 +150,6 @@
         #highlights-card,
         #morning-card {
           page-break-inside: avoid;
-        }
-
-        /* Destaques para labels tipo "What:", "Why it matters:" etc */
-        .mc-label {
-          display: inline-block;
-          padding: 1px 8px;
-          margin-right: 4px;
-          border-radius: 999px;
-          background: rgba(189,147,249,0.22);
-          color: var(--accent-strong);
-          font-size: 11px;
-          text-transform: uppercase;
-          letter-spacing: 0.04em;
-        }
-
-        /* Ajuste leve para o texto logo após a label */
-        .markdown-body li {
-          line-height: 1.6;
-        }
-
-        /* Se a label estiver no começo do parágrafo, dá um respiro */
-        .markdown-body p > .mc-label:first-child {
-          margin-right: 6px;
         }
 
       }
@@ -446,7 +445,7 @@
         window.print();
       });
       
-      function highlightSocLabels() {
+     function highlightSocLabels() {
       const LABELS = [
         "What:",
         "What happened:",
@@ -463,20 +462,23 @@
 
       strongNodes.forEach((node) => {
         const text = (node.textContent || "").trim();
+        if (!text) return;
 
-        // Normaliza para comparação sem case e sem espaço final
+        // normaliza para lower case, sem múltiplos espaços
         const normalized = text.replace(/\s+/g, " ").toLowerCase();
 
-        LABELS.forEach((labelRaw) => {
-          const labelNorm = labelRaw.replace(/\s+/g, " ").toLowerCase();
+        for (const labelRaw of LABELS) {
+          const base = labelRaw.replace(/:$/, "").toLowerCase(); // tira dois pontos do fim
 
-          // Se o <strong> for exatamente a label (com ou sem espaço extra)
-          if (normalized === labelNorm || normalized === labelNorm.replace(/:$/, "")) {
+          // se o texto começa com o label base (ex: "what happened")
+          if (normalized.startsWith(base)) {
             node.classList.add("mc-label");
+            break;
           }
-        });
+        }
       });
     }
+
 
       window.addEventListener("DOMContentLoaded", () => {
         fetchMorningCall(LATEST_URL);
