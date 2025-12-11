@@ -10,28 +10,28 @@
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
     <style>
-        /* Destaques para labels tipo "What:", "Why it matters:" etc */
-        .mc-label {
-          display: inline-block;
-          padding: 1px 8px;
-          margin-right: 4px;
-          border-radius: 999px;
-          background: rgba(189,147,249,0.22);
-          color: var(--accent-strong);
-          font-size: 11px;
-          text-transform: uppercase;
-          letter-spacing: 0.04em;
-        }
+      /* Destaques para labels tipo "What:", "Why it matters:" etc */
+      .mc-label {
+        display: inline-block;
+        padding: 1px 8px;
+        margin-right: 4px;
+        border-radius: 999px;
+        background: rgba(189,147,249,0.22);
+        color: var(--accent-strong);
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
 
-        /* Ajuste leve para o texto logo após a label */
-        .markdown-body li {
-          line-height: 1.6;
-        }
+      /* Ajuste leve para o texto logo após a label */
+      .markdown-body li {
+        line-height: 1.6;
+      }
 
-        /* Se a label estiver no começo do parágrafo, dá um respiro */
-        .markdown-body p > .mc-label:first-child {
-          margin-right: 6px;
-        }
+      /* Se a label estiver no começo do parágrafo, dá um respiro */
+      .markdown-body p > .mc-label:first-child {
+        margin-right: 6px;
+      }
 
       /* PRINT-FRIENDLY STYLES */
       @media print {
@@ -447,37 +447,62 @@
       
      function highlightSocLabels() {
       const LABELS = [
-        "What:",
-        "What happened:",
-        "Why it matters:",
-        "Why it matters operationally:",
-        "Recommended immediate actions:",
-        "Recommended actions:",
-        "Log sources:",
-        "Log source:",
-        "Focus:",
+        "What",
+        "What happened",
+        "Why it matters",
+        "Why it matters operationally",
+        "Recommended immediate actions",
+        "Recommended actions",
+        "Log sources",
+        "Log source",
+        "Focus",
       ];
 
-      const strongNodes = morningContent.querySelectorAll("strong, b");
+      const lis = morningContent.querySelectorAll("li");
 
-      strongNodes.forEach((node) => {
-        const text = (node.textContent || "").trim();
-        if (!text) return;
+      lis.forEach((li) => {
+        // pega o primeiro nó de texto dentro do <li>
+        const firstNode = li.firstChild;
+        if (!firstNode || firstNode.nodeType !== Node.TEXT_NODE) {
+          return;
+        }
 
-        // normaliza para lower case, sem múltiplos espaços
-        const normalized = text.replace(/\s+/g, " ").toLowerCase();
+        const originalText = firstNode.textContent || "";
+        const trimmed = originalText.trim();
+        if (!trimmed) return;
 
-        for (const labelRaw of LABELS) {
-          const base = labelRaw.replace(/:$/, "").toLowerCase(); // tira dois pontos do fim
+        for (const baseLabel of LABELS) {
+          // monta regex do tipo:
+          // ^\s*(What|What happened)\s*:?\s*(resto...)
+          const pattern = new RegExp(
+            "^\\s*(" +
+              baseLabel.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") +
+              ")\\s*:?\\s*(.*)$",
+            "i"
+          );
 
-          // se o texto começa com o label base (ex: "what happened")
-          if (normalized.startsWith(base)) {
-            node.classList.add("mc-label");
-            break;
+          const match = trimmed.match(pattern);
+          if (match) {
+            const labelText = match[1]; // ex: "What", "Why it matters"
+            const rest = match[2];      // o resto da frase
+
+            const labelSpan = document.createElement("span");
+            labelSpan.className = "mc-label";
+            // opcional: exibir com dois pontos e maiúsculo
+            labelSpan.textContent = labelText.toUpperCase() + ":";
+
+            // insere o span antes do primeiro nó de texto
+            li.insertBefore(labelSpan, firstNode);
+
+            // ajusta o texto original para conter só o resto da frase
+            firstNode.textContent = rest ? " " + rest : "";
+
+            break; // já achou label, não precisa testar os outros
           }
         }
       });
     }
+
 
 
       window.addEventListener("DOMContentLoaded", () => {
