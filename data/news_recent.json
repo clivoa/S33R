@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-02-03T10:09:58.384246+00:00",
+  "generated_at": "2026-02-03T11:08:10.300692+00:00",
   "days_back": 30,
-  "total_items": 8436,
+  "total_items": 8447,
   "items": [
     {
       "title": "Secure Your Spot at RSAC 2026 Conference",
@@ -12,6 +12,132 @@
       "type_label": "General Security & Blogs",
       "published": "2026-03-23T11:00:00+00:00",
       "published_ts": 1774263600,
+      "smart_groups": [],
+      "curated": false
+    },
+    {
+      "title": "Kasada Raises $20 Million for Anti-Bot Expansion",
+      "summary": "The company will invest in market expansion and accelerating product capabilities. The post Kasada Raises $20 Million for Anti-Bot Expansion appeared first on SecurityWeek .",
+      "link": "https://www.securityweek.com/kasada-raises-20-million-for-anti-bot-expansion/",
+      "source": "SecurityWeek",
+      "type": "general",
+      "type_label": "General Security & Blogs",
+      "published": "2026-02-03T11:00:00+00:00",
+      "published_ts": 1770116400,
+      "smart_groups": [],
+      "curated": false
+    },
+    {
+      "title": "Supporting Wayland\u2019s XDG activation protocol with Gtk/Glib",
+      "summary": "One of the biggest sore points with Wayland is its focus stealing protection. The idea is good: an application should not be able to bring itself into focus at an unexpected time, only when the currently active application allows it. Support is still lacking however, which might also be due to Gtk/Glib implementing the required XDG activation protocol but not really documenting it. It took me a bit of time to figure this out without any public information, this article will hopefully make things easier for other people. Contents How the XDG activation protocol works State of implementation in Gtk/Glib Starting applications via Gio.AppInfo Starting applications by other means How the XDG activation protocol works The main idea behind the XDG activation protocol is that focus transfer from one application to another requires consent. With X11 a file manager could just launch the browser for an HTML file and the browser would immediately take focus, even if that browser was already running. With Wayland the file manager has to indicate that the browser is allowed to take focus. It does that by giving the browser its XDG activation token, typically via XDG_ACTIVATION_TOKEN environment variable. The browser can then use that activation token to prove consent and take focus. For this to work the protocol has to be supported on both ends: the file manager must know how to retrieve an activation token and pass it on via XDG_ACTIVATION_TOKEN environment variable, and the browser has to know how to use that token. State of implementation in Gtk/Glib The receiving side has been implemented in Gtk with merge request 7118 and is available starting with Gtk 4.14.6 and 4.15.1. This is the unproblematic part: it is handled automatically and doesn\u2019t require the application developer to change anything. The sending side has been implemented in Gtk with merge request 3502 and Glib with merge request 3090 , so it is available starting with Gtk 4.10.0 and Glib 2.75.1. This is the part which might require some changes to the application \u2013 changes that I couldn\u2019t find documented anywhere. Starting applications via Gio.AppInfo When a Gtk-based file manager wants to open an HTML file, this usually involves Gio.AppInfo and g_app_info_launch or similar: GAppInfo * app_info = g_app_info_get_default_for_type ( \"text/html\" , TRUE ); GList * list = NULL ; list = g_list_append ( list , \"https://example.com/\" ); GdkDisplay * display = gdk_display_get_default (); GdkAppLaunchContext * context = ( display ? gdk_display_get_app_launch_context ( display ) : NULL ); g_app_info_launch_uris ( app_info , list , G_APP_LAUNCH_CONTEXT ( context ), NULL ); g_list_free ( list ); This should normally transfer focus to the browser automatically. That app launch context parameter is important however, you cannot omit it. Also, this will only work if the desktop file corresponding to the AppInfo has the StartupNotify key set \u2013 the Gtk developers decided to merge the handling of X11 startup notifications and XDG activations. Starting applications by other means But what if you are using something like execve function to start applications? You can still set XDG_ACTIVATION_TOKEN environment variable manually. It\u2019s important to know however that the token has to be retrieved via g_app_launch_context_get_startup_notify_id (please pardon my C): char ** extend_env ( char ** env , char * value ) { int env_size = 0 ; while ( env [ env_size ]) env_size ++ ; char ** new_env = malloc (( env_size + 2 ) * sizeof ( char * )); memcpy ( new_env , env , env_size * sizeof ( char * )); new_env [ env_size ++ ] = value ; new_env [ env_size ++ ] = NULL ; return new_env ; } char * argv [] = { \"/usr/bin/firefox\" , \"https://example.com/\" , NULL }; char * default_env [] = { NULL }; char ** env = default_env ; bool should_free_env = FALSE ; GdkDisplay * display = gdk_display_get_default (); if ( display ) { GdkAppLaunchContext * context = gdk_display_get_app_launch_context ( display ); env = g_app_launch_context_get_environment ( G_APP_LAUNCH_CONTEXT ( context )); char * sn_id = g_app_launch_context_get_startup_notify_id ( G_APP_LAUNCH_CONTEXT ( context ), NULL , NULL ); if ( sn_id ) { char token_var [ 256 ]; snprintf ( token_var , sizeof ( token_var ), \"XDG_ACTIVATION_TOKEN=%s\" , sn_id ); env = extend_env ( env , token_var ); should_free_env = TRUE ; } } if ( ! fork ()) execve ( argv [ 0 ], argv , env ); if ( should_free_env ) free ( env ); As before, it\u2019s worth noting that Gtk developers decided to merge the handling of X11 startup notifications and XDG activations, hence the function name to retrieve the token. The last two parameters of g_app_launch_context_get_startup_notify_id are unused for Wayland, these are only relevant for X11 startup notifications. If you pass in an AppInfo instance here you might actually get an X11 notification ID back that you should write into the DESKTOP_STARTUP_ID environment variable. However, if you have an AppInfo instance it should be easier to use one of its launch functions as described above, these will do it automatically.",
+      "link": "https://palant.info/2026/02/03/supporting-waylands-xdg-activation-protocol-with-gtk/glib/",
+      "source": "https://palant.info/rss.xml",
+      "type": "general",
+      "type_label": "General Security & Blogs",
+      "published": "2026-02-03T10:55:20+00:00",
+      "published_ts": 1770116120,
+      "smart_groups": [],
+      "curated": false
+    },
+    {
+      "title": "New Password-Stealing Phishing Campaign Targets Corporate Dropbox Credentials",
+      "summary": "Multi-stage attack begins with fake message relating to business requests and evades detection with link hidden in a PDF",
+      "link": "https://www.infosecurity-magazine.com/news/password-stealing-phishing-pdf/",
+      "source": "Infosecurity Magazine \u2013 News",
+      "type": "general",
+      "type_label": "General Security & Blogs",
+      "published": "2026-02-03T10:55:00+00:00",
+      "published_ts": 1770116100,
+      "smart_groups": [
+        "Phishing / Social Engineering"
+      ],
+      "curated": false
+    },
+    {
+      "title": "A fake cloud storage alert that ends at Freecash",
+      "summary": "We followed a fake cloud storage payment alert through deceptive affiliate redirects, ending at a familiar destination: Freecash.",
+      "link": "https://www.malwarebytes.com/blog/news/2026/02/a-fake-cloud-storage-alert-that-ends-at-freecash",
+      "source": "Malwarebytes Labs",
+      "type": "general",
+      "type_label": "General Security & Blogs",
+      "published": "2026-02-03T10:38:35+00:00",
+      "published_ts": 1770115115,
+      "smart_groups": [],
+      "curated": false
+    },
+    {
+      "title": "Notepad++ infrastructure hijacked by Chinese APT in sophisticated supply chain attack",
+      "summary": "The popular open-source text editor Notepad++ was targeted in a sophisticated supply chain attack that allowed Chinese state-sponsored hackers to deliver malware through compromised software updates, the project\u2019s maintainer disclosed in a blog post . The attack, which ran from June through December 2025, involved infrastructure-level compromise of Notepad++\u2019s shared hosting provider that enabled threat actors to selectively intercept and redirect update traffic to servers under their control, Notepad++ author Don Ho said in the statement. \u201cMultiple independent security researchers have assessed that the threat actor is likely a Chinese state-sponsored group, which would explain the highly selective targeting observed during the campaign,\u201d Ho wrote. The incident highlights a critical blind spot in enterprise security. Attackers prize distribution points like update servers because one successful insertion delivers access to thousands of environments at once, according to a Forrester analysis also published Sunday. The compromise is particularly concerning because Notepad++ is widely used by developers, analysts, and IT operators, yet \u201cdoes not require an enterprise contract or license, and does not include usage tracking by default and therefore may not be tracked in an enterprise software inventory,\u201d Forrester analysts Jeff Pollard, Allie Mellen, Jess Burn, Janet Worthington, and Tope Olufon wrote in their blog post. How the attack unfolded The compromise occurred at the hosting provider level rather than through vulnerabilities in Notepad++ code, Ho said in the note. Attackers gained access to the shared hosting server and redirected traffic from the update endpoint to attacker-controlled servers. \u201cThe bad actors specifically searched for the Notepad++ domain to intercept the traffic to your website, as they might know the then-existing Notepad++ vulnerabilities related to insufficient update verification controls,\u201d the hosting provider said in a statement shared by Ho. The name of the hosting provider, however, is not disclosed in the blog post. A detailed query seeking comments from Ho remains unanswered. The server was initially compromised until September 2, 2025, when scheduled maintenance included kernel and firmware updates. However, attackers maintained stolen credentials to internal services until December 2, 2025, allowing continued traffic interception, according to the provider\u2019s statement. The targeting was highly selective \u2014 traffic from certain users was redirected while most legitimate updates proceeded normally, Ho said. Rapid7 identifies custom malware Cybersecurity firm Rapid7 also published a detailed technical analysis corroborating Ho\u2019s disclosure and identifying the attack as part of a broader campaign deploying previously undocumented malware. Rapid7\u2019s investigation uncovered a custom backdoor the firm dubbed \u201cChrysalis,\u201d alongside Cobalt Strike and Metasploit frameworks. \u201cForensic analysis conducted by the MDR team suggests that the initial access vector aligns with publicly disclosed abuse of the Notepad++ distribution infrastructure,\u201d Rapid7 researcher Ivan Feigl wrote. The Chrysalis backdoor supports 16 distinct command capabilities ranging from interactive shell access to complete self-removal. One loader variant exploited Microsoft Warbird, an internal code protection framework, to execute shellcode while masquerading as a legitimate Microsoft-signed binary. Rapid7 attributed the campaign to Lotus Blossom, also known as Billbug , a Chinese APT group active since 2009, known for espionage operations targeting government, telecommunications, and critical infrastructure sectors across Southeast Asia and Central America. The attribution is based on strong similarities to previously published Symantec research, particularly the use of a renamed Bitdefender executable to side-load malicious DLLs. Why detection proved difficult The sophisticated malware evaded detection for months largely because a compromised utility blends into normal developer behavior, making it challenging to identify. \u201cMost EDR programs are blind by design to \u2018expected\u2019 developer behavior,\u201d the Forrester analysts wrote. \u201cA compromised utility does not need exploits, LOLBins, or exotic malware. It just needs to look boring\u2014like something a dev would do.\u201d Ho noted that his incident response team was unable to extract concrete indicators of compromise despite analyzing roughly 400 GB of server logs. In an edit posted Sunday, Ho acknowledged Rapid7\u2019s more detailed findings. \u201cLast evening I received an email from Ivan Feigl (Rapid7) to share their excellent investigation story\u2014it seems to be the same story, and obviously, they have more tangible information (including IoCs) than I do,\u201d he wrote. Rapid7 identified network infrastructure, including IP addresses in Malaysia and China, along with command and control URLs, including api.skycloudcenter.com and api.wiresguard.com. Security enhancements and broader implications In response, Notepad++ has migrated to a new hosting provider and enhanced WinGup (the updater component) in version 8.8.9 to verify both certificate and signature of downloaded installers, Ho said. Certificate and signature verification will be enforced starting with version 8.9.2, expected within approximately one month. \u201cI deeply apologize to all users affected by this hijacking,\u201d Ho wrote. \u201cI recommend downloading v8.9.1 and running the installer to update your Notepad++ manually.\u201d For enterprise security teams, the incident underscores the need for comprehensive software inventories that include widely used utilities, cryptographic verification of all updates, and what Forrester described as a \u201cshift from implicit trust to continuous verification.\u201d The Forrester analysts also warned that AI agents could amplify similar risks. \u201cThe same supply chain blind spots that let a compromised tool blend into developer noise will let a compromised agent establish persistence and elevate privileges at scale,\u201d they wrote. Organizations that cannot strictly define what should execute and communicate are \u201cstructurally conceding this class of attack.\u201d",
+      "link": "https://www.csoonline.com/article/4126269/notepad-infrastructure-hijacked-by-chinese-apt-in-sophisticated-supply-chain-attack.html",
+      "source": "CSO Online",
+      "type": "general",
+      "type_label": "General Security & Blogs",
+      "published": "2026-02-03T10:31:15+00:00",
+      "published_ts": 1770114675,
+      "smart_groups": [
+        "Curated",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Threat Actors / APT",
+        "Malware / Payloads",
+        "Identity / Access",
+        "Network / OT / ICS",
+        "Crypto / Web3"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Bitcoin ETFs bounce $562M after $1.5B sell-off, as headwinds linger",
+      "summary": "Spot Bitcoin ETFs drew $562 million in inflows Monday, partially offsetting $1.5 billion outflows last week while Ether ETFs remained in the red.",
+      "link": "https://cointelegraph.com/news/bitcoin-etf-bounce-561m-inflows-headwinds-linger?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound",
+      "source": "Cointelegraph.com News",
+      "type": "crypto",
+      "type_label": "Crypto & Blockchain Security",
+      "published": "2026-02-03T10:28:45+00:00",
+      "published_ts": 1770114525,
+      "smart_groups": [],
+      "curated": false
+    },
+    {
+      "title": "8.7 billion records spilled: Inside the massive Chinese data leak",
+      "summary": "The exposed Elasticsearch cluster, which contained over 160 indices, held billions of primarily Chinese records, ranging from national citizen ID numbers to various business records. submitted by /u/Cybernews_com [link] [comments]",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1quodt0/87_billion_records_spilled_inside_the_massive/",
+      "source": "/r/cybersecurity",
+      "type": "osint",
+      "type_label": "OSINT, Communities & Subreddits",
+      "published": "2026-02-03T10:23:25+00:00",
+      "published_ts": 1770114205,
+      "smart_groups": [
+        "Curated",
+        "Network / OT / ICS",
+        "Data Breaches / Leaks"
+      ],
+      "curated": true
+    },
+    {
+      "title": "DIY AI bot farm OpenClaw is a security 'dumpster fire'",
+      "summary": "Your own personal Jarvis. A bot to hear your prayers. A bot that cares. Just not about keeping you safe OpenClaw, the AI-powered personal assistant users interact with via messaging apps and sometimes entrust with their credentials to various online services, has prompted a wave of malware and is delivering some shocking bills.\u2026",
+      "link": "https://go.theregister.com/feed/www.theregister.com/2026/02/03/openclaw_security_problems/",
+      "source": "The Register - Security",
+      "type": "general",
+      "type_label": "General Security & Blogs",
+      "published": "2026-02-03T10:14:14+00:00",
+      "published_ts": 1770113654,
+      "smart_groups": [
+        "Malware / Payloads"
+      ],
+      "curated": false
+    },
+    {
+      "title": "Musk's xAI seeks crypto expert to train AI on market analysis",
+      "summary": "Elon Musk\u2019s xAI is recruiting a crypto specialist to train its models in onchain data, market structure and real-world trading behavior.",
+      "link": "https://cointelegraph.com/news/xai-hiring-crypto-expert-train-ai-markets?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound",
+      "source": "Cointelegraph.com News",
+      "type": "crypto",
+      "type_label": "Crypto & Blockchain Security",
+      "published": "2026-02-03T10:06:03+00:00",
+      "published_ts": 1770113163,
       "smart_groups": [],
       "curated": false
     },
@@ -40,6 +166,54 @@
       "published_ts": 1770112800,
       "smart_groups": [],
       "curated": false
+    },
+    {
+      "title": "HTB: Bamboo",
+      "summary": "Bamboo offers a Squid HTTP proxy through which I\u2019ll access a PaperCut NG instance. I\u2019ll use Spose to scan through the proxy and discover the print management application. I\u2019ll exploit an authentication bypass vulnerability in PaperCut and use application access to enabling print scripting to get code execution. For privilege escalation, I\u2019ll abuse a root process that runs a script from the papercut user\u2019s home directory.",
+      "link": "https://0xdf.gitlab.io/2026/02/03/htb-bamboo.html",
+      "source": "https://0xdf.gitlab.io/feed.xml",
+      "type": "general",
+      "type_label": "General Security & Blogs",
+      "published": "2026-02-03T10:00:00+00:00",
+      "published_ts": 1770112800,
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Focusing on Proactive Controls in the Face of LLM-Assisted Malware - Rob Allen - ASW #368",
+      "summary": "",
+      "link": "https://www.scworld.com/podcast-segment/14391-focusing-on-proactive-controls-in-the-face-of-llm-assisted-malware-rob-allen-asw-368",
+      "source": "SCM feed for Latest",
+      "type": "general",
+      "type_label": "General Security & Blogs",
+      "published": "2026-02-03T10:00:00+00:00",
+      "published_ts": 1770112800,
+      "smart_groups": [
+        "Malware / Payloads"
+      ],
+      "curated": false
+    },
+    {
+      "title": "Focusing on Proactive Controls in the Face of LLM-Assisted Malware - Rob Allen - ASW #368",
+      "summary": "Everyone is turning to LLMs to generate code, including attackers. Thus, it's no great surprise that there are now examples of malware generated by LLMs. We discuss the implications of more malware with Rob Allen and what it means for orgs that want to protect themselves from ransomware. Resources https://www.bleepingcomputer.com/news/security/voidlink-cloud-malware-shows-clear-signs-of-being-ai-generated/ https://research.checkpoint.com/2026/voidlink-early-ai-generated-malware-framework/ https://cloud.google.com/blog/topics/threat-intelligence/threat-actor-usage-of-ai-tools/ This segment is sponsored by ThreatLocker. Visit https://securityweekly.com/threatlocker to learn more about them! Visit https://www.securityweekly.com/asw for all the latest episodes! Show Notes: https://securityweekly.com/asw-368",
+      "link": "https://podcast.securityweekly.com/focusing-on-proactive-controls-in-the-face-of-llm-assisted-malware-rob-allen-asw-368",
+      "source": "Security Weekly Podcast Network (Audio)",
+      "type": "podcasts",
+      "type_label": "Podcasts & YouTube",
+      "published": "2026-02-03T10:00:00+00:00",
+      "published_ts": 1770112800,
+      "smart_groups": [
+        "Curated",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "Malware / Payloads",
+        "Network / OT / ICS"
+      ],
+      "curated": true
     },
     {
       "title": "I just published a crime thriller about an IT Business Analyst who moonlights as a debt collector and enforcer for organized crime. My book is currently free on Amazon for a limited time.",
@@ -110,6 +284,25 @@
       "curated": false
     },
     {
+      "title": "Notepad++ infrastructure hack likely tied to China-nexus APT Lotus Blossom",
+      "summary": "Rapid7 researchers say the Notepad++ hosting breach is likely linked to the China-nexus Lotus Blossom APT group. Recently, the Notepad++ maintainer revealed that nation-state hackers compromised the hosting provider\u2019s infrastructure, redirecting update traffic to malicious servers. The attack did not exploit flaws in Notepad++ code but intercepted updates before they reached users. \u201cAccording to the [\u2026]",
+      "link": "https://securityaffairs.com/187570/apt/notepad-infrastructure-hack-likely-tied-to-china-nexus-apt-lotus-blossom.html",
+      "source": "Security Affairs",
+      "type": "general",
+      "type_label": "General Security & Blogs",
+      "published": "2026-02-03T09:35:23+00:00",
+      "published_ts": 1770111323,
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Cloud / SaaS",
+        "Threat Actors / APT",
+        "Identity / Access"
+      ],
+      "curated": true
+    },
+    {
       "title": "British military to get legal OK to swat drones near bases",
       "summary": "Armed Forces Bill would let troops take action against unmanned threats around defense sites Britain's defense personnel will be given the authority to neutralize drones threatening military bases under measures being introduced in the Armed Forces Bill, currently making its way through Parliament.\u2026",
       "link": "https://go.theregister.com/feed/www.theregister.com/2026/02/03/armed_forces_bill_drones/",
@@ -155,6 +348,21 @@
       "curated": false
     },
     {
+      "title": "Apache Syncope Vulnerability Let Attackers Hijack User Sessions",
+      "summary": "A critical XML External Entity (XXE) vulnerability has been disclosed in the Syncope identity management console. The flaw could allow administrators to expose sensitive user data and compromise session security inadvertently. The vulnerability, tracked as CVE-2026-23795, affects multiple versions of the platform and requires immediate patching. The improper restriction of XML External Entity references in [\u2026] The post Apache Syncope Vulnerability Let Attackers Hijack User Sessions appeared first on Cyber Security News .",
+      "link": "https://cybersecuritynews.com/apache-syncope-vulnerability-2/",
+      "source": "Cyber Security News (FeedBurner)",
+      "type": "general",
+      "type_label": "General Security & Blogs",
+      "published": "2026-02-03T08:53:29+00:00",
+      "published_ts": 1770108809,
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
       "title": "I recommend these USB-C connectors to anyone with a laptop - here's what they do",
       "summary": "Busted USB-C ports are a problem. These affordable breakaway accessories protect them at an affordable price.",
       "link": "https://www.zdnet.com/article/magnetic-usb-c-adapter-240w-duhesin-review/",
@@ -179,6 +387,24 @@
       "published_ts": 1770107091,
       "smart_groups": [],
       "curated": false
+    },
+    {
+      "title": "APT28 Hackers Exploiting Microsoft Office 0-Day in the Wild to Deploy Malware",
+      "summary": "APT28, the Russia-linked advanced persistent threat group, has launched a sophisticated campaign targeting Central and Eastern Europe using a zero-day vulnerability in Microsoft Office. The threat actors leveraged specially crafted Microsoft Rich Text Format (RTF) files to exploit the vulnerability and deliver malicious backdoors through a multi-stage infection chain. The campaign, tracked as Operation Neusploit, [\u2026] The post APT28 Hackers Exploiting Microsoft Office 0-Day in the Wild to Deploy Malware appeared first on Cyber Security News .",
+      "link": "https://cybersecuritynews.com/apt28-hackers-exploiting-microsoft-office-0-day/",
+      "source": "Cyber Security News (FeedBurner)",
+      "type": "general",
+      "type_label": "General Security & Blogs",
+      "published": "2026-02-03T08:24:39+00:00",
+      "published_ts": 1770107079,
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Threat Actors / APT",
+        "Malware / Payloads"
+      ],
+      "curated": true
     },
     {
       "title": "Exploiting CVE-2025-49825 (authentication bypass vulnerability in Teleport)",
@@ -116478,60 +116704,6 @@
         "Windows / Microsoft"
       ],
       "curated": true
-    },
-    {
-      "title": "Palo Alto Networks security-intel boss calls AI agents 2026's biggest insider threat",
-      "summary": "Lock 'em down interview AI agents represent the new insider threat to companies in 2026, according to Palo Alto Networks Chief Security Intel Officer Wendi Whitmore, and this poses several challenges to executives tasked with securing the expected surge in autonomous agents.\u2026",
-      "link": "https://go.theregister.com/feed/www.theregister.com/2026/01/04/ai_agents_insider_threats_panw/",
-      "source": "The Register - Security",
-      "type": "general",
-      "type_label": "General Security & Blogs",
-      "published": "2026-01-04T10:40:07+00:00",
-      "published_ts": 1767523207,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "Week 01 \u2013 2026",
-      "summary": "Strengthen Your Identity Posture Before Attackers Find the Gaps In this cheat sheet, you\u2019ll discover:\u2022 The four highest-risk identity categories to remediate today.\u2022 A step-by-step ISPM maturity model and 90-day implementation plan.\u2022 How to eliminate toxic permissions, enforce MFA, and remove dormant identities at scale. Download the ISPM Cheat Sheet Sponsored by Permiso Damien AttoeThe [\u2026]",
-      "link": "https://thisweekin4n6.com/2026/01/04/week-01-2026/",
-      "source": "This Week In 4n6",
-      "type": "dfir",
-      "type_label": "DFIR & Forensics",
-      "published": "2026-01-04T10:29:17+00:00",
-      "published_ts": 1767522557,
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "Identity / Access"
-      ],
-      "curated": true
-    },
-    {
-      "title": "President Trump blocks $2.9M Emcore chip sale over security concerns",
-      "summary": "Trump ordered the divestment of a $2.9M chip deal, citing U.S. national security risks if HieFo retained control of Emcore \u2019s technology. President Trump ordered the divestment of a $2.9 million chips deal, citing national security risks tied to HieFo Corp.\u2019s control of Emcore \u2019s chip technology. HieFo (short for High Efficiency Photonics) is a [\u2026]",
-      "link": "https://securityaffairs.com/186473/security/president-trump-blocks-2-9m-emcore-chip-sale-over-security-concerns.html",
-      "source": "Security Affairs",
-      "type": "general",
-      "type_label": "General Security & Blogs",
-      "published": "2026-01-04T09:59:16+00:00",
-      "published_ts": 1767520756,
-      "smart_groups": [
-        "Network / OT / ICS"
-      ],
-      "curated": false
-    },
-    {
-      "title": "Looking for a specific cyber security book",
-      "summary": "The book had multiple stories in it about cyber security . Story 1: a guy purchases a home in an area with not a lot of people to build a secure research system for his next plan. He buys multiple computer and sets up a cage for his main . Story 2 : the guy pays kids to test WiFi breaches around a hospital Story 3: guy sneaks into I believe and African government officials office to set up a computer to steal data Thank you ! submitted by /u/IllustriousPack4870 [link] [comments]",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1q3m1y5/looking_for_a_specific_cyber_security_book/",
-      "source": "/r/cybersecurity",
-      "type": "osint",
-      "type_label": "OSINT, Communities & Subreddits",
-      "published": "2026-01-04T09:50:13+00:00",
-      "published_ts": 1767520213,
-      "smart_groups": [],
-      "curated": false
     }
   ]
 }
