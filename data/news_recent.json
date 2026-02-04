@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-02-04T21:05:06.063773+00:00",
+  "generated_at": "2026-02-04T22:08:39.633271+00:00",
   "days_back": 30,
-  "total_items": 8747,
+  "total_items": 8652,
   "items": [
     {
       "title": "Secure Your Spot at RSAC 2026 Conference",
@@ -12,6 +12,151 @@
       "type_label": "General Security & Blogs",
       "published": "2026-03-23T11:00:00+00:00",
       "published_ts": 1774263600,
+      "smart_groups": [],
+      "curated": false
+    },
+    {
+      "title": "How our AI vulnerability scanner found an authorization bypass in MLflow",
+      "summary": "submitted by /u/securely-vibe [link] [comments]",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1qw2ami/how_our_ai_vulnerability_scanner_found_an/",
+      "source": "/r/cybersecurity",
+      "type": "osint",
+      "type_label": "OSINT, Communities & Subreddits",
+      "published": "2026-02-04T21:55:01+00:00",
+      "published_ts": 1770242101,
+      "smart_groups": [
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": false
+    },
+    {
+      "title": "Julius - Open Source LLM Service Fingerprinting Tool",
+      "summary": "Made a thing. Julius fingerprints LLM services - point it at a target and it tells you if you're looking at Ollama, vLLM, LiteLLM, etc. Single binary, JSON output, works nicely in recon pipelines. What it does: Detects 17+ services including Ollama, vLLM, LiteLLM, LocalAI, HuggingFace TGI, NVIDIA NIM Extracts available models from identified endpoints Single Go binary, no dependencies JSON/JSONL output for piping into other tools Blog: https://www.praetorian.com/blog/introducing-julius-open-source-llm-service- submitted by /u/Praetorian_Security [link] [comments]",
+      "link": "https://www.reddit.com/r/netsec/comments/1qw23me/julius_open_source_llm_service_fingerprinting_tool/",
+      "source": "/r/netsec",
+      "type": "osint",
+      "type_label": "OSINT, Communities & Subreddits",
+      "published": "2026-02-04T21:47:50+00:00",
+      "published_ts": 1770241670,
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Zero Trust with Azure Firewall, Azure DDoS Protection and Azure WAF: A practical use case",
+      "summary": "Introduction Zero Trust has emerged as the defining security ethos of the modern enterprise. It is guided by a simple but powerful principle: \u201cNever trust, always verify.\u201d This principle is more relevant now than ever as cyberattacks continue to trend upward in both frequency and impact, affecting organizations of every size and industry. No entity large or small can assume immunity. As a result, adopting Zero Trust is no longer optional, it is a foundational requirement for designing secure, resilient architectures. A key tenet of Zero Trust is the assumption of breach, thus designing systems with the expectation that threats may already exist both outside and inside the network perimeter. To implement this principle, you need multiple, independent security controls that inspect traffic at different layers and enforce least privilege access continuously. Relying on a single security control, even a highly capable one, leaves gaps that modern attackers are adept at exploiting. It is within this context that combining the use of Azure Firewall, Azure DDoS Protection and Azure Web Application Firewall (WAF) services to secure Web Applications while protecting the network perimeter becomes important. Together, these services deliver comprehensive protection across the network and application layers. Defense-in-depth: Why Azure WAF, Azure DDoS Protection and Azure Firewall are essential for Zero Trust In these sections ahead, we examine the common network and application-layer attack vectors that target modern web applications and illustrate how Azure WAF, Azure DDoS protection, and Azure Firewall, when layered strategically, work in tandem to mitigate these threats. The architecture The test environment was designed to reflect a common Azure deployment pattern: Azure DDoS Protection at the edge, to defend against a comprehensive set of network layer (layer 3/4) attacks Azure Application Gateway with WAF , inspecting inbound HTTP traffic for application-layer threats Azure Firewall Premium behind the gateway, providing network-layer protection, deep packet inspection, and outbound traffic governance. A backend subnet hosting an intentionally vulnerable application (OWASP Juice Shop) to simulate real-world attack scenarios. Traffic flows through the DDoS first, then WAF, and then the firewall, before reaching the backend. Outbound traffic from the backend is routed through the firewall for inspection. This ensures that all inbound and outbound traffic is scrutinized. Two access paths that will be tested: Via the Application Gateway public IP, where traffic passes through DDoS, WAF and Firewall. Via the Firewall public IP using a DNAT rule, where traffic bypasses WAF and is inspected only by the Firewall. The following scenarios illustrate how this complementary protection strengthens overall resilience: Scenario 1: SQL injection (application-layer attack) Let\u2019s say an attacker on the internet attempts to access the application\u2019s login endpoint via the Application Gateway IP address and injects a SQL payload into the input field. For example, the attacker submits a request containing the following payload in the User ID field: ?id=' OR 1=1 -- Azure WAF will receive the request, analyze, and if Azure WAF is deployed in Prevention mode, it will immediately detect the SQL injection attempt using its built-in Managed Ruleset. Upon detection, Azure WAF will return a WAF block page, preventing the request from ever reaching the application. By contrast, when the same application is accessed through a firewall-only path (for example, via a DNAT rule on Azure Firewall that exposes the application on port 443), Azure Firewall allows the traffic as it does not perform deep Application layer inspection and SQL injection payloads when embedded within the HTTP request body, appear legitimate at the network layer. Here is a snapshot of the attacker gaining access to the admin role when they insert this SQL injection attack without Azure WAF and only Azure Firewall in the path. Scenario 2: Volumetric and application-layer DDoS attacks Next, the attacker launches a volumetric network layer DDoS (SYN/UDP floods) to saturate bandwidth, but Azure DDoS Network Protection absorbs and scrubs the attack at the edge , so no traffic reaches Application Gateway, WAF, or Firewall. When the network layer attack fails, they shift to HTTP flood attack at the application layer, overwhelming the web application with a high volume of requests. Some requests include exploit attempts, while others are designed purely to exhaust application resources. Azure WAF here , can identify malicious patterns such as: Automated bots lacking proper headers Abnormal request rates Known exploit payloads embedded within requests Malicious IP addresses Note: Azure DDoS Protection is a comprehensive service that provides protection across network layers (Layer 3 and 4) , while HTTP DDoS Protection specifically targets application-layer attacks (Layer 7) and is integrated with Azure WAF . They are complementary services designed to defend against different types of threats within the Azure environment. Additionally, if the botnet\u2019s IPs are known threat actors or malicious traffic, Azure Firewall\u2019s threat intelligence and IDPS will be able to flag this traffic too. Together, these services form a complementary, defense-in-depth strategy for protecting Azure workloads against distributed denial-of-service attacks. Scenario 3: Path Traversal Attempt/Information leak : (Application-Layer Attack) Next, the attacker sends HTTP requests to access sensitive system files such as /etc/passwd by sending crafted HTTP requests to the application via the Application Gateway public IP address . The request successfully passes through Azure Application Gateway WAF, as it does not trigger a managed rule violation in this case. However, when the request reaches Azure Firewall, the Firewall\u2019s IDPS detects the malicious pattern in the HTTP header and blocks the connection before it can reach the backend workload. Because the backend connection is denied by Azure Firewall, Application Gateway is unable to establish a successful response and returns a 504 Gateway Timeout to the client, rather than a 403 Forbidden response that would typically be generated by WAF when it blocks traffic. Below is the log from Azure Firewall showing that its able to detect this traffic as \u2013 Attempted Information Leak. As seen below, the traffic passed Application Gateway+WAF but was caught by Azure Firewall: This scenario highlights an important architectural outcome: The combination of WAF and Azure Firewall provides layered enforcement, even if an attack manages to slip past Azure WAF, Azure Firewall adds an additional enforcement layer to ensure the application remains protected. Now, let\u2019s look at some more Network Layer attacks: Scenario 4: Network reconnaissance and breach In this scenario, port 3389 is exposed on Application Gateway using the L4 TCP Proxy option . Now, the attacker attempts to scan the Application Gateway on all the ports/protocols and found that port 3389 was open along with other ports such as ports 80, 8080, 3000. Azure WAF will alert us for Layer 7/Application exploit but cannot verify/validate the attack on port 3389 since it was purely Layer 3/4 and contained no HTTP payload for WAF inspection. The L4 proxy listener on App Gateway simply forwards the raw TCP connections to the Azure Firewall behind it. Azure Firewall, however, performs full network\u2011layer inspection across all ports and protocols, allowing it to detect and alert on this type of L3/L4 reconnaissance even when App Gateway had the port open via the TCP proxy feature. As seen below the traffic passed Application Gateway+WAF but was caught by Azure Firewall since it is non-HTTP: The attacker then tries a different approach: Now the attacker somehow compromises a workstation inside our network and attempts to move laterally to the web server via RDP on port 3389 and/or attempts to exfiltrate and try to access something outside of the network. Azure Firewall located inside the VNet blocks the RDP attempt (if there is no rule allowing it) and if there is, its IDPS flags/blocks the traffic as suspicious. In this case, Azure WAF will not be involved but Azure Firewall inspects this internal and/or outbound traffic and blocks it. This illustrates how a combination of the two stops the attacker at multiple points: firewall foiled the reconnaissance and lateral movement/exfiltration, WAF foiled the application exploit. We can see below the outbound malicious attempt caught by Azure Firewall IDPS: In summary, Azure WAF is like the \u201cbodyguard at the application\u2019s front door\u201d \u2013 inspecting every HTTP request in detail and ejecting those carrying hidden weapons or exhibiting bad behavior. It focuses on the web layer, which Azure Firewall or DDoS alone cannot fully protect. If we only had the WAF and no network firewall or DDoS, we\u2019d be safe from many web attacks but would remain exposed to network-level threats (e.g., someone trying to RDP into a VM, or flooding a non-HTTP service). Conversely, if we had only the firewall, a crafty attacker could still exploit a vulnerability in our web app with a well-crafted HTTP request that looks \u201callowed\u201d to the firewall \u2013 that\u2019s where the WAF comes in to catch it. Azure Firewall on the other hand, acts as the \u201cmoat and drawbridge\u201d to your cloud network: it keeps out the obvious bad guys at the gate, tightly limits what\u2019s allowed in or out (no implicit trust for internal IPs), and uses threat intel + signatures to sniff out known threats in any traffic it passes, even outbound traffic. The table below shows the traffic flow that will be filtered by Azure WAF vs Azure Firewall. As you can see, layered security is fundamental to Zero Trust Conclusion In a Zero Trust architecture, security cannot rely on implicit trust or a single layer of defense. The combination of Azure Firewall Premium, Azure DDoS protection and Azure Application Gateway WAF exemplifies defense-in-depth by protecting both network and application layers. Organizations hosting internet-facing applications should adopt this layered strategy to reduce exposure to modern threats, prevent lateral movement, and maintain strict control over outbound traffic. By implementing these services together, you align with Microsoft\u2019s recommended best practices for Zero Trust and significantly strengthen your cloud security posture. References: Implement a Zero Trust network for web applications by using Azure Firewall and Azure Application Gateway What is Azure Web Application Firewall? Azure DDoS Protection Overview | Microsoft Learn What is Azure Firewall? Architecture designs using Azure WAF and Azure Firewall together Zero Trust Assessment Overview | Microsoft Learn",
+      "link": "https://techcommunity.microsoft.com/t5/azure-network-security-blog/zero-trust-with-azure-firewall-azure-ddos-protection-and-azure/ba-p/4490595",
+      "source": "Azure Network Security Blog",
+      "type": "vendors",
+      "type_label": "Vendors & Product Blogs",
+      "published": "2026-02-04T21:47:23+00:00",
+      "published_ts": 1770241643,
+      "smart_groups": [
+        "Curated",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Cloud / SaaS",
+        "Malware / Payloads",
+        "Web / API Security",
+        "Identity / Access",
+        "Crypto / Web3"
+      ],
+      "curated": true
+    },
+    {
+      "title": "The Rise of OpenClaw",
+      "summary": "The growing threat of automated attack infrastructure",
+      "link": "https://www.security.com/expert-perspectives/rise-openclaw",
+      "source": "Broadcom \u2013 Symantec Blogs",
+      "type": "vendors",
+      "type_label": "Vendors & Product Blogs",
+      "published": "2026-02-04T21:30:00+00:00",
+      "published_ts": 1770240600,
+      "smart_groups": [],
+      "curated": false
+    },
+    {
+      "title": "Salami attack sa pinas",
+      "summary": "Has anyone heard about salami attacks? I know someone involved in one, and I\u2019m not sure how to handle it. Do cops even catch people for this stuff? It seems like easy money for them. submitted by /u/Unfair-Holiday-1666 [link] [comments]",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1qw1eyf/salami_attack_sa_pinas/",
+      "source": "/r/cybersecurity",
+      "type": "osint",
+      "type_label": "OSINT, Communities & Subreddits",
+      "published": "2026-02-04T21:22:26+00:00",
+      "published_ts": 1770240146,
+      "smart_groups": [],
+      "curated": false
+    },
+    {
+      "title": "CME Explores Launching Its Own Coin as 24/7 Trading for Crypto Funds Nears",
+      "summary": "CME Group is looking at launching its own coin on a decentralized network, while moving crypto products to 24/7 trading as volumes jump 92%.",
+      "link": "https://decrypt.co/356948/cme-explores-launching-coin-247-crypto-fund-trading",
+      "source": "Decrypt",
+      "type": "crypto",
+      "type_label": "Crypto & Blockchain Security",
+      "published": "2026-02-04T21:21:03+00:00",
+      "published_ts": 1770240063,
+      "smart_groups": [],
+      "curated": false
+    },
+    {
+      "title": "Critical n8n flaws disclosed along with public exploits",
+      "summary": "Multiple critical vulnerabilities in the popular n8n open-source workflow automation platform allow escaping the confines of the environment and taking complete control of the host server. [...]",
+      "link": "https://www.bleepingcomputer.com/news/security/critical-n8n-flaws-disclosed-along-with-public-exploits/",
+      "source": "BleepingComputer",
+      "type": "general",
+      "type_label": "General Security & Blogs",
+      "published": "2026-02-04T21:14:36+00:00",
+      "published_ts": 1770239676,
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Cloud / SaaS"
+      ],
+      "curated": true
+    },
+    {
+      "title": "AWS intruder achieved admin access in under 10 minutes thanks to AI assist, researchers say",
+      "summary": "LLMs automated most phases of the attack A digital intruder broke into an AWS cloud environment and in just under 10 minutes went from initial access to administrative privileges, thanks to an AI speed assist.\u2026",
+      "link": "https://go.theregister.com/feed/www.theregister.com/2026/02/04/aws_cloud_breakin_ai_assist/",
+      "source": "The Register - Security",
+      "type": "general",
+      "type_label": "General Security & Blogs",
+      "published": "2026-02-04T21:09:42+00:00",
+      "published_ts": 1770239382,
+      "smart_groups": [
+        "Cloud / SaaS"
+      ],
+      "curated": false
+    },
+    {
+      "title": "Attackers Use Windows Screensavers to Drop Malware, RMM Tools",
+      "summary": "By tapping the unusual .scr file type, attackers leverage \"executables that don't always receive executable-level controls,\" one researcher noted.",
+      "link": "https://www.darkreading.com/application-security/attackers-use-screensavers-drop-malware-rmm-tools",
+      "source": "darkreading",
+      "type": "general",
+      "type_label": "General Security & Blogs",
+      "published": "2026-02-04T21:06:28+00:00",
+      "published_ts": 1770239188,
+      "smart_groups": [
+        "Windows / Microsoft",
+        "Malware / Payloads"
+      ],
+      "curated": false
+    },
+    {
+      "title": "Splunk security advisory (AV26-088)",
+      "summary": "",
+      "link": "https://cyber.gc.ca/en/alerts-advisories/splunk-security-advisory-av26-088",
+      "source": "Alerts and advisories",
+      "type": "general",
+      "type_label": "General Security & Blogs",
+      "published": "2026-02-04T20:53:34+00:00",
+      "published_ts": 1770238414,
       "smart_groups": [],
       "curated": false
     },
@@ -40,6 +185,18 @@
       "curated": false
     },
     {
+      "title": "New \u2018Axie Infinity\u2019 Ethereum Gaming Token Will Be Airdropped to AXS Stakers",
+      "summary": "Ethereum crypto game Axie Infinity is introducing a new token that will be airdropped to stakers and those who play its upcoming land game.",
+      "link": "https://decrypt.co/356964/new-axie-infinity-ethereum-gaming-token-airdropped",
+      "source": "Decrypt",
+      "type": "crypto",
+      "type_label": "Crypto & Blockchain Security",
+      "published": "2026-02-04T20:47:12+00:00",
+      "published_ts": 1770238032,
+      "smart_groups": [],
+      "curated": false
+    },
+    {
       "title": "This handy kitchen gadget put an end to cooking anxiety for me - and it's seriously spoiled me",
       "summary": "The Meater Pro is a precision thermometer that makes cooking meat perfectly so much easier. Here's how I use mine.",
       "link": "https://www.zdnet.com/article/meater-pro-review/",
@@ -52,6 +209,20 @@
       "curated": false
     },
     {
+      "title": "Here\u2019s what happened in crypto today",
+      "summary": "Need to know what happened in crypto today? Here is the latest news on daily trends and events impacting Bitcoin price, blockchain, DeFi, NFTs, Web3 and crypto regulation.",
+      "link": "https://cointelegraph.com/news/what-happened-in-crypto-today?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound",
+      "source": "Cointelegraph.com News",
+      "type": "crypto",
+      "type_label": "Crypto & Blockchain Security",
+      "published": "2026-02-04T20:41:56+00:00",
+      "published_ts": 1770237716,
+      "smart_groups": [
+        "Crypto / Web3"
+      ],
+      "curated": false
+    },
+    {
       "title": "Taiwanese national sentenced to 30 years for running darknet Incognito Market",
       "summary": "A Taiwanese national was sentenced to 30 years in U.S. prison for his role as an administrator of Incognito Market, a popular dark web platform that facilitated more than $100 million of drug sales.",
       "link": "https://therecord.media/incognito-market-sentenced-thirty",
@@ -60,6 +231,18 @@
       "type_label": "General Security & Blogs",
       "published": "2026-02-04T20:41:35+00:00",
       "published_ts": 1770237695,
+      "smart_groups": [],
+      "curated": false
+    },
+    {
+      "title": "Cisco security advisory (AV26-087)",
+      "summary": "",
+      "link": "https://cyber.gc.ca/en/alerts-advisories/cisco-security-advisory-av26-087",
+      "source": "Alerts and advisories",
+      "type": "general",
+      "type_label": "General Security & Blogs",
+      "published": "2026-02-04T20:37:07+00:00",
+      "published_ts": 1770237427,
       "smart_groups": [],
       "curated": false
     },
@@ -1831,20 +2014,6 @@
       "type_label": "Crypto & Blockchain Security",
       "published": "2026-02-04T13:37:46+00:00",
       "published_ts": 1770212266,
-      "smart_groups": [
-        "Crypto / Web3"
-      ],
-      "curated": false
-    },
-    {
-      "title": "Here\u2019s what happened in crypto today",
-      "summary": "Need to know what happened in crypto today? Here is the latest news on daily trends and events impacting Bitcoin price, blockchain, DeFi, NFTs, Web3 and crypto regulation.",
-      "link": "https://cointelegraph.com/news/what-happened-in-crypto-today?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound",
-      "source": "Cointelegraph.com News",
-      "type": "crypto",
-      "type_label": "Crypto & Blockchain Security",
-      "published": "2026-02-04T13:33:10+00:00",
-      "published_ts": 1770211990,
       "smart_groups": [
         "Crypto / Web3"
       ],
@@ -119541,1385 +119710,6 @@
         "Crypto / Web3"
       ],
       "curated": true
-    },
-    {
-      "title": "The three most exciting TVs of CES 2026",
-      "summary": "TCL, Hisense, and LG show off their TV lineups with upgrades like an industry-first RGBY Mini-LED display, ultra-thin designs, and AI-enhanced picture and sound.",
-      "link": "https://www.zdnet.com/article/three-most-exciting-tvs-ces-2026-lg-hisense-and-tcl/",
-      "source": "ZDNet \u2013 Security",
-      "type": "general",
-      "type_label": "General Security & Blogs",
-      "published": "2026-01-05T21:33:37+00:00",
-      "published_ts": 1767648817,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "NIST compliance in 2026: A complete implementation guide | UpGuard",
-      "summary": "NIST compliance ensures alignment with leading cybersecurity frameworks. Explore how the NIST standards can safeguard sensitive data and manage third-party",
-      "link": "https://upguard-staging.webflow.io/blog/nist-compliance",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "Biggest Data Breaches in Europe [Updated 2025] | UpGuard",
-      "summary": "Find out the biggest data breaches to ever occur in Europe.",
-      "link": "https://upguard-staging.webflow.io/blog/biggest-data-breaches-europe",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [
-        "Data Breaches / Leaks"
-      ],
-      "curated": false
-    },
-    {
-      "title": "Biggest Data Breaches in France [Updated 2025] | UpGuard",
-      "summary": "Learn about the biggest data breaches ever to occur in France.",
-      "link": "https://upguard-staging.webflow.io/blog/biggest-data-breaches-france",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [
-        "Data Breaches / Leaks"
-      ],
-      "curated": false
-    },
-    {
-      "title": "Essential Eight Compliance Guide (Updated 2026) | UpGuard",
-      "summary": "The Australian government is mandating compliance with the Essential Eight framework. Learn about each of the controls and how to achieve compliance.",
-      "link": "https://upguard-staging.webflow.io/blog/essential-eight",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "Enterprise Vendor Risk Management: 2026 Guide | UpGuard",
-      "summary": "Discover how enterprise VRM programs help large-scale organizations remain robust and resilient against growing third-party risks from outside vendors.",
-      "link": "https://upguard-staging.webflow.io/blog/enterprise-vendor-risk-management",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "Free GDPR Vendor Security Questionnaire Template (2026 Edition) | UpGuard",
-      "summary": "Expand your organization's vendor risk management toolbox by utilizing this free GDPR vendor questionnaire template.",
-      "link": "https://upguard-staging.webflow.io/blog/gdpr-vendor-security-questionnaire-template",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "Free CCPA Vendor Questionnaire Template (2026 Edition) | UpGuard",
-      "summary": "Get a high-level understanding of each vendor's degree of CCPA compliance with this free questionnaire template.",
-      "link": "https://upguard-staging.webflow.io/blog/free-ccpa-vendor-questionnaire-template",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "VPN Security Concerns in 2026 | UpGuard",
-      "summary": "VPN internet connections protect web traffic through an encrypted tunnel, keeping sensitive data from interception. So what are the risks?",
-      "link": "https://upguard-staging.webflow.io/blog/vpn-risk",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs"
-      ],
-      "curated": true
-    },
-    {
-      "title": "2026 Vendor Risk Management Workflow (6-Stage Guide) | UpGuard",
-      "summary": "A 6-stage VRM framework you can implement to increase resilience against the third-party risk threat landscape in 2026 and beyond.",
-      "link": "https://upguard-staging.webflow.io/blog/vendor-risk-management-workflow",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "A Guide to Vendor Risk Management Reporting in 2026 | UpGuard",
-      "summary": "Learn about which metrics are the most valuable for stakeholders and senior management in a Vendor Risk Management report.",
-      "link": "https://upguard-staging.webflow.io/blog/vendor-risk-management-reporting",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [
-        "Network / OT / ICS"
-      ],
-      "curated": false
-    },
-    {
-      "title": "4-Stage Vendor Risk Management Framework (2026 Edition) | UpGuard",
-      "summary": "A framework for implementing an efficient vendor risk management framework for efficiently managing vendor risks in the 2026 threat landscape.",
-      "link": "https://upguard-staging.webflow.io/blog/vendor-risk-management-implementation-framework",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "Vendor Risk Management Checklist (Updated 2026) | UpGuard",
-      "summary": "This is a complete vendor risk management checklist. Learn how to reduce your third and fourth-party risk with this in-depth post.",
-      "link": "https://upguard-staging.webflow.io/blog/vendor-risk-management-checklist",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "Vendor Risk Management Best Practices in 2026 | UpGuard",
-      "summary": "Vendor risk management can help prevent data breaches and is increasingly a key part of regulatory compliance.",
-      "link": "https://upguard-staging.webflow.io/blog/vendor-risk-management-best-practices",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [
-        "Data Breaches / Leaks"
-      ],
-      "curated": false
-    },
-    {
-      "title": "Vendor Risk Assessment Example (2026) | UpGuard",
-      "summary": "A breakdown of a vendor risk assessment example to inspire the design of your own risk assessment template and workflows.",
-      "link": "https://upguard-staging.webflow.io/blog/vendor-risk-assessment-example",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "Biggest Data Breaches in the UK [Updated 2025] | UpGuard",
-      "summary": "Learn about the biggest data breaches to ever occur in the UK.",
-      "link": "https://upguard-staging.webflow.io/blog/biggest-data-breaches-uk",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [
-        "Data Breaches / Leaks"
-      ],
-      "curated": false
-    },
-    {
-      "title": "What Is Cyber Threat Monitoring in 2026?  | UpGuard",
-      "summary": "Learn how cyber threat monitoring is evolving in 2025 and what tools, tactics, and best practices your security team needs to stay ahead.",
-      "link": "https://upguard-staging.webflow.io/blog/what-is-cyber-threat-monitoring",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [
-        "Network / OT / ICS"
-      ],
-      "curated": false
-    },
-    {
-      "title": "Third Party Security: Building Your Vendor Risk Program in 2026 | UpGuard",
-      "summary": "Discover how third party security safeguards your vendor relationships and ensures compliance. Build a proactive risk program now.",
-      "link": "https://upguard-staging.webflow.io/blog/third-party-security",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "Top 8 Cyber Threat Detection Tools in 2026 | UpGuard",
-      "summary": "A list of the top-performing cyber threat detection for protecting your internal and external assets from cyberattacks.",
-      "link": "https://upguard-staging.webflow.io/blog/top-cyber-threat-detection-tools",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "Human Factors in Cybersecurity in 2026 | UpGuard",
-      "summary": "Discover the primary human factors that could be disrupting the efficacy of your cybersecurity program and learn how to mitigate them.",
-      "link": "https://upguard-staging.webflow.io/blog/human-factors-in-cybersecurity",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "Ultimate Guide to Cybersecurity Reports in 2026 | UpGuard",
-      "summary": "Learn why cyber reports are critical and why they are an essential tool for every cybersecurity program. Includes a framework for cyber report writing.",
-      "link": "https://upguard-staging.webflow.io/blog/cyber-security-reports",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "Top Third-Party Monitoring Solutions in 2026 | UpGuard",
-      "summary": "Third-party monitoring solutions are a crucial component of a comprehensive third-party risk management program. Here are the top contenders in 2026.",
-      "link": "https://upguard-staging.webflow.io/blog/top-third-party-monitoring-solutions",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "11 Third-Party Risk Management Best Practices in 2026 | UpGuard",
-      "summary": "Discover 11 third-party risk management practices your organization should implement in 2026.",
-      "link": "https://upguard-staging.webflow.io/blog/11-tprm-best-practices-2024",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "Implementing A Vendor Risk Assessment Process in 2026 | UpGuard",
-      "summary": "A framework for implementing an efficient vendor risk assessment workflow into a Vendor Risk Management program in 2026.",
-      "link": "https://upguard-staging.webflow.io/blog/implementing-a-vendor-risk-assessment-process",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "Meeting Third-Party Risk Requirements of DORA in 2026 | UpGuard",
-      "summary": "Learn how to achieve compliance with the third-party risk management standards of the Digital Operational Resilience Act (DORA)",
-      "link": "https://upguard-staging.webflow.io/blog/meeting-third-party-risk-requirements-of-dora",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "How to Comply with NIST SP 800-171 Revision 3 in 2026 | UpGuard",
-      "summary": "Dive into the latest revision of NIST 800-171 and learn what your organization must do to comply with the TPRM requirements of NIST 800-171 Rev. 3.",
-      "link": "https://upguard-staging.webflow.io/blog/nist-800-171-rev3",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "The 5 Biggest Cyber Threats For the Education Sector in 2026 | UpGuard",
-      "summary": "Learn how cybercriminals try to exploit the education sector and develop defensive strategies to prevent common threats from harming your institution.",
-      "link": "https://upguard-staging.webflow.io/blog/cyber-threats-education",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [
-        "Curated",
-        "Exploit / PoC"
-      ],
-      "curated": true
-    },
-    {
-      "title": "12 Best Third-Party Risk Management Software Solutions (2026) | UpGuard",
-      "summary": "Learn which contenders are the top TPRM solution options in the market. Compare their features to make the best decision based on your requirements.",
-      "link": "https://upguard-staging.webflow.io/blog/best-third-party-risk-management-software-solutions",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "Free Infrastructure Security Questionnaire Template (2026 Edition) | UpGuard",
-      "summary": "Use this information security questionnaire template to appraise your vendors and build out your own internal questionnaire document.",
-      "link": "https://upguard-staging.webflow.io/blog/infrastructure-security-questionnaire-template",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "Best Vendor Risk Management Software for 2026 | UpGuard",
-      "summary": "Compare top vendor risk management software solutions and learn how to choose, implement, and integrate the right tool for your organization\u2019s needs.",
-      "link": "https://upguard-staging.webflow.io/blog/best-vendor-risk-management-software-solutions",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "Free SolarWinds Vendor Questionnaire Template (2026 Edition) | UpGuard",
-      "summary": "Elevate your organization's vendor risk management program by utilizing this FREE SolarWinds vendor questionnaire template.",
-      "link": "https://upguard-staging.webflow.io/blog/solarwinds-vendor-questionnaire-template",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "Creating a Cybersecurity Report for Senior Management in 2026 | UpGuard",
-      "summary": "Senior management has a unique set of reporting requirements. Learn what they are and how to create a cybersecurity report optimized for this audience.",
-      "link": "https://upguard-staging.webflow.io/blog/creating-a-cybersecurity-report-for-senior-management",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "Choosing a PCI DSS 4.0 Compliance Product in 2026 | UpGuard",
-      "summary": "Learn which features to look for when choosing a tool for tracking PCI DSS compliance. The right tool will help you avoid costly violations.",
-      "link": "https://upguard-staging.webflow.io/blog/choosing-a-pci-dss-compliance-product",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "Choosing Automated Risk Remediation Software in 2026 | UpGuard",
-      "summary": "Automation technology, when correctly applied to cyber risk remediation software could have a profoundly positve impact on your cybersecurity program.",
-      "link": "https://upguard-staging.webflow.io/blog/choosing-automated-risk-remediation-software",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "7 Third-Party Risk Management Trends to be Aware of in 2026 | UpGuard",
-      "summary": "Discover what Third-Party Risk Management trends your organization should watch in 2026 and learn how to adjust your TPRM program accordingly.",
-      "link": "https://upguard-staging.webflow.io/blog/tprm-trends",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "Choosing a Healthcare Cyber Risk Remediation Product in 2026 | UpGuard",
-      "summary": "Learn which features to look for in an ideal cyber risk remediation product for healthcare services. The right choice will reduce data breach impact.",
-      "link": "https://upguard-staging.webflow.io/blog/choosing-a-healthcare-cyber-risk-remediation-product",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [
-        "Data Breaches / Leaks"
-      ],
-      "curated": false
-    },
-    {
-      "title": "Choosing a Tech Attack Surface Management Product in 2026 | UpGuard",
-      "summary": "Learn the features to look for in an ideal Attack Surface Management product optimized for the tech industry's unique cybersecurity risk profile.",
-      "link": "https://upguard-staging.webflow.io/blog/choosing-a-tech-attack-surface-management-product",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "Meeting OCC Third-Party Risk Requirements [2026 Edition] | UpGuard",
-      "summary": "Learn how to meet the third-party risk management requirements outlined by the Office of the Comptroller of the Currency.",
-      "link": "https://upguard-staging.webflow.io/blog/meeting-occ-tprm-requirements",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "Top Cybersecurity Threats for Executives in 2026 | UpGuard",
-      "summary": "Learn about the top cybersecurity threats that all executives should know.",
-      "link": "https://upguard-staging.webflow.io/blog/top-cybersecurity-threats-for-executives",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "The State of University Cybersecurity: 3 Major Problems in 2026 | UpGuard",
-      "summary": "Learn the top three security flaws increasing the risk of data breaches in the higher education sector.",
-      "link": "https://upguard-staging.webflow.io/blog/top-cybersecurity-problems-for-universities-colleges",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [
-        "Cloud / SaaS",
-        "Data Breaches / Leaks"
-      ],
-      "curated": false
-    },
-    {
-      "title": "The Ultimate Cybersecurity Guide for Healthcare in 2026 | UpGuard",
-      "summary": "A free cybersecurity guide for any business in the healthcare industry. Includes data breach and ransomware attack defense strategies for 2026.",
-      "link": "https://upguard-staging.webflow.io/blog/ultimate-cybersecurity-guide-for-healthcare",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [
-        "Curated",
-        "Ransomware",
-        "Data Breaches / Leaks"
-      ],
-      "curated": true
-    },
-    {
-      "title": "A Data Leak Detection Guide for the Tech Industry in 2026 | UpGuard",
-      "summary": "A critical data leak detection guide for companies in the tech industry in 2026.",
-      "link": "https://upguard-staging.webflow.io/blog/how-tech-companies-can-detect-data-leaks",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [
-        "Curated",
-        "Data Breaches / Leaks"
-      ],
-      "curated": true
-    },
-    {
-      "title": "FERPA Compliance Guide (Updated 2026) | UpGuard",
-      "summary": "Find out which requirements schools need to follow to become FERPA compliant.",
-      "link": "https://upguard-staging.webflow.io/blog/ferpa-compliance-guide",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "51 HIPAA Statistics Every Healthcare Entity Needs to Know in 2026 | UpGuard",
-      "summary": "Find out the most important HIPAA statistics that every healthcare organization needs to know.",
-      "link": "https://upguard-staging.webflow.io/blog/hipaa-statistics",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [
-        "Network / OT / ICS"
-      ],
-      "curated": false
-    },
-    {
-      "title": "Top Cybersecurity Regulations in India in 2026 | UpGuard",
-      "summary": "Learn more about top cybersecurity regulations and governing bodies in India today.",
-      "link": "https://upguard-staging.webflow.io/blog/cybersecurity-regulations-india",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "Australia & its New Telco Regulation Compliance Guide for 2026 | UpGuard",
-      "summary": "If you're an APRA-regulated finance entity, you need to understand how to comply with Australia's amended telecommunication regulation.",
-      "link": "https://upguard-staging.webflow.io/blog/compliance-guide-australia-its-new-telco-regulation",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "How to Comply with PCI DSS 4.0.1 (2026 Guide) | UpGuard",
-      "summary": "Learn how to comply with versions 4.0 and 4.0.1 of PCI DSS.",
-      "link": "https://upguard-staging.webflow.io/blog/pci-compliance",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "Meeting the SOC 2 Third-Party Requirements in 2026 | UpGuard",
-      "summary": "Learn how UpGuard can help you comply with SOC 2's third-party requirements.",
-      "link": "https://upguard-staging.webflow.io/blog/soc-2-third-party-requirements",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "The Ultimate Ransomware Defense Guide (2026) | UpGuard",
-      "summary": "Learn how to implement an effective security strategy for minimizing the impact of ransomware attacks.",
-      "link": "https://upguard-staging.webflow.io/blog/protecting-employee-credentials-from-ransomware-compromise",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [
-        "Curated",
-        "Ransomware"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Key Metrics for Tracking PCI DSS Compliance in 2026 | UpGuard",
-      "summary": "Monitoring these key metrics will help you track your PCI DSS compliance efforts.",
-      "link": "https://upguard-staging.webflow.io/blog/metrics-for-tracking-pci-dss-compliance",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [
-        "Network / OT / ICS"
-      ],
-      "curated": false
-    },
-    {
-      "title": "Making the Vendor Questionnaire Process More Efficient in 2026 | UpGuard",
-      "summary": "Tired of sluggish processes delayed suppressing your vendor questionnaire efficiency? Learn how to optimize them in this 4-part framework.",
-      "link": "https://upguard-staging.webflow.io/blog/making-the-vendor-questionnaire-process-more-efficient",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "How to Comply with HECVAT in 2026 (Free Checklist) | UpGuard",
-      "summary": "If you're in the education industry, you need to be aware of the data security requirements stipulated in HECVAT. Learn how to comply with this standard.",
-      "link": "https://upguard-staging.webflow.io/blog/how-to-comply-with-hecvat",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "8 Tips for Lowering Your Cyber Insurance Premium in 2026 | UpGuard",
-      "summary": "With some clever strategies, you can reduce your cybersecurity premium. Learn the top 8 tactics you should be implementing,",
-      "link": "https://upguard-staging.webflow.io/blog/reducing-your-cybersecurity-insurance-premium",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [
-        "Network / OT / ICS"
-      ],
-      "curated": false
-    },
-    {
-      "title": "Top 8 Network Segmentation Best Practices in 2026 | UpGuard",
-      "summary": "Learn more about network segmentation best practices and how you can limit the spread of a potential cyber attack.",
-      "link": "https://upguard-staging.webflow.io/blog/network-segmentation-best-practices",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "How to Prepare for a PCI DSS 4.0 Audit in 7 Steps in 2026 | UpGuard",
-      "summary": "This article covers how to prepare for a PCI DSS onsite audit and maintain compliance with PCI requirements.",
-      "link": "https://upguard-staging.webflow.io/blog/how-to-prepare-for-a-pci-dss-audit",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "Top 10 Attack Surface Management Software Solutions in 2026 | UpGuard",
-      "summary": "This guide outlines the main considerations of effective attack surface management software and the best solutions currently on the market.",
-      "link": "https://upguard-staging.webflow.io/blog/best-attack-surface-management-software-solutions",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "9 Best Data Leak Detection Software Solutions in 2026 | UpGuard",
-      "summary": "This guide outlines the main considerations of effective data leak detection software and the best solutions currently on the market.",
-      "link": "https://upguard-staging.webflow.io/blog/best-data-leak-detection-software-solutions",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [
-        "Curated",
-        "Data Breaches / Leaks"
-      ],
-      "curated": true
-    },
-    {
-      "title": "19 Most Common Types of Phishing Attacks in 2026 | UpGuard",
-      "summary": "Learn the most commonly used phishing attacks and how to identify them.",
-      "link": "https://upguard-staging.webflow.io/blog/types-of-phishing-attacks",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [
-        "Phishing / Social Engineering"
-      ],
-      "curated": false
-    },
-    {
-      "title": "Meeting the Third-Party Risk Requirements of NIST CSF in 2026 | UpGuard",
-      "summary": "Learn how to comply with the supply chain risk management security requirements of NIST CSF 2.0",
-      "link": "https://upguard-staging.webflow.io/blog/nist-csf-third-party-risk-requirements",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "Meeting the Third-Party Risk Requirements of PCI DSS in 2026 | UpGuard",
-      "summary": "Learn which PCI requirements are relevant to the third-party risk management process and how the UpGuard platform can help comply with each requirement.",
-      "link": "https://upguard-staging.webflow.io/blog/pci-dss-third-party-risk-requirements",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "The Biggest Security Risks in Your Supply Chain in 2026 | UpGuard",
-      "summary": "Learn about the biggest security risks in your supply and how to successfully mitigate their impact.",
-      "link": "https://upguard-staging.webflow.io/blog/biggest-supply-chain-security-risks",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "Meeting the Third-Party Risk Requirements of NIST 800-53 in 2026 | UpGuard",
-      "summary": "Learn how to comply with the third-party risk management (TPRM) requirements outlined in NIST 800-53.",
-      "link": "https://upguard-staging.webflow.io/blog/third-party-risk-requirements-nist-800-53",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "Meeting the Third-Party Risk Requirements of ISO 27001 in 2026 | UpGuard",
-      "summary": "Learn which ISO 27001 controls are relevant to TPRM and how the UpGuard platform can help meet each control\u2019s objectives.",
-      "link": "https://upguard-staging.webflow.io/blog/iso-27001-third-party-risk-requirements",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "9 Third-Party Risk Cyber Gaps in 2026 | UpGuard",
-      "summary": "Understanding your existing third-party cybersecurity gaps allows you to better manage third-party risk. Learn more in this guide.",
-      "link": "https://upguard-staging.webflow.io/blog/third-party-risk-cyber-gaps",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "Meeting ISO Third-Party Risk Management Requirements in 2026 | UpGuard",
-      "summary": "Learn how to intelligently implement the most relevant ISO controls to support your Third-Party Risk Management program in 2023.",
-      "link": "https://upguard-staging.webflow.io/blog/iso-third-party-risk-management-requirements",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "The 6 Biggest Cyber Threats for Financial Services in 2026 | UpGuard",
-      "summary": "Learn about the biggest cyber threats every financial service should be aware of in 2021 and how to successfully defend against them.",
-      "link": "https://upguard-staging.webflow.io/blog/biggest-cyber-threats-for-financial-services",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "Vendor Management Best Practices in 2026 | UpGuard",
-      "summary": "Vendor management is the process through which organizations steer service excellence, and minimize risks to obtain optimum benefits from their vendors.",
-      "link": "https://upguard-staging.webflow.io/blog/vendor-management-best-practices",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "Top 5 Free Open Port Check Tools in 2026 | UpGuard",
-      "summary": "These open port scanners will help you detect security vulnerabilities in your ecosystem.",
-      "link": "https://upguard-staging.webflow.io/blog/best-open-port-scanners",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [
-        "Vulnerabilities / CVEs"
-      ],
-      "curated": false
-    },
-    {
-      "title": "How to Map Your Digital Footprint: A Guide for Businesses in 2026 | UpGuard",
-      "summary": "One of the best ways of identifying vulnerabilities in your ecosystem is by mapping your digital footprint. Read this post to learn the correct process.",
-      "link": "https://upguard-staging.webflow.io/blog/how-to-map-your-digital-footprint",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [
-        "Vulnerabilities / CVEs"
-      ],
-      "curated": false
-    },
-    {
-      "title": "What is UPnP? Yes, It's Still Dangerous in 2026 | UpGuard",
-      "summary": "If UPnP is currently enabled on your router, you could be at risk of a swathe of cyberattacks. Find out what UPnP is and how to best protect yourself.",
-      "link": "https://upguard-staging.webflow.io/blog/what-is-upnp",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "Top 8 Australian Cybersecurity Frameworks (Updated 2026) | UpGuard",
-      "summary": "We've compiled 10 of the best cybersecurity frameworks to protect Australian businesses from cyberattacks.",
-      "link": "https://upguard-staging.webflow.io/blog/australian-cybersecurity-frameworks",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "How to be Compliant with Biden's Cybersecurity Executive Order | UpGuard",
-      "summary": "The United States President has signed a Cybersecurity Executive Order that calls for a complete reformation of cybersecurity standards.",
-      "link": "https://upguard-staging.webflow.io/blog/cybersecurity-executive-order",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "11 Ways to Prevent Supply Chain Attacks in 2026 (Highly Effective) | UpGuard",
-      "summary": "Supply chain attacks are on the rise. Follow these prevention tips to avoid falling victim to these devastating breaches.",
-      "link": "https://upguard-staging.webflow.io/blog/how-to-prevent-supply-chain-attacks",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [
-        "Curated"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Assume Breach Mentality vs. Supply Chain Attacks in 2026 | UpGuard",
-      "summary": "Supply chain attacks could be prevented if all network activity is assumed to be malicious. Learn how to implement an Assume Breach framework.",
-      "link": "https://upguard-staging.webflow.io/blog/prevent-supply-chain-attacks-with-assume-breach",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [
-        "Curated"
-      ],
-      "curated": true
-    },
-    {
-      "title": "What is Vendor Due Diligence? Choosing Secure Vendors in 2026 | UpGuard",
-      "summary": "Your vendors need to follow stringent cybersecurity practices to protect you from cyberattacks. Learn the correct vendor due diligence process.",
-      "link": "https://upguard-staging.webflow.io/blog/vendor-due-diligence",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "How to Create a Secure Password in 2026: The Password Security Checklist | UpGuard",
-      "summary": "Learn how to create a secure password and keep your passwords secure with this in-depth guide.",
-      "link": "https://upguard-staging.webflow.io/blog/the-password-security-checklist",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "Third-Party Risk Management Guide for 2026 | UpGuard",
-      "summary": "Learn how to build and scale your third-party risk management program with expert guidance and a practical implementation checklist to minimize risk.",
-      "link": "https://upguard-staging.webflow.io/blog/third-party-risk-management",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "Ansible vs Chef [includes Infographic] | UpGuard",
-      "summary": "Both Ansible and Chef are tools to help the sysadmin or devops professionals better manage large numbers of servers. Learn more about each.",
-      "link": "https://upguard-staging.webflow.io/blog/ansible-vs-chef",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "11 Steps to Secure SQL in 2026 | UpGuard",
-      "summary": "Cover your back-end with these 11 steps to improve security for MySQL and Microsoft SQL Server and protect your data against most common threats.",
-      "link": "https://upguard-staging.webflow.io/blog/11-steps-to-secure-sql",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "Bitbucket vs GitHub (Updated for 2026) | UpGuard",
-      "summary": "Bitbucket and Github are two of the largest web-based hosting services for source code and development projects.",
-      "link": "https://upguard-staging.webflow.io/blog/bitbucket-vs-github",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs"
-      ],
-      "curated": true
-    },
-    {
-      "title": "How to Comply With CPS 234 (Updated for 2026) | UpGuard",
-      "summary": "This is a complete overview of how to comply with Prudential Standard CPS 234. Learn about the key requirements and how to meet them in this in-depth post.",
-      "link": "https://upguard-staging.webflow.io/blog/cps-234-compliance",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "Why is Third-Party Risk Management Important in 2026? | UpGuard",
-      "summary": "This is a complete overview that outlines why third-party risk management is important. Learn about successful TPRM programs in this in-depth post.",
-      "link": "https://upguard-staging.webflow.io/blog/third-party-risk-management-important",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "What Is Email Security? Best Practices for 2026 | UpGuard",
-      "summary": "This is a complete overview of email security. Learn about email security best practices and how to implement them with this in-depth post.",
-      "link": "https://upguard-staging.webflow.io/blog/email-security",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "Website Security Checklist: Protect Your Website in 2026 | UpGuard",
-      "summary": "Before putting your website into production, be sure to complete the 13 steps in this checklist to protect against the most common hacks and exploits.",
-      "link": "https://upguard-staging.webflow.io/blog/the-website-security-checklist",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [
-        "Curated",
-        "Exploit / PoC"
-      ],
-      "curated": true
-    },
-    {
-      "title": "9 Ways to Prevent Third-Party Data Breaches in 2026 | UpGuard",
-      "summary": "This is a complete guide to preventing third-party data breaches. Learn about how organizations like yours are keeping themselves and their customers safe.",
-      "link": "https://upguard-staging.webflow.io/blog/prevent-third-party-data-breaches",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [
-        "Data Breaches / Leaks"
-      ],
-      "curated": false
-    },
-    {
-      "title": "116 Must-Know Data Breach Statistics for 2026 | UpGuard",
-      "summary": "116 data breach statistics that cover risk, cost, prevention, industry trends, and more. Assess and analyze these stats and learn to prevent data breaches.",
-      "link": "https://upguard-staging.webflow.io/blog/data-breach-statistics",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [
-        "Network / OT / ICS",
-        "Data Breaches / Leaks"
-      ],
-      "curated": false
-    },
-    {
-      "title": "25 Working from Home Security Tips for Staff and Employers in 2026 | UpGuard",
-      "summary": "This is a complete overview of how to stay secure while working from home. Learn what you can do as an employee and employer in this in-depth post.",
-      "link": "https://upguard-staging.webflow.io/blog/working-from-home-security-tips",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "How to Prevent Data Breaches in 2026 (Highly Effective Strategy) | UpGuard",
-      "summary": "Learn how to implement an effective security control strategy for defending against data breaches in 2026.",
-      "link": "https://upguard-staging.webflow.io/blog/prevent-data-breaches",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [
-        "Data Breaches / Leaks"
-      ],
-      "curated": false
-    },
-    {
-      "title": "Third-Party Risk Assessment Best Practices in 2026 | UpGuard",
-      "summary": "This is a complete overview of the best practices for third-party risk assessment. Learn how to reduce your third-party risk exposure effectively.",
-      "link": "https://upguard-staging.webflow.io/blog/third-party-risk-assessment-best-practices",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "DigitalOcean vs AWS: Which Cloud Server is Better in 2026? | UpGuard",
-      "summary": "This is a complete guide to DigitalOcean vs AWS. Learn about their differences and which is right platform for you with this in-depth post.",
-      "link": "https://upguard-staging.webflow.io/blog/digitalocean-vs-aws",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [
-        "Cloud / SaaS"
-      ],
-      "curated": false
-    },
-    {
-      "title": "How to Automate Vendor Risk Management in 2026 | UpGuard",
-      "summary": "Third-party vendors are an important source of strategic advantage, cost savings, and expertise. Yet outsourcing is not without cybersecurity risk.",
-      "link": "https://upguard-staging.webflow.io/blog/automate-vendor-risk-management",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Five Things You Need to Know About Third-Party Risk in 2026 | UpGuard",
-      "summary": "Third and fourth party breaches account for over half of all data exposure. Here's what you need to know about third party cyber risk to protect you.",
-      "link": "https://upguard-staging.webflow.io/blog/five-things-to-know-about-third-party-risk",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "Top 11 Questionnaires for IT Vendor Assessment in 2026 | UpGuard",
-      "summary": "This is a complete overview of the top 11 questionnaires for IT vendor assessment. Learn which security questionnaire is right for you in this in post.",
-      "link": "https://upguard-staging.webflow.io/blog/top-vendor-assessment-questionnaires",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "What is SOX Compliance? 2026 Requirements, Controls and More | UpGuard",
-      "summary": "This is a complete overview of SOX Compliance. Learn how to ensure your organization is compliant with the SOX Act in this in-depth post.",
-      "link": "https://upguard-staging.webflow.io/blog/sox-compliance",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "Top Cybersecurity Metrics and KPIs for 2026 | UpGuard",
-      "summary": "Discover the most important cybersecurity metrics and KPIs to monitor your risk posture, track performance, and meet compliance goals.",
-      "link": "https://upguard-staging.webflow.io/blog/cybersecurity-metrics",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [
-        "Network / OT / ICS"
-      ],
-      "curated": false
-    },
-    {
-      "title": "The Top Cybersecurity Websites and Blogs of 2026 | UpGuard",
-      "summary": "This is a complete guide to the best cybersecurity and information security websites and blogs. Learn where CISOs and senior management stay up to date.",
-      "link": "https://upguard-staging.webflow.io/blog/cybersecurity-websites",
-      "source": "UpGuard Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-05T21:28:22+00:00",
-      "published_ts": 1767648502,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "Why Arbor Edge Defense and CDN-Based DDoS protection are better together",
-      "summary": "In today\u2019s hyperconnected digital landscape, distributed denial-of-service (DDoS) attacks have evolved into sophisticated, multivector threats capable of crippling even the most resilient infrastructures. While content delivery network (CDN)-based DDoS protection offers scalable mitigation for volumetric attacks, it\u2019s not a silver bullet. To truly safeguard critical services and maintain operational continuity, organizations must adopt a multilayered defense strategy\u2014and that\u2019s where NETSCOUT Arbor Edge Defense (AED) comes in. The limitations of CDN-based DDoS protection CDN providers offer robust cloud-based DDoS mitigation that is effective against large-scale volumetric attacks. These services reroute traffic through global scrubbing centers, filtering out malicious traffic before it reaches the origin server. However, CDN-based solutions often fall short in detecting and mitigating: Low-volume, stealthy application-layer attacks Transmission Control Protocol (TCP) state exhaustion attacks Outbound threats from compromised internal hosts Attacks that bypass CDN routing (for example, direct-to-IP attacks) These gaps leave critical infrastructure vulnerable, especially when attackers use dynamic, multivector techniques designed to evade upstream defenses. Arbor Edge Defense: The first and last line of defense NETSCOUT\u2019s AED is uniquely positioned between the internet router and the firewall, acting as an inline, always-on shield. AED uses artificial intelligence (AI) and machine learning (ML)-powered stateless packet processing and real-time threat intelligence from NETSCOUT\u2019s ATLAS infrastructure, which monitors up to 50% of global internet traffic spanning more than 200 countries and territories and 398 industry verticals and representing two-thirds of the routable IP space. Key capabilities include: Automatic mitigation of all DDoS attack types, including encrypted traffic and Domain Name System (DNS) water torture attacks Protection against outbound threats, preventing data exfiltration, and botnet communications Firewall preservation, reducing operational load by as much as 80% Adaptive DDoS protection , which learns and adjusts to evolving attack patterns in real time The power of a hybrid approach Combining AED with CDN-based DDoS protection creates a defense-in-depth architecture that covers the full spectrum of attack vectors: Arbor Cloud DDoS protection handles high-volume attacks far from the target, preserving bandwidth and upstream resources AED provides surgical, on-premises mitigation for application-layer and state-exhaustion attacks that cloud solutions often miss Real-world impact According to IDC , 41% of organizations report that online attacks\u2014including DDoS\u2014have caused damages exceeding $100,000, with 5% suffering losses of more than $1 million. As attackers increasingly leverage AI to launch dynamic threats, organizations must respond with intelligent, automated defenses that adapt in real time. In isolation, CDN-based DDoS protection and Arbor Edge Defense each offer valuable capabilities. But together, they form a comprehensive, adaptive, and resilient security posture that\u2019s essential for modern enterprises facing relentless cyberthreats. By integrating these solutions, organizations can ensure their networks remain available, secure, and performant\u2014no matter what the threat landscape throws their way. Learn more about NETSCOUT\u2019s Arbor Edge Defense .",
-      "link": "https://www.csoonline.com/article/4110775/why-arbor-edge-defense-and-cdn-based-ddos-protection-are-better-together.html",
-      "source": "CSO Online",
-      "type": "general",
-      "type_label": "General Security & Blogs",
-      "published": "2026-01-05T21:19:40+00:00",
-      "published_ts": 1767647980,
-      "smart_groups": [
-        "Curated",
-        "Ransomware",
-        "Vulnerabilities / CVEs",
-        "Malware / Payloads",
-        "Network / OT / ICS"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Prediction markets move into real estate with Polymarket\u2013Parcl deal",
-      "summary": "Parcl\u2019s native PRCL token surged over 100% following news of the partnership, which brings housing price indexes into prediction markets.",
-      "link": "https://cointelegraph.com/news/polymarket-housing-markets-parcl-data-partnership?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound",
-      "source": "Cointelegraph.com News",
-      "type": "crypto",
-      "type_label": "Crypto & Blockchain Security",
-      "published": "2026-01-05T21:18:57+00:00",
-      "published_ts": 1767647937,
-      "smart_groups": [
-        "Crypto / Web3"
-      ],
-      "curated": false
-    },
-    {
-      "title": "Samsung reveals 2026 TVs, including a 130-inch Micro RGB model",
-      "summary": "While most TVs in the lineup are getting upgrades, one model is losing an important feature.",
-      "link": "https://www.zdnet.com/article/samsung-2026-tvs-lineup-ces-micro-rgb/",
-      "source": "ZDNet \u2013 Security",
-      "type": "general",
-      "type_label": "General Security & Blogs",
-      "published": "2026-01-05T21:18:45+00:00",
-      "published_ts": 1767647925,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "Why cybersecurity needs to focus more on investigation and less on just detection and response",
-      "summary": "When we think about cybersecurity, most of us picture alarms going off, software scanning for viruses, and firewalls keeping the bad guys out. Detection and response are the heavy lifters in any modern security strategy, and rightfully so. They help us spot threats, shut them down quickly, and get back to business. But here\u2019s the catch: Focusing only on detection and response is like driving a car while looking only in the rearview mirror. You might see problems when they\u2019ve already happened, but you miss the opportunity to understand what caused them and how to avoid them in the future. In cybersecurity, the investigation phase is where the real magic happens. It\u2019s where you dig deeper, look beyond the surface, and ask the tough questions: How did this happen? Why did it work? What does this mean for the bigger picture? The truth is, too many organizations spend most of their time trying to detect and respond to threats without investing in the deeper understanding that comes with a thorough investigation. The problem with over-focusing on detection Imagine you\u2019re dealing with a leak in your house. You notice the water rising, so you grab a mop and start cleaning up. But if you never investigate where the leak is coming from, it\u2019s only a matter of time before the problem returns. In cybersecurity, detection is the mop, important for stopping immediate damage, but not a long-term solution. Detection tools such as intrusion detection systems (IDS) and firewalls are crucial. They alert you to threats, catch malicious activities early, and help prevent disaster. But they are reactive by nature. They\u2019re designed to find the known problems, the familiar patterns, the stuff that has already been spotted and documented. This is great for stopping the obvious things, such as hackers trying to brute-force their way into a system, but it\u2019s not so effective against things that are more subtle or sophisticated. The real issue? Many of today\u2019s most dangerous threats are the ones that don\u2019t show up easily on detection radars. Think about the advanced persistent threats (APTs) that remain hidden for months or the zero-day attacks that exploit vulnerabilities no one even knew existed. These threats may slip right past the detection systems because they don\u2019t act in obvious ways. That\u2019s why, in these cases, detection alone isn\u2019t enough. It\u2019s just the first step. Investigation: Where the real insights lie This is where investigation comes in. Think of investigation as the part where you understand the full story. It\u2019s like detective work: not just looking at the footprints, but figuring out where they came from, who\u2019s leaving them, and why they\u2019re trying to break in in the first place. You can\u2019t stop a cyberattack with detection alone if you don\u2019t understand what caused it or how it worked. And if you don\u2019t know the cause, you can\u2019t appropriately respond to the detected threat. An investigation looks at things such as: What vulnerabilities were exploited? How did the attackers gain access in the first place? What have they done once inside? What\u2019s the long-term impact: did they steal data, or just cause chaos? By diving deep into packet -level data, investigators can paint a full picture of an attack, uncovering things that might not be immediately apparent. This level of understanding is essential for defending against future threats. It\u2019s about learning from what happened, not just reacting to it. Why we miss it, and why we shouldn\u2019t There\u2019s a reason why so many organizations focus on detection and response. They\u2019re easy to measure, and they provide quick, visible results. But here\u2019s the thing: When we put all our effort into detecting and responding, we miss out on the bigger lessons that investigation can teach us. Take this analogy: Imagine trying to prevent a fire by only looking for smoke. If all you focus on is catching the smoke as it rises, you never find out where the fire started. Maybe it was a faulty wire or an unnoticed spark in the attic. You\u2019re reacting, but you\u2019re not solving the root cause. The same goes for cybersecurity. When we\u2019re just detecting and responding, we may miss the true cause of the problem, which leaves us vulnerable to the same issues happening again. An investigation is the only way to uncover the weak points in your defenses, learn from your mistakes, and improve over time. The true cost of missing the investigation The cost of neglecting investigation goes beyond just missing a threat. It\u2019s about missed opportunities for learning and growth. Every attack offers a lesson. By investigating the full scope of a breach, you gain insights that not only help in responding to that incident but also prepare you to defend against future ones. It\u2019s about building resilience, not just reaction. Think about it: If you never investigate an incident thoroughly, you\u2019re essentially ignoring the underlying risk that allowed the threat to flourish. You might fix the hole that was exploited, but you won\u2019t have a clear understanding of why it was there in the first place. And next time, attackers might find a different way in. The bigger picture: Cybersecurity as a continuous learning process Here\u2019s the deeper point: Cybersecurity is not about preventing every single attack; that\u2019s an unrealistic goal. It\u2019s about understanding your vulnerabilities, adapting, and getting better over time. Investigation is a tool for continuous improvement. The market has been laser-focused on detection and response, and for good reason. These are crucial in mitigating immediate risk. But they should be part of a broader, more reflective process that includes investigation, a phase that allows you to learn from the past and prepare for the future. In the long run, this is the real key to building a resilient security posture. Final thoughts: A shift in thinking As we look to the future of cybersecurity, it\u2019s time for a shift in thinking. Instead of just reacting to threats, let\u2019s focus on understanding them: investigating the root causes, uncovering patterns, and using those insights to strengthen our defenses. The goal should be not just to stop the attack, but to learn from it and build a better system going forward. If we can embrace this mindset, we\u2019ll be far more prepared for the challenges ahead. After all, the best defense against tomorrow\u2019s attack isn\u2019t just detecting it when it happens. It\u2019s understanding it before it even starts. Learn how NETSCOUT Omnis Cyber Intelligence can help by providing comprehensive network visibility with scalable deep packet inspection (DPI) to detect, investigate, and respond to threats more efficiently.",
-      "link": "https://www.csoonline.com/article/4110767/why-cybersecurity-needs-to-focus-more-on-investigation-and-less-on-just-detection-and-response.html",
-      "source": "CSO Online",
-      "type": "general",
-      "type_label": "General Security & Blogs",
-      "published": "2026-01-05T21:18:32+00:00",
-      "published_ts": 1767647912,
-      "smart_groups": [
-        "Curated",
-        "Ransomware",
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "Identity / Access"
-      ],
-      "curated": true
-    },
-    {
-      "title": "ClickFix attack uses fake Windows BSOD screens to push malware",
-      "summary": "A new ClickFix social engineering campaign is targeting the hospitality sector in Europe, using fake Windows Blue Screen of Death (BSOD) screens to trick users into manually compiling and executing malware on their systems. [...]",
-      "link": "https://www.bleepingcomputer.com/news/security/clickfix-attack-uses-fake-windows-bsod-screens-to-push-malware/",
-      "source": "BleepingComputer",
-      "type": "general",
-      "type_label": "General Security & Blogs",
-      "published": "2026-01-05T21:16:35+00:00",
-      "published_ts": 1767647795,
-      "smart_groups": [
-        "Windows / Microsoft",
-        "Malware / Payloads",
-        "Phishing / Social Engineering"
-      ],
-      "curated": false
-    },
-    {
-      "title": "5 myths about DDoS attacks and protection",
-      "summary": "Distributed denial-of-service (DDoS) attacks come in many shapes and sizes, as do the myths surrounding them. These myths can center on motivations, DDoS attack vectors and techniques, mitigation strategies, and more. DDoS myths are also sometimes more dangerous than the attacks themselves because the misconceptions can leave organizations vulnerable to other types of cyberattacks, misguide mitigation strategies, or cause teams to miss attacks altogether. Let\u2019s look at five of the top myths regarding DDoS attacks and protection and debunk them. Myth 1: DDoS attacks are uncommon, only target large corporations, and are carried out by sophisticated threat actors. In reality, DDoS attacks are very common, targeting businesses of all types and sizes. According to NETSCOUT\u2019s ASERT research team , there were more than 15 million DDoS attacks worldwide in 2024. This level of activity shows that the threat of DDoS is alive and well, making defensive measures a must for companies of all shapes and sizes. Although nation-states carry out their own sophisticated DDoS attacks, many are carried out by low-cost or even free DDoS-for-hire services that utilize global botnets or groups of compromised devices. Often, the ones requesting DDoS-for-hire attacks are not sophisticated hackers but are acting on geopolitical events, going after companies, individuals, or infrastructure that go against their interests. DDoS attacks do not always target corporate networks. They often target infrastructure or key services, such as power grids, to profoundly impact the general population. Myth 2: DDoS attacks only involve flooding networks with large amounts of traffic. In the early days of DDoS, the vast majority of attacks were large traffic floods. However, DDoS attacks have evolved over time, becoming more surgically targeted and complex. The media continues to report on the largest, most shocking attacks that are terabits per second in size, reinforcing this common misconception. Although these large-scale attacks are still dangerous, most smaller attacks, under 1Gbps, are equally dangerous, targeting application layers such as the Domain Name System (DNS) and HTTP. In 2024, ASERT noted a 43% increase in smaller application-layer attacks compared with 2023, showing that these targeted assaults are rising in popularity. This is because many DDoS protection services provided by internet service providers (ISPs) and other cloud protection solutions look for large volumetric attacks and disregard the smaller attacks, which are passed on to the customer. Unless networks have some level of DDoS protection in place, these smaller attacks are more likely to be successful and can cause issues for businesses and their customers. Transmission Control Protocol (TCP) state-exhaustion attacks are another common type of smaller attack. They specifically target stateful on-premises devices such as firewalls, load balancers, virtual private network (VPN) gateways, and more, and fill their state tables with bogus connections, blocking legitimate users from accessing areas of the network. Myth 3: Next-generation firewalls can stop DDoS attacks. Next-generation firewalls (NGFWs) are powerful devices that can greatly improve your overall security stance. However, their stateful design makes them vulnerable to several types of DDoS attacks, especially state-exhaustion attacks. Pairing NGFWs with a stateless DDoS mitigation solution placed in front of the firewall protects firewalls from state-exhaustion attacks. Myth 4: Cloud-based DDoS protection alone is enough. When a DDoS attack is larger than your internet pipe, the only way to stop it is with cloud-based DDoS protection . That said, smaller attacks can slip past these protections, necessitating additional defensive measures. Modern DDoS attacks leverage multiple attack vectors to bypass defenses. This means they can pair a volumetric attack or state-exhaustion attack with an application-layer attack to target multiple areas of the network, making it harder to detect and mitigate. By deploying a hybrid approach to DDoS defense, pairing cloud-based and on-premises inline DDoS protection solutions , organizations can better protect against agile, multivector DDoS onslaughts, maximizing uptime and availability. Myth 5: DDoS protection does not require the use of AI/ML. Many believe that leveraging artificial intelligence (AI) or machine learning (ML) is not necessary in defending against DDoS attacks. That could not be further from the truth. First, attackers are using AI/ML to multiply attack volumes, increase sophistication, and avoid detection. This means that defensive measures must think the same way, leveraging the traffic anomaly detection capabilities of AI/ML to find abnormalities in traffic patterns that signify DDoS threats. AI/ML can take the form of curated threat intelligence feeds that automatically block known, active DDoS threats in real time. With this threat intelligence constantly updated, the latest threats are no match for AI/ML-powered DDoS defenses. AI/ML can also automate real-time countermeasure adjustments to defend against multivector attacks. DDoS attacks and protection Myths have no place in protecting your network\u2019s most important digital assets. Don\u2019t fall victim to these common myths. Dedicated DDoS protection that defends against dynamic multivector DDoS attacks is the only true way to assure maximum uptime in the modern DDoS landscape. Learn more about NETSCOUT\u2019s Arbor DDoS protection solution .",
-      "link": "https://www.csoonline.com/article/4110714/5-myths-about-ddos-attacks-and-protection.html",
-      "source": "CSO Online",
-      "type": "general",
-      "type_label": "General Security & Blogs",
-      "published": "2026-01-05T21:15:52+00:00",
-      "published_ts": 1767647752,
-      "smart_groups": [
-        "Ransomware",
-        "Malware / Payloads"
-      ],
-      "curated": false
-    },
-    {
-      "title": "Polymarket Trader's $400K Bet on Maduro's Ousting Sparks Insider Trading Controversy",
-      "summary": "Industry figures argue that insider trading on prediction markets is a \u201cfeature, not a bug,\u201d as they face growing scrutiny from lawmakers.",
-      "link": "https://decrypt.co/353611/polymarket-trader-400k-bet-maduro-ousting-insider-trading-controversy",
-      "source": "Decrypt",
-      "type": "crypto",
-      "type_label": "Crypto & Blockchain Security",
-      "published": "2026-01-05T21:09:40+00:00",
-      "published_ts": 1767647380,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "Critical 'MongoBleed' Bug Under Active Attack, Patch Now",
-      "summary": "A memory leak security vulnerability allows unauthenticated attackers to extract passwords and tokens from MongoDB servers.",
-      "link": "https://www.darkreading.com/cloud-security/mongobleed-bug-active-attack-patch",
-      "source": "darkreading",
-      "type": "general",
-      "type_label": "General Security & Blogs",
-      "published": "2026-01-05T20:52:04+00:00",
-      "published_ts": 1767646324,
-      "smart_groups": [
-        "Vulnerabilities / CVEs"
-      ],
-      "curated": false
-    },
-    {
-      "title": "HP's EliteBook X G2i is be the ultraportable business laptop I've been waiting for",
-      "summary": "HP's new EliteBook X G2 series is highly customizable and incredibly lightweight, with some welcome design innovations.",
-      "link": "https://www.zdnet.com/article/hp-elitebook-x-g2i-ces/",
-      "source": "ZDNet \u2013 Security",
-      "type": "general",
-      "type_label": "General Security & Blogs",
-      "published": "2026-01-05T20:52:00+00:00",
-      "published_ts": 1767646320,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "Trump suggests US used cyberattacks to turn off lights in Venezuela during strikes",
-      "summary": "submitted by /u/rkhunter_ [link] [comments]",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1q4xh3s/trump_suggests_us_used_cyberattacks_to_turn_off/",
-      "source": "/r/cybersecurity",
-      "type": "osint",
-      "type_label": "OSINT, Communities & Subreddits",
-      "published": "2026-01-05T20:43:41+00:00",
-      "published_ts": 1767645821,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "Novo Nordisk Launches $149 Wegovy Pill, Expanding Access to GLP-1 Weight-Loss Drugs",
-      "summary": "The once-daily Wegovy pill became the first oral GLP-1 approved for weight loss in the U.S., offering an alternative to injectable treatments that have driven soaring demand.",
-      "link": "https://decrypt.co/353632/novo-nordisk-wegovy-pill-expanding-access-glp-1-weight-loss-drugs",
-      "source": "Decrypt",
-      "type": "crypto",
-      "type_label": "Crypto & Blockchain Security",
-      "published": "2026-01-05T20:43:30+00:00",
-      "published_ts": 1767645810,
-      "smart_groups": [],
-      "curated": false
     },
     {
       "title": "Iron Mountain Suffers Alleged Breach According to Dark Web Reports | UpGuard",
