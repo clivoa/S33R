@@ -1,136 +1,132 @@
 {
-  "generated_at": "2026-02-03T07:09:16.307930+00:00",
-  "analysis_date": "2026-02-03",
+  "generated_at": "2026-02-04T07:09:35.498940+00:00",
+  "analysis_date": "2026-02-04",
   "model": "gpt-5.1",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-02-03T06:19:36.960287+00:00",
+  "source_generated_at": "2026-02-04T06:18:36.054061+00:00",
   "source_days_back": 30,
-  "source_total_items": 8395,
-  "total_items_in_window_all": 295,
-  "total_items_in_window_curated": 87,
-  "morning_call_markdown": "### Executive Summary\n- State-backed supply-chain compromise of Notepad++ update infrastructure and multiple dev registries (Open VSX, AI tooling) increases risk from “trusted” software channels; check developer endpoints and build systems.\n- A recently patched Microsoft Office vulnerability (CVE-2026-21509) is being actively exploited by APT28/Fancy Bear and others, alongside new PDF/Dropbox phishing; harden and monitor Office/email paths.\n- Ongoing exploitation of exposed databases (MongoDB), cloud ML/AI platforms (OpenClaw, SageMaker SDK), and remote-access products (Ivanti zero-days) underlines need to lock down internet-facing services and cloud identities.\n\n---\n\n### High-priority items (immediate attention)\n\n- **Notepad++ update supply-chain hijack (Lotus Blossom / state-backed)**\n  - What happened: Hosting provider compromise let attackers backdoor Notepad++ update distribution for months, selectively delivering malware to users.\n  - Why it matters: Developer/admin workstations may have silently pulled trojanized updates, giving attackers a foothold in high-privilege environments.\n  - Recommended immediate actions:  \n    - Identify all endpoints with Notepad++ installed; flag those that updated in the last 9–12 months, especially from non-corporate mirrors.  \n    - Run targeted EDR sweeps on those endpoints using vendor IOCs and behavior patterns (new services, unusual outbound to rare domains); block any Notepad++ auto-update to internet until validated.\n\n- **Microsoft Office CVE-2026-21509 exploited by APT28 and others**\n  - What happened: Russia-linked APT28/Fancy Bear and other actors are actively exploiting a recently patched Office bug for initial access via malicious documents.\n  - Why it matters: High likelihood of phishing into our user base with weaponized Office files leading to code execution and follow-on credential theft.\n  - Recommended immediate actions:  \n    - Confirm emergency patch/mitigation status for Office across endpoints; prioritize high-risk users (finance, execs, privileged IT).  \n    - In email and EDR, hunt for recent Office spawning scripting interpreters or LOLBins (wscript, powershell, cmd, mshta, regsvr32) from attachments; tighten Office macro/Protected View policies if possible.\n\n- **New phishing using PDFs and Dropbox for credential theft**\n  - What happened: Campaigns use benign-looking emails with PDFs that link to fake Dropbox login pages to harvest credentials.\n  - Why it matters: Likely to bypass basic URL filters (trusted brand, embedded in PDF) and target corporate/O365/Dropbox accounts used for data sharing.\n  - Recommended immediate actions:  \n    - In email security, flag external PDFs containing embedded URLs to non-Dropbox domains or lookalike Dropbox domains; elevate to sandboxing/manual review.  \n    - In IdP logs, monitor for logins from unusual IPs/devices shortly after email delivery to users who received such PDFs; enable/verify MFA and impossible travel detections.\n\n- **Cloud/AI platform vulnerabilities and data exposure (OpenClaw RCE, 21k exposed instances; SageMaker Python SDK findings; GCP Cloud Monitoring → Cloud Run abuse; Ivanti zero-days)**\n  - What happened: Critical one-click RCE and mass misconfig in OpenClaw AI, security findings in AWS SageMaker SDK, a GCP Cloud Monitoring privilege-escalation path, and actively exploited Ivanti remote access vulnerabilities.\n  - Why it matters: Our ML/AI and remote-access/cloud-monitoring stack could be abused for code execution, lateral movement, or data exfiltration, especially if internet-facing.\n  - Recommended immediate actions:  \n    - Coordinate with cloud/platform teams today to verify: (1) we don’t have exposed OpenClaw or similar AI agents; (2) SageMaker SDK and related components are current; (3) any GCP Cloud Monitoring Uptime Checks→Cloud Run flows align with least-privilege; (4) Ivanti appliances are patched or access-restricted; add compensating WAF/VPN controls where patching lags.\n\n- **Database and Linux/Windows malware activity (MongoDB ransom-wiping, ShadowHS fileless Linux malware, Pulsar RAT on Windows)**\n  - What happened: Attackers are wiping unsecured MongoDB instances and planting ransom notes; new fileless Linux malware (ShadowHS) spreads automatically; Pulsar RAT abuses Windows Run keys for persistence and exfiltration.\n  - Why it matters: Direct risk to any exposed DBs and internet-facing Linux/Windows servers; stealth persistence could bypass basic AV.\n  - Recommended immediate actions:  \n    - Immediately verify no MongoDB instances are publicly exposed without auth; check for recent DB drop/recreate activity and ransom notes.  \n    - For Linux and Windows servers, run hunts for abnormal outbound traffic from system daemons/services, new per-user Run key entries, and shells spawned from web processes; tighten SSH/RDP and patch baseline.\n\n---\n\n### Monitoring & detection recommendations\n\n- **Office 0-day / APT28 phishing (CVE-2026-21509)**\n  - Log sources: Email gateway, EDR, Windows Event Logs, proxy/DNS.  \n  - Hunt: Office processes (WINWORD/EXCEL/POWERPNT) spawning script interpreters or LOLBins (powershell, wscript, mshta, regsvr32, rundll32) – ATT&CK T1203, T1566, T1059.\n\n- **PDF + Dropbox credential phishing**\n  - Log sources: Secure email gateway, web proxy, IdP/M365 audit logs.  \n  - Hunt: PDF attachments with embedded URLs to non-Dropbox domains or typosquats; subsequent logins from new IPs/ASNs to corporate SaaS within 0–2 hours of delivery – T1566.002, T1078.\n\n- **Notepad++ / developer tooling supply-chain compromise**\n  - Log sources: EDR, endpoint software inventory, proxy/DNS logs.  \n  - Hunt: Notepad++ updater or binary making outbound connections to rare domains/IPs; newly created services, scheduled tasks, or persistence set shortly after Notepad++ update events – T1195, T1547.\n\n- **AI/dev registries and Open VSX / MoltBot / Hugging Face abuse**\n  - Log sources: Dev endpoints, CI/CD runners, artifact repositories, EDR, outbound DNS.  \n  - Hunt: Build agents pulling new or recently updated packages/extensions from public registries just before unusual outbound connections or script execution; unsigned binaries in build output – T1195.003, T1505.\n\n- **Cloud platform abuse (OpenClaw, SageMaker, GCP Cloud Monitoring → Cloud Run, non-human identities)**\n  - Log sources: AWS CloudTrail, GCP Audit Logs, IAM/IdP logs, container logs.  \n  - Hunt: Uptime Checks or monitoring service accounts invoking Cloud Run or similar workloads unexpectedly; creation of new API keys/roles for service accounts; abnormal data-transfer volumes from ML/AI workloads – T1078.004, T1098, T1610.\n\n- **MongoDB ransom-wiping & database exposure**\n  - Log sources: MongoDB logs, firewall/WAF, cloud security posture tools.  \n  - Hunt: Anonymous or unknown IPs performing full-collection deletes, mass updates, or dropping databases; spikes in DB errors followed by ransom-note collections – T1485, T1490.\n\n- **Linux ShadowHS & Windows Pulsar RAT / other RATs**\n  - Log sources: EDR on Linux/Windows, syslog, Windows registry auditing, NetFlow.  \n  - Hunt: For Linux – long-lived suspicious processes with network connections to rare external IPs and no on-disk binary; for Windows – new per-user Run entries, RAT-like processes initiating C2 (small, periodic TLS/HTTP beacons) – T1055, T1105, T1547.\n\n- **Abuse of LOLBins across environments (PeckBirdy, general post-exploitation)**\n  - Log sources: EDR, PowerShell logs, Sysmon, command-line telemetry.  \n  - Hunt: LOLBins (certutil, msiexec, bitsadmin, powershell, wmic, rundll32) used to download or execute from external URLs, temp paths, or user-writable directories – T1218, T1105.\n\n---\n\n### Medium-term follow-ups\n\n- **Patch and configuration review for Office, Ivanti, OpenClaw, SageMaker SDK, GCP Monitoring**\n  - Ensure these products are on latest patches; document and close any compensating controls after patching; add them to regular vulnerability scanning coverage.\n\n- **Enterprise-wide software inventory and update control for dev tools**\n  - Build/maintain an authoritative inventory of developer utilities (Notepad++, IDEs, extensions, AI coding agents) and route updates via internal repositories where possible.\n\n- **Hardening of databases and cloud data stores**\n  - Enforce mandatory authentication and network segmentation for MongoDB and other DBs; add guardrails (CSPM policies) to prevent public exposure and default credentials.\n\n- **Identity and access management for non-human identities**\n  - Review service accounts, API tokens, and monitoring agents in cloud/on-prem; enforce least-privilege, regular key rotation, and anomaly detection on their behavior.\n\n- **Email and user awareness refresh**\n  - Update phishing training to include current patterns: Office 0-day docs, PDF→Dropbox scams, AI/crypto-themed lures; rehearse reporting/escalation paths for suspicious messages.\n\n- **Linux and OT/ICS monitoring uplift**\n  - Expand EDR and logging coverage to critical Linux servers and any OT/ICS components in scope; baseline normal services and network flows to better detect wipers or destructive activity.",
+  "source_total_items": 8664,
+  "total_items_in_window_all": 348,
+  "total_items_in_window_curated": 94,
+  "morning_call_markdown": "### Executive Summary\n- APT28 (Russian state actor) is actively exploiting a recently patched Microsoft Office vulnerability (CVE‑2026‑21509) in phishing campaigns delivering malware; this is directly relevant to our user base and Office footprint.\n- Multiple dev‑tool and AI‑assistant supply‑chain vectors (Notepad++ infrastructure compromise, React Native Metro/CLI RCE, OpenClaw/Ask Gordon AI flaws, malicious VSX extensions) are being used to target developers and CI/CD environments.\n- CISA added new actively exploited vulnerabilities (SolarWinds Web Help Desk, Sangoma FreePBX, GitLab) to the KEV catalog with short patch deadlines, increasing urgency around exposed internet‑facing apps.\n\n---\n\n### High-priority items (immediate attention)\n\n- **APT28 exploiting Microsoft Office CVE‑2026‑21509 (0‑day → n‑day)**\n  - What happened: Russian APT28 is using CVE‑2026‑21509 in Office in active spear‑phishing/espionage campaigns (Operation “Neusploit”).\n  - Why it matters operationally: We have heavy Office usage; this is an exploit‑in‑document scenario that bypasses users and leads to initial access and malware deployment.\n  - Recommended immediate actions for the SOC today:  \n    • Verify whether the Feb Office patches covering CVE‑2026‑21509 are deployed to endpoints; if not, flag at‑risk segments.  \n    • Tighten/phish‑triage rules for Office attachments from external senders; prioritize sandbox detonation of Office docs with macros or embedded OLE; hunt for recent Office‑spawned child processes (winword/excel/powerpnt → cmd.exe/powershell.exe/mshta.exe/wscript.exe).\n\n- **CISA KEV updates: SolarWinds Web Help Desk + Sangoma FreePBX + GitLab**\n  - What happened: CISA added SolarWinds Web Help Desk, Sangoma FreePBX, and GitLab flaws to the Known Exploited Vulnerabilities catalog and ordered US agencies to patch SolarWinds by Friday.\n  - Why it matters operationally: These products are often internet‑facing or central to internal workflows; active exploitation means scanning and opportunistic compromise are likely on any exposed instance.\n  - Recommended immediate actions for the SOC today:  \n    • Coordinate with infra to confirm whether we run any of these products (on‑prem or managed) and whether vulnerable versions are internet‑reachable.  \n    • Increase monitoring on any identified instances for anomalous authentication, new accounts, unexpected webshell‑like requests, and unusual data egress; if exposed and unpatched, treat as high‑risk asset and consider temporary network restrictions.\n\n- **Notepad++ supply‑chain compromise (Chinese APT, malicious updates)**\n  - What happened: Notepad++ distribution/infrastructure was hijacked, likely by China‑nexus APT (Lotus Blossom), to push trojanized updates; new IoCs and targets reported.\n  - Why it matters operationally: Notepad++ is common on developer/admin workstations; compromised binaries can provide high‑privilege footholds and persistence in our environment.\n  - Recommended immediate actions for the SOC today:  \n    • Obtain current IoC set from vendor/feeds and run retro‑hunts in EDR and proxy logs for malicious Notepad++ installers and update URLs.  \n    • Identify endpoints with Notepad++ installed (CMDB/EDR inventory); prioritize EDR triage on these machines for unusual outbound connections and new scheduled tasks/services created shortly after recent Notepad++ updates.\n\n- **React Native Metro / CLI RCE under active exploitation (Metro4Shell, dev targeting)**\n  - What happened: A critical RCE in the React Native Metro dev server / CLI (npm package) is being exploited in the wild to deploy Rust malware and other payloads against developer systems.\n  - Why it matters operationally: Dev laptops and CI build hosts are high‑value; compromise here can lead to code tampering, credential theft, and downstream supply‑chain risk for internal apps.\n  - Recommended immediate actions for the SOC today:  \n    • Work with Dev/IT to identify systems running React Native/Metro dev servers; confirm they are not exposed to untrusted networks and that patches/mitigations are applied.  \n    • In EDR, hunt for Metro/Node.js processes listening on external interfaces plus suspicious child processes (e.g., node.exe → powershell/curl/wget → unknown binaries) and outbound connections to unfamiliar hosts immediately following dev‑server access.\n\n- **AI/Dev‑tool ecosystem vulnerabilities (OpenClaw, Ask Gordon AI, VSX extensions, Anatsa banking malware app)**\n  - What happened:  \n    • OpenClaw AI assistant and Docker’s Ask Gordon AI had flaws allowing hijack and code execution via metadata;  \n    • Malicious VSX extensions (GlassWorm) targeting developers reached 22k+ downloads;  \n    • A malicious Android app from Google Play spread Anatsa banking malware.\n  - Why it matters operationally: These impact our developer toolchain and mobile banking threat surface; abuse may bypass traditional controls via “trusted” apps/extensions/AI tools.\n  - Recommended immediate actions for the SOC today:  \n    • Confirm with DevOps that any use of OpenClaw/Ask Gordon or affected VSX extensions is reviewed/disabled or patched; increase scrutiny of code‑execution events originating from AI tooling or VS Code extensions.  \n    • For mobile banking: check fraud team telemetry for any recent anomalous Android sessions consistent with overlay/Anatsa behavior (impossible travel, fast account draining), and ensure mobile‑threat‑detection signals are enabled in fraud/SIEM where available.\n\n---\n\n### Monitoring & detection recommendations\n\n- **Office exploitation / APT28 (CVE‑2026‑21509)**  \n  - Log sources: EDR, Windows event logs, email gateway, sandbox.  \n  - Hunt for Office processes spawning scripting interpreters or LOLBins (cmd, powershell, wmic, mshta, regsvr32, rundll32) [T1204, T1203, T1059]; correlate with recent external emails carrying Office attachments or links.\n\n- **Web‑app / appliance exploitation (SolarWinds WHD, GitLab, Sangoma FreePBX)**  \n  - Log sources: Web server/app logs, WAF, firewall, reverse proxies.  \n  - Monitor for spikes in 404/500 errors, unusual POSTs to admin or API endpoints, atypical user‑agent strings, and command‑like content in parameters [T1190]; alert on new local/admin accounts or privilege changes shortly after suspicious requests.\n\n- **Developer environment attacks (React Native Metro, VSX extensions, Notepad++)**  \n  - Log sources: EDR on dev workstations, endpoint firewall, proxy/DNS logs, Git/CI logs.  \n  - Hunt for: dev tools initiating outbound connections to rare domains/IPs, unsigned binaries executed from temp/npm/cache folders, and new SSH/API tokens or PATs being created/exported shortly after dev‑tool activity [T1552, T1555, T1557].\n\n- **AI‑assistant and agent abuse (OpenClaw, Ask Gordon, Clawdbot/Moltbot context)**  \n  - Log sources: Container/orchestration logs, CI/CD logs, API gateway, identity logs.  \n  - Monitor for AI tools invoking build/deploy pipelines or shell commands unexpectedly [T1059, T1609]; flag any new tokens/keys or configuration changes initiated via AI‑integrated services rather than normal admin accounts.\n\n- **Phishing and fake cloud‑storage campaigns (Dropbox‑style phishing)**  \n  - Log sources: Email security, web proxy, IdP.  \n  - Tighten detections around look‑alike domains and “document share” lures; correlate sign‑ins to O365/Google/Dropbox from new devices/locations immediately after clicks on such links [T1566, T1078].\n\n- **Banking malware / mobile threats (Anatsa)**  \n  - Log sources: Online banking and mobile app logs, fraud systems, customer support tickets.  \n  - Monitor for Android sessions exhibiting rapid credential reuse, screen overlay behavior, or device‑binding anomalies; flag sudden device changes followed by high‑risk transfers [T1566.004, T1650].\n\n- **Ransomware precursors & KEV‑listed bugs**  \n  - Log sources: EDR, VPN, RDP, AD, backup systems.  \n  - Hunt for: new local admins, shadow copy deletion, unusual use of backup admin accounts, lateral movement via SMB/RDP from internet‑reachable servers running any KEV‑listed software [T1078, T1021, T1486].\n\n- **Supply‑chain / software distribution anomalies (Notepad++, VSX, Docker images)**  \n  - Log sources: Software distribution platform logs, artifact repositories, EDR.  \n  - Alert on installations or updates sourced from non‑standard repos/URLs, especially for editors/IDEs and containers; compare image digests against expected values [T1195].\n\n---\n\n### Medium-term follow-ups\n\n- **Patch management around KEV and Office**  \n  - Ensure CVE‑2026‑21509 and all recently listed KEV items (SolarWinds WHD, GitLab, Sangoma FreePBX, related Microsoft bugs) are in the prioritized patch backlog with clear deadlines and business owner sign‑off.\n\n- **Developer environment hardening**  \n  - Formalize policy for exposing dev servers (React Native Metro, similar tools) only on localhost/VPN; enforce code‑signing and allow‑listing for VS Code extensions, npm packages, and editors like Notepad++.\n\n- **AI and agentic tooling governance**  \n  - Establish security review for any AI assistant/agent that can access code, infrastructure, or secrets (OpenClaw, Ask Gordon, Foundry agents, etc.); require least‑privilege access and robust logging before enabling in production.\n\n- **Supply‑chain and SBOM strategy**  \n  - Align with emerging software security codes of practice (e.g., UK initiative, OpenSSF guidance); improve SBOM generation and consumption so that vulnerable components in our stack can be quickly identified when new CVEs or supply‑chain issues arise.\n\n- **User and developer awareness**  \n  - Run targeted awareness around current phishing lures (fake cloud‑storage, quishing/QR codes, Office exploits) and secure use of extensions/AI tools in dev workflows.\n\n- **IR readiness review**  \n  - Using lessons from recent ransomware and supply‑chain incidents, validate that IR playbooks cover: supply‑chain compromise on dev tools, AI/agent misuse, and KEV exploitation, including clear containment steps for dev and CI/CD systems.",
   "highlights": [
     {
-      "title": "Open-source attacks move through normal development workflows",
-      "link": "https://www.helpnetsecurity.com/2026/02/03/open-source-attacks-supply-chain-development-workflows/",
-      "source": "Help Net Security",
-      "published": "2026-02-03T06:00:53+00:00",
+      "title": "Critical Django Flaw Allows DoS and SQL Injection Attacks",
+      "link": "https://gbhackers.com/critical-django-flaw/",
+      "source": "GBHackers News",
+      "published": "2026-02-04T05:55:26+00:00",
       "smart_groups": [
         "Curated",
         "Vulnerabilities / CVEs",
-        "Malware / Payloads",
-        "Supply Chain / Software"
+        "Cloud / SaaS",
+        "Web / API Security"
       ],
       "curated": true
     },
     {
-      "title": "Was tun, wenn die Erpresser kommen?",
-      "link": "https://www.csoonline.com/article/4125456/was-tun-wenn-die-erpresser-kommen.html",
-      "source": "CSO Online",
-      "published": "2026-02-03T06:00:00+00:00",
+      "title": "Why incident response breaks down when it matters most",
+      "link": "https://www.helpnetsecurity.com/2026/02/04/incident-response-failures-pressure-video/",
+      "source": "Help Net Security",
+      "published": "2026-02-04T05:30:42+00:00",
+      "smart_groups": [
+        "Curated",
+        "Exploit / PoC"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Hackers Actively Exploit React Native Metro Server to Target Software Developers",
+      "link": "https://gbhackers.com/hackers-actively-exploit-react-native-metro-server/",
+      "source": "GBHackers News",
+      "published": "2026-02-04T05:21:05+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Malware / Payloads"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Mongo's Too Easy - AI Bug Bounties Gone Wild",
+      "link": "https://www.youtube.com/watch?v=If5SQJprpus",
+      "source": "Security Now (YouTube Playlist)",
+      "published": "2026-02-04T05:04:03+00:00",
       "smart_groups": [
         "Curated",
         "Ransomware",
         "Vulnerabilities / CVEs",
-        "Web / API Security",
-        "Network / OT / ICS",
-        "Phishing / Social Engineering",
+        "Windows / Microsoft",
+        "Malware / Payloads"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Nevada Moves to Bar Coinbase’s Prediction Markets Without State Gaming License",
+      "link": "https://decrypt.co/356874/nevada-bar-coinbases-prediction-markets-state-gaming-license",
+      "source": "Decrypt",
+      "published": "2026-02-04T04:59:59+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Cloud / SaaS"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Die besten DAST- & SAST-Tools",
+      "link": "https://www.csoonline.com/article/3493611/dynamic-static-application-security-testing-die-besten-dast-sast-tools.html",
+      "source": "CSO Online",
+      "published": "2026-02-04T04:00:00+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
         "Crypto / Web3"
       ],
       "curated": true
     },
     {
-      "title": "Product showcase: 2FAS Auth – Free, open-source 2FA for iOS",
-      "link": "https://www.helpnetsecurity.com/2026/02/03/product-showcase-2fas-auth-free-open-source-2fa-ios/",
-      "source": "Help Net Security",
-      "published": "2026-02-03T05:30:16+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "Identity / Access"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Cybersecurity jobs available right now: February 3, 2026",
-      "link": "https://www.helpnetsecurity.com/2026/02/03/cybersecurity-jobs-available-right-now-february-3-2026/",
-      "source": "Help Net Security",
-      "published": "2026-02-03T05:00:58+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Notepad++ Hosting Breach Attributed to China-Linked Lotus Blossom Hacking Group",
-      "link": "https://thehackernews.com/2026/02/notepad-hosting-breach-attributed-to.html",
-      "source": "The Hacker News",
-      "published": "2026-02-03T04:55:00+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "Malware / Payloads",
-        "Identity / Access"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Tether releases open-source operating system for Bitcoin mining",
-      "link": "https://cointelegraph.com/news/tether-releases-open-source-operating-system-for-bitcoin-miners?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound",
-      "source": "Cointelegraph.com News",
-      "published": "2026-02-03T03:48:14+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs"
-      ],
-      "curated": true
-    },
-    {
-      "title": "New phishing attack leverages PDFs and Dropbox",
-      "link": "https://www.csoonline.com/article/4125990/new-phishing-attack-leverages-pdfs-and-dropbox.html",
-      "source": "CSO Online",
-      "published": "2026-02-03T02:30:44+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "Malware / Payloads",
-        "Identity / Access",
-        "Network / OT / ICS",
-        "Phishing / Social Engineering"
-      ],
-      "curated": true
-    },
-    {
-      "title": "I didn't trust the 'dog-proof' USB-C cable claim, so I tried something sharper instead",
-      "link": "https://www.zdnet.com/article/galvanox-pet-proof-usb-c-cable-review/",
-      "source": "ZDNet – Security",
-      "published": "2026-02-03T02:15:43+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Notepad++ Hack Detailed Along With the IoCs and Custom Malware Used",
-      "link": "https://cybersecuritynews.com/notepad-hack/",
+      "title": "Hackers Exploiting React Server Components Vulnerability in the Wild to Deploy Malicious Payloads",
+      "link": "https://cybersecuritynews.com/react-server-vulnerability-exploited/",
       "source": "Cyber Security News (FeedBurner)",
-      "published": "2026-02-03T02:06:58+00:00",
+      "published": "2026-02-04T02:00:50+00:00",
       "smart_groups": [
         "Curated",
-        "Malware / Payloads",
-        "Identity / Access"
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
       ],
       "curated": true
     },
     {
-      "title": "Tulsa International Airport purportedly compromised by Qilin",
-      "link": "https://www.scworld.com/brief/tulsa-international-airport-purportedly-compromised-by-qilin",
+      "title": "Alleged Bitcoin Ransom Note Sent to TMZ in Case Involving 'Today' Show Host's Missing Mother",
+      "link": "https://decrypt.co/356867/alleged-bitcoin-ransom-note-tmz-guthrie-missing-mother",
+      "source": "Decrypt",
+      "published": "2026-02-04T01:33:00+00:00",
+      "smart_groups": [
+        "Curated",
+        "Ransomware"
+      ],
+      "curated": true
+    },
+    {
+      "title": "The Microsoft Copilot Data Connector for Microsoft Sentinel is Now in Public Preview",
+      "link": "https://techcommunity.microsoft.com/t5/microsoft-sentinel-blog/the-microsoft-copilot-data-connector-for-microsoft-sentinel-is/ba-p/4491986",
+      "source": "Microsoft Sentinel Blog",
+      "published": "2026-02-04T00:42:52+00:00",
+      "smart_groups": [
+        "Curated",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "Windows / Microsoft"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Ransomware surge prompts FCC guidance for stronger telecom security practices",
+      "link": "https://www.scworld.com/brief/ransomware-surge-prompts-fcc-guidance-for-stronger-telecom-security-practices",
       "source": "SCM feed for Latest",
-      "published": "2026-02-03T00:33:41+00:00",
+      "published": "2026-02-04T00:10:12+00:00",
       "smart_groups": [
         "Curated",
         "Ransomware"
