@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-02-05T02:36:20.166016+00:00",
+  "generated_at": "2026-02-05T05:15:36.739773+00:00",
   "days_back": 30,
-  "total_items": 8647,
+  "total_items": 8644,
   "items": [
     {
       "title": "Secure Your Spot at RSAC 2026 Conference",
@@ -14,6 +14,319 @@
       "published_ts": 1774263600,
       "smart_groups": [],
       "curated": false
+    },
+    {
+      "title": "Zero Trust with Azure Firewall, Azure DDoS Protection and Azure WAF: A practical use case",
+      "summary": "Introduction Zero Trust has emerged as the defining security ethos of the modern enterprise. It is guided by a simple but powerful principle: \u201cNever trust, always verify.\u201d This principle is more relevant now than ever as cyberattacks continue to trend upward in both frequency and impact, affecting organizations of every size and industry. No entity large or small can assume immunity. As a result, adopting Zero Trust is no longer optional, it is a foundational requirement for designing secure, resilient architectures. A key tenet of Zero Trust is the assumption of breach, thus designing systems with the expectation that threats may already exist both outside and inside the network perimeter. To implement this principle, you need multiple, independent security controls that inspect traffic at different layers and enforce least privilege access continuously. Relying on a single security control, even a highly capable one, leaves gaps that modern attackers are adept at exploiting. It is within this context that combining the use of Azure Firewall, Azure DDoS Protection and Azure Web Application Firewall (WAF) services to secure Web Applications while protecting the network perimeter becomes important. Together, these services deliver comprehensive protection across the network and application layers. Defense-in-depth: Why Azure WAF, Azure DDoS Protection and Azure Firewall are essential for Zero Trust In these sections ahead, we examine the common network and application-layer attack vectors that target modern web applications and illustrate how Azure WAF, Azure DDoS protection, and Azure Firewall, when layered strategically, work in tandem to mitigate these threats. The architecture The test environment was designed to reflect a common Azure deployment pattern: Azure DDoS Protection at the edge, to defend against a comprehensive set of network layer (layer 3/4) attacks Azure Application Gateway with WAF , inspecting inbound HTTP traffic for application-layer threats Azure Firewall Premium behind the gateway, providing network-layer protection, deep packet inspection, and outbound traffic governance. A backend subnet hosting an intentionally vulnerable application (OWASP Juice Shop) to simulate real-world attack scenarios. Traffic flows through the DDoS first, then WAF, and then the firewall, before reaching the backend. Outbound traffic from the backend is routed through the firewall for inspection. This ensures that all inbound and outbound traffic is scrutinized. Two access paths that will be tested: Via the Application Gateway public IP, where traffic passes through DDoS, WAF and Firewall. Via the Firewall public IP using a DNAT rule, where traffic bypasses WAF and is inspected only by the Firewall. The following scenarios illustrate how this complementary protection strengthens overall resilience: Scenario 1: SQL injection (application-layer attack) Let\u2019s say an attacker on the internet attempts to access the application\u2019s login endpoint via the Application Gateway IP address and injects a SQL payload into the input field. For example, the attacker submits a request containing the following payload in the User ID field: ?id=' OR 1=1 -- Azure WAF will receive the request, analyze, and if Azure WAF is deployed in Prevention mode, it will immediately detect the SQL injection attempt using its built-in Managed Ruleset. Upon detection, Azure WAF will return a WAF block page, preventing the request from ever reaching the application. By contrast, when the same application is accessed through a firewall-only path (for example, via a DNAT rule on Azure Firewall that exposes the application on port 443), Azure Firewall allows the traffic as it does not perform deep Application layer inspection and SQL injection payloads when embedded within the HTTP request body, appear legitimate at the network layer. Here is a snapshot of the attacker gaining access to the admin role when they insert this SQL injection attack without Azure WAF and only Azure Firewall in the path. Scenario 2: Volumetric and application-layer DDoS attacks Next, the attacker launches a volumetric network layer DDoS (SYN/UDP floods) to saturate bandwidth, but Azure DDoS Network Protection absorbs and scrubs the attack at the edge , so no traffic reaches Application Gateway, WAF, or Firewall. When the network layer attack fails, they shift to HTTP flood attack at the application layer, overwhelming the web application with a high volume of requests. Some requests include exploit attempts, while others are designed purely to exhaust application resources. Azure WAF here , can identify malicious patterns such as: Automated bots lacking proper headers Abnormal request rates Known exploit payloads embedded within requests Malicious IP addresses Note: Azure DDoS Protection is a comprehensive service that provides protection across network layers (Layer 3 and 4) , while HTTP DDoS Protection specifically targets application-layer attacks (Layer 7) and is integrated with Azure WAF . They are complementary services designed to defend against different types of threats within the Azure environment. Additionally, if the botnet\u2019s IPs are known threat actors or malicious traffic, Azure Firewall\u2019s threat intelligence and IDPS will be able to flag this traffic too. Together, these services form a complementary, defense-in-depth strategy for protecting Azure workloads against distributed denial-of-service attacks. Scenario 3: Path Traversal Attempt/Information leak : (Application-Layer Attack) Next, the attacker sends HTTP requests to access sensitive system files such as /etc/passwd by sending crafted HTTP requests to the application via the Application Gateway public IP address . The request successfully passes through Azure Application Gateway WAF, as it does not trigger a managed rule violation in this case. However, when the request reaches Azure Firewall, the Firewall\u2019s IDPS detects the malicious pattern in the HTTP header and blocks the connection before it can reach the backend workload. Because the backend connection is denied by Azure Firewall, Application Gateway is unable to establish a successful response and returns a 504 Gateway Timeout to the client, rather than a 403 Forbidden response that would typically be generated by WAF when it blocks traffic. Below is the log from Azure Firewall showing that its able to detect this traffic as \u2013 Attempted Information Leak. As seen below, the traffic passed Application Gateway+WAF but was caught by Azure Firewall: This scenario highlights an important architectural outcome: The combination of WAF and Azure Firewall provides layered enforcement, even if an attack manages to slip past Azure WAF, Azure Firewall adds an additional enforcement layer to ensure the application remains protected. Now, let\u2019s look at some more Network Layer attacks: Scenario 4: Network reconnaissance and breach In this scenario, port 3389 is exposed on Application Gateway using the L4 TCP Proxy option . Now, the attacker attempts to scan the Application Gateway on all the ports/protocols and found that port 3389 was open along with other ports such as ports 80, 8080, 3000. Azure WAF will alert us for Layer 7/Application exploit but cannot verify/validate the attack on port 3389 since it was purely Layer 3/4 and contained no HTTP payload for WAF inspection. The L4 proxy listener on App Gateway simply forwards the raw TCP connections to the Azure Firewall behind it. Azure Firewall, however, performs full network\u2011layer inspection across all ports and protocols, allowing it to detect and alert on this type of L3/L4 reconnaissance even when App Gateway had the port open via the TCP proxy feature. As seen below the traffic passed Application Gateway+WAF but was caught by Azure Firewall since it is non-HTTP: The attacker then tries a different approach: Now the attacker somehow compromises a workstation inside our network and attempts to move laterally to the web server via RDP on port 3389 and/or attempts to exfiltrate and try to access something outside of the network. Azure Firewall located inside the VNet blocks the RDP attempt (if there is no rule allowing it) and if there is, its IDPS flags/blocks the traffic as suspicious. In this case, Azure WAF will not be involved but Azure Firewall inspects this internal and/or outbound traffic and blocks it. This illustrates how a combination of the two stops the attacker at multiple points: firewall foiled the reconnaissance and lateral movement/exfiltration, WAF foiled the application exploit. We can see below the outbound malicious attempt caught by Azure Firewall IDPS: In summary, Azure WAF is like the \u201cbodyguard at the application\u2019s front door\u201d \u2013 inspecting every HTTP request in detail and ejecting those carrying hidden weapons or exhibiting bad behavior. It focuses on the web layer, which Azure Firewall or DDoS alone cannot fully protect. If we only had the WAF and no network firewall or DDoS, we\u2019d be safe from many web attacks but would remain exposed to network-level threats (e.g., someone trying to RDP into a VM, or flooding a non-HTTP service). Conversely, if we had only the firewall, a crafty attacker could still exploit a vulnerability in our web app with a well-crafted HTTP request that looks \u201callowed\u201d to the firewall \u2013 that\u2019s where the WAF comes in to catch it. Azure Firewall on the other hand, acts as the \u201cmoat and drawbridge\u201d to your cloud network: it keeps out the obvious bad guys at the gate, tightly limits what\u2019s allowed in or out (no implicit trust for internal IPs), and uses threat intel + signatures to sniff out known threats in any traffic it passes, even outbound traffic. The table below shows the traffic flow that will be filtered by Azure WAF vs Azure Firewall. As you can see, layered security is fundamental to Zero Trust Conclusion In a Zero Trust architecture, security cannot rely on implicit trust or a single layer of defense. The combination of Azure Firewall Premium, Azure DDoS protection and Azure Application Gateway WAF exemplifies defense-in-depth by protecting both network and application layers. Organizations hosting internet-facing applications should adopt this layered strategy to reduce exposure to modern threats, prevent lateral movement, and maintain strict control over outbound traffic. By implementing these services together, you align with Microsoft\u2019s recommended best practices for Zero Trust and significantly strengthen your cloud security posture. References: Implement a Zero Trust network for web applications by using Azure Firewall and Azure Application Gateway What is Azure Web Application Firewall? Azure DDoS Protection Overview | Microsoft Learn What is Azure Firewall? Architecture designs using Azure WAF and Azure Firewall together Zero Trust Assessment Overview | Microsoft Learn",
+      "link": "https://techcommunity.microsoft.com/t5/azure-network-security-blog/zero-trust-with-azure-firewall-azure-ddos-protection-and-azure/ba-p/4490595",
+      "source": "Azure Network Security Blog",
+      "type": "vendors",
+      "type_label": "Vendors & Product Blogs",
+      "published": "2026-02-05T05:06:20+00:00",
+      "published_ts": 1770267980,
+      "smart_groups": [
+        "Curated",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Cloud / SaaS",
+        "Malware / Payloads",
+        "Web / API Security",
+        "Identity / Access",
+        "Crypto / Web3"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Measuring AI use becomes a business requirement",
+      "summary": "Enterprise teams already run dozens of AI tools across daily work. Usage stretches from code generation and analytics to customer support drafting and internal research. Oversight remains uneven across roles, functions, and industries. A new Larridin survey of enterprise leaders places measurement and governance at the center of this operating environment. Executives frequently express confidence in their understanding of AI activity across the organization. Directors and managers closer to daily operations describe a different condition. \u2026 More \u2192 The post Measuring AI use becomes a business requirement appeared first on Help Net Security .",
+      "link": "https://www.helpnetsecurity.com/2026/02/05/measuring-ai-use-becomes-a-business-requirement/",
+      "source": "Help Net Security",
+      "type": "general",
+      "type_label": "General Security & Blogs",
+      "published": "2026-02-05T05:00:53+00:00",
+      "published_ts": 1770267653,
+      "smart_groups": [
+        "Network / OT / ICS"
+      ],
+      "curated": false
+    },
+    {
+      "title": "Cyberattackers Exploit DNS TXT Records in ClickFix Script to Execute Malicious PowerShell Commands",
+      "summary": "A new evolution in the \u201cClickFix\u201d social engineering campaigns, dubbed KongTuke. This latest variant, observed actively since late December 2025, distinguishes itself by leveraging DNS TXT records to stage and retrieve malicious payloads, marking a significant shift in evasion tactics. The \u201cClickFix\u201d technique typically involves compromising legitimate websites or creating fake landing pages that display a deceptive \u201cVerify [\u2026] The post Cyberattackers Exploit DNS TXT Records in ClickFix Script to Execute Malicious PowerShell Commands appeared first on GBHackers Security | #1 Globally Trusted Cyber Security News Platform .",
+      "link": "https://gbhackers.com/dns-txt-records/",
+      "source": "GBHackers News",
+      "type": "general",
+      "type_label": "General Security & Blogs",
+      "published": "2026-02-05T04:58:46+00:00",
+      "published_ts": 1770267526,
+      "smart_groups": [
+        "Curated",
+        "Exploit / PoC",
+        "Windows / Microsoft",
+        "Network / OT / ICS",
+        "Phishing / Social Engineering"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Cisco Warns of Meeting Management Flaw Enabling Arbitrary File Upload by Remote Attackers",
+      "summary": "Cisco has released a security advisory detailing a high-severity vulnerability in Cisco Meeting Management (CMM). The flaw, caused by improper input validation, allows authenticated remote attackers to upload arbitrary files and potentially execute commands with root privileges. The vulnerability is located within the Certificate Management feature of the CMM web-based management interface. It has been assigned a CVSS [\u2026] The post Cisco Warns of Meeting Management Flaw Enabling Arbitrary File Upload by Remote Attackers appeared first on GBHackers Security | #1 Globally Trusted Cyber Security News Platform .",
+      "link": "https://gbhackers.com/cisco-warns-of-meeting-management-flaw/",
+      "source": "GBHackers News",
+      "type": "general",
+      "type_label": "General Security & Blogs",
+      "published": "2026-02-05T04:53:56+00:00",
+      "published_ts": 1770267236,
+      "smart_groups": [
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": false
+    },
+    {
+      "title": "Microsoft to Integrate Sysmon Threat Detection Natively into Windows 11",
+      "summary": "Microsoft has officially begun rolling out native System Monitor (Sysmon) functionality to Windows 11, marking a significant shift for threat hunters and security operations centers (SOCs). Released via the Windows 11 Insider Preview Build 26300.7733 (Dev Channel) on February 3, 2026, this update embeds the popular Sysinternals tool directly into the operating system\u2019s optional features. [\u2026] The post Microsoft to Integrate Sysmon Threat Detection Natively into Windows 11 appeared first on GBHackers Security | #1 Globally Trusted Cyber Security News Platform .",
+      "link": "https://gbhackers.com/microsoft-to-integrate-sysmon-threat-detection/",
+      "source": "GBHackers News",
+      "type": "general",
+      "type_label": "General Security & Blogs",
+      "published": "2026-02-05T04:45:57+00:00",
+      "published_ts": 1770266757,
+      "smart_groups": [
+        "Windows / Microsoft"
+      ],
+      "curated": false
+    },
+    {
+      "title": "Bhutan moves $22M in Bitcoin as crypto slumps, mining conditions toughen",
+      "summary": "Bhutan has slipped to the seventh-largest nation-state Bitcoin holder, with its stash falling from 13,295 BTC in October 2024 to 5,700 BTC.",
+      "link": "https://cointelegraph.com/news/bhutan-reportedly-sells-more-bitcoin-from-its-reserve?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound",
+      "source": "Cointelegraph.com News",
+      "type": "crypto",
+      "type_label": "Crypto & Blockchain Security",
+      "published": "2026-02-05T04:38:20+00:00",
+      "published_ts": 1770266300,
+      "smart_groups": [],
+      "curated": false
+    },
+    {
+      "title": "CISA Confirms VMware ESXi 0-Day Vulnerability Exploited in Ransomware Operations",
+      "summary": "The Cybersecurity and Infrastructure Security Agency (CISA) has officially added a critical vulnerability affecting VMware ESXi to its Known Exploited Vulnerabilities (KEV) catalog. Tracked as CVE-2025-22225, this zero-day flaw allows attackers to escape security sandboxes. It is currently being leveraged in active ransomware operations. Technical Analysis of CVE-2025-22225 The vulnerability is classified as an arbitrary write memory [\u2026] The post CISA Confirms VMware ESXi 0-Day Vulnerability Exploited in Ransomware Operations appeared first on GBHackers Security | #1 Globally Trusted Cyber Security News Platform .",
+      "link": "https://gbhackers.com/cisa-confirms-vmware-esxi-0-day-vulnerability/",
+      "source": "GBHackers News",
+      "type": "general",
+      "type_label": "General Security & Blogs",
+      "published": "2026-02-05T04:36:00+00:00",
+      "published_ts": 1770266160,
+      "smart_groups": [
+        "Curated",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Crypto wallet provider Payy launches privacy-focused Ethereum L2",
+      "summary": "Payy\u2019s new privacy layer 2 makes every ERC-20 transfer private by default without the need for new wallets or tokens.",
+      "link": "https://cointelegraph.com/news/privacy-enabled-evm-l2-payy-launches-ethereum?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound",
+      "source": "Cointelegraph.com News",
+      "type": "crypto",
+      "type_label": "Crypto & Blockchain Security",
+      "published": "2026-02-05T04:22:58+00:00",
+      "published_ts": 1770265378,
+      "smart_groups": [],
+      "curated": false
+    },
+    {
+      "title": "XRP traders more optimistic as BTC, ETH mood turns sour: Santiment",
+      "summary": "Social media sentiment has turned \u201cextremely bearish\u201d toward Bitcoin and Ethereum this week, according to analytics platform Santiment.",
+      "link": "https://cointelegraph.com/news/xrp-traders-sentiment-high-bitcoin-ethereum-santiment?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound",
+      "source": "Cointelegraph.com News",
+      "type": "crypto",
+      "type_label": "Crypto & Blockchain Security",
+      "published": "2026-02-05T04:10:44+00:00",
+      "published_ts": 1770264644,
+      "smart_groups": [
+        "Network / OT / ICS"
+      ],
+      "curated": false
+    },
+    {
+      "title": "Iron Mountain Suffers Alleged Breach According to Dark Web Reports | UpGuard",
+      "summary": "A data breach involving Iron Mountain was reported on February 2, 2026. See incident details, impact on customers, and recommended security measures.",
+      "link": "https://www.upguard.com/news/iron-mountain-data-breach-2026-04-02",
+      "source": "UpGuard \u2013 News",
+      "type": "vendors",
+      "type_label": "Vendors & Product Blogs",
+      "published": "2026-02-05T04:10:30+00:00",
+      "published_ts": 1770264630,
+      "smart_groups": [
+        "Data Breaches / Leaks"
+      ],
+      "curated": false
+    },
+    {
+      "title": "How long until we see a major AI-related data breach?",
+      "summary": "With how many companies are rushing to plug everything into ChatGPT and other AI tools, feels like it's only a matter of time before we see a massive breach tied to AI usage. Samsung surely was a wakeup call but that was just employees being careless. I'm thinking more like a provider getting compromised or training data getting leaked that exposes customer info from thousands of companies at once. Anyone in security thinking about this? Feels like we're building a house of cards... submitted by /u/Ok_Card_2823 [link] [comments]",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1qwb1a0/how_long_until_we_see_a_major_airelated_data/",
+      "source": "/r/cybersecurity",
+      "type": "osint",
+      "type_label": "OSINT, Communities & Subreddits",
+      "published": "2026-02-05T04:05:57+00:00",
+      "published_ts": 1770264357,
+      "smart_groups": [
+        "Data Breaches / Leaks"
+      ],
+      "curated": false
+    },
+    {
+      "title": "I took apart the new AirTag 2 and found a serious flaw in Apple's popular tracker",
+      "summary": "I disabled the new AirTag's speaker in two minutes with just one tool. Here's why that's a major problem.",
+      "link": "https://www.zdnet.com/article/apple-airtag-2-popular-tracker-flaw/",
+      "source": "ZDNet \u2013 Security",
+      "type": "general",
+      "type_label": "General Security & Blogs",
+      "published": "2026-02-05T04:00:53+00:00",
+      "published_ts": 1770264053,
+      "smart_groups": [],
+      "curated": false
+    },
+    {
+      "title": "I tried this bizarre wireless charger for my Apple Watch - it's surprisingly useful",
+      "summary": "If your Apple Watch is just as important as your iPhone, this snap charger is a compelling charging solution.",
+      "link": "https://www.zdnet.com/article/iniu-apple-watch-power-bank-charger-review/",
+      "source": "ZDNet \u2013 Security",
+      "type": "general",
+      "type_label": "General Security & Blogs",
+      "published": "2026-02-05T03:30:46+00:00",
+      "published_ts": 1770262246,
+      "smart_groups": [],
+      "curated": false
+    },
+    {
+      "title": "FCC Opens Review of Elon Musk's SpaceX Plan for Orbital AI Data Centers",
+      "summary": "The filing follows approval of Starlink\u2019s Gen2 expansion and Elon Musk\u2019s push to move AI infrastructure into orbit.",
+      "link": "https://decrypt.co/357024/fcc-review-musk-spacex-plan-orbital-ai-data-centers",
+      "source": "Decrypt",
+      "type": "crypto",
+      "type_label": "Crypto & Blockchain Security",
+      "published": "2026-02-05T03:22:26+00:00",
+      "published_ts": 1770261746,
+      "smart_groups": [],
+      "curated": false
+    },
+    {
+      "title": "Bitcoin Extends Selloff as Macro Pressures and Leverage Unwind",
+      "summary": "The latest decline reflects a broader unwind in leverage, with investors reassessing Bitcoin\u2019s short-term role as an inflation hedge.",
+      "link": "https://decrypt.co/357025/bitcoin-extends-selloff-macro-pressures-leverage-unwind",
+      "source": "Decrypt",
+      "type": "crypto",
+      "type_label": "Crypto & Blockchain Security",
+      "published": "2026-02-05T03:07:33+00:00",
+      "published_ts": 1770260853,
+      "smart_groups": [],
+      "curated": false
+    },
+    {
+      "title": "Linux Mint vs. Zorin OS: I've tried both Windows alternatives, and here's my winner",
+      "summary": "Linux Mint and Zorin OS are both popular Linux distros - but which one should you use? Here's my advice after weeks of testing.",
+      "link": "https://www.zdnet.com/article/linux-mint-vs-zorin-os/",
+      "source": "ZDNet \u2013 Security",
+      "type": "general",
+      "type_label": "General Security & Blogs",
+      "published": "2026-02-05T03:01:11+00:00",
+      "published_ts": 1770260471,
+      "smart_groups": [
+        "Windows / Microsoft",
+        "Linux / Unix"
+      ],
+      "curated": false
+    },
+    {
+      "title": "Want local vibe coding? This AI stack replaces Claude Code and Codex - and it's free",
+      "summary": "You can replace expensive, cloud-based AI coding with three tools. Here's how.",
+      "link": "https://www.zdnet.com/article/local-ai-coding-stack-replaces-claude-code-codex-free/",
+      "source": "ZDNet \u2013 Security",
+      "type": "general",
+      "type_label": "General Security & Blogs",
+      "published": "2026-02-05T03:01:09+00:00",
+      "published_ts": 1770260469,
+      "smart_groups": [
+        "Crypto / Web3"
+      ],
+      "curated": false
+    },
+    {
+      "title": "AI is collapsing the career ladder\u00a0 - 5 ways to reach that leadership role now",
+      "summary": "AI has changed all the rules. To get to the top, you'll have to prove you're ready for responsibility. Here's how.",
+      "link": "https://www.zdnet.com/article/career-ladder-crumbling-climb-leadership/",
+      "source": "ZDNet \u2013 Security",
+      "type": "general",
+      "type_label": "General Security & Blogs",
+      "published": "2026-02-05T03:01:08+00:00",
+      "published_ts": 1770260468,
+      "smart_groups": [],
+      "curated": false
+    },
+    {
+      "title": "'I lost two hours of my day' - why workers are frustrated with AI",
+      "summary": "AI adoption is up while employee confidence in the technology is down. A report from ManpowerGroup explains why.",
+      "link": "https://www.zdnet.com/article/confidence-in-ai-tools-among-workers-plunged-why-and-what-to-do-about-it/",
+      "source": "ZDNet \u2013 Security",
+      "type": "general",
+      "type_label": "General Security & Blogs",
+      "published": "2026-02-05T03:00:49+00:00",
+      "published_ts": 1770260449,
+      "smart_groups": [],
+      "curated": false
+    },
+    {
+      "title": "1.5 million AI agents are at risk of going rogue",
+      "summary": "A study released Wednesday by API management platform vendor Gravitee indicates that upwards of half of the three million agents currently in use by organizations in the US and UK \u201care ungoverned and at the risk of going rogue.\u201d Based on a December 2025 survey of 750 IT executives and practitioners conducted by Opinion Matters, the results revealed that AI agents are being deployed faster than security teams can keep up. There are, said Rory Blundell , CEO of Gravitee, now over three million AI agents operating within corporations, which he described as a workforce larger than the entire global employee count at Walmart. The three million number is based on an extrapolation of survey results, based on government estimates of 8,250 UK businesses and 77,000 US businesses that employ 250 employees or more. The mean number of AI agents deployed per business is 36.9, and when respondents were asked if their organization \u201cexperienced or suspected an AI agent-related security or data privacy incident in the past 12 months,\u201d 88% said that they had. The mean percentage of agents that are not actively monitored and secured, according to the findings, was 53% Asked what prompted the study, Blundell wrote in an email, \u201cwe\u2019re all familiar with stories of AI agents going rogue: deleting codebases, leaking confidential information, inventing fake data. The working hypothesis that prompted this research was that, while agentic deployment is reaching an exciting stage, businesses have not yet caught up with agent governance. The research validates that.\u201d A global problem Agents, he said, \u201ccan offer businesses a huge productivity gain, but we have to be realistic about the risks: without governance and oversight, they can easily start becoming liabilities, and a danger to consumers and businesses alike.\u201d In addition, said Blundell, despite respondents being only from the UK and US, \u201cthis is absolutely a global problem. Companies around the world are using AI agents, and across the board there is a gap between the level of deployment and the level of governance. We have a strong customer base in the EU, where we see the same problems.\u201d David Shipley , head of Canadian-based security awareness training firm Beauceron Security, said, \u201cthe only thing that shocks me is that people think it\u2019s only 53% of agents that aren\u2019t monitored. It\u2019s higher.\u201d He likened the results from the Gravitee study to a \u201clesson about the Titanic that everyone in technology keeps ignoring. The Titanic disaster didn\u2019t happen because they didn\u2019t know there would be icebergs on the trip. They knew it was peak iceberg season, they knew they were going too fast.\u201d Shipley said that the ship\u2019s captain and his crew \u201cthought they\u2019d detect [an iceberg]; if they didn\u2019t, and hit one, that their technology controls would protect them to help them recover.\u201d They put their faith in the so-called watertight compartments that, it turned out, weren\u2019t watertight at the top, but, most importantly, they trusted the new wireless communications technology that they could use to call for help if they got in trouble. The equivalent today: \u201cWell, IT and security can fix it if we get in trouble with our agents.\u201d \u201cWrong then, super wrong now,\u201d he said. He said, \u201cwe know AI agents are inherently dangerous and unreliable. There\u2019s literally math proofs out there that show it. So, we know there are icebergs. Let me repeat this for those at the back of the room: 100% of AI agents have the potential to go rogue. If a vendor assures you it isn\u2019t possible and their core technology is an LLM, they\u2019re lying. We know we\u2019re going too fast in adoption for the risks we know exist.\u201d Shipley added, \u201cnow, the funny part: imagine if the Titanic still made the choices it did, knowing the watertight compartments didn\u2019t work (aka monitoring is missing for 53% of AI agents), we know by the time IT and security roll on an AI agent risk, the damage is done (the ship\u2019s sinking too fast and radio isn\u2019t going to help because help will be too late). And we still made the choices we\u2019re making.\u201d The real issue is invisible AI, not rogue AI Manish Jain , principal research director at Info-Tech Research Group, said that as the \u201cexponential\u201d speed of AI development continues, his firm, based on experiences with CIOs and CDOs, predicts that there will be more AI agents globally by the year 2028 than the number of human employees. \u201cIt would be one of the biggest challenges for business and IT executives to govern them without curtailing the innovation that these AI agents bring with them,\u201d he said. Even today, he noted, \u201cwe see that most enterprise AI agents are running without oversight. Many organizations don\u2019t even know how many agents they have, where they\u2019re running, or what they can touch. If you don\u2019t know how many mules are in the barn, don\u2019t act surprised when one kicks the door down.\u201d Jain pointed out that AI agents are no different. \u201cUnaccounted agents often emerge through sanctioned, low-code tools and informal experimentation, bypassing traditional IT scrutiny until something breaks. You cannot govern what you can\u2019t see. So, we need to understand that the real issue isn\u2019t \u2018rogue AI\u2019, it\u2019s invisible AI.\u201d Info-Tech, he added, \u201cstrongly believes that governing AI models or pre-approving agents is no longer enough, because invisible, rogue agents will do tandava (the dance of destruction) at runtime. This is because, when it comes to governing these AI agents, the number is so huge that approval gates will not be sustainable without halting the innovation. Continuous oversight should be the priority for AI governance after setting initial guardrails as part of the AI strategy.\u201d Perspective, he said, also needs to change: \u201cAI agents are no longer helpful bots. They often operate with delegated yet broad credentials, persistent access, and undefined accountability. This can become a costly mistake as overprivileged agents are the new insider threat. We need to define tiered access for AI agents. While we can\u2019t avoid giving a few people keys to our house to speed up things, if you trust every stranger with your house keys, we wouldn\u2019t be able to blame the locksmith when things go missing.\u201d",
+      "link": "https://www.csoonline.com/article/4127733/1-5-million-ai-agents-are-at-risk-of-going-rogue.html",
+      "source": "CSO Online",
+      "type": "general",
+      "type_label": "General Security & Blogs",
+      "published": "2026-02-05T02:42:45+00:00",
+      "published_ts": 1770259365,
+      "smart_groups": [
+        "Curated",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "Identity / Access",
+        "Crypto / Web3"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Turning off this simple switch made the Firefox browser much more bearable for me",
+      "summary": "Mozilla heard your complaints, and now Firefox 148 gives you an AI opt-out.",
+      "link": "https://www.zdnet.com/article/firefox-turn-off-ai-features-switch-how-to/",
+      "source": "ZDNet \u2013 Security",
+      "type": "general",
+      "type_label": "General Security & Blogs",
+      "published": "2026-02-05T02:30:39+00:00",
+      "published_ts": 1770258639,
+      "smart_groups": [],
+      "curated": false
+    },
+    {
+      "title": "CISA Warns of VMware ESXi 0-day Vulnerability Exploited in Ransomware Attacks",
+      "summary": "The U.S. Cybersecurity and Infrastructure Security Agency (CISA) recently confirmed that ransomware groups are actively exploiting CVE-2025-22225, a high-severity VMware ESXi sandbox escape vulnerability. This flaw, patched by Broadcom in March 2025, enables attackers to escape virtual machine isolation and deploy ransomware across hypervisors. CVE-2025-22225 is an arbitrary write vulnerability in VMware ESXi, rated Important [\u2026] The post CISA Warns of VMware ESXi 0-day Vulnerability Exploited in Ransomware Attacks appeared first on Cyber Security News .",
+      "link": "https://cybersecuritynews.com/vmware-esxi-0-day-ransomware-attack/",
+      "source": "Cyber Security News (FeedBurner)",
+      "type": "general",
+      "type_label": "General Security & Blogs",
+      "published": "2026-02-05T02:20:28+00:00",
+      "published_ts": 1770258028,
+      "smart_groups": [
+        "Curated",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": true
     },
     {
       "title": "My proven way to speed up Linux when RAM upgrades aren't worth it (and it's free to do)",
@@ -50,6 +363,33 @@
       "type_label": "Government, CERT & Advisories",
       "published": "2026-02-05T02:10:11+00:00",
       "published_ts": 1770257411,
+      "smart_groups": [],
+      "curated": false
+    },
+    {
+      "title": "Multiple TP-Link OS Command Injection Vulnerabilities Let Attackers Gain Admin Control of the Device",
+      "summary": "TP-Link has released urgent firmware updates for its Archer BE230 Wi-Fi 7 routers to address multiple high-severity security flaws. These vulnerabilities could allow authenticated attackers to execute arbitrary operating system (OS) commands, effectively granting them complete administrative control over the device. The vulnerabilities affect the Archer BE230 v1.2 model running firmware versions before 1.2.4 Build [\u2026] The post Multiple TP-Link OS Command Injection Vulnerabilities Let Attackers Gain Admin Control of the Device appeared first on Cyber Security News .",
+      "link": "https://cybersecuritynews.com/tp-link-os-command-injection-vulnerability/",
+      "source": "Cyber Security News (FeedBurner)",
+      "type": "general",
+      "type_label": "General Security & Blogs",
+      "published": "2026-02-05T02:07:30+00:00",
+      "published_ts": 1770257250,
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Cloud / SaaS"
+      ],
+      "curated": false
+    },
+    {
+      "title": "CFTC pulls Biden-era proposal to ban sports, political prediction markets",
+      "summary": "CFTC Chair Mike Selig described the proposal as a \u201cfrolic into merit regulation\u201d by the Biden administration.",
+      "link": "https://cointelegraph.com/news/cftc-withdraws-proposal-ban-sports-political-prediction-markets?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound",
+      "source": "Cointelegraph.com News",
+      "type": "crypto",
+      "type_label": "Crypto & Blockchain Security",
+      "published": "2026-02-05T02:05:17+00:00",
+      "published_ts": 1770257117,
       "smart_groups": [],
       "curated": false
     },
@@ -633,28 +973,6 @@
       "smart_groups": [
         "Curated",
         "Vulnerabilities / CVEs"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Zero Trust with Azure Firewall, Azure DDoS Protection and Azure WAF: A practical use case",
-      "summary": "Introduction Zero Trust has emerged as the defining security ethos of the modern enterprise. It is guided by a simple but powerful principle: \u201cNever trust, always verify.\u201d This principle is more relevant now than ever as cyberattacks continue to trend upward in both frequency and impact, affecting organizations of every size and industry. No entity large or small can assume immunity. As a result, adopting Zero Trust is no longer optional, it is a foundational requirement for designing secure, resilient architectures. A key tenet of Zero Trust is the assumption of breach, thus designing systems with the expectation that threats may already exist both outside and inside the network perimeter. To implement this principle, you need multiple, independent security controls that inspect traffic at different layers and enforce least privilege access continuously. Relying on a single security control, even a highly capable one, leaves gaps that modern attackers are adept at exploiting. It is within this context that combining the use of Azure Firewall, Azure DDoS Protection and Azure Web Application Firewall (WAF) services to secure Web Applications while protecting the network perimeter becomes important. Together, these services deliver comprehensive protection across the network and application layers. Defense-in-depth: Why Azure WAF, Azure DDoS Protection and Azure Firewall are essential for Zero Trust In these sections ahead, we examine the common network and application-layer attack vectors that target modern web applications and illustrate how Azure WAF, Azure DDoS protection, and Azure Firewall, when layered strategically, work in tandem to mitigate these threats. The architecture The test environment was designed to reflect a common Azure deployment pattern: Azure DDoS Protection at the edge, to defend against a comprehensive set of network layer (layer 3/4) attacks Azure Application Gateway with WAF , inspecting inbound HTTP traffic for application-layer threats Azure Firewall Premium behind the gateway, providing network-layer protection, deep packet inspection, and outbound traffic governance. A backend subnet hosting an intentionally vulnerable application (OWASP Juice Shop) to simulate real-world attack scenarios. Traffic flows through the DDoS first, then WAF, and then the firewall, before reaching the backend. Outbound traffic from the backend is routed through the firewall for inspection. This ensures that all inbound and outbound traffic is scrutinized. Two access paths that will be tested: Via the Application Gateway public IP, where traffic passes through DDoS, WAF and Firewall. Via the Firewall public IP using a DNAT rule, where traffic bypasses WAF and is inspected only by the Firewall. The following scenarios illustrate how this complementary protection strengthens overall resilience: Scenario 1: SQL injection (application-layer attack) Let\u2019s say an attacker on the internet attempts to access the application\u2019s login endpoint via the Application Gateway IP address and injects a SQL payload into the input field. For example, the attacker submits a request containing the following payload in the User ID field: ?id=' OR 1=1 -- Azure WAF will receive the request, analyze, and if Azure WAF is deployed in Prevention mode, it will immediately detect the SQL injection attempt using its built-in Managed Ruleset. Upon detection, Azure WAF will return a WAF block page, preventing the request from ever reaching the application. By contrast, when the same application is accessed through a firewall-only path (for example, via a DNAT rule on Azure Firewall that exposes the application on port 443), Azure Firewall allows the traffic as it does not perform deep Application layer inspection and SQL injection payloads when embedded within the HTTP request body, appear legitimate at the network layer. Here is a snapshot of the attacker gaining access to the admin role when they insert this SQL injection attack without Azure WAF and only Azure Firewall in the path. Scenario 2: Volumetric and application-layer DDoS attacks Next, the attacker launches a volumetric network layer DDoS (SYN/UDP floods) to saturate bandwidth, but Azure DDoS Network Protection absorbs and scrubs the attack at the edge , so no traffic reaches Application Gateway, WAF, or Firewall. When the network layer attack fails, they shift to HTTP flood attack at the application layer, overwhelming the web application with a high volume of requests. Some requests include exploit attempts, while others are designed purely to exhaust application resources. Azure WAF here , can identify malicious patterns such as: Automated bots lacking proper headers Abnormal request rates Known exploit payloads embedded within requests Malicious IP addresses Note: Azure DDoS Protection is a comprehensive service that provides protection across network layers (Layer 3 and 4) , while HTTP DDoS Protection specifically targets application-layer attacks (Layer 7) and is integrated with Azure WAF . They are complementary services designed to defend against different types of threats within the Azure environment. Additionally, if the botnet\u2019s IPs are known threat actors or malicious traffic, Azure Firewall\u2019s threat intelligence and IDPS will be able to flag this traffic too. Together, these services form a complementary, defense-in-depth strategy for protecting Azure workloads against distributed denial-of-service attacks. Scenario 3: Path Traversal Attempt/Information leak : (Application-Layer Attack) Next, the attacker sends HTTP requests to access sensitive system files such as /etc/passwd by sending crafted HTTP requests to the application via the Application Gateway public IP address . The request successfully passes through Azure Application Gateway WAF, as it does not trigger a managed rule violation in this case. However, when the request reaches Azure Firewall, the Firewall\u2019s IDPS detects the malicious pattern in the HTTP header and blocks the connection before it can reach the backend workload. Because the backend connection is denied by Azure Firewall, Application Gateway is unable to establish a successful response and returns a 504 Gateway Timeout to the client, rather than a 403 Forbidden response that would typically be generated by WAF when it blocks traffic. Below is the log from Azure Firewall showing that its able to detect this traffic as \u2013 Attempted Information Leak. As seen below, the traffic passed Application Gateway+WAF but was caught by Azure Firewall: This scenario highlights an important architectural outcome: The combination of WAF and Azure Firewall provides layered enforcement, even if an attack manages to slip past Azure WAF, Azure Firewall adds an additional enforcement layer to ensure the application remains protected. Now, let\u2019s look at some more Network Layer attacks: Scenario 4: Network reconnaissance and breach In this scenario, port 3389 is exposed on Application Gateway using the L4 TCP Proxy option . Now, the attacker attempts to scan the Application Gateway on all the ports/protocols and found that port 3389 was open along with other ports such as ports 80, 8080, 3000. Azure WAF will alert us for Layer 7/Application exploit but cannot verify/validate the attack on port 3389 since it was purely Layer 3/4 and contained no HTTP payload for WAF inspection. The L4 proxy listener on App Gateway simply forwards the raw TCP connections to the Azure Firewall behind it. Azure Firewall, however, performs full network\u2011layer inspection across all ports and protocols, allowing it to detect and alert on this type of L3/L4 reconnaissance even when App Gateway had the port open via the TCP proxy feature. As seen below the traffic passed Application Gateway+WAF but was caught by Azure Firewall since it is non-HTTP: The attacker then tries a different approach: Now the attacker somehow compromises a workstation inside our network and attempts to move laterally to the web server via RDP on port 3389 and/or attempts to exfiltrate and try to access something outside of the network. Azure Firewall located inside the VNet blocks the RDP attempt (if there is no rule allowing it) and if there is, its IDPS flags/blocks the traffic as suspicious. In this case, Azure WAF will not be involved but Azure Firewall inspects this internal and/or outbound traffic and blocks it. This illustrates how a combination of the two stops the attacker at multiple points: firewall foiled the reconnaissance and lateral movement/exfiltration, WAF foiled the application exploit. We can see below the outbound malicious attempt caught by Azure Firewall IDPS: In summary, Azure WAF is like the \u201cbodyguard at the application\u2019s front door\u201d \u2013 inspecting every HTTP request in detail and ejecting those carrying hidden weapons or exhibiting bad behavior. It focuses on the web layer, which Azure Firewall or DDoS alone cannot fully protect. If we only had the WAF and no network firewall or DDoS, we\u2019d be safe from many web attacks but would remain exposed to network-level threats (e.g., someone trying to RDP into a VM, or flooding a non-HTTP service). Conversely, if we had only the firewall, a crafty attacker could still exploit a vulnerability in our web app with a well-crafted HTTP request that looks \u201callowed\u201d to the firewall \u2013 that\u2019s where the WAF comes in to catch it. Azure Firewall on the other hand, acts as the \u201cmoat and drawbridge\u201d to your cloud network: it keeps out the obvious bad guys at the gate, tightly limits what\u2019s allowed in or out (no implicit trust for internal IPs), and uses threat intel + signatures to sniff out known threats in any traffic it passes, even outbound traffic. The table below shows the traffic flow that will be filtered by Azure WAF vs Azure Firewall. As you can see, layered security is fundamental to Zero Trust Conclusion In a Zero Trust architecture, security cannot rely on implicit trust or a single layer of defense. The combination of Azure Firewall Premium, Azure DDoS protection and Azure Application Gateway WAF exemplifies defense-in-depth by protecting both network and application layers. Organizations hosting internet-facing applications should adopt this layered strategy to reduce exposure to modern threats, prevent lateral movement, and maintain strict control over outbound traffic. By implementing these services together, you align with Microsoft\u2019s recommended best practices for Zero Trust and significantly strengthen your cloud security posture. References: Implement a Zero Trust network for web applications by using Azure Firewall and Azure Application Gateway What is Azure Web Application Firewall? Azure DDoS Protection Overview | Microsoft Learn What is Azure Firewall? Architecture designs using Azure WAF and Azure Firewall together Zero Trust Assessment Overview | Microsoft Learn",
-      "link": "https://techcommunity.microsoft.com/t5/azure-network-security-blog/zero-trust-with-azure-firewall-azure-ddos-protection-and-azure/ba-p/4490595",
-      "source": "Azure Network Security Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-02-04T21:47:23+00:00",
-      "published_ts": 1770241643,
-      "smart_groups": [
-        "Curated",
-        "Ransomware",
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "Cloud / SaaS",
-        "Malware / Payloads",
-        "Web / API Security",
-        "Identity / Access",
-        "Crypto / Web3"
       ],
       "curated": true
     },
@@ -2024,18 +2342,6 @@
       "smart_groups": [
         "Cloud / SaaS"
       ],
-      "curated": false
-    },
-    {
-      "title": "You can turn off Firefox's new AI features with one simple switch - here's how",
-      "summary": "Mozilla heard your complaints, and now Firefox 148 gives you an AI opt-out.",
-      "link": "https://www.zdnet.com/article/firefox-turn-off-ai-features-switch-how-to/",
-      "source": "ZDNet \u2013 Security",
-      "type": "general",
-      "type_label": "General Security & Blogs",
-      "published": "2026-02-04T15:10:00+00:00",
-      "published_ts": 1770217800,
-      "smart_groups": [],
       "curated": false
     },
     {
@@ -13841,18 +14147,6 @@
       "smart_groups": [
         "Web / API Security"
       ],
-      "curated": false
-    },
-    {
-      "title": "Why workers are losing confidence in AI - and what businesses can do about it",
-      "summary": "AI adoption is up while employee confidence in the technology is down. A report from ManpowerGroup explains why.",
-      "link": "https://www.zdnet.com/article/confidence-in-ai-tools-among-workers-plunged-why-and-what-to-do-about-it/",
-      "source": "ZDNet \u2013 Security",
-      "type": "general",
-      "type_label": "General Security & Blogs",
-      "published": "2026-02-02T08:00:44+00:00",
-      "published_ts": 1770019244,
-      "smart_groups": [],
       "curated": false
     },
     {
@@ -50348,20 +50642,6 @@
       "published_ts": 1769121704,
       "smart_groups": [
         "Data Breaches / Leaks"
-      ],
-      "curated": false
-    },
-    {
-      "title": "The ultimate Apple Watch accessory? I didn't know I needed this charger until now",
-      "summary": "Your Apple Watch can be just as indispensable as your iPhone, and this Iniu power bank can keep it going for longer than a week.",
-      "link": "https://www.zdnet.com/article/iniu-apple-watch-power-bank-charger-review/",
-      "source": "ZDNet \u2013 Security",
-      "type": "general",
-      "type_label": "General Security & Blogs",
-      "published": "2026-01-22T22:39:00+00:00",
-      "published_ts": 1769121540,
-      "smart_groups": [
-        "Identity / Access"
       ],
       "curated": false
     },
@@ -119413,302 +119693,6 @@
       "published": "2026-01-06T04:51:57+00:00",
       "published_ts": 1767675117,
       "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "GravityRAT with Remote Access Capabilities Attacking Windows, Android, and macOS Systems",
-      "summary": "GravityRAT is a remote access trojan that has been targeting government agencies and military organizations since 2016. This malware originated as a Windows-only threat but has evolved into a cross-platform tool that can attack Windows, Android, and macOS systems. The malware uses fake apps and tricky emails to spread, making it hard for regular users [\u2026] The post GravityRAT with Remote Access Capabilities Attacking Windows, Android, and macOS Systems appeared first on Cyber Security News .",
-      "link": "https://cybersecuritynews.com/gravityrat-with-remote-access-capabilities/",
-      "source": "Cyber Security News (FeedBurner)",
-      "type": "general",
-      "type_label": "General Security & Blogs",
-      "published": "2026-01-06T04:48:13+00:00",
-      "published_ts": 1767674893,
-      "smart_groups": [
-        "Curated",
-        "Windows / Microsoft",
-        "Malware / Payloads"
-      ],
-      "curated": true
-    },
-    {
-      "title": "I thought smart ceiling lights were a gimmick - until Govee showed me these models at CES",
-      "summary": "Govee has just launched three new flagship smart home products, along with a convenient Samsung SmartThings integration.",
-      "link": "https://www.zdnet.com/article/govee-smart-ceiling-light-ces/",
-      "source": "ZDNet \u2013 Security",
-      "type": "general",
-      "type_label": "General Security & Blogs",
-      "published": "2026-01-06T04:02:00+00:00",
-      "published_ts": 1767672120,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "This smart lock with infinite battery life at CES is my favorite home gadget so far",
-      "summary": "The Lockin brand is introducing a new smart lock to the US market, featuring a unique charging feature that you'll want to see.",
-      "link": "https://www.zdnet.com/article/lockin-v7-max-smart-lock-ces/",
-      "source": "ZDNet \u2013 Security",
-      "type": "general",
-      "type_label": "General Security & Blogs",
-      "published": "2026-01-06T04:01:00+00:00",
-      "published_ts": 1767672060,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "These smart glasses beat the Meta Ray-Bans for me with useful features and a cheaper price",
-      "summary": "The new Rokid Style glasses have debuted at CES, and are lightweight, comfortable, and surprisingly functional.",
-      "link": "https://www.zdnet.com/article/rokid-ai-style-glasses-ces-2026/",
-      "source": "ZDNet \u2013 Security",
-      "type": "general",
-      "type_label": "General Security & Blogs",
-      "published": "2026-01-06T03:57:00+00:00",
-      "published_ts": 1767671820,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "CES 2026 Day 1: Live updates on the biggest TV, smart glasses, and robot news (and more)",
-      "summary": "The world's biggest technology trade show is a go, and we're tracking the best announcements from top brands all week long.",
-      "link": "https://www.zdnet.com/article/ces-2026-live-updates-1-5-26/",
-      "source": "ZDNet \u2013 Security",
-      "type": "general",
-      "type_label": "General Security & Blogs",
-      "published": "2026-01-06T03:54:00+00:00",
-      "published_ts": 1767671640,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "Ethereum staking sees tidal shift as validator exit queue clears out",
-      "summary": "Ethereum\u2019s validator exit queue fell near zero for the first time since July as staking demand increased, led by BitMine\u2019s aggressive accumulation.",
-      "link": "https://cointelegraph.com/news/ethereum-staking-pressure-shifts-validator-exit-queue-clears-out?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound",
-      "source": "Cointelegraph.com News",
-      "type": "crypto",
-      "type_label": "Crypto & Blockchain Security",
-      "published": "2026-01-06T03:33:59+00:00",
-      "published_ts": 1767670439,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "AMD's new Ryzen chipset promises faster performance, better gaming, and smarter AI",
-      "summary": "AMD unveiled new Ryzen AI laptop, gaming, and workstation processors at CES 2026, setting the stage for the year to come.",
-      "link": "https://www.zdnet.com/article/amd-ryzen-ai-400-ces-2026/",
-      "source": "ZDNet \u2013 Security",
-      "type": "general",
-      "type_label": "General Security & Blogs",
-      "published": "2026-01-06T03:30:19+00:00",
-      "published_ts": 1767670219,
-      "smart_groups": [
-        "Identity / Access"
-      ],
-      "curated": false
-    },
-    {
-      "title": "Critical AdonisJS Bodyparser Flaw (CVSS 9.2) Enables Arbitrary File Write on Servers",
-      "summary": "Users of the \"@adonisjs/bodyparser\" npm package are being advised to update to the latest version following the disclosure of a critical security vulnerability that, if successfully exploited, could allow a remote attacker to write arbitrary files on the server. Tracked as CVE-2026-21440 (CVSS score: 9.2), the flaw has been described as a path traversal issue affecting the AdonisJS multipart",
-      "link": "https://thehackernews.com/2026/01/critical-adonisjs-bodyparser-flaw-cvss.html",
-      "source": "The Hacker News",
-      "type": "general",
-      "type_label": "General Security & Blogs",
-      "published": "2026-01-06T03:30:00+00:00",
-      "published_ts": 1767670200,
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": true
-    },
-    {
-      "title": "This menstrual pad takes period blood and turns it into data diagnostics",
-      "summary": "Vivoo introduced its conceptual FlowPad at CES, alongside the launch of its smart toilet sensor for hydration detection.",
-      "link": "https://www.zdnet.com/article/this-menstrual-pad-takes-period-blood-and-turns-it-into-data-diagnostics/",
-      "source": "ZDNet \u2013 Security",
-      "type": "general",
-      "type_label": "General Security & Blogs",
-      "published": "2026-01-06T03:21:21+00:00",
-      "published_ts": 1767669681,
-      "smart_groups": [
-        "Network / OT / ICS"
-      ],
-      "curated": false
-    },
-    {
-      "title": "Intel's Panther Lake CPUs may be the PC shake-up we didn't know we needed",
-      "summary": "Intel's Core Ultra Series 3 processors, built on its new 18A architecture, was just officially unveiled at CES.",
-      "link": "https://www.zdnet.com/article/intel-panther-lake-announced-at-ces/",
-      "source": "ZDNet \u2013 Security",
-      "type": "general",
-      "type_label": "General Security & Blogs",
-      "published": "2026-01-06T03:19:00+00:00",
-      "published_ts": 1767669540,
-      "smart_groups": [
-        "Identity / Access"
-      ],
-      "curated": false
-    },
-    {
-      "title": "Forget Micro RGB: TCL's new SQD-Mini LED TV is the model to beat for me at CES",
-      "summary": "The X11L seems almost too good to be true, but I'd love for TCL to prove me wrong.",
-      "link": "https://www.zdnet.com/article/tcl-x11l-ces-2026/",
-      "source": "ZDNet \u2013 Security",
-      "type": "general",
-      "type_label": "General Security & Blogs",
-      "published": "2026-01-06T03:14:00+00:00",
-      "published_ts": 1767669240,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "LG just revealed its 2026 TV lineup, and it's challenging Samsung in almost every way",
-      "summary": "The return of an old favorite is catching attention at CES.",
-      "link": "https://www.zdnet.com/article/lg-tv-reveal-ces-2026/",
-      "source": "ZDNet \u2013 Security",
-      "type": "general",
-      "type_label": "General Security & Blogs",
-      "published": "2026-01-06T03:12:00+00:00",
-      "published_ts": 1767669120,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "This handheld device could save you from your next allergic reaction - here's the pitch",
-      "summary": "Allergen Alert is a new device that samples the food on your plate to notify you of an allergen before it's too late.",
-      "link": "https://www.zdnet.com/article/allergen-alert-ces-2026/",
-      "source": "ZDNet \u2013 Security",
-      "type": "general",
-      "type_label": "General Security & Blogs",
-      "published": "2026-01-06T03:09:00+00:00",
-      "published_ts": 1767668940,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "These brain-tracking earbuds use EEG to measure your cognitive performance",
-      "summary": "You can use the Naox Wave while you work, sleep, or exercise.",
-      "link": "https://www.zdnet.com/article/naox-wave-eeg-brain-tracking-earbuds-ces-2026/",
-      "source": "ZDNet \u2013 Security",
-      "type": "general",
-      "type_label": "General Security & Blogs",
-      "published": "2026-01-06T03:00:48+00:00",
-      "published_ts": 1767668448,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "What is Dolby Vision 2? Everything to know about hottest TV standard at CES 2026",
-      "summary": "The latest video format introduces two big upgrades and fixes one major complaint.",
-      "link": "https://www.zdnet.com/article/dolby-vision-2-explainer/",
-      "source": "ZDNet \u2013 Security",
-      "type": "general",
-      "type_label": "General Security & Blogs",
-      "published": "2026-01-06T03:00:00+00:00",
-      "published_ts": 1767668400,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "Bitcoin Gains Momentum as Traders Look for Confirmation",
-      "summary": "Bitcoin\u2019s push to $95,000, supported by bullish options flows, is being tempered by flat open interest and weak spot demand.",
-      "link": "https://decrypt.co/353674/bitcoin-gains-momentum-traders-look-confirmation",
-      "source": "Decrypt",
-      "type": "crypto",
-      "type_label": "Crypto & Blockchain Security",
-      "published": "2026-01-06T02:54:45+00:00",
-      "published_ts": 1767668085,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "One of my favorite Windows laptops from 2025 is getting a design redo, and I'm iffy about it",
-      "summary": "Acer's Swift 16 AI earned our Editor's Choice award last year, but its 2026 refresh has me scratching my head.",
-      "link": "https://www.zdnet.com/article/acer-swift-16-ai-laptop-ces-2026/",
-      "source": "ZDNet \u2013 Security",
-      "type": "general",
-      "type_label": "General Security & Blogs",
-      "published": "2026-01-06T02:46:00+00:00",
-      "published_ts": 1767667560,
-      "smart_groups": [
-        "Windows / Microsoft"
-      ],
-      "curated": false
-    },
-    {
-      "title": "I did not expect this powerful Windows laptop at CES 2026 to be so thin and light",
-      "summary": "MSI's Prestige and Modern series laptops have standard OLED displays and Intel 'Panther Lake' chips.",
-      "link": "https://www.zdnet.com/article/msi-prestige-modern-laptop-hands-on-ces/",
-      "source": "ZDNet \u2013 Security",
-      "type": "general",
-      "type_label": "General Security & Blogs",
-      "published": "2026-01-06T02:41:00+00:00",
-      "published_ts": 1767667260,
-      "smart_groups": [
-        "Windows / Microsoft"
-      ],
-      "curated": false
-    },
-    {
-      "title": "I've tested several pairs of smart glasses at CES 2026 - this one nails both price and performance",
-      "summary": "Delivering a superb 3D experience at a reasonable price, the Xreal 1S sets a new bar for sub-$500 AR glasses.",
-      "link": "https://www.zdnet.com/article/xreal-1s-xr-glasses-review/",
-      "source": "ZDNet \u2013 Security",
-      "type": "general",
-      "type_label": "General Security & Blogs",
-      "published": "2026-01-06T02:36:00+00:00",
-      "published_ts": 1767666960,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "Your Peacock sports broadcasts are about to look and sound a lot better - here's why",
-      "summary": "Peacock is the first streaming service to roll out Dolby's full suite of picture and sound tech.",
-      "link": "https://www.zdnet.com/article/peacock-dolby-atmos-vision-2-upgrade-ces-2026/",
-      "source": "ZDNet \u2013 Security",
-      "type": "general",
-      "type_label": "General Security & Blogs",
-      "published": "2026-01-06T02:30:39+00:00",
-      "published_ts": 1767666639,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "Coinbase rallies 8% after Goldman Sachs upgrades stock to \u2018buy\u2019",
-      "summary": "Goldman Sachs highlighted crypto firms building infrastructure over trading desks, seeing steady growth in tokenization and prediction markets.",
-      "link": "https://cointelegraph.com/news/coinbase-soars-8-goldman-sachs-upgrades-stock-buy?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound",
-      "source": "Cointelegraph.com News",
-      "type": "crypto",
-      "type_label": "Crypto & Blockchain Security",
-      "published": "2026-01-06T02:20:59+00:00",
-      "published_ts": 1767666059,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "US crypto stocks soar double-digits as major tokens rally",
-      "summary": "Major US crypto stocks soared on Monday as the wider crypto market mounted a comeback, with Bitcoin and Ether hitting three-week highs.",
-      "link": "https://cointelegraph.com/news/crypto-stocks-soar-double-digits-major-tokens-rally?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound",
-      "source": "Cointelegraph.com News",
-      "type": "crypto",
-      "type_label": "Crypto & Blockchain Security",
-      "published": "2026-01-06T02:10:28+00:00",
-      "published_ts": 1767665428,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "Iron Mountain Suffers Alleged Breach According to Dark Web Reports | UpGuard",
-      "summary": "A data breach involving Iron Mountain was reported on February 2, 2026. See incident details, impact on customers, and recommended security measures.",
-      "link": "https://www.upguard.com/news/iron-mountain-data-breach-2026-04-02",
-      "source": "UpGuard \u2013 News",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": null,
-      "published_ts": null,
-      "smart_groups": [
-        "Data Breaches / Leaks"
-      ],
       "curated": false
     },
     {
