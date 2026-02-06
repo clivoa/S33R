@@ -1,0 +1,146 @@
+{
+  "generated_at": "2026-02-05T07:15:58.886780+00:00",
+  "analysis_date": "2026-02-05",
+  "model": "gpt-5.1",
+  "window_hours": 24,
+  "source_file": "data/news_recent.json",
+  "source_generated_at": "2026-02-05T06:24:06.945114+00:00",
+  "source_days_back": 30,
+  "source_total_items": 8642,
+  "total_items_in_window_all": 336,
+  "total_items_in_window_curated": 89,
+  "morning_call_markdown": "### Executive Summary\n- Active exploitation of VMware ESXi, SolarWinds Web Help Desk, GitLab, and React2Shell/Ingress-NGINX significantly raises risk to our virtualization, ITSM, CI/CD, and web infrastructure; several are now in CISA KEV and used in ransomware ops.\n- Supply‑chain and third‑party risks are prominent: Notepad++ update infrastructure compromise, Notepad++ China-linked targeting, and Google Looker cross‑tenant/RCE issues affecting analytics stacks.\n- Ransomware actors are rapidly improving tooling (EDR-disabling 0‑day driver, ESXi targeting, new RaaS operations) while APTs exploit Office and WinRAR bugs; user-facing phishing and cloud-abuse campaigns continue at scale.\n\n---\n\n### High-priority items (immediate attention)\n\n- **VMware ESXi 0‑day / CVE-2025-22225 used in ransomware (CISA KEV)**\n  - What happened: CISA confirmed a VMware ESXi vulnerability is being exploited in active ransomware operations (CVE-2025-22225 / related 0‑day).\n  - Why it matters operationally: Direct risk to any ESXi hosting critical banking workloads; compromise can lead to mass encryption and full environment foothold.\n  - Recommended immediate actions for the SOC today:  \n    • Confirm with infra teams current ESXi versions and patch status; prioritize internet‑exposed or DMZ hosts.  \n    • Hunt in hypervisor/log aggregation for unusual datastore access, snapshot deletions, mass VM shutdowns (T1489), and new ESXi management logins from atypical IPs.\n\n- **SolarWinds Web Help Desk RCE – actively exploited + added to CISA KEV**\n  - What happened: Critical RCE in SolarWinds Web Help Desk is under active exploitation and now on CISA’s Known Exploited Vulnerabilities list.\n  - Why it matters operationally: ITSM/Help Desk platforms often have AD integration and ticket/asset data; RCE there is a strong pivot point into core networks.\n  - Recommended immediate actions for the SOC today:  \n    • Identify any SolarWinds Web Help Desk instances (on-prem or exposed) and verify patch/mitigation status; escalate any internet-facing unpatched systems.  \n    • Monitor web server logs for suspicious POSTs to unusual endpoints, webshell-like responses, or spikes in 500 errors; look for new local/service accounts and weird PowerShell/WMI spawned by web server processes (T1059, T1505).\n\n- **GitLab SSRF (5‑year‑old bug) + n8n RCE & CI/CD automation exposure**\n  - What happened: CISA warns of active exploitation of an old GitLab SSRF; separate disclosure of critical RCE in n8n workflow automation with public exploits.\n  - Why it matters operationally: CI/CD and automation tools often hold repo secrets, deployment keys, and service credentials – compromise gives broad access to app and infra.\n  - Recommended immediate actions for the SOC today:  \n    • Confirm with DevOps whether we run GitLab (self‑hosted) or n8n; if yes, check versions against advisories and restrict external exposure immediately if not fully patched.  \n    • Hunt in GitLab/n8n logs for unexpected API calls, new PATs/tokens, new OAuth apps, or unusual outbound connections from CI runners (T1552, T1557).\n\n- **React2Shell & Ingress-NGINX exploitation (NGINX / K8s ingress RCE, traffic hijack)**\n  - What happened: React2Shell and Ingress-NGINX vulnerabilities are being exploited to hijack web traffic, drop cryptominers, and establish reverse shells.\n  - Why it matters operationally: Direct threat to any NGINX reverse proxies or Kubernetes ingress in front of customer web apps, APIs, or internal admin portals.\n  - Recommended immediate actions for the SOC today:  \n    • Coordinate with platform teams to verify NGINX / ingress controller versions and emergency patching; ensure no admin interfaces are exposed without SSO/MFA.  \n    • Monitor WAF, NGINX, and K8s audit logs for anomalous config changes, unexpected 3xx/5xx spikes, new upstreams, or pods executing curl/wget/bash from ingress containers (T1190, T1571).\n\n- **Google Looker RCE / cross‑tenant data access (self‑hosted and cloud)**\n  - What happened: Multiple Looker vulnerabilities allow RCE and potential cross‑tenant data exfiltration in self‑hosted and Google Cloud deployments.\n  - Why it matters operationally: Looker often connects to core data warehouses and may process sensitive financial/PII data; compromise equals large‑scale data theft risk.\n  - Recommended immediate actions for the SOC today:  \n    • Confirm whether we use Looker (self‑hosted or GCP SaaS); check with data/BI teams and confirm patch level or mitigations from Google/Tenable advisories.  \n    • Monitor Looker and DB logs for unusual queries (large table dumps, cross‑schema access), new integrations, and Looker service accounts accessing atypical datasets or from new IPs (T1530, T1005).\n\n---\n\n### Monitoring & detection recommendations\n\n- **ESXi / virtualization ransomware targeting**  \n  - Log sources: ESXi host logs, vCenter, hypervisor management, backup/orchestration platforms.  \n  - Hunt for: New or failed logins from unknown IPs, modifications to backup jobs, datastore browser usage, snapshot deletion, mass VM power operations (T1485/T1489).\n\n- **SolarWinds Web Help Desk & general web RCE (NGINX, React2Shell, Ingress)**  \n  - Log sources: Web server logs, WAF, reverse proxies, EDR on app servers.  \n  - Hunt for: Unusual query strings, unexpected file uploads, requests invoking cmd.exe/bash/powershell, processes spawned by web server user (T1190, T1059.003/.004).\n\n- **GitLab/n8n/CI-CD & SCM exploitation**  \n  - Log sources: GitLab/n8n audit logs, Git server logs, runner/container logs, IdP.  \n  - Hunt for: Creation of new PATs/tokens, unexpected admin privilege changes, unknown runners, builds triggered by non‑standard branches, or sudden outbound connections to new IPs from CI runners (T1552, T1078).\n\n- **Supply-chain & dev-tool compromise (Notepad++ malicious updates, Notepad++ targeting)**  \n  - Log sources: EDR, proxy/HTTP logs, software distribution (SCCM/Intune), application allow‑lists.  \n  - Hunt for: Notepad++ binaries or update URLs that diverge from official distribution patterns, unsigned/abnormally signed executables, new scheduled tasks/services spawned shortly after Notepad++ updates (T1195, T1105).\n\n- **Ransomware tooling improvements (EDR‑bypass driver 0‑day, new RaaS, ESXi focus)**  \n  - Log sources: EDR, Windows event logs (driver install events), AV logs, domain controller logs.  \n  - Hunt for: Unsigned or newly‑signed kernel drivers, changes to AV/EDR registry keys or services, suspicious use of sc.exe/powershell to disable protections, lateral movement with credential reuse (T1562, T1068, T1021).\n\n- **APT exploitation of Office and WinRAR vulnerabilities (Russian and China-linked ops)**  \n  - Log sources: Email security, EDR, O365/M365 audit logs, endpoint application logs.  \n  - Hunt for: Office/WinRAR spawning scripting interpreters (cmd, powershell, wscript), attachments with archives/Macros followed by network beacons, new persistence from Office add‑ins or autoruns (T1204, T1566, T1059).\n\n- **Cloud & SaaS abuse (Looker, Microsoft/Google platforms, Citrix NetScaler scanning)**  \n  - Log sources: Cloud provider logs (GCP, Azure, M365), Citrix ADC/NetScaler logs, IdP logs.  \n  - Hunt for: Login attempts from unusual geos to Citrix and SaaS, anomalous API calls from service principals, sudden spikes in data egress from analytics tools, new OAuth app consents (T1078, T1529, T1530).\n\n- **Malvertising / phishing kits (Facebook Ads tech‑support scam, IPFS‑hosted VHDs, ValleyRAT/LINE impersonation)**  \n  - Log sources: Secure web gateway, email security, EDR, DNS.  \n  - Hunt for: Downloads of VHD/ISO/ZIP via HTTP(S), processes invoked from mounted VHDs, browser redirects to support‑like pages, DNS TXT lookups followed by PowerShell (ClickFix-style payload delivery) (T1566, T1204, T1105).\n\n---\n\n### Medium-term follow-ups\n\n- **Comprehensive exposure review of key platforms (ESXi, SolarWinds, GitLab, NGINX, Citrix, Looker)**  \n  - Build and maintain an accurate inventory of these systems, their versions, internet exposure, and ownership; align patch SLAs to CISA KEV timelines.\n\n- **Third‑party and supply-chain risk governance**  \n  - Assess policies for code/tool adoption (e.g., Notepad++, dev tools, AI agents); enforce use of vetted repositories and centralized software distribution with code-sign validation.\n\n- **Ransomware resilience uplift**  \n  - Re‑validate backup immutability, offline copies, and restore procedures; ensure hypervisor-level backups and configuration exports are tested and secured from tampering.\n\n- **Endpoint & driver‑security hardening**  \n  - Tighten policies around driver installation (require trusted signatures, restrict admin rights), and review EDR/AV self‑protection settings against driver-based tampering.\n\n- **Cloud & identity security posture**  \n  - Strengthen conditional access/MFA for all admin and service accounts across SaaS, cloud, and Citrix; review least-privilege for service principals used by analytics/CI/CD.\n\n- **User awareness refresh (phishing, fake support, malicious installers)**  \n  - Run targeted awareness addressing malvertising, “support” scams, fake installers (LINE, Notepad++ lookalikes), and risky archive attachments exploiting WinRAR/Office.",
+  "highlights": [
+    {
+      "title": "New 3-Step Malvertising Chain Exploits Facebook Ads to Promote Tech Support Scam Kit",
+      "link": "https://gbhackers.com/malvertising-chain/",
+      "source": "GBHackers News",
+      "published": "2026-02-05T05:42:15+00:00",
+      "smart_groups": [
+        "Curated",
+        "Exploit / PoC"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Cybersecurity planning keeps moving toward whole-of-society models",
+      "link": "https://www.helpnetsecurity.com/2026/02/05/cybersecurity-planning-national-cybersecurity-strategy/",
+      "source": "Help Net Security",
+      "published": "2026-02-05T05:30:02+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Zero Trust with Azure Firewall, Azure DDoS Protection and Azure WAF: A practical use case",
+      "link": "https://techcommunity.microsoft.com/t5/azure-network-security-blog/zero-trust-with-azure-firewall-azure-ddos-protection-and-azure/ba-p/4490595",
+      "source": "Azure Network Security Blog",
+      "published": "2026-02-05T05:15:27+00:00",
+      "smart_groups": [
+        "Curated",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Cloud / SaaS",
+        "Malware / Payloads",
+        "Web / API Security",
+        "Identity / Access",
+        "Crypto / Web3"
+      ],
+      "curated": true
+    },
+    {
+      "title": "WatchGuard VPN Client Flaw on Windows Enables SYSTEM‑Level Command Execution",
+      "link": "https://gbhackers.com/watchguard-vpn-client-flaw-on-windows/",
+      "source": "GBHackers News",
+      "published": "2026-02-05T05:03:58+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Windows / Microsoft"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Cyberattackers Exploit DNS TXT Records in ClickFix Script to Execute Malicious PowerShell Commands",
+      "link": "https://gbhackers.com/dns-txt-records/",
+      "source": "GBHackers News",
+      "published": "2026-02-05T04:58:46+00:00",
+      "smart_groups": [
+        "Curated",
+        "Exploit / PoC",
+        "Windows / Microsoft",
+        "Network / OT / ICS",
+        "Phishing / Social Engineering"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Hackers Exploit React2Shell to Hijack Web Traffic via Compromised NGINX Servers",
+      "link": "https://thehackernews.com/2026/02/hackers-exploit-react2shell-to-hijack.html",
+      "source": "The Hacker News",
+      "published": "2026-02-05T04:56:00+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Identity / Access"
+      ],
+      "curated": true
+    },
+    {
+      "title": "CISA Confirms VMware ESXi 0-Day Vulnerability Exploited in Ransomware Operations",
+      "link": "https://gbhackers.com/cisa-confirms-vmware-esxi-0-day-vulnerability/",
+      "source": "GBHackers News",
+      "published": "2026-02-05T04:36:00+00:00",
+      "smart_groups": [
+        "Curated",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Amaranth-Dragon Exploiting WinRAR Vulnerability to Gain Persistent to Victim Systems",
+      "link": "https://cybersecuritynews.com/amaranth-dragon-exploiting-winrar-vulnerability/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-02-05T04:08:29+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": true
+    },
+    {
+      "title": "1.5 million AI agents are at risk of going rogue",
+      "link": "https://www.csoonline.com/article/4127733/1-5-million-ai-agents-are-at-risk-of-going-rogue.html",
+      "source": "CSO Online",
+      "published": "2026-02-05T02:42:45+00:00",
+      "smart_groups": [
+        "Curated",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "Identity / Access",
+        "Crypto / Web3"
+      ],
+      "curated": true
+    },
+    {
+      "title": "CISA Warns of VMware ESXi 0-day Vulnerability Exploited in Ransomware Attacks",
+      "link": "https://cybersecuritynews.com/vmware-esxi-0-day-ransomware-attack/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-02-05T02:20:28+00:00",
+      "smart_groups": [
+        "Curated",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": true
+    }
+  ]
+}
