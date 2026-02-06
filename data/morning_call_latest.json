@@ -1,144 +1,138 @@
 {
-  "generated_at": "2026-02-05T07:15:58.886780+00:00",
-  "analysis_date": "2026-02-05",
+  "generated_at": "2026-02-06T07:12:56.134904+00:00",
+  "analysis_date": "2026-02-06",
   "model": "gpt-5.1",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-02-05T06:24:06.945114+00:00",
+  "source_generated_at": "2026-02-06T06:22:48.434987+00:00",
   "source_days_back": 30,
-  "source_total_items": 8642,
-  "total_items_in_window_all": 336,
-  "total_items_in_window_curated": 89,
-  "morning_call_markdown": "### Executive Summary\n- Active exploitation of VMware ESXi, SolarWinds Web Help Desk, GitLab, and React2Shell/Ingress-NGINX significantly raises risk to our virtualization, ITSM, CI/CD, and web infrastructure; several are now in CISA KEV and used in ransomware ops.\n- Supply‑chain and third‑party risks are prominent: Notepad++ update infrastructure compromise, Notepad++ China-linked targeting, and Google Looker cross‑tenant/RCE issues affecting analytics stacks.\n- Ransomware actors are rapidly improving tooling (EDR-disabling 0‑day driver, ESXi targeting, new RaaS operations) while APTs exploit Office and WinRAR bugs; user-facing phishing and cloud-abuse campaigns continue at scale.\n\n---\n\n### High-priority items (immediate attention)\n\n- **VMware ESXi 0‑day / CVE-2025-22225 used in ransomware (CISA KEV)**\n  - What happened: CISA confirmed a VMware ESXi vulnerability is being exploited in active ransomware operations (CVE-2025-22225 / related 0‑day).\n  - Why it matters operationally: Direct risk to any ESXi hosting critical banking workloads; compromise can lead to mass encryption and full environment foothold.\n  - Recommended immediate actions for the SOC today:  \n    • Confirm with infra teams current ESXi versions and patch status; prioritize internet‑exposed or DMZ hosts.  \n    • Hunt in hypervisor/log aggregation for unusual datastore access, snapshot deletions, mass VM shutdowns (T1489), and new ESXi management logins from atypical IPs.\n\n- **SolarWinds Web Help Desk RCE – actively exploited + added to CISA KEV**\n  - What happened: Critical RCE in SolarWinds Web Help Desk is under active exploitation and now on CISA’s Known Exploited Vulnerabilities list.\n  - Why it matters operationally: ITSM/Help Desk platforms often have AD integration and ticket/asset data; RCE there is a strong pivot point into core networks.\n  - Recommended immediate actions for the SOC today:  \n    • Identify any SolarWinds Web Help Desk instances (on-prem or exposed) and verify patch/mitigation status; escalate any internet-facing unpatched systems.  \n    • Monitor web server logs for suspicious POSTs to unusual endpoints, webshell-like responses, or spikes in 500 errors; look for new local/service accounts and weird PowerShell/WMI spawned by web server processes (T1059, T1505).\n\n- **GitLab SSRF (5‑year‑old bug) + n8n RCE & CI/CD automation exposure**\n  - What happened: CISA warns of active exploitation of an old GitLab SSRF; separate disclosure of critical RCE in n8n workflow automation with public exploits.\n  - Why it matters operationally: CI/CD and automation tools often hold repo secrets, deployment keys, and service credentials – compromise gives broad access to app and infra.\n  - Recommended immediate actions for the SOC today:  \n    • Confirm with DevOps whether we run GitLab (self‑hosted) or n8n; if yes, check versions against advisories and restrict external exposure immediately if not fully patched.  \n    • Hunt in GitLab/n8n logs for unexpected API calls, new PATs/tokens, new OAuth apps, or unusual outbound connections from CI runners (T1552, T1557).\n\n- **React2Shell & Ingress-NGINX exploitation (NGINX / K8s ingress RCE, traffic hijack)**\n  - What happened: React2Shell and Ingress-NGINX vulnerabilities are being exploited to hijack web traffic, drop cryptominers, and establish reverse shells.\n  - Why it matters operationally: Direct threat to any NGINX reverse proxies or Kubernetes ingress in front of customer web apps, APIs, or internal admin portals.\n  - Recommended immediate actions for the SOC today:  \n    • Coordinate with platform teams to verify NGINX / ingress controller versions and emergency patching; ensure no admin interfaces are exposed without SSO/MFA.  \n    • Monitor WAF, NGINX, and K8s audit logs for anomalous config changes, unexpected 3xx/5xx spikes, new upstreams, or pods executing curl/wget/bash from ingress containers (T1190, T1571).\n\n- **Google Looker RCE / cross‑tenant data access (self‑hosted and cloud)**\n  - What happened: Multiple Looker vulnerabilities allow RCE and potential cross‑tenant data exfiltration in self‑hosted and Google Cloud deployments.\n  - Why it matters operationally: Looker often connects to core data warehouses and may process sensitive financial/PII data; compromise equals large‑scale data theft risk.\n  - Recommended immediate actions for the SOC today:  \n    • Confirm whether we use Looker (self‑hosted or GCP SaaS); check with data/BI teams and confirm patch level or mitigations from Google/Tenable advisories.  \n    • Monitor Looker and DB logs for unusual queries (large table dumps, cross‑schema access), new integrations, and Looker service accounts accessing atypical datasets or from new IPs (T1530, T1005).\n\n---\n\n### Monitoring & detection recommendations\n\n- **ESXi / virtualization ransomware targeting**  \n  - Log sources: ESXi host logs, vCenter, hypervisor management, backup/orchestration platforms.  \n  - Hunt for: New or failed logins from unknown IPs, modifications to backup jobs, datastore browser usage, snapshot deletion, mass VM power operations (T1485/T1489).\n\n- **SolarWinds Web Help Desk & general web RCE (NGINX, React2Shell, Ingress)**  \n  - Log sources: Web server logs, WAF, reverse proxies, EDR on app servers.  \n  - Hunt for: Unusual query strings, unexpected file uploads, requests invoking cmd.exe/bash/powershell, processes spawned by web server user (T1190, T1059.003/.004).\n\n- **GitLab/n8n/CI-CD & SCM exploitation**  \n  - Log sources: GitLab/n8n audit logs, Git server logs, runner/container logs, IdP.  \n  - Hunt for: Creation of new PATs/tokens, unexpected admin privilege changes, unknown runners, builds triggered by non‑standard branches, or sudden outbound connections to new IPs from CI runners (T1552, T1078).\n\n- **Supply-chain & dev-tool compromise (Notepad++ malicious updates, Notepad++ targeting)**  \n  - Log sources: EDR, proxy/HTTP logs, software distribution (SCCM/Intune), application allow‑lists.  \n  - Hunt for: Notepad++ binaries or update URLs that diverge from official distribution patterns, unsigned/abnormally signed executables, new scheduled tasks/services spawned shortly after Notepad++ updates (T1195, T1105).\n\n- **Ransomware tooling improvements (EDR‑bypass driver 0‑day, new RaaS, ESXi focus)**  \n  - Log sources: EDR, Windows event logs (driver install events), AV logs, domain controller logs.  \n  - Hunt for: Unsigned or newly‑signed kernel drivers, changes to AV/EDR registry keys or services, suspicious use of sc.exe/powershell to disable protections, lateral movement with credential reuse (T1562, T1068, T1021).\n\n- **APT exploitation of Office and WinRAR vulnerabilities (Russian and China-linked ops)**  \n  - Log sources: Email security, EDR, O365/M365 audit logs, endpoint application logs.  \n  - Hunt for: Office/WinRAR spawning scripting interpreters (cmd, powershell, wscript), attachments with archives/Macros followed by network beacons, new persistence from Office add‑ins or autoruns (T1204, T1566, T1059).\n\n- **Cloud & SaaS abuse (Looker, Microsoft/Google platforms, Citrix NetScaler scanning)**  \n  - Log sources: Cloud provider logs (GCP, Azure, M365), Citrix ADC/NetScaler logs, IdP logs.  \n  - Hunt for: Login attempts from unusual geos to Citrix and SaaS, anomalous API calls from service principals, sudden spikes in data egress from analytics tools, new OAuth app consents (T1078, T1529, T1530).\n\n- **Malvertising / phishing kits (Facebook Ads tech‑support scam, IPFS‑hosted VHDs, ValleyRAT/LINE impersonation)**  \n  - Log sources: Secure web gateway, email security, EDR, DNS.  \n  - Hunt for: Downloads of VHD/ISO/ZIP via HTTP(S), processes invoked from mounted VHDs, browser redirects to support‑like pages, DNS TXT lookups followed by PowerShell (ClickFix-style payload delivery) (T1566, T1204, T1105).\n\n---\n\n### Medium-term follow-ups\n\n- **Comprehensive exposure review of key platforms (ESXi, SolarWinds, GitLab, NGINX, Citrix, Looker)**  \n  - Build and maintain an accurate inventory of these systems, their versions, internet exposure, and ownership; align patch SLAs to CISA KEV timelines.\n\n- **Third‑party and supply-chain risk governance**  \n  - Assess policies for code/tool adoption (e.g., Notepad++, dev tools, AI agents); enforce use of vetted repositories and centralized software distribution with code-sign validation.\n\n- **Ransomware resilience uplift**  \n  - Re‑validate backup immutability, offline copies, and restore procedures; ensure hypervisor-level backups and configuration exports are tested and secured from tampering.\n\n- **Endpoint & driver‑security hardening**  \n  - Tighten policies around driver installation (require trusted signatures, restrict admin rights), and review EDR/AV self‑protection settings against driver-based tampering.\n\n- **Cloud & identity security posture**  \n  - Strengthen conditional access/MFA for all admin and service accounts across SaaS, cloud, and Citrix; review least-privilege for service principals used by analytics/CI/CD.\n\n- **User awareness refresh (phishing, fake support, malicious installers)**  \n  - Run targeted awareness addressing malvertising, “support” scams, fake installers (LINE, Notepad++ lookalikes), and risky archive attachments exploiting WinRAR/Office.",
+  "source_total_items": 8749,
+  "total_items_in_window_all": 368,
+  "total_items_in_window_curated": 104,
+  "morning_call_markdown": "### Executive Summary\n- Active ransomware exploitation of VMware ESXi and SmarterTools/SmarterMail, plus new LockBit 5.0 and other families, keeps virtualization and email infrastructure as high‑value targets.\n- Multiple abuse paths for remote access and EDR evasion (Windows screensaver → RMM, SonicWall SSLVPN credential abuse → EDR killer, BYOVD techniques) increase the risk of “EDR-blind” intrusions.\n- New critical vulnerabilities in Ingress NGINX, n8n automation, SolarWinds Help Desk, Cisco/F5, and supply-chain style concerns (Notepad++ backdoor) require rapid exposure assessment and patching.\n\n---\n\n### High-priority items (immediate attention)\n\n- **Ransomware exploiting VMware ESXi (CVE-2025-22225) & cross‑platform LockBit 5.0**\n  - What happened: CISA confirms ongoing ransomware intrusions via an ESXi bug; LockBit 5.0 now targets Windows, Linux & ESXi.\n  - Why it matters operationally: Our virtualization layer is a high-impact single point of failure; ESXi encryption leads to rapid business outage.\n  - Recommended immediate actions for the SOC today:  \n    - Confirm with infra teams which ESXi builds and management interfaces are internet-exposed; ensure patch/mitigation status is known.  \n    - Hunt for anomalous activity on ESXi: unexpected SSH logins, new cron jobs, unknown binaries, unusual snapshot or datastore operations; tighten access from management networks only.\n\n- **SmarterTools/SmarterMail and other internet-facing app exploitation in ransomware ops**\n  - What happened: CISA highlights an actively exploited SmarterTools vulnerability used in recent ransomware attacks; SolarWinds Help Desk and ISPsystem VMs also abused for stealth payload delivery.\n  - Why it matters operationally: Any exposed web-based admin/helpdesk/mail platform in our environment or third parties could be an initial-access vector into our network or customer data.\n  - Recommended immediate actions for the SOC today:  \n    - Validate inventory of SmarterMail/SmarterTools, SolarWinds Help Desk, ISPsystem/VM hosting panels and similar internet-facing apps; escalate any unpatched or unknown exposures.  \n    - Review last 7–14 days of web server/WAF logs for these services: unusual POSTs to admin/upload endpoints, new admin accounts, webshell-like behavior; set high-priority alerts for such patterns.\n\n- **EDR evasion via BYOVD and SonicWall SSLVPN credential abuse + EDR killer**\n  - What happened: Reports show attackers exploiting decade‑old Windows driver flaws (BYOVD) to disable EDR (including Black Basta); separate campaign uses compromised SonicWall SSLVPN credentials to deploy an EDR-killer tool.\n  - Why it matters operationally: Intruders may gain persistent access and then blind our endpoint monitoring, leading to undetected lateral movement and data theft/ransomware.\n  - Recommended immediate actions for the SOC today:  \n    - Hunt across EDR and Windows logs for: loading of unexpected/legacy drivers, repeated EDR/AV service stops, tamper protection alerts, and unexplained gaps in telemetry on active hosts.  \n    - Review VPN/SonicWall (or equivalent) logs for credential stuffing, anomalous geo/IP, and logins outside normal patterns; enforce MFA where not present and push for rapid credential resets on any suspicious accounts.\n\n- **Abuse of Windows screensaver and RMM tools for remote access**\n  - What happened: Attackers are using malicious Windows screensaver files to deploy remote monitoring/management (RMM) tools and gain remote access.\n  - Why it matters operationally: RMM tools look like legitimate IT activity and can bypass many controls, making L1 detection harder and enabling full hands-on-keyboard attacks.\n  - Recommended immediate actions for the SOC today:  \n    - Tighten monitoring for new/unapproved RMM installations and outbound connections from user endpoints (AnyDesk, TeamViewer, ScreenConnect, custom RMM agents).  \n    - Flag execution of `.scr` files from email, downloads, or temp paths; treat any user‑reported “screensaver crashes” or odd prompts as potential phishing payloads and investigate with full triage.\n\n- **Critical cloud & automation vulnerabilities (Ingress NGINX, n8n, Codespaces RCE)**\n  - What happened: Four new Ingress NGINX vulns, critical RCE in n8n workflows, and abuse of VS Code config files in GitHub Codespaces enable remote command execution and environment takeover.\n  - Why it matters operationally: These map directly to CI/CD and automation components that may have access to code, credentials, or production cloud resources—ideal for stealthy supply-chain or data access.\n  - Recommended immediate actions for the SOC today:  \n    - With dev/cloud teams, quickly confirm whether we run vulnerable Ingress NGINX, n8n, or Codespaces-based workflows for sensitive apps; prioritize any internet-exposed instances.  \n    - Increase monitoring on CI/CD and automation: new/modified workflows, suspicious curl/powershell/wget commands, credential access from pipelines, unexpected outbound connections.\n\n---\n\n### Monitoring & detection recommendations\n\n- **Ransomware & ESXi/virtualization (LockBit, Interlock, ShadowSyndicate, DragonForce, Nitrogen)**\n  - Logs: Hypervisor logs (ESXi), vCenter, Windows Security, EDR, backups.  \n  - Hunt for: mass file changes, sudden backup deletions (T1485), new or modified ESXi services/cron, encryption tools on servers, large SMB writes from a single host.\n\n- **VPN & edge device abuse (SonicWall, VMware, ISP panels)**\n  - Logs: VPN/SSLVPN, firewall, RADIUS/IdP, admin panel access logs.  \n  - Hunt for: logins from new countries/ASNs, high auth failures then success (T1110), new device registrations, new local admin accounts on VPN/edge appliances.\n\n- **EDR tampering and BYOVD (Black Basta and copycats)**\n  - Logs: EDR console, Windows Sysmon, security logs, driver install logs.  \n  - Hunt for: `sc stop` or `net stop` against security services (T1562.001), loading of unsigned/legacy drivers, registry changes for driver/service start types, hosts that stop sending EDR heartbeats while still “online”.\n\n- **Malicious RMM and screensaver-based initial access**\n  - Logs: EDR, application inventory, proxy/DNS, email gateway.  \n  - Hunt for: execution of `.scr` from `%Downloads%`, `%Temp%`, Outlook cache; new network connections to RMM vendor domains from unusual segments; RMM binaries run under user profiles (T1219).\n\n- **Exploitation of web/automation platforms (SmarterMail, SolarWinds Help Desk, n8n, Codespaces, Ingress NGINX)**\n  - Logs: Web server/WAF, reverse proxies, container/orchestrator logs, CI/CD audit.  \n  - Hunt for: suspicious POST/PUT to admin or upload endpoints, command injection patterns in query strings, webshell-like commands, creation of new API tokens or service accounts (T1136, T1098).\n\n- **Office, WinRAR and file-based malware delivery (SystemBC, CrashFix Python RAT, Android lures)**\n  - Logs: Email security, endpoint AV/EDR, web proxy, sandbox.  \n  - Hunt for: macros/attachment detonation, archive extraction leading directly to script/exe launch (T1204), use of LOLBins (powershell, wscript, mshta) shortly after file open events.\n\n- **Supply-chain / software abuse (Notepad++ backdoor, Go, Cisco/F5 patches)**\n  - Logs: Endpoint inventory, software distribution, EDR.  \n  - Hunt for: unexpected versions of Notepad++ or other dev tools, unsigned binaries in standard install paths, processes spawned by editors/tools that reach external C2-like domains (T1195).\n\n- **AI/automation security (n8n, AI orchestration, AI agents)**\n  - Logs: Cloud provider logs, API gateway, secret stores, data access logs.  \n  - Hunt for: automation workflows accessing prod data stores from non‑standard contexts, large anomalous data exports (T1030), new tokens/keys provisioned from automation identities.\n\n---\n\n### Medium-term follow-ups\n\n- **Patch and configuration review for ESXi, SmarterTools, SolarWinds Help Desk, SonicWall, Cisco, F5, Ingress NGINX, n8n, Go runtime, Cisco Meeting Management.**\n  - Coordinate with infrastructure and dev teams to ensure all critical CVEs mentioned are in our patch backlog with explicit timelines and compensating controls.\n\n- **Formalize EDR tamper-protection strategy and BYOVD hardening.**\n  - Ensure kernel driver allowlists/denylists are tuned; require approval/workflow for new drivers; periodically review EDR tamper alerts and test our ability to detect/alert on EDR disable attempts.\n\n- **Ransomware tabletop focusing on virtualization and backup destruction.**\n  - Simulate ESXi/Hyper-V compromise and test escalation, containment of management networks, backup restoration from offline copies, and comms with business/management.\n\n- **RMM and remote access governance.**\n  - Maintain an approved list of RMM/remote tools, block others at proxy and application control, and align detections; educate IT and helpdesk on using only sanctioned tools.\n\n- **Assessment of CI/CD, GitHub Codespaces, and workflow automation security.**\n  - Review permissions, secrets handling, and internet exposure for pipelines and platforms like n8n; implement least privilege and stronger monitoring around production-affecting workflows.\n\n- **Vendor and third-party risk review, especially for key SaaS and gov/fintech providers.**\n  - Use recent breaches (Betterment, Conduent, Substack, AI apps) as prompts to confirm incident-reporting SLAs, data segregation, and our detection/response integration with critical third parties.",
   "highlights": [
     {
-      "title": "New 3-Step Malvertising Chain Exploits Facebook Ads to Promote Tech Support Scam Kit",
-      "link": "https://gbhackers.com/malvertising-chain/",
+      "title": "Hackers Exploit Windows Screensaver to Deploy RMM Tools, Gain Remote Access",
+      "link": "https://gbhackers.com/windows-screensaver/",
       "source": "GBHackers News",
-      "published": "2026-02-05T05:42:15+00:00",
-      "smart_groups": [
-        "Curated",
-        "Exploit / PoC"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Cybersecurity planning keeps moving toward whole-of-society models",
-      "link": "https://www.helpnetsecurity.com/2026/02/05/cybersecurity-planning-national-cybersecurity-strategy/",
-      "source": "Help Net Security",
-      "published": "2026-02-05T05:30:02+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Zero Trust with Azure Firewall, Azure DDoS Protection and Azure WAF: A practical use case",
-      "link": "https://techcommunity.microsoft.com/t5/azure-network-security-blog/zero-trust-with-azure-firewall-azure-ddos-protection-and-azure/ba-p/4490595",
-      "source": "Azure Network Security Blog",
-      "published": "2026-02-05T05:15:27+00:00",
-      "smart_groups": [
-        "Curated",
-        "Ransomware",
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "Cloud / SaaS",
-        "Malware / Payloads",
-        "Web / API Security",
-        "Identity / Access",
-        "Crypto / Web3"
-      ],
-      "curated": true
-    },
-    {
-      "title": "WatchGuard VPN Client Flaw on Windows Enables SYSTEM‑Level Command Execution",
-      "link": "https://gbhackers.com/watchguard-vpn-client-flaw-on-windows/",
-      "source": "GBHackers News",
-      "published": "2026-02-05T05:03:58+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "Windows / Microsoft"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Cyberattackers Exploit DNS TXT Records in ClickFix Script to Execute Malicious PowerShell Commands",
-      "link": "https://gbhackers.com/dns-txt-records/",
-      "source": "GBHackers News",
-      "published": "2026-02-05T04:58:46+00:00",
+      "published": "2026-02-06T05:54:24+00:00",
       "smart_groups": [
         "Curated",
         "Exploit / PoC",
         "Windows / Microsoft",
-        "Network / OT / ICS",
         "Phishing / Social Engineering"
       ],
       "curated": true
     },
     {
-      "title": "Hackers Exploit React2Shell to Hijack Web Traffic via Compromised NGINX Servers",
-      "link": "https://thehackernews.com/2026/02/hackers-exploit-react2shell-to-hijack.html",
-      "source": "The Hacker News",
-      "published": "2026-02-05T04:56:00+00:00",
+      "title": "Concerns Raised Over CISA’s Silent Ransomware Updates in KEV Catalog",
+      "link": "https://www.securityweek.com/questions-raised-over-cisas-silent-ransomware-updates-in-kev-catalog/",
+      "source": "SecurityWeek",
+      "published": "2026-02-06T05:28:39+00:00",
       "smart_groups": [
         "Curated",
+        "Ransomware",
         "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": true
+    },
+    {
+      "title": "CISA Advisory Highlights Exploited SmarterTools Vulnerability in Recent Ransomware Attacks",
+      "link": "https://gbhackers.com/cisa-advisory-highlights-exploited-smartertools-vulnerability/",
+      "source": "GBHackers News",
+      "published": "2026-02-06T05:22:52+00:00",
+      "smart_groups": [
+        "Curated",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Betterment Data Breach Exposes Sensitive Information of 1.4 Million Customers",
+      "link": "https://gbhackers.com/betterment-data-breach/",
+      "source": "GBHackers News",
+      "published": "2026-02-06T04:56:31+00:00",
+      "smart_groups": [
+        "Curated",
         "Exploit / PoC",
+        "Data Breaches / Leaks",
+        "Phishing / Social Engineering"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Cybersicherheitsvorschriften: So erfüllen Sie Ihre Compliance-Anforderungen",
+      "link": "https://www.csoonline.com/article/3494023/cybersicherheitsvorschriften-so-erfullen-sie-ihre-compliance-anforderungen.html",
+      "source": "CSO Online",
+      "published": "2026-02-06T04:00:00+00:00",
+      "smart_groups": [
+        "Curated",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
         "Identity / Access"
       ],
       "curated": true
     },
     {
-      "title": "CISA Confirms VMware ESXi 0-Day Vulnerability Exploited in Ransomware Operations",
-      "link": "https://gbhackers.com/cisa-confirms-vmware-esxi-0-day-vulnerability/",
-      "source": "GBHackers News",
-      "published": "2026-02-05T04:36:00+00:00",
-      "smart_groups": [
-        "Curated",
-        "Ransomware",
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Amaranth-Dragon Exploiting WinRAR Vulnerability to Gain Persistent to Victim Systems",
-      "link": "https://cybersecuritynews.com/amaranth-dragon-exploiting-winrar-vulnerability/",
-      "source": "Cyber Security News (FeedBurner)",
-      "published": "2026-02-05T04:08:29+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": true
-    },
-    {
-      "title": "1.5 million AI agents are at risk of going rogue",
-      "link": "https://www.csoonline.com/article/4127733/1-5-million-ai-agents-are-at-risk-of-going-rogue.html",
+      "title": "Four new vulnerabilities found in Ingress NGINX",
+      "link": "https://www.csoonline.com/article/4128439/four-new-vulnerabilities-found-in-ingress-nginx.html",
       "source": "CSO Online",
-      "published": "2026-02-05T02:42:45+00:00",
+      "published": "2026-02-06T02:48:26+00:00",
       "smart_groups": [
         "Curated",
-        "Ransomware",
         "Vulnerabilities / CVEs",
-        "Identity / Access",
-        "Crypto / Web3"
+        "Exploit / PoC",
+        "Cloud / SaaS"
       ],
       "curated": true
     },
     {
-      "title": "CISA Warns of VMware ESXi 0-day Vulnerability Exploited in Ransomware Attacks",
-      "link": "https://cybersecuritynews.com/vmware-esxi-0-day-ransomware-attack/",
-      "source": "Cyber Security News (FeedBurner)",
-      "published": "2026-02-05T02:20:28+00:00",
+      "title": "Can files be protected AFTER ransomware starts running?",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1qx5ew4/can_files_be_protected_after_ransomware_starts/",
+      "source": "/r/cybersecurity",
+      "published": "2026-02-06T02:31:04+00:00",
       "smart_groups": [
         "Curated",
         "Ransomware",
+        "Malware / Payloads"
+      ],
+      "curated": true
+    },
+    {
+      "title": "I reversed Tower of Fantasy's kernel anti-cheat driver while waiting for the game to install. It's a full BYOVD toolkit that's never even loaded.",
+      "link": "https://www.reddit.com/r/netsec/comments/1qx4183/i_reversed_tower_of_fantasys_kernel_anticheat/",
+      "source": "/r/netsec",
+      "published": "2026-02-06T01:28:13+00:00",
+      "smart_groups": [
+        "Curated",
+        "Ransomware",
+        "Cloud / SaaS"
+      ],
+      "curated": true
+    },
+    {
+      "title": "I reversed Tower of Fantasy's kernel anti-cheat driver while waiting for the game to install. It's a full BYOVD toolkit that's never even loaded.",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1qx3yuj/i_reversed_tower_of_fantasys_kernel_anticheat/",
+      "source": "/r/cybersecurity",
+      "published": "2026-02-06T01:25:14+00:00",
+      "smart_groups": [
+        "Curated",
+        "Ransomware"
+      ],
+      "curated": true
+    },
+    {
+      "title": "n8n vulnerabilities raise takeover risks for AI orchestration users",
+      "link": "https://www.scworld.com/brief/n8n-vulnerabilities-raise-takeover-risks-for-ai-orchestration-users",
+      "source": "SCM feed for Latest",
+      "published": "2026-02-06T00:30:29+00:00",
+      "smart_groups": [
+        "Curated",
         "Vulnerabilities / CVEs",
-        "Exploit / PoC"
+        "Cloud / SaaS"
       ],
       "curated": true
     }
