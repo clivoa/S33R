@@ -1,123 +1,102 @@
 {
-  "generated_at": "2026-02-06T07:12:56.134904+00:00",
-  "analysis_date": "2026-02-06",
+  "generated_at": "2026-02-07T07:00:59.207551+00:00",
+  "analysis_date": "2026-02-07",
   "model": "gpt-5.1",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-02-06T06:22:48.434987+00:00",
+  "source_generated_at": "2026-02-07T06:16:12.402364+00:00",
   "source_days_back": 30,
-  "source_total_items": 8749,
-  "total_items_in_window_all": 368,
-  "total_items_in_window_curated": 104,
-  "morning_call_markdown": "### Executive Summary\n- Active ransomware exploitation of VMware ESXi and SmarterTools/SmarterMail, plus new LockBit 5.0 and other families, keeps virtualization and email infrastructure as high‑value targets.\n- Multiple abuse paths for remote access and EDR evasion (Windows screensaver → RMM, SonicWall SSLVPN credential abuse → EDR killer, BYOVD techniques) increase the risk of “EDR-blind” intrusions.\n- New critical vulnerabilities in Ingress NGINX, n8n automation, SolarWinds Help Desk, Cisco/F5, and supply-chain style concerns (Notepad++ backdoor) require rapid exposure assessment and patching.\n\n---\n\n### High-priority items (immediate attention)\n\n- **Ransomware exploiting VMware ESXi (CVE-2025-22225) & cross‑platform LockBit 5.0**\n  - What happened: CISA confirms ongoing ransomware intrusions via an ESXi bug; LockBit 5.0 now targets Windows, Linux & ESXi.\n  - Why it matters operationally: Our virtualization layer is a high-impact single point of failure; ESXi encryption leads to rapid business outage.\n  - Recommended immediate actions for the SOC today:  \n    - Confirm with infra teams which ESXi builds and management interfaces are internet-exposed; ensure patch/mitigation status is known.  \n    - Hunt for anomalous activity on ESXi: unexpected SSH logins, new cron jobs, unknown binaries, unusual snapshot or datastore operations; tighten access from management networks only.\n\n- **SmarterTools/SmarterMail and other internet-facing app exploitation in ransomware ops**\n  - What happened: CISA highlights an actively exploited SmarterTools vulnerability used in recent ransomware attacks; SolarWinds Help Desk and ISPsystem VMs also abused for stealth payload delivery.\n  - Why it matters operationally: Any exposed web-based admin/helpdesk/mail platform in our environment or third parties could be an initial-access vector into our network or customer data.\n  - Recommended immediate actions for the SOC today:  \n    - Validate inventory of SmarterMail/SmarterTools, SolarWinds Help Desk, ISPsystem/VM hosting panels and similar internet-facing apps; escalate any unpatched or unknown exposures.  \n    - Review last 7–14 days of web server/WAF logs for these services: unusual POSTs to admin/upload endpoints, new admin accounts, webshell-like behavior; set high-priority alerts for such patterns.\n\n- **EDR evasion via BYOVD and SonicWall SSLVPN credential abuse + EDR killer**\n  - What happened: Reports show attackers exploiting decade‑old Windows driver flaws (BYOVD) to disable EDR (including Black Basta); separate campaign uses compromised SonicWall SSLVPN credentials to deploy an EDR-killer tool.\n  - Why it matters operationally: Intruders may gain persistent access and then blind our endpoint monitoring, leading to undetected lateral movement and data theft/ransomware.\n  - Recommended immediate actions for the SOC today:  \n    - Hunt across EDR and Windows logs for: loading of unexpected/legacy drivers, repeated EDR/AV service stops, tamper protection alerts, and unexplained gaps in telemetry on active hosts.  \n    - Review VPN/SonicWall (or equivalent) logs for credential stuffing, anomalous geo/IP, and logins outside normal patterns; enforce MFA where not present and push for rapid credential resets on any suspicious accounts.\n\n- **Abuse of Windows screensaver and RMM tools for remote access**\n  - What happened: Attackers are using malicious Windows screensaver files to deploy remote monitoring/management (RMM) tools and gain remote access.\n  - Why it matters operationally: RMM tools look like legitimate IT activity and can bypass many controls, making L1 detection harder and enabling full hands-on-keyboard attacks.\n  - Recommended immediate actions for the SOC today:  \n    - Tighten monitoring for new/unapproved RMM installations and outbound connections from user endpoints (AnyDesk, TeamViewer, ScreenConnect, custom RMM agents).  \n    - Flag execution of `.scr` files from email, downloads, or temp paths; treat any user‑reported “screensaver crashes” or odd prompts as potential phishing payloads and investigate with full triage.\n\n- **Critical cloud & automation vulnerabilities (Ingress NGINX, n8n, Codespaces RCE)**\n  - What happened: Four new Ingress NGINX vulns, critical RCE in n8n workflows, and abuse of VS Code config files in GitHub Codespaces enable remote command execution and environment takeover.\n  - Why it matters operationally: These map directly to CI/CD and automation components that may have access to code, credentials, or production cloud resources—ideal for stealthy supply-chain or data access.\n  - Recommended immediate actions for the SOC today:  \n    - With dev/cloud teams, quickly confirm whether we run vulnerable Ingress NGINX, n8n, or Codespaces-based workflows for sensitive apps; prioritize any internet-exposed instances.  \n    - Increase monitoring on CI/CD and automation: new/modified workflows, suspicious curl/powershell/wget commands, credential access from pipelines, unexpected outbound connections.\n\n---\n\n### Monitoring & detection recommendations\n\n- **Ransomware & ESXi/virtualization (LockBit, Interlock, ShadowSyndicate, DragonForce, Nitrogen)**\n  - Logs: Hypervisor logs (ESXi), vCenter, Windows Security, EDR, backups.  \n  - Hunt for: mass file changes, sudden backup deletions (T1485), new or modified ESXi services/cron, encryption tools on servers, large SMB writes from a single host.\n\n- **VPN & edge device abuse (SonicWall, VMware, ISP panels)**\n  - Logs: VPN/SSLVPN, firewall, RADIUS/IdP, admin panel access logs.  \n  - Hunt for: logins from new countries/ASNs, high auth failures then success (T1110), new device registrations, new local admin accounts on VPN/edge appliances.\n\n- **EDR tampering and BYOVD (Black Basta and copycats)**\n  - Logs: EDR console, Windows Sysmon, security logs, driver install logs.  \n  - Hunt for: `sc stop` or `net stop` against security services (T1562.001), loading of unsigned/legacy drivers, registry changes for driver/service start types, hosts that stop sending EDR heartbeats while still “online”.\n\n- **Malicious RMM and screensaver-based initial access**\n  - Logs: EDR, application inventory, proxy/DNS, email gateway.  \n  - Hunt for: execution of `.scr` from `%Downloads%`, `%Temp%`, Outlook cache; new network connections to RMM vendor domains from unusual segments; RMM binaries run under user profiles (T1219).\n\n- **Exploitation of web/automation platforms (SmarterMail, SolarWinds Help Desk, n8n, Codespaces, Ingress NGINX)**\n  - Logs: Web server/WAF, reverse proxies, container/orchestrator logs, CI/CD audit.  \n  - Hunt for: suspicious POST/PUT to admin or upload endpoints, command injection patterns in query strings, webshell-like commands, creation of new API tokens or service accounts (T1136, T1098).\n\n- **Office, WinRAR and file-based malware delivery (SystemBC, CrashFix Python RAT, Android lures)**\n  - Logs: Email security, endpoint AV/EDR, web proxy, sandbox.  \n  - Hunt for: macros/attachment detonation, archive extraction leading directly to script/exe launch (T1204), use of LOLBins (powershell, wscript, mshta) shortly after file open events.\n\n- **Supply-chain / software abuse (Notepad++ backdoor, Go, Cisco/F5 patches)**\n  - Logs: Endpoint inventory, software distribution, EDR.  \n  - Hunt for: unexpected versions of Notepad++ or other dev tools, unsigned binaries in standard install paths, processes spawned by editors/tools that reach external C2-like domains (T1195).\n\n- **AI/automation security (n8n, AI orchestration, AI agents)**\n  - Logs: Cloud provider logs, API gateway, secret stores, data access logs.  \n  - Hunt for: automation workflows accessing prod data stores from non‑standard contexts, large anomalous data exports (T1030), new tokens/keys provisioned from automation identities.\n\n---\n\n### Medium-term follow-ups\n\n- **Patch and configuration review for ESXi, SmarterTools, SolarWinds Help Desk, SonicWall, Cisco, F5, Ingress NGINX, n8n, Go runtime, Cisco Meeting Management.**\n  - Coordinate with infrastructure and dev teams to ensure all critical CVEs mentioned are in our patch backlog with explicit timelines and compensating controls.\n\n- **Formalize EDR tamper-protection strategy and BYOVD hardening.**\n  - Ensure kernel driver allowlists/denylists are tuned; require approval/workflow for new drivers; periodically review EDR tamper alerts and test our ability to detect/alert on EDR disable attempts.\n\n- **Ransomware tabletop focusing on virtualization and backup destruction.**\n  - Simulate ESXi/Hyper-V compromise and test escalation, containment of management networks, backup restoration from offline copies, and comms with business/management.\n\n- **RMM and remote access governance.**\n  - Maintain an approved list of RMM/remote tools, block others at proxy and application control, and align detections; educate IT and helpdesk on using only sanctioned tools.\n\n- **Assessment of CI/CD, GitHub Codespaces, and workflow automation security.**\n  - Review permissions, secrets handling, and internet exposure for pipelines and platforms like n8n; implement least privilege and stronger monitoring around production-affecting workflows.\n\n- **Vendor and third-party risk review, especially for key SaaS and gov/fintech providers.**\n  - Use recent breaches (Betterment, Conduent, Substack, AI apps) as prompts to confirm incident-reporting SLAs, data segregation, and our detection/response integration with critical third parties.",
+  "source_total_items": 8651,
+  "total_items_in_window_all": 289,
+  "total_items_in_window_curated": 59,
+  "morning_call_markdown": "### Executive Summary\n- Active ransomware exploitation of a critical SmarterMail RCE (CVE-2026-24423) and SolarWinds Web Help Desk flaws requires urgent exposure check and monitoring for initial access and lateral movement.\n- Ongoing abuse of bulletproof hosting, DNS hijacking of consumer routers, and cybersquatting is increasing attacker infrastructure resilience and phishing efficacy; strengthen domain, DNS, and email defenses.\n- Supply-chain and platform risks continue: compromised npm/PyPI crypto packages and new SaaS/automation platform vulns (Looker, n8n, Zendesk misuse) mean tighter code, cloud, and SaaS monitoring is needed.\n\n---\n\n### High-priority items (immediate attention)\n\n- **SmarterMail critical RCE actively used in ransomware (CVE-2026-24423)**\n  - What happened: CISA and multiple reports confirm widespread ransomware exploitation of a SmarterMail RCE, now on KEV list.\n  - Why it matters operationally: Direct external RCE on mail servers → high‑value foothold for data theft and ransomware in our or third‑party environments.\n  - Recommended immediate actions: (1) Confirm we/critical vendors do not run SmarterMail exposed to the internet; if present, verify patching or isolate immediately. (2) Hunt last 30–60 days for abnormal child processes from SmarterMail services, new local accounts, and outbound C2 from those hosts; add targeted alerting on SmarterMail process anomalies.\n\n- **Active exploitation of SolarWinds Web Help Desk**\n  - What happened: Microsoft details in‑the‑wild exploitation of SolarWinds Web Help Desk vulnerabilities for remote access.\n  - Why it matters operationally: Helpdesk systems often have AD/identity ties and ticket data; compromise can lead to credential theft and lateral movement.\n  - Recommended immediate actions: (1) Confirm whether Web Help Desk is in use/on perimeter; if yes, ensure patched, internet access minimized, and WAF rules tightened. (2) Review logs for webshell patterns, unusual authentication, or new admin accounts from that host; add high‑fidelity alerts for command execution and file uploads via the app.\n\n- **Compromised npm/PyPI packages delivering wallet stealers/RATs (dYdX ecosystem)**\n  - What happened: dYdX‑related npm and PyPI packages were trojanized to drop wallet‑stealing and RAT malware.\n  - Why it matters operationally: Developers or quants pulling these packages on internal machines/CI can introduce stealer/RATs into our internal network and trading environments.\n  - Recommended immediate actions: (1) Coordinate with Dev/Eng to identify any use of dYdX or similarly named npm/PyPI packages; if present, freeze builds and scan hosts/containers for stealer/RAT activity. (2) Increase monitoring on developer endpoints and CI runners for anomalous network connections and script execution after package installs.\n\n- **Global DNS hijacking via old home routers + cybersquatting/phishing infrastructure**\n  - What happened: Campaign hijacks DNS on legacy home routers; separate reporting shows cybersquatted domains actively spreading malware and credential theft.\n  - Why it matters operationally: Remote/work‑from‑home staff and customers may resolve our domains via attacker DNS, enabling credential theft via fake portals or malware delivery.\n  - Recommended immediate actions: (1) Enhance detections for logins from atypical ASNs/geos and inconsistent device fingerprints; enforce MFA challenges on risky sign‑ins. (2) Work with brand/protect teams to monitor for look‑alike domains; tighten email filtering and URL sandboxing for domains visually similar to our brand or major partners.\n\n- **Ransomware ecosystem: bulletproof hosting & ISPsystem VM template abuse**\n  - What happened: Ransomware groups are leveraging “legit” ISPsystem infrastructure/VM templates and bulletproof hosting providers to spin up resilient C2 and payload delivery.\n  - Why it matters operationally: More attacker infra that looks legitimate and rotates quickly, complicating IP/domain‑based blocking and increasing chance of successful intrusions.\n  - Recommended immediate actions: (1) Prioritize behavior‑based detections on endpoints (EDR) and network (e.g., unusual tool execution, data staging, mass encryption patterns) over pure IOC blocking. (2) Review current blocks/monitoring for known bulletproof ASN ranges; ensure we have run‑booked playbooks for rapid sinkhole/block upon new intel from threat feeds.\n\n---\n\n### Monitoring & detection recommendations\n\n- **SmarterMail & SolarWinds exploitation**\n  - Log sources: Server OS logs, web server logs, EDR, WAF, network firewall.\n  - Focus: Webshell indicators, unusual child processes from service accounts, outbound connections to rare IPs/domains, file write+execute in web app directories. (ATT&CK: T1190, T1059, T1505.003)\n\n- **Initial ransomware behaviors (post‑exploitation of SmarterMail/SolarWinds)**\n  - Log sources: EDR, Windows Security Event Logs, AD logs, backup system logs.\n  - Focus: New local/domain admin creation, mass file modifications, VSS/backup deletion commands, tooling like PsExec, RDP spikes. (T1078, T1486, T1565.001)\n\n- **Compromised developer packages (dYdX npm/PyPI)**\n  - Log sources: EDR on developer workstations/CI, HTTP proxy, DNS logs, code repo/CI logs.\n  - Focus: Scripts spawned immediately after package install, unexpected outbound connections from build servers to new domains/IPs, downloads of additional executables. (T1059, T1105)\n\n- **Cybersquatting‑driven phishing and malicious PDFs**\n  - Log sources: Email security, secure web gateway/proxy, sandboxing, endpoint telemetry.\n  - Focus: Emails with look‑alike domains to our org/major partners, PDF attachments that spawn processes or initiate network connections, credential posts to unexpected domains. (T1566.002, T1204, T1189)\n\n- **DNS hijacking via home routers / risky remote access**\n  - Log sources: IdP/SSO, VPN logs, CASB, DNS resolver logs.\n  - Focus: Logins from residential IPs with sudden geo/ASN changes, frequent MFA prompts/denies, DNS queries for our domains resolving to unusual IP ranges vs. baseline. (T1078, T1539, T1606)\n\n- **Bulletproof hosting / malicious infrastructure**\n  - Log sources: Firewall, NDR, DNS, EDR.\n  - Focus: Outbound to newly registered domains, uncommon ports, or ASNs associated with bulletproof hosting; repeated short‑lived TLS sessions with self‑signed or unusual certs. (T1071, T1090)\n\n- **SaaS platform exploits (Looker, n8n, Zendesk misconfig)**\n  - Log sources: Cloud/SaaS logs (Looker, automation platforms, ticketing), IdP, API gateway.\n  - Focus: New API tokens, changes to webhooks/integrations, high‑volume data exports, admin privilege escalations from low‑trust IPs. (T1529, T1530, T1020)\n\n- **Android banking/credential malware (FvncBot) impact on customers and staff**\n  - Log sources: Fraud monitoring systems, mobile app telemetry, customer IAM.\n  - Focus: Rapid device changes for same account, new device logins followed by high‑risk transactions, impossible travel anomalies. (T1078, T1659 – fraud‑adjacent)\n\n---\n\n### Medium-term follow-ups\n\n- **SmarterMail / SolarWinds / SaaS exposure review**\n  - Complete an updated inventory of internet‑facing collaboration/helpdesk/mail/SaaS platforms; confirm patch levels and whether WAF and MFA are enforced where possible.\n\n- **SaaS and automation platform hardening (Looker, n8n, Zendesk, others)**\n  - Review configs: least‑privilege for service accounts, restrict outbound webhooks, enable anomaly alerts on large exports and admin changes; ensure vendor security advisories are integrated into patch/ops process.\n\n- **Software supply chain controls (npm/PyPI and internal builds)**\n  - Implement or strengthen package allow‑listing, integrity checks (e.g., lockfiles, checksum verification), and pre‑deployment malware scanning in CI; define process for rapid package rollback.\n\n- **DNS and domain protection**\n  - Evaluate protective DNS for staff endpoints (including remote users) and validate DNSSEC/registry lock/brand monitoring coverage for our core domains; coordinate with marketing/legal for response to brand impersonation.\n\n- **Endpoint and identity resilience vs. ransomware**\n  - Reassess EDR coverage, RDP exposure, backup protection (immutable backups, isolate backup infra); validate that identity protections (MFA, conditional access, privileged access management) are tuned against typical ransomware playbooks.\n\n- **Edge and unsupported device lifecycle (aligned with CISA guidance)**\n  - Start/continue a program to inventory and phase out unsupported edge/network devices and risky home‑grown appliances; ensure we have a policy for minimum firmware/software levels for internet‑facing gear.",
   "highlights": [
     {
-      "title": "Hackers Exploit Windows Screensaver to Deploy RMM Tools, Gain Remote Access",
-      "link": "https://gbhackers.com/windows-screensaver/",
+      "title": "Hackers Exploit Cybersquatting Tactics to Spread Malware and Steal Sensitive Information",
+      "link": "https://gbhackers.com/hackers-exploit-cybersquatting-tactics/",
       "source": "GBHackers News",
-      "published": "2026-02-06T05:54:24+00:00",
-      "smart_groups": [
-        "Curated",
-        "Exploit / PoC",
-        "Windows / Microsoft",
-        "Phishing / Social Engineering"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Concerns Raised Over CISA’s Silent Ransomware Updates in KEV Catalog",
-      "link": "https://www.securityweek.com/questions-raised-over-cisas-silent-ransomware-updates-in-kev-catalog/",
-      "source": "SecurityWeek",
-      "published": "2026-02-06T05:28:39+00:00",
+      "published": "2026-02-07T05:49:44+00:00",
       "smart_groups": [
         "Curated",
         "Ransomware",
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": true
-    },
-    {
-      "title": "CISA Advisory Highlights Exploited SmarterTools Vulnerability in Recent Ransomware Attacks",
-      "link": "https://gbhackers.com/cisa-advisory-highlights-exploited-smartertools-vulnerability/",
-      "source": "GBHackers News",
-      "published": "2026-02-06T05:22:52+00:00",
-      "smart_groups": [
-        "Curated",
-        "Ransomware",
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Betterment Data Breach Exposes Sensitive Information of 1.4 Million Customers",
-      "link": "https://gbhackers.com/betterment-data-breach/",
-      "source": "GBHackers News",
-      "published": "2026-02-06T04:56:31+00:00",
-      "smart_groups": [
-        "Curated",
         "Exploit / PoC",
-        "Data Breaches / Leaks",
-        "Phishing / Social Engineering"
+        "Malware / Payloads",
+        "Network / OT / ICS"
       ],
       "curated": true
     },
     {
-      "title": "Cybersicherheitsvorschriften: So erfüllen Sie Ihre Compliance-Anforderungen",
-      "link": "https://www.csoonline.com/article/3494023/cybersicherheitsvorschriften-so-erfullen-sie-ihre-compliance-anforderungen.html",
-      "source": "CSO Online",
-      "published": "2026-02-06T04:00:00+00:00",
-      "smart_groups": [
-        "Curated",
-        "Ransomware",
-        "Vulnerabilities / CVEs",
-        "Identity / Access"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Four new vulnerabilities found in Ingress NGINX",
-      "link": "https://www.csoonline.com/article/4128439/four-new-vulnerabilities-found-in-ingress-nginx.html",
-      "source": "CSO Online",
-      "published": "2026-02-06T02:48:26+00:00",
+      "title": "Claude Opus 4.6 Released with Improved Cybersecurity, Validating 500+ high-severity Vulnerabilities",
+      "link": "https://cybersecuritynews.com/claude-opus-4-6-released/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-02-07T01:52:04+00:00",
       "smart_groups": [
         "Curated",
         "Vulnerabilities / CVEs",
-        "Exploit / PoC",
         "Cloud / SaaS"
       ],
       "curated": true
     },
     {
-      "title": "Can files be protected AFTER ransomware starts running?",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1qx5ew4/can_files_be_protected_after_ransomware_starts/",
-      "source": "/r/cybersecurity",
-      "published": "2026-02-06T02:31:04+00:00",
-      "smart_groups": [
-        "Curated",
-        "Ransomware",
-        "Malware / Payloads"
-      ],
-      "curated": true
-    },
-    {
-      "title": "I reversed Tower of Fantasy's kernel anti-cheat driver while waiting for the game to install. It's a full BYOVD toolkit that's never even loaded.",
-      "link": "https://www.reddit.com/r/netsec/comments/1qx4183/i_reversed_tower_of_fantasys_kernel_anticheat/",
+      "title": "crypto-scanner: Open-source CLI tool to find quantum-vulnerable cryptography in your codebase",
+      "link": "https://www.reddit.com/r/netsec/comments/1qy0mjx/cryptoscanner_opensource_cli_tool_to_find/",
       "source": "/r/netsec",
-      "published": "2026-02-06T01:28:13+00:00",
+      "published": "2026-02-07T01:41:45+00:00",
       "smart_groups": [
         "Curated",
-        "Ransomware",
-        "Cloud / SaaS"
+        "Vulnerabilities / CVEs"
       ],
       "curated": true
     },
     {
-      "title": "I reversed Tower of Fantasy's kernel anti-cheat driver while waiting for the game to install. It's a full BYOVD toolkit that's never even loaded.",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1qx3yuj/i_reversed_tower_of_fantasys_kernel_anticheat/",
+      "title": "Analysis of active exploitation of SolarWinds Web Help Desk",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1qy0511/analysis_of_active_exploitation_of_solarwinds_web/",
       "source": "/r/cybersecurity",
-      "published": "2026-02-06T01:25:14+00:00",
+      "published": "2026-02-07T01:19:52+00:00",
+      "smart_groups": [
+        "Curated",
+        "Exploit / PoC"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Analysis of active exploitation of SolarWinds Web Help Desk",
+      "link": "https://www.microsoft.com/en-us/security/blog/2026/02/06/active-exploitation-solarwinds-web-help-desk/",
+      "source": "Microsoft Security Blog",
+      "published": "2026-02-07T01:08:49+00:00",
+      "smart_groups": [
+        "Curated",
+        "Exploit / PoC"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Discovering Negative-Days with LLM Workflows",
+      "link": "https://spaceraccoon.dev/discovering-negative-days-llm-workflows/",
+      "source": "https://spaceraccoon.dev/feed.xml",
+      "published": "2026-02-07T00:00:00+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "CISSP and future of SOX roles",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1qxxpjv/cissp_and_future_of_sox_roles/",
+      "source": "/r/cybersecurity",
+      "published": "2026-02-06T23:35:45+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Global education-targeted ransomware attack growth decelerates",
+      "link": "https://www.scworld.com/brief/global-education-targeted-ransomware-attack-growth-decelerates",
+      "source": "SCM feed for Latest",
+      "published": "2026-02-06T23:29:15+00:00",
       "smart_groups": [
         "Curated",
         "Ransomware"
@@ -125,14 +104,25 @@
       "curated": true
     },
     {
-      "title": "n8n vulnerabilities raise takeover risks for AI orchestration users",
-      "link": "https://www.scworld.com/brief/n8n-vulnerabilities-raise-takeover-risks-for-ai-orchestration-users",
+      "title": "Coupang breach toll grows further",
+      "link": "https://www.scworld.com/brief/coupang-breach-toll-grows-further",
       "source": "SCM feed for Latest",
-      "published": "2026-02-06T00:30:29+00:00",
+      "published": "2026-02-06T23:28:32+00:00",
       "smart_groups": [
         "Curated",
         "Vulnerabilities / CVEs",
-        "Cloud / SaaS"
+        "Data Breaches / Leaks"
+      ],
+      "curated": true
+    },
+    {
+      "title": "More than 25M compromised by Conduent hack",
+      "link": "https://www.scworld.com/brief/more-than-25m-compromised-by-conduent-hack",
+      "source": "SCM feed for Latest",
+      "published": "2026-02-06T23:25:54+00:00",
+      "smart_groups": [
+        "Curated",
+        "Ransomware"
       ],
       "curated": true
     }
