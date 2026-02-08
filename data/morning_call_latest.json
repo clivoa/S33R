@@ -1,35 +1,71 @@
 {
-  "generated_at": "2026-02-07T07:00:59.207551+00:00",
-  "analysis_date": "2026-02-07",
+  "generated_at": "2026-02-08T07:06:34.089575+00:00",
+  "analysis_date": "2026-02-08",
   "model": "gpt-5.1",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-02-07T06:16:12.402364+00:00",
+  "source_generated_at": "2026-02-08T05:31:43.268479+00:00",
   "source_days_back": 30,
-  "source_total_items": 8651,
-  "total_items_in_window_all": 289,
-  "total_items_in_window_curated": 59,
-  "morning_call_markdown": "### Executive Summary\n- Active ransomware exploitation of a critical SmarterMail RCE (CVE-2026-24423) and SolarWinds Web Help Desk flaws requires urgent exposure check and monitoring for initial access and lateral movement.\n- Ongoing abuse of bulletproof hosting, DNS hijacking of consumer routers, and cybersquatting is increasing attacker infrastructure resilience and phishing efficacy; strengthen domain, DNS, and email defenses.\n- Supply-chain and platform risks continue: compromised npm/PyPI crypto packages and new SaaS/automation platform vulns (Looker, n8n, Zendesk misuse) mean tighter code, cloud, and SaaS monitoring is needed.\n\n---\n\n### High-priority items (immediate attention)\n\n- **SmarterMail critical RCE actively used in ransomware (CVE-2026-24423)**\n  - What happened: CISA and multiple reports confirm widespread ransomware exploitation of a SmarterMail RCE, now on KEV list.\n  - Why it matters operationally: Direct external RCE on mail servers → high‑value foothold for data theft and ransomware in our or third‑party environments.\n  - Recommended immediate actions: (1) Confirm we/critical vendors do not run SmarterMail exposed to the internet; if present, verify patching or isolate immediately. (2) Hunt last 30–60 days for abnormal child processes from SmarterMail services, new local accounts, and outbound C2 from those hosts; add targeted alerting on SmarterMail process anomalies.\n\n- **Active exploitation of SolarWinds Web Help Desk**\n  - What happened: Microsoft details in‑the‑wild exploitation of SolarWinds Web Help Desk vulnerabilities for remote access.\n  - Why it matters operationally: Helpdesk systems often have AD/identity ties and ticket data; compromise can lead to credential theft and lateral movement.\n  - Recommended immediate actions: (1) Confirm whether Web Help Desk is in use/on perimeter; if yes, ensure patched, internet access minimized, and WAF rules tightened. (2) Review logs for webshell patterns, unusual authentication, or new admin accounts from that host; add high‑fidelity alerts for command execution and file uploads via the app.\n\n- **Compromised npm/PyPI packages delivering wallet stealers/RATs (dYdX ecosystem)**\n  - What happened: dYdX‑related npm and PyPI packages were trojanized to drop wallet‑stealing and RAT malware.\n  - Why it matters operationally: Developers or quants pulling these packages on internal machines/CI can introduce stealer/RATs into our internal network and trading environments.\n  - Recommended immediate actions: (1) Coordinate with Dev/Eng to identify any use of dYdX or similarly named npm/PyPI packages; if present, freeze builds and scan hosts/containers for stealer/RAT activity. (2) Increase monitoring on developer endpoints and CI runners for anomalous network connections and script execution after package installs.\n\n- **Global DNS hijacking via old home routers + cybersquatting/phishing infrastructure**\n  - What happened: Campaign hijacks DNS on legacy home routers; separate reporting shows cybersquatted domains actively spreading malware and credential theft.\n  - Why it matters operationally: Remote/work‑from‑home staff and customers may resolve our domains via attacker DNS, enabling credential theft via fake portals or malware delivery.\n  - Recommended immediate actions: (1) Enhance detections for logins from atypical ASNs/geos and inconsistent device fingerprints; enforce MFA challenges on risky sign‑ins. (2) Work with brand/protect teams to monitor for look‑alike domains; tighten email filtering and URL sandboxing for domains visually similar to our brand or major partners.\n\n- **Ransomware ecosystem: bulletproof hosting & ISPsystem VM template abuse**\n  - What happened: Ransomware groups are leveraging “legit” ISPsystem infrastructure/VM templates and bulletproof hosting providers to spin up resilient C2 and payload delivery.\n  - Why it matters operationally: More attacker infra that looks legitimate and rotates quickly, complicating IP/domain‑based blocking and increasing chance of successful intrusions.\n  - Recommended immediate actions: (1) Prioritize behavior‑based detections on endpoints (EDR) and network (e.g., unusual tool execution, data staging, mass encryption patterns) over pure IOC blocking. (2) Review current blocks/monitoring for known bulletproof ASN ranges; ensure we have run‑booked playbooks for rapid sinkhole/block upon new intel from threat feeds.\n\n---\n\n### Monitoring & detection recommendations\n\n- **SmarterMail & SolarWinds exploitation**\n  - Log sources: Server OS logs, web server logs, EDR, WAF, network firewall.\n  - Focus: Webshell indicators, unusual child processes from service accounts, outbound connections to rare IPs/domains, file write+execute in web app directories. (ATT&CK: T1190, T1059, T1505.003)\n\n- **Initial ransomware behaviors (post‑exploitation of SmarterMail/SolarWinds)**\n  - Log sources: EDR, Windows Security Event Logs, AD logs, backup system logs.\n  - Focus: New local/domain admin creation, mass file modifications, VSS/backup deletion commands, tooling like PsExec, RDP spikes. (T1078, T1486, T1565.001)\n\n- **Compromised developer packages (dYdX npm/PyPI)**\n  - Log sources: EDR on developer workstations/CI, HTTP proxy, DNS logs, code repo/CI logs.\n  - Focus: Scripts spawned immediately after package install, unexpected outbound connections from build servers to new domains/IPs, downloads of additional executables. (T1059, T1105)\n\n- **Cybersquatting‑driven phishing and malicious PDFs**\n  - Log sources: Email security, secure web gateway/proxy, sandboxing, endpoint telemetry.\n  - Focus: Emails with look‑alike domains to our org/major partners, PDF attachments that spawn processes or initiate network connections, credential posts to unexpected domains. (T1566.002, T1204, T1189)\n\n- **DNS hijacking via home routers / risky remote access**\n  - Log sources: IdP/SSO, VPN logs, CASB, DNS resolver logs.\n  - Focus: Logins from residential IPs with sudden geo/ASN changes, frequent MFA prompts/denies, DNS queries for our domains resolving to unusual IP ranges vs. baseline. (T1078, T1539, T1606)\n\n- **Bulletproof hosting / malicious infrastructure**\n  - Log sources: Firewall, NDR, DNS, EDR.\n  - Focus: Outbound to newly registered domains, uncommon ports, or ASNs associated with bulletproof hosting; repeated short‑lived TLS sessions with self‑signed or unusual certs. (T1071, T1090)\n\n- **SaaS platform exploits (Looker, n8n, Zendesk misconfig)**\n  - Log sources: Cloud/SaaS logs (Looker, automation platforms, ticketing), IdP, API gateway.\n  - Focus: New API tokens, changes to webhooks/integrations, high‑volume data exports, admin privilege escalations from low‑trust IPs. (T1529, T1530, T1020)\n\n- **Android banking/credential malware (FvncBot) impact on customers and staff**\n  - Log sources: Fraud monitoring systems, mobile app telemetry, customer IAM.\n  - Focus: Rapid device changes for same account, new device logins followed by high‑risk transactions, impossible travel anomalies. (T1078, T1659 – fraud‑adjacent)\n\n---\n\n### Medium-term follow-ups\n\n- **SmarterMail / SolarWinds / SaaS exposure review**\n  - Complete an updated inventory of internet‑facing collaboration/helpdesk/mail/SaaS platforms; confirm patch levels and whether WAF and MFA are enforced where possible.\n\n- **SaaS and automation platform hardening (Looker, n8n, Zendesk, others)**\n  - Review configs: least‑privilege for service accounts, restrict outbound webhooks, enable anomaly alerts on large exports and admin changes; ensure vendor security advisories are integrated into patch/ops process.\n\n- **Software supply chain controls (npm/PyPI and internal builds)**\n  - Implement or strengthen package allow‑listing, integrity checks (e.g., lockfiles, checksum verification), and pre‑deployment malware scanning in CI; define process for rapid package rollback.\n\n- **DNS and domain protection**\n  - Evaluate protective DNS for staff endpoints (including remote users) and validate DNSSEC/registry lock/brand monitoring coverage for our core domains; coordinate with marketing/legal for response to brand impersonation.\n\n- **Endpoint and identity resilience vs. ransomware**\n  - Reassess EDR coverage, RDP exposure, backup protection (immutable backups, isolate backup infra); validate that identity protections (MFA, conditional access, privileged access management) are tuned against typical ransomware playbooks.\n\n- **Edge and unsupported device lifecycle (aligned with CISA guidance)**\n  - Start/continue a program to inventory and phase out unsupported edge/network devices and risky home‑grown appliances; ensure we have a policy for minimum firmware/software levels for internet‑facing gear.",
+  "source_total_items": 8412,
+  "total_items_in_window_all": 99,
+  "total_items_in_window_curated": 19,
+  "morning_call_markdown": "### Executive Summary\n- Ransomware attack on payment gateway BridgePay highlights ongoing high-impact risk to payment processors and downstream financial services.\n- A 0‑day remote code execution flaw in BeyondTrust remote access products could provide direct privileged access into enterprise networks.\n- Growing use of AI tools in offensive security and large-scale vuln discovery raises the likelihood of rapid exploit weaponization for exposed services.\n\n---\n\n### High-priority items (immediate attention)\n\n- **BridgePay ransomware attack disrupting payment processing (Items 11, 15)**\n  - What happened: A major payment gateway (BridgePay) confirmed a ransomware attack that caused nationwide payment outages.\n  - Why it matters operationally: Demonstrates current actor focus on payment infrastructure and the impact of taking a gateway/processor offline; similar TTPs could target our payment and settlement interfaces or key third parties.\n  - Recommended immediate actions:  \n    - Review current payment-processing assets, gateways, and API endpoints; validate recent changes and ensure EDR coverage and backup status.  \n    - Run targeted hunts for ransomware precursors: anomalous RDP/VPN logins, use of built‑in tools for staging (PowerShell, certutil, vssadmin), unusual encryption tool execution.\n\n- **BeyondTrust Remote Access 0‑day RCE (Item 17)**\n  - What happened: A 0‑day remote code execution vulnerability was disclosed in BeyondTrust Remote Access products (remote support/privileged access platform).\n  - Why it matters operationally: These systems often have high privileges into critical servers and may be internet‑facing; RCE could give attackers direct access to internal infrastructure and high‑value accounts.\n  - Recommended immediate actions:  \n    - Identify any BeyondTrust Remote Access / Privileged Remote Access instances (internal and external); confirm against vendor advisories for mitigations, workarounds, network ACLs, and logging guidance.  \n    - Increase monitoring of these hosts: web access logs, authentication logs, and process creation; alert on suspicious web shells, new users, or unusual outbound connections from BeyondTrust servers.\n\n- **Remote access & identity hardening / 2FA strength discussion (Item 1 + general trend)**\n  - What happened: Renewed focus on the relative strength/weakness of different 2FA methods and remote access protections, in the context of ongoing compromise stories.\n  - Why it matters operationally: Weak 2FA (SMS, push‑only) and poorly protected remote support paths are common entry vectors for ransomware and BEC against financial institutions.\n  - Recommended immediate actions:  \n    - For SOC: tune alerts for MFA fatigue (many push prompts, multiple locations, repeated failures followed by success) and unusual device changes; coordinate with IAM to validate strong 2FA on admin and payment accounts.  \n    - Verify that all remote access services (VPN, remote support tools, jump servers) require phishing‑resistant MFA where available and are behind WAF/VPN rather than directly exposed.\n\n- **AI‑accelerated vulnerability discovery / autonomous pentesting tools (Items 7, 18)**\n  - What happened: AI tools (e.g., Claude Opus) reportedly identified hundreds of high‑severity vulns in open source code, and discussions on autonomous AI pentesting tools gaining traction.\n  - Why it matters operationally: Expect faster discovery and weaponization of bugs, especially in popular internet‑facing components and open-source dependencies used in financial sector stacks.\n  - Recommended immediate actions:  \n    - Prioritize scanning and patching for internet‑facing apps and APIs; compare scanner results with recent public disclosures for critical components in our tech stack.  \n    - Increase scrutiny of anomalous scanning/probing behavior in WAF/API logs (rapid parameter fuzzing, new user‑agents, high‑rate 4xx/5xx).\n\n- **Supply chain / AI platform data exposure (Moltbook AI social network exposure – Item 13)**\n  - What happened: An AI‑related social network (Moltbook) leaked real user data tied to “AI agents.”\n  - Why it matters operationally: Highlights risk from third‑party AI/SaaS platforms used for experimentation, code hosting, or data sharing that may hold internal or customer data.\n  - Recommended immediate actions:  \n    - For SOC today: flag and review unusual outbound connections to lesser‑known AI/SaaS domains from internal hosts; coordinate with security governance to confirm approved AI tools list.  \n    - Watch for uploads of source code or data to non‑approved AI platforms in data loss prevention (DLP) and proxy logs.\n\n---\n\n### Monitoring & detection recommendations\n\n- **Ransomware precursors & lateral movement (BridgePay case)**  \n  - Log sources: EDR, Windows event logs, AD, VPN, RDP gateway.  \n  - Hunt for: T1059 (Command-Line), T1078 (Valid Accounts), T1021 (Remote Services) – anomalous admin logons, new local admins, use of vssadmin/shadow copies deletion, sudden spikes in file rename/encrypt patterns.\n\n- **Remote access & BeyondTrust 0‑day**  \n  - Log sources: Web server logs for BeyondTrust, EDR on BeyondTrust host, firewall/VPN.  \n  - Hunt for: T1190 (Exploit Public-Facing App), T1105 (Ingress Tool Transfer) – unusual POSTs to uncommon URLs, abnormal 500/404 patterns before success, new binaries or scripts dropped in web directories.\n\n- **Payment and API channels protection**  \n  - Log sources: Payment gateway logs, API gateway/WAF, transaction monitoring.  \n  - Hunt for: T1190, T1068 (Exploitation for Privilege Escalation) – bursts of failed API authentication, unexpected IPs hitting payment APIs, method/endpoint enumeration, or changes in transaction patterns coinciding with infra anomalies.\n\n- **MFA abuse and account takeover**  \n  - Log sources: IdP (Okta/ADFS/etc.), VPN, mail, core banking admin portals.  \n  - Hunt for: T1110 (Brute Force), T1078 – multiple MFA prompts, impossible travel, new device registrations, logins from Tor/VPN exit nodes or unusual geos.\n\n- **Cloud and SaaS misuse / AI & code exfiltration**  \n  - Log sources: CASB, proxy, cloud audit logs (AWS/Azure/GCP), DLP.  \n  - Hunt for: T1530 (Data from Cloud Storage), T1048 (Exfiltration over Alternative Protocol) – uploads of large archives, source repositories, or database exports to non‑approved AI/code platforms and file‑sharing services.\n\n- **Secret exposure & credential abuse (Kingfisher secret scanner relevance – Item 6)**  \n  - Log sources: Code repo logs, CI/CD, cloud IAM, IdP.  \n  - Hunt for: T1552 (Unsecured Credentials), T1555 (Credentials from Password Stores) – new access keys created/used from unfamiliar locations, sudden privilege elevations, service accounts accessing atypical resources.\n\n- **Network scanning and deception opportunities (cloud/API deception tools – Items 5, 9)**  \n  - Log sources: Firewall, IDS/IPS, WAF, cloud flow logs.  \n  - Hunt for: T1046 (Network Service Scanning), T1595 (Active Scanning) – repeated connection attempts to non‑documented services or canary endpoints; use results to refine blocking and threat intel.\n\n- **Privileged access anomalies**  \n  - Log sources: PAM/BeyondTrust logs (if present), Windows security logs, Unix sudo logs.  \n  - Hunt for: T1078, T1098 (Account Manipulation) – new or modified privileged accounts, unusual sudo/su chains, off‑hours elevation activity.\n\n---\n\n### Medium-term follow-ups\n\n- **BeyondTrust 0‑day remediation program**\n  - Work with infrastructure and vendor management to track BeyondTrust advisories, plan patch/upgrade windows, and ensure hardened configuration (network segmentation, strong MFA, logging to SIEM).\n\n- **Ransomware tabletop and resilience review**\n  - Run a payment‑flow‑focused ransomware tabletop exercise (including third‑party payment processors); validate backup/restore RTOs for payment and settlement systems and confirm playbook readiness.\n\n- **Strong MFA and remote access strategy**\n  - Push for phishing‑resistant MFA (FIDO2/WebAuthn, smartcards) on all admin, payment, and high‑risk applications; review and reduce legacy protocols and SMS‑based second factors.\n\n- **Secure AI and SaaS usage policy**\n  - Formalize/refresh policy on AI tools and external SaaS for code, data, and model usage; catalog which platforms are allowed and integrate with CASB for visibility and enforcement.\n\n- **Continuous vuln management with AI in mind**\n  - Adjust vulnerability management SLAs assuming faster exploit cycles: prioritize internet‑facing and high‑impact components; evaluate integrating modern scanners (including AI‑assisted ones) into CI/CD and regular infra scanning.\n\n- **Deception and honeypot strategy**\n  - Assess feasibility of deploying low‑risk deception assets (cloud/API canaries, fake credentials) to detect early intrusion stages, focusing on payment networks, remote access, and admin segments.",
   "highlights": [
     {
-      "title": "Hackers Exploit Cybersquatting Tactics to Spread Malware and Steal Sensitive Information",
-      "link": "https://gbhackers.com/hackers-exploit-cybersquatting-tactics/",
-      "source": "GBHackers News",
-      "published": "2026-02-07T05:49:44+00:00",
+      "title": "Table of 2FA strength",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1qyxd9t/table_of_2fa_strength/",
+      "source": "/r/cybersecurity",
+      "published": "2026-02-08T02:51:55+00:00",
       "smart_groups": [
         "Curated",
-        "Ransomware",
-        "Exploit / PoC",
+        "Vulnerabilities / CVEs",
+        "Windows / Microsoft",
         "Malware / Payloads",
-        "Network / OT / ICS"
+        "Identity / Access",
+        "Phishing / Social Engineering",
+        "Crypto / Web3"
       ],
       "curated": true
     },
     {
-      "title": "Claude Opus 4.6 Released with Improved Cybersecurity, Validating 500+ high-severity Vulnerabilities",
-      "link": "https://cybersecuritynews.com/claude-opus-4-6-released/",
-      "source": "Cyber Security News (FeedBurner)",
-      "published": "2026-02-07T01:52:04+00:00",
+      "title": "Open source hardened container images - a solution",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1qyvboa/open_source_hardened_container_images_a_solution/",
+      "source": "/r/cybersecurity",
+      "published": "2026-02-08T01:17:10+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Web / API Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Is cybersecurity software buying mostly top-down?",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1qytly2/is_cybersecurity_software_buying_mostly_topdown/",
+      "source": "/r/cybersecurity",
+      "published": "2026-02-08T00:00:27+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "ISC2.org Insight Report on 2025 Cybersecurity Hiring Trends",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1qys16c/isc2org_insight_report_on_2025_cybersecurity/",
+      "source": "/r/cybersecurity",
+      "published": "2026-02-07T22:52:08+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Cloud Deception Management Platform (Open-source Cloud Canaries)",
+      "link": "https://www.reddit.com/r/netsec/comments/1qymqx8/cloud_deception_management_platform_opensource/",
+      "source": "/r/netsec",
+      "published": "2026-02-07T19:20:30+00:00",
       "smart_groups": [
         "Curated",
         "Vulnerabilities / CVEs",
@@ -38,91 +74,62 @@
       "curated": true
     },
     {
-      "title": "crypto-scanner: Open-source CLI tool to find quantum-vulnerable cryptography in your codebase",
-      "link": "https://www.reddit.com/r/netsec/comments/1qy0mjx/cryptoscanner_opensource_cli_tool_to_find/",
+      "title": "New OSS secret scanner: Kingfisher (Rust) validates exposed creds + maps permissions",
+      "link": "https://www.reddit.com/r/netsec/comments/1qyl3yf/new_oss_secret_scanner_kingfisher_rust_validates/",
       "source": "/r/netsec",
-      "published": "2026-02-07T01:41:45+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Analysis of active exploitation of SolarWinds Web Help Desk",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1qy0511/analysis_of_active_exploitation_of_solarwinds_web/",
-      "source": "/r/cybersecurity",
-      "published": "2026-02-07T01:19:52+00:00",
-      "smart_groups": [
-        "Curated",
-        "Exploit / PoC"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Analysis of active exploitation of SolarWinds Web Help Desk",
-      "link": "https://www.microsoft.com/en-us/security/blog/2026/02/06/active-exploitation-solarwinds-web-help-desk/",
-      "source": "Microsoft Security Blog",
-      "published": "2026-02-07T01:08:49+00:00",
-      "smart_groups": [
-        "Curated",
-        "Exploit / PoC"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Discovering Negative-Days with LLM Workflows",
-      "link": "https://spaceraccoon.dev/discovering-negative-days-llm-workflows/",
-      "source": "https://spaceraccoon.dev/feed.xml",
-      "published": "2026-02-07T00:00:00+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs"
-      ],
-      "curated": true
-    },
-    {
-      "title": "CISSP and future of SOX roles",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1qxxpjv/cissp_and_future_of_sox_roles/",
-      "source": "/r/cybersecurity",
-      "published": "2026-02-06T23:35:45+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Global education-targeted ransomware attack growth decelerates",
-      "link": "https://www.scworld.com/brief/global-education-targeted-ransomware-attack-growth-decelerates",
-      "source": "SCM feed for Latest",
-      "published": "2026-02-06T23:29:15+00:00",
-      "smart_groups": [
-        "Curated",
-        "Ransomware"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Coupang breach toll grows further",
-      "link": "https://www.scworld.com/brief/coupang-breach-toll-grows-further",
-      "source": "SCM feed for Latest",
-      "published": "2026-02-06T23:28:32+00:00",
+      "published": "2026-02-07T18:18:41+00:00",
       "smart_groups": [
         "Curated",
         "Vulnerabilities / CVEs",
-        "Data Breaches / Leaks"
+        "Cloud / SaaS"
       ],
       "curated": true
     },
     {
-      "title": "More than 25M compromised by Conduent hack",
-      "link": "https://www.scworld.com/brief/more-than-25m-compromised-by-conduent-hack",
-      "source": "SCM feed for Latest",
-      "published": "2026-02-06T23:25:54+00:00",
+      "title": "Claude Opus Finds more than 500 High Severity Vulnerabilities in OpenSource Codebases",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1qykqeh/claude_opus_finds_more_than_500_high_severity/",
+      "source": "/r/cybersecurity",
+      "published": "2026-02-07T18:04:23+00:00",
       "smart_groups": [
         "Curated",
-        "Ransomware"
+        "Vulnerabilities / CVEs",
+        "Linux / Unix",
+        "Identity / Access",
+        "Network / OT / ICS"
+      ],
+      "curated": true
+    },
+    {
+      "title": "WAF Product Suggestions",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1qyi32i/waf_product_suggestions/",
+      "source": "/r/cybersecurity",
+      "published": "2026-02-07T16:23:38+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "trappsec: open source framework for API deception",
+      "link": "https://www.reddit.com/r/netsec/comments/1qyfxlw/trappsec_open_source_framework_for_api_deception/",
+      "source": "/r/netsec",
+      "published": "2026-02-07T14:59:42+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "HTB: Signed",
+      "link": "https://0xdf.gitlab.io/2026/02/07/htb-signed.html",
+      "source": "https://0xdf.gitlab.io/feed.xml",
+      "published": "2026-02-07T14:45:00+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Windows / Microsoft"
       ],
       "curated": true
     }
