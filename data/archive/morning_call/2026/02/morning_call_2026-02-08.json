@@ -1,0 +1,137 @@
+{
+  "generated_at": "2026-02-08T07:06:34.089575+00:00",
+  "analysis_date": "2026-02-08",
+  "model": "gpt-5.1",
+  "window_hours": 24,
+  "source_file": "data/news_recent.json",
+  "source_generated_at": "2026-02-08T05:31:43.268479+00:00",
+  "source_days_back": 30,
+  "source_total_items": 8412,
+  "total_items_in_window_all": 99,
+  "total_items_in_window_curated": 19,
+  "morning_call_markdown": "### Executive Summary\n- Ransomware attack on payment gateway BridgePay highlights ongoing high-impact risk to payment processors and downstream financial services.\n- A 0‑day remote code execution flaw in BeyondTrust remote access products could provide direct privileged access into enterprise networks.\n- Growing use of AI tools in offensive security and large-scale vuln discovery raises the likelihood of rapid exploit weaponization for exposed services.\n\n---\n\n### High-priority items (immediate attention)\n\n- **BridgePay ransomware attack disrupting payment processing (Items 11, 15)**\n  - What happened: A major payment gateway (BridgePay) confirmed a ransomware attack that caused nationwide payment outages.\n  - Why it matters operationally: Demonstrates current actor focus on payment infrastructure and the impact of taking a gateway/processor offline; similar TTPs could target our payment and settlement interfaces or key third parties.\n  - Recommended immediate actions:  \n    - Review current payment-processing assets, gateways, and API endpoints; validate recent changes and ensure EDR coverage and backup status.  \n    - Run targeted hunts for ransomware precursors: anomalous RDP/VPN logins, use of built‑in tools for staging (PowerShell, certutil, vssadmin), unusual encryption tool execution.\n\n- **BeyondTrust Remote Access 0‑day RCE (Item 17)**\n  - What happened: A 0‑day remote code execution vulnerability was disclosed in BeyondTrust Remote Access products (remote support/privileged access platform).\n  - Why it matters operationally: These systems often have high privileges into critical servers and may be internet‑facing; RCE could give attackers direct access to internal infrastructure and high‑value accounts.\n  - Recommended immediate actions:  \n    - Identify any BeyondTrust Remote Access / Privileged Remote Access instances (internal and external); confirm against vendor advisories for mitigations, workarounds, network ACLs, and logging guidance.  \n    - Increase monitoring of these hosts: web access logs, authentication logs, and process creation; alert on suspicious web shells, new users, or unusual outbound connections from BeyondTrust servers.\n\n- **Remote access & identity hardening / 2FA strength discussion (Item 1 + general trend)**\n  - What happened: Renewed focus on the relative strength/weakness of different 2FA methods and remote access protections, in the context of ongoing compromise stories.\n  - Why it matters operationally: Weak 2FA (SMS, push‑only) and poorly protected remote support paths are common entry vectors for ransomware and BEC against financial institutions.\n  - Recommended immediate actions:  \n    - For SOC: tune alerts for MFA fatigue (many push prompts, multiple locations, repeated failures followed by success) and unusual device changes; coordinate with IAM to validate strong 2FA on admin and payment accounts.  \n    - Verify that all remote access services (VPN, remote support tools, jump servers) require phishing‑resistant MFA where available and are behind WAF/VPN rather than directly exposed.\n\n- **AI‑accelerated vulnerability discovery / autonomous pentesting tools (Items 7, 18)**\n  - What happened: AI tools (e.g., Claude Opus) reportedly identified hundreds of high‑severity vulns in open source code, and discussions on autonomous AI pentesting tools gaining traction.\n  - Why it matters operationally: Expect faster discovery and weaponization of bugs, especially in popular internet‑facing components and open-source dependencies used in financial sector stacks.\n  - Recommended immediate actions:  \n    - Prioritize scanning and patching for internet‑facing apps and APIs; compare scanner results with recent public disclosures for critical components in our tech stack.  \n    - Increase scrutiny of anomalous scanning/probing behavior in WAF/API logs (rapid parameter fuzzing, new user‑agents, high‑rate 4xx/5xx).\n\n- **Supply chain / AI platform data exposure (Moltbook AI social network exposure – Item 13)**\n  - What happened: An AI‑related social network (Moltbook) leaked real user data tied to “AI agents.”\n  - Why it matters operationally: Highlights risk from third‑party AI/SaaS platforms used for experimentation, code hosting, or data sharing that may hold internal or customer data.\n  - Recommended immediate actions:  \n    - For SOC today: flag and review unusual outbound connections to lesser‑known AI/SaaS domains from internal hosts; coordinate with security governance to confirm approved AI tools list.  \n    - Watch for uploads of source code or data to non‑approved AI platforms in data loss prevention (DLP) and proxy logs.\n\n---\n\n### Monitoring & detection recommendations\n\n- **Ransomware precursors & lateral movement (BridgePay case)**  \n  - Log sources: EDR, Windows event logs, AD, VPN, RDP gateway.  \n  - Hunt for: T1059 (Command-Line), T1078 (Valid Accounts), T1021 (Remote Services) – anomalous admin logons, new local admins, use of vssadmin/shadow copies deletion, sudden spikes in file rename/encrypt patterns.\n\n- **Remote access & BeyondTrust 0‑day**  \n  - Log sources: Web server logs for BeyondTrust, EDR on BeyondTrust host, firewall/VPN.  \n  - Hunt for: T1190 (Exploit Public-Facing App), T1105 (Ingress Tool Transfer) – unusual POSTs to uncommon URLs, abnormal 500/404 patterns before success, new binaries or scripts dropped in web directories.\n\n- **Payment and API channels protection**  \n  - Log sources: Payment gateway logs, API gateway/WAF, transaction monitoring.  \n  - Hunt for: T1190, T1068 (Exploitation for Privilege Escalation) – bursts of failed API authentication, unexpected IPs hitting payment APIs, method/endpoint enumeration, or changes in transaction patterns coinciding with infra anomalies.\n\n- **MFA abuse and account takeover**  \n  - Log sources: IdP (Okta/ADFS/etc.), VPN, mail, core banking admin portals.  \n  - Hunt for: T1110 (Brute Force), T1078 – multiple MFA prompts, impossible travel, new device registrations, logins from Tor/VPN exit nodes or unusual geos.\n\n- **Cloud and SaaS misuse / AI & code exfiltration**  \n  - Log sources: CASB, proxy, cloud audit logs (AWS/Azure/GCP), DLP.  \n  - Hunt for: T1530 (Data from Cloud Storage), T1048 (Exfiltration over Alternative Protocol) – uploads of large archives, source repositories, or database exports to non‑approved AI/code platforms and file‑sharing services.\n\n- **Secret exposure & credential abuse (Kingfisher secret scanner relevance – Item 6)**  \n  - Log sources: Code repo logs, CI/CD, cloud IAM, IdP.  \n  - Hunt for: T1552 (Unsecured Credentials), T1555 (Credentials from Password Stores) – new access keys created/used from unfamiliar locations, sudden privilege elevations, service accounts accessing atypical resources.\n\n- **Network scanning and deception opportunities (cloud/API deception tools – Items 5, 9)**  \n  - Log sources: Firewall, IDS/IPS, WAF, cloud flow logs.  \n  - Hunt for: T1046 (Network Service Scanning), T1595 (Active Scanning) – repeated connection attempts to non‑documented services or canary endpoints; use results to refine blocking and threat intel.\n\n- **Privileged access anomalies**  \n  - Log sources: PAM/BeyondTrust logs (if present), Windows security logs, Unix sudo logs.  \n  - Hunt for: T1078, T1098 (Account Manipulation) – new or modified privileged accounts, unusual sudo/su chains, off‑hours elevation activity.\n\n---\n\n### Medium-term follow-ups\n\n- **BeyondTrust 0‑day remediation program**\n  - Work with infrastructure and vendor management to track BeyondTrust advisories, plan patch/upgrade windows, and ensure hardened configuration (network segmentation, strong MFA, logging to SIEM).\n\n- **Ransomware tabletop and resilience review**\n  - Run a payment‑flow‑focused ransomware tabletop exercise (including third‑party payment processors); validate backup/restore RTOs for payment and settlement systems and confirm playbook readiness.\n\n- **Strong MFA and remote access strategy**\n  - Push for phishing‑resistant MFA (FIDO2/WebAuthn, smartcards) on all admin, payment, and high‑risk applications; review and reduce legacy protocols and SMS‑based second factors.\n\n- **Secure AI and SaaS usage policy**\n  - Formalize/refresh policy on AI tools and external SaaS for code, data, and model usage; catalog which platforms are allowed and integrate with CASB for visibility and enforcement.\n\n- **Continuous vuln management with AI in mind**\n  - Adjust vulnerability management SLAs assuming faster exploit cycles: prioritize internet‑facing and high‑impact components; evaluate integrating modern scanners (including AI‑assisted ones) into CI/CD and regular infra scanning.\n\n- **Deception and honeypot strategy**\n  - Assess feasibility of deploying low‑risk deception assets (cloud/API canaries, fake credentials) to detect early intrusion stages, focusing on payment networks, remote access, and admin segments.",
+  "highlights": [
+    {
+      "title": "Table of 2FA strength",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1qyxd9t/table_of_2fa_strength/",
+      "source": "/r/cybersecurity",
+      "published": "2026-02-08T02:51:55+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Windows / Microsoft",
+        "Malware / Payloads",
+        "Identity / Access",
+        "Phishing / Social Engineering",
+        "Crypto / Web3"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Open source hardened container images - a solution",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1qyvboa/open_source_hardened_container_images_a_solution/",
+      "source": "/r/cybersecurity",
+      "published": "2026-02-08T01:17:10+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Web / API Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Is cybersecurity software buying mostly top-down?",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1qytly2/is_cybersecurity_software_buying_mostly_topdown/",
+      "source": "/r/cybersecurity",
+      "published": "2026-02-08T00:00:27+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "ISC2.org Insight Report on 2025 Cybersecurity Hiring Trends",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1qys16c/isc2org_insight_report_on_2025_cybersecurity/",
+      "source": "/r/cybersecurity",
+      "published": "2026-02-07T22:52:08+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Cloud Deception Management Platform (Open-source Cloud Canaries)",
+      "link": "https://www.reddit.com/r/netsec/comments/1qymqx8/cloud_deception_management_platform_opensource/",
+      "source": "/r/netsec",
+      "published": "2026-02-07T19:20:30+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Cloud / SaaS"
+      ],
+      "curated": true
+    },
+    {
+      "title": "New OSS secret scanner: Kingfisher (Rust) validates exposed creds + maps permissions",
+      "link": "https://www.reddit.com/r/netsec/comments/1qyl3yf/new_oss_secret_scanner_kingfisher_rust_validates/",
+      "source": "/r/netsec",
+      "published": "2026-02-07T18:18:41+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Cloud / SaaS"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Claude Opus Finds more than 500 High Severity Vulnerabilities in OpenSource Codebases",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1qykqeh/claude_opus_finds_more_than_500_high_severity/",
+      "source": "/r/cybersecurity",
+      "published": "2026-02-07T18:04:23+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Linux / Unix",
+        "Identity / Access",
+        "Network / OT / ICS"
+      ],
+      "curated": true
+    },
+    {
+      "title": "WAF Product Suggestions",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1qyi32i/waf_product_suggestions/",
+      "source": "/r/cybersecurity",
+      "published": "2026-02-07T16:23:38+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "trappsec: open source framework for API deception",
+      "link": "https://www.reddit.com/r/netsec/comments/1qyfxlw/trappsec_open_source_framework_for_api_deception/",
+      "source": "/r/netsec",
+      "published": "2026-02-07T14:59:42+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "HTB: Signed",
+      "link": "https://0xdf.gitlab.io/2026/02/07/htb-signed.html",
+      "source": "https://0xdf.gitlab.io/feed.xml",
+      "published": "2026-02-07T14:45:00+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Windows / Microsoft"
+      ],
+      "curated": true
+    }
+  ]
+}
