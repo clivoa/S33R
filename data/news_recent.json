@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-02-09T02:51:38.498149+00:00",
+  "generated_at": "2026-02-09T05:32:16.518003+00:00",
   "days_back": 30,
-  "total_items": 8198,
+  "total_items": 8208,
   "items": [
     {
       "title": "Secure Your Spot at RSAC 2026 Conference",
@@ -14,6 +14,178 @@
       "published_ts": 1774263600,
       "smart_groups": [],
       "curated": false
+    },
+    {
+      "title": "OpenClaw Taps VirusTotal to Safeguard AI Agent Skill Ecosystem",
+      "summary": "As AI agents move from experimental chatbots to powerful tools capable of managing our finances and smart homes, security has become the top priority. Today, OpenClaw announced a major partnership with VirusTotal to bring advanced threat detection to ClawHub, its marketplace for AI skills. Why AI Agents Need Special Protection Traditional software is rigid; it [\u2026] The post OpenClaw Taps VirusTotal to Safeguard AI Agent Skill Ecosystem appeared first on GBHackers Security | #1 Globally Trusted Cyber Security News Platform .",
+      "link": "https://gbhackers.com/openclaw-virustotal-safeguard-ai-agent-skill-ecosystem/",
+      "source": "GBHackers News",
+      "type": "general",
+      "type_label": "General Security & Blogs",
+      "published": "2026-02-09T05:09:51+00:00",
+      "published_ts": 1770613791,
+      "smart_groups": [],
+      "curated": false
+    },
+    {
+      "title": "CRL & AIA Publishing Guidance (Practical PKI Part 2)",
+      "summary": "My name is Ron Arestia, and I am a Security Researcher with Microsoft\u2019s Detection and Response Team (DART). We respond to customer cybersecurity incidents to assist with containment and recovery from threat actors. In this blog post, we will be covering CRL and AIA publishing guidance with a focus on the Active Directory Certificate Services (ADCS) offline root Certificate Authority (CA). This is part 2 of a series on practical PKI implementation based around my experience with customer interactions working as a Microsoft engineer. Feel free to catch up on previous blog posts or jump right into this one: Secure Configuration and Hardening of Active Directory Certificate Services Implementing and Managing an ADCS Offline Root Certificate Authority (Part 1) In Part 2 of our series, we will focus on the certificate revocation list (CRL) and authority information access (AIA) extensions with an example of manual maintenance on an offline root certificate authority (CA). The Certificate Revocation List Delta Certificate Revocation Lists The Authority Information Access Extension Publishing Considerations The Certificate Revocation List The IETF RFC 5280 defines a Certificate Revocation List (CRL) as \u201ca time-stamped list identifying revoked certificates that is signed by a CA or CRL issuer and made freely available in a public repository.\u201d Since there are a number of nuances for both scope and application, this section will cover a standard two-tier public key infrastructure (PKI) where the root CA manages revocation for subordinate certificates, and the issuing CA manages revocation for issued endpoint certificates. It is important to note that CRLs and their repositories can be scoped for specific purposes, but we are focused on PKI basics in this blog and will cover custom implementations at a later time. In this section we will not address the Online Certificate Status Protocol (OCSP). This concept will be covered later. Everything about your PKI relies on proper maintenance of and access to the CRL. If the CRL is not available due to expiration or an outage of the endpoint hosting it, certificate revocation checking fails which means end users will receive a programmatic error from a web browser or the operating system itself. For instance, Figure 1 below shows that the CA in my lab is offline. Figure 1 When I try to start the issuing CA, I receive the error shown in Figure 2. Figure 2 The CRYPT_E_REVOCATION_OFFLINE error indicates that a revocation lookup failed somewhere in the process of starting the issuing CA. If we open PKIView.msc (Figure 3), we can check the overall health of our PKI to determine what, if anything, is not functioning. Figure 3 Here you see that the CRL for my root CA expired back in August 2025 (Figure 4). This would cause the issuing CA to not start up properly, supporting the idea that the CRL is important for the functionality of your PKI. Figure 4 To resolve this issue, we need to go to our offline root CA, generate a new CRL, and publish it to the location specified in the CA extension for proper lookup. My lab root CA is hosted on a Hyper-V server without connectivity to any network (Figure 5). Figure 5 Notice that there are no network adapters for this Hyper-V VM. I can only access it from the host itself using the local console. Once logged in, note that I can see the root CA did, in fact, issue a CRL (Figure 6) the last time it was online (5 November 2025), but since the root CA is offline, and I did not manually copy the CRL from the machine, it did not update for the PKI globally, which is expected behavior. Figure 6 To remedy this, I am going to manually publish an updated CRL from the root CA (Figures 7 & 8) and copy it to the issuing CA for publishing. Figure 7 Figure 8 Once complete, we can view the CRL in the OS to verify the new timestamp (Figure 9) Figure 9 Finally, we change the local administrator password on the offline root CA and shut it down. Since this is a virtual machine, we can browse on the Hyper-V host to the VM hard drive, mount it, and pull the CRL off of the disk (Figure 10). Figure 10 Note: as per our last blog post, this is not considered secure since anyone with access to the file system of the Hyper-V host, including a threat actor, could perform the exact same action but with the root CA private key, effectively compromising your entire PKI. For the purposes of this blog series and in a non-production lab environment, this practice is overriding security in lieu of convenience. If, however, you have a proper Tier 0 virtualization host and are using an HSM, this could be functional for a production environment with adherence to cybersecurity best practices. Now we can drop the CRL on the issuing CA and copy it over to the web publishing endpoint (Figure 11). Figure 11 This resolves the broken revocation check during startup of the issuing CA and brings the PKI back into the green in PKIView.msc (Figure 12). Figure 12 In this section, we showed one of the common issues arising from an expired CRL and illustrated the importance of maintaining a healthy CRL publishing environment. We also walked through how to resolve this issue by issuing and publishing a new CRL from the root CA. Delta Certificate Revocation Lists IETF RFC 5280 defines a delta certificate revocation list as a CRL that \u201conly lists those certificates, within its scope, whose revocation status has changed since the issuance of a referenced complete [base] CRL.\u201d Delta CRLs are supplemental to the base CRL and allow for a \u201cfresher\u201d certificate revocation list without having to re-publish the base CRL every time a certificate is revoked. Delta CRLs can also help to reduce revocation lookup delays in an environment with particularly large base CRLs, but delta CRLs are functionally rolled up into the base CRL at the next base CRL publishing interval, so they do not provide any advantage over base CRLs with regards to overall size long term. Delta CRLs are especially useful in high-revocation environments where revocation needs to be respected quickly, as they are published at a more rapid interval than the base CRL. It is important to note, however, that delta CRL publishing intervals are not instantaneous, so a priority revocation such as for a compromised certificate would still require manually re-publishing either the base or delta CRL. It is critical to understand that delta CRLs are accepted and functional for Windows, but delta CRLs may not be respected by non-Windows systems. Some enterprise distributions of Linux do accept delta CRLs, but you may need to work with your distribution vendor to allow them otherwise. In the case of a CRL lookup by a system without delta CRL support, any certificates in the delta CRL would be overlooked during a CRL lookup in lieu of using the base CRL. By default, delta CRLs are configured for use in ADCS. When guiding customers, I make the case that unless they anticipate a high revocation load, using delta CRLs is unnecessary. Additionally, if the customer is leveraging non-Windows systems in their environment, I urge caution around delta CRLs to prevent a false sense of security around revocation. There is nothing inherently wrong with using delta CRLs out of the box but understanding their main purpose (faster revocation publishing out-of-band from the base CRL publishing) is important to drive outcomes. Delta CRLs have a place and are an accepted extension in PKI discussions, but deciding in advance if you will truly leverage their utility goes a long way to reduce administrative overhead of the PKI long term. If you do not anticipate doing regular revocation, they are an additional administrative touchpoint that will not serve your immediate or long-term needs. If, however, you are concerned about rapid response for revocation or having to manually issue out-of-band CRLs, then delta CRLs can help. The Authority Information Access Extension IETF RFC 3280 defines the Authority Information Access (AIA) extension as \u201chow to access CA information and services for the issuer of the certificate in which the extension appears.\u201d This is an extension, similar to the CRL, that is not critical but recommended for the functionality of your PKI. This location, stamped on every certificate issued by a CA, is used to help end entities construct a valid certificate chain in the event there are any missing or outdated certificates. Without this extension, all certificates in an end entity chain would need to be trusted in advance by the system using the certificate. The publishing of the AIA location is separate from the CRL, but most PKI implementations use the same publishing endpoint for both. However, it is not necessary to publish to the same location. The AIA location will contain a copy of the public certificate for the root, policy, and issuing CAs in a PKI. You should never publish private keys to this location. The certificates are necessarily accessible by any system. The private key is exactly that: private. It should only exist on the CA itself or, preferably, on an HSM. The AIA publishing location is part of the CA extension configuration on every ADCS CA (Figure 13) and can also be added to the Online Certificate Status Protocol (OCSP) extension, if desired. Figure 13 Note the limited options for this configuration. This is by design. You are simply providing a web-based (or LDAP) endpoint to which an endpoint can refer to download additional certificates to build a trust chain. Publishing certificates to this endpoint is usually a manual process since CA certificate updates are a less frequent operation. It is possible to automate this using something like DFS-R or a scripted process, but that also increases your risk footprint. It is also important to note that the certificate file name in the publishing location must match exactly the name input into the extension. Any characters, including spaces, beyond what it explicitly declared in the extension will cause the AIA lookup to fail. A lack of a proper certificate in the AIA location will not generally cause a problem unless an endpoint needs a certificate from the chain. Unlike the CRL, missing AIA information will not cause a CA to not start, and end users will not be warned about missing the CA certificate unless it is necessary to build a chain which might otherwise present as a trust issue vs. a critical error. If the certificate chain is present in the local system or application trust store, the AIA location is not parsed. In summary, the AIA location is used to build certificate trust chains. They are often published to the same location as the CRLs and are simply copies of the public certificate for the root, policy, and/or issuing CA servers. This is a non-critical extension, but best practice is to make these available to consumers of your certificates. Publishing Considerations The most common question I have heard around CRL and AIA publishing is \u201cwhat\u2019s the best publishing interval?\u201d The answer depends on your organization\u2019s use of certificates and how aggressive you are with revocation. Our standard guidance provided to customers with low revocation and light usage is approximately one (1) year for a base CRL from the root CA. In the event you have to revoke a subordinate CA or policy CA certificate, you will be manually publishing a new CRL along with a new certificate for their replacements, so one (1) year provides a decent window for operation without completely forgetting the root CA exists. This helps to keep processes around root CA maintenance fresh for your administrative teams. Since issuing CAs are online and can be configured to write the CRL directly to publishing endpoints, a more rapid publishing cadence can be used. I normally recommend anywhere from one (1) week to one (1) month, depending on your anticipated revocation needs. For AIA publishing, we haven\u2019t discussed CA certificate lifetimes yet, but given a standard two-tier PKI validity period of ten (10) years for the root CA and five (5) years for the issuing CA(s), the certificates published to the AIA location will usually be approximately five (5) years and two-and-a-half (2.5) years old, at most, respectively. (More on CA certificate lifetimes in a future blog post.) As a result, AIA publishing will be a manual process (but can be automated, if desired). Another common question is what protocols to use for publishing. Technically IETF RFC 5280 Section 3.4 defines LDAP, HTTP, FTP, and X.500 for distribution. Out of the box, ADCS, when configured as an enterprise deployment, will define an HTTP and LDAP endpoint for CRL and AIA publishing. For the purposes of modern security best practice, I advise customers to stick to HTTP for a few reasons: HTTP is platform agnostic and acceptable for any network-based platform (Windows, Linux, Mac, mobile devices, network devices, etc.) HTTP presents little network overhead compared to LDAP Port 80 connectivity is much more palatable to a network security team than allowing communications broadly to port 389 In 15 years of working with ADCS, I have never come across an implementation using FTP. While it is supported as per the specifications, FTP presents a big target for threat actors and should be avoided. I have never seen a pure X.500 distribution configuration. If you are working in a majority Windows enterprise where everything is domain joined, it could be argued that LDAP is sufficient. LDAP is fault tolerant across all of your AD domain controllers, easily configured from PKIView.msc, endpoints easily managed by group policy, and when configured properly, secure. However, I do not advise relying solely on LDAP for CRL/AIA distribution, as non-Windows systems in your organization (i.e., network, storage, and virtualization platforms) will likely rely on your PKI and may or may not support LDAP calls for lookups. Additionally, as stated previously, LDAP calls are \u201cexpensive\u201d compared to simple HTTP. When you have a conversation with your network security team about accessibility, you are likely to run into opposition to blanket TCP 389 access for your entire organization. Most enterprises with whom I have worked try to lock down port 389 as much as possible, and if you have a proper tier 0 or network segmentation, opening 389 globally introduces a level of risk I would not advise any organization to endeavor. If you or your team are insistent on relying on LDAP, I recommend using HTTP as your second option for fault tolerance and platform accessibility. HTTP is the best route for CRL and AIA publishing. It is fast, reliable, easily extensible using load balancers, and, in an IIS/Windows implementation, it is possible to configure ADCS to write the CRL directly to the file system of a web server(s) for publishing. It is also natively more secure to just open port 80 to serve up what amount to basic text files vs. opening port 389 to your entire AD infrastructure, allowing access to more than just the published files. Finally, it is critical to understand that your HTTP publishing endpoint must use port 80 . We get the question from time to time about whether or not you can put a certificate in front of the HTTP endpoint to \u201cmake it secure.\u201d The problem with that is how are endpoints going to check for revocation of the certificate protecting that web endpoint if the web endpoint uses a certificate with a CRL published to the same location? You will create a loop condition, and the CRL lookup will fail. Can you put a certificate in front of it? Technically you could, but it would have to be a certificate with a CRL serviced from a different endpoint, likely publicly accessible, which means you are spending money and administrative cycles to maintain a certificate outside of your own PKI which, in my opinion, defeats the purpose of standing up the PKI in the first place. There is nothing inherently risky about having port 80 open to the specific endpoint, and you can implement security measures on the web server to ensure that a threat actor cannot abuse the web server. All you are serving from that endpoint are some plain text files with information that is necessarily public. There is not anything inherently sensitive in the CRL or AIA that would necessitate protecting the connection with SSL/TLS. As with many points discussed in this blog, your outcomes may vary. You may have different revocation needs or perhaps you just do not want to deal with booting your root CA annually to do CRL maintenance. For a basic enterprise PKI, the numbers called out in this blog post for publishing intervals should be sufficient to keep things functional without casting aside the need to keep your root CA top-of-mind for your administrative team. Take the time to discuss your needs with your larger organization and set expectations for regular maintenance of your PKI to ensure it remains functional and secure. That is all for part 2 of our ADCS blog. In part 3, we are going to start shifting away from the root CA as the primary focus to discuss PKI purpose and common hierarchies.",
+      "link": "https://techcommunity.microsoft.com/t5/core-infrastructure-and-security/crl-aia-publishing-guidance-practical-pki-part-2/ba-p/4485713",
+      "source": "Core Infrastructure and Security Blog",
+      "type": "vendors",
+      "type_label": "Vendors & Product Blogs",
+      "published": "2026-02-09T05:00:00+00:00",
+      "published_ts": 1770613200,
+      "smart_groups": [
+        "Windows / Microsoft",
+        "Linux / Unix",
+        "Network / OT / ICS",
+        "Crypto / Web3"
+      ],
+      "curated": false
+    },
+    {
+      "title": "New \u201cCrypto Scanner\u201d Tool Helps Developers Identify Quantum Risks Before Q-Day",
+      "summary": "With the \u201cQ-Day\u201d horizon the point when quantum computers will be capable of breaking standard encryption projected for roughly 2033, the race to secure digital infrastructure is accelerating. To aid in this transition, Quantum Shield Labs has released Crypto Scanner, a new open-source CLI tool designed to inventory and analyse cryptographic vulnerabilities in codebases before they [\u2026] The post New \u201cCrypto Scanner\u201d Tool Helps Developers Identify Quantum Risks Before Q-Day appeared first on GBHackers Security | #1 Globally Trusted Cyber Security News Platform .",
+      "link": "https://gbhackers.com/new-crypto-scanner-tool-helps-developers-identify-quantum-risks/",
+      "source": "GBHackers News",
+      "type": "general",
+      "type_label": "General Security & Blogs",
+      "published": "2026-02-09T04:56:21+00:00",
+      "published_ts": 1770612981,
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Bitcoin Recovers as Coinbase Premium Turns Higher",
+      "summary": "Analysts maintain a cautious stance even after Bitcoin\u2019s 12% relief rally clawed back recent losses amid a surging Coinbase Premium.",
+      "link": "https://decrypt.co/357418/bitcoin-coinbase-premium-turns-higher",
+      "source": "Decrypt",
+      "type": "crypto",
+      "type_label": "Crypto & Blockchain Security",
+      "published": "2026-02-09T04:53:45+00:00",
+      "published_ts": 1770612825,
+      "smart_groups": [],
+      "curated": false
+    },
+    {
+      "title": "Bessent suggests Warsh nomination hearings alongside Powell probe",
+      "summary": "The Fed chair confirmation faces a key hurdle as a senator vows to block the process until a DOJ investigation into Jerome Powell is resolved.",
+      "link": "https://cointelegraph.com/news/bessent-suggests-warsh-nomination-hearings-alongside-powell-probe?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound",
+      "source": "Cointelegraph.com News",
+      "type": "crypto",
+      "type_label": "Crypto & Blockchain Security",
+      "published": "2026-02-09T04:33:37+00:00",
+      "published_ts": 1770611617,
+      "smart_groups": [],
+      "curated": false
+    },
+    {
+      "title": "Weekly Update 490",
+      "summary": "A big \"thank you\" to everyone who helped me troubleshoot the problem with my \"Print Screen\" button on the new PC. Try as we all might, none of us could figure out why it refused to bind to SnagIt and instead insisted on dumping the entire",
+      "link": "https://www.troyhunt.com/weekly-update-490/",
+      "source": "Troy Hunt",
+      "type": "general",
+      "type_label": "General Security & Blogs",
+      "published": "2026-02-09T04:19:39+00:00",
+      "published_ts": 1770610779,
+      "smart_groups": [],
+      "curated": false
+    },
+    {
+      "title": "Crypto and banks spar in comments on Fed\u2019s \u2018skinny master account\u2019 idea",
+      "summary": "Crypto companies have backed a Federal Reserve proposal to give them limited access to the central bank, while banking associations have urged caution.",
+      "link": "https://cointelegraph.com/news/crypto-banks-input-fed-skinny-master-account-proposal?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound",
+      "source": "Cointelegraph.com News",
+      "type": "crypto",
+      "type_label": "Crypto & Blockchain Security",
+      "published": "2026-02-09T04:19:27+00:00",
+      "published_ts": 1770610767,
+      "smart_groups": [
+        "Identity / Access"
+      ],
+      "curated": false
+    },
+    {
+      "title": "Indian police commissioner wants ID cards for AI agents",
+      "summary": "PLUS: China broadens cryptocurrency crackdown; Australian facial recognition privacy revisited; Singapore debuts electric VTOL; and more! Asia In Brief The Commissioner of Police in the Indian city of Hyderabad, population 11 million, has called for AI agents to be issued with identity cards \u2013 or at least their digital equivalent.\u2026",
+      "link": "https://go.theregister.com/feed/www.theregister.com/2026/02/09/asia_tech_news_roundup/",
+      "source": "The Register - Security",
+      "type": "general",
+      "type_label": "General Security & Blogs",
+      "published": "2026-02-09T04:08:59+00:00",
+      "published_ts": 1770610139,
+      "smart_groups": [
+        "Crypto / Web3"
+      ],
+      "curated": false
+    },
+    {
+      "title": "Address poisoning recently cost 2 victims over $62M alone: Scam Sniffer",
+      "summary": "Analysts have warned that Ethereum\u2019s Fusaka upgrade has made address poisoning cheaper, as malicious actors can carry out dust attacks for very little cost.",
+      "link": "https://cointelegraph.com/news/over-62m-lost-address-poisoning-since-december-scam-sniffer?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound",
+      "source": "Cointelegraph.com News",
+      "type": "crypto",
+      "type_label": "Crypto & Blockchain Security",
+      "published": "2026-02-09T03:57:52+00:00",
+      "published_ts": 1770609472,
+      "smart_groups": [],
+      "curated": false
+    },
+    {
+      "title": "Hackers Leveraging Free Firebase Developer Accounts to Send Phishing Emails",
+      "summary": "The landscape of digital threats is constantly shifting, with cybercriminals increasingly adopting \u201cliving off the cloud\u201d strategies to bypass security perimeters. By exploiting the infrastructure of trusted service providers, attackers can effectively cloak their malicious activities, making detection significantly more difficult for both automated defense systems and human observers in the corporate environment. This trend [\u2026] The post Hackers Leveraging Free Firebase Developer Accounts to Send Phishing Emails appeared first on Cyber Security News .",
+      "link": "https://cybersecuritynews.com/hackers-leveraging-free-firebase-developer-accounts/",
+      "source": "Cyber Security News (FeedBurner)",
+      "type": "general",
+      "type_label": "General Security & Blogs",
+      "published": "2026-02-09T03:55:07+00:00",
+      "published_ts": 1770609307,
+      "smart_groups": [
+        "Curated",
+        "Exploit / PoC",
+        "Phishing / Social Engineering"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Customer Identity & Access Management: Die besten CIAM-Tools",
+      "summary": "Wir haben die besten L\u00f6sungen in Sachen Customer Identity & Access Management f\u00fcr Sie zusammengestellt. Jackie Niam | shutterstock.com Customer Identity & Access Management (CIAM) bildet eine Unterkategorie von Identity & Access Management ( IAM ). CIAM wird dazu eingesetzt, die Authentifizierungs- und Autorisierungsprozesse von Applikationen zu managen, die \u00f6ffentlich zug\u00e4nglich sind, beziehungsweise von Kunden bedient werden. Geht es darum, die f\u00fcr Ihr Unternehmen passende CIAM-L\u00f6sung zu ermitteln, gilt es, die Benutzerfreundlichkeit mit einer langen Liste von Gesch\u00e4ftszielen und -anforderungen ins Gleichgewicht zu bringen: Marketingverantwortliche wollen Daten \u00fcber Kunden und deren Ger\u00e4te sammeln. Datenschutzbeauftragte wollen sicherstellen, dass alle Prozesse mit den Datenschutzbestimmungen in Einklang stehen. Security- und Risiko-Entscheider wollen die Integrit\u00e4t der Konten sicherstellen und die betr\u00fcgerische Nutzung von Anmeldedaten so weit wie m\u00f6glich verhindern. Um Sie bei diesem heiklen Balanceakt zu unterst\u00fctzen, haben wir die derzeit besten L\u00f6sungen, die der Markt f\u00fcr Customer Identity & Access Management zu bieten hat, f\u00fcr Sie zusammengestellt. Empfehlenswerte Customer Identity & Access Management Tools Die folgenden CIAM-Plattformen und -L\u00f6sungen werden von Analysten und Kunden aufgrund ihres Funktionsumfangs, ihrer Erweiterbarkeit und ihrer Benutzerfreundlichkeit bevorzugt. IBM Security Verify Im Enterprise-Bereich erh\u00e4lt IBMs Security Verify gute Noten f\u00fcr seine robuste Infrastruktur, die durch eine containersierte Multi-Cloud-Architektur gest\u00fctzt wird. Diese ist nicht nur skalierbar, sondern bietet Unternehmen auch die M\u00f6glichkeit, isolierte Kundeninstanzen zu managen. Dabei bietet die IBM-L\u00f6sung Support f\u00fcr eine Vielzahl von Authentifizierungsstandards, inklusive FIDO 2 Server-Zertifizierung. Um Marketing-Analysen oder BI-Funktionen zu integrieren, k\u00f6nnen die Kunden entweder das IBM-eigene \u00d6kosystem oder Drittanbieter \u00fcber ein ausgedehntes Konnektoren-Portfolio ins Boot holen. Ein wichtiges Alleinstellungsmerkmal des IBM-Produkts: W\u00e4hrend viele andere CIAM-Produkte in Sachen risikobasierte Authentifizierung und Betrugsbek\u00e4mpfung nur Integrationsoptionen anbieten k\u00f6nnen, bringt Security Verify diese Funktionen nativ mit: Die \u201cTrusteer\u201d-Funktionen nutzen Analysefunktionen, um Betrug mit Hilfe von KI-gest\u00fctztem, adaptivem Zugriff zu reduzieren. Das System nutzt eine Kombination aus Anomalieerkennung, Erkennung von Betrugsmustern und anderen passiven Verhaltensanalysen, um die Vertrauensw\u00fcrdigkeit eines Kontos zu bewerten und die Authentifizierungsanforderungen entsprechend anzupassen. Dar\u00fcber hinaus bietet die IBM-L\u00f6sung auch ein Self-Service-Portal f\u00fcr die Benutzer, um Einwilligungen zu managen sowie eine Low-Code/No-Code -Management-Funktion, die Datenschutzbeauftrage und Business-Entscheidern erm\u00f6glicht, Datenschutzrichtlinien und -anforderungen ohne die Hilfe von Softwareentwicklern festzulegen und zu optimieren. LoginRadius Wenn Sie in Sachen CIAM eine schl\u00fcsselfertige L\u00f6sung suchen, die f\u00fcr ihre einfache Implementierung und Bedienung bekannt ist, sollten Sie einen Blick auf das Angebot von LoginRadius werfen: Sie bringt umfassenden API-Support mit und l\u00e4sst sich in vielfacher Hinsicht an ihre Bed\u00fcrfnisse anpassen. Allerdings handelt es sich hierbei nicht um eine Plattform, die f\u00fcr umfangreiche Code-Anpassungen unter der Haube gedacht ist. Vielmehr adressiert sie als No-Code-L\u00f6sung Unternehmen, die wenig bis gar keine Entwicklungsarbeit leisten wollen oder k\u00f6nnen. Onboarding-Workflows werden \u00fcber eine grafische Benutzeroberfl\u00e4che abgewickelt, Richtlinien \u00fcber Dropdown-Listen erstellt. Zu Integrationszwecken steht ein Marktplatz mit vordefinierten Konnektoren zur Verf\u00fcgung. Dar\u00fcber hinaus enth\u00e4lt die CIAM-Plattform auch eine integrierte Analyse-Engine mit Dutzenden von Reportings f\u00fcr Marketing- und Identit\u00e4tsanalysen. Um Datenschutz- und Compliance-Anforderungen gerecht zu werden, stehen grundlegende Consent-Management- und Self-Service-Funktionen zur Verf\u00fcgung \u2013 zudem wird etwa Social Login unterst\u00fctzt. F\u00fcr die einfache Bedienung und die Deployment-Vorz\u00fcge opfern Unternehmen ein gewisses Ma\u00df an Kontrolle: So verf\u00fcgt das Tool zwar \u00fcber eine Authentifizierungs-Risiko-Engine, bietet aber nur wenig Kontrolle \u00fcber dessen Priorisierung. F\u00fcr Betrugserkennungs-Funktionen von Drittanbietern stehen nicht besonders viele Konnektoren zur Verf\u00fcgung und Ger\u00e4teattribute werden f\u00fcr Risikobewertungen und -analysen zwar untersucht, allerdings nur in begrenztem Umfang. Microsoft Entra Microsoft ist zwar ein wichtiger Akteur auf dem breiteren IAM-Markt, arbeitet sich in Sachen CIAM aber immer noch auf der Reifegradskala nach oben. Im Rahmen ihrer letzten gro\u00dfen Access-Management-Analyse argumentierten die Marktforscher von Gartner, die CIAM-Funktionen von Azure AD seien im Vergleich zu den Konkurrenzangeboten unausgereift, weswegen die meisten Kunden das Produkt nur f\u00fcr Workforce-Szenarien verwendeten. Seitdem ist allerdings viel passiert: Microsoft hat mit Nachdruck in sein gesamtes Identity-Portfolio investiert und sich mit einer neuen Produktlinie namens Entra positioniert. Diese umfasst nun das komplette Azure-AD-Paket, inklusive der CIAM-Funktionalit\u00e4ten von Azure AD External Identities \u2013 zudem wurde auch die Open-Standard-Plattform Verified ID in den Mix aufgenommen. Microsoft setzt auf dieses dezentrale Identit\u00e4tsnachweis-\u00d6kosystem in erster Linie f\u00fcr Mitarbeiterszenarien und setzt damit einen langfristigen strategischen Schwerpunkt, der sich vermutlich auch auf externe Anwendungsf\u00e4lle erstrecken wird. Trotz einiger gro\u00dfer Funktionsl\u00fccken \u2013 etwa fehlende Consumer Privacy Dashboards oder der eher rudiment\u00e4ren Adaptive-Authentication-Policy-Konstruktion \u2013 hat Azure AD External Identities Vorteile: Es ist extrem skalierbar, einfach zu bedienen und verf\u00fcgt \u00fcber einige starke Account-Takeover-Schutzmechanismen. Zudem l\u00e4sst es sich gut mit Microsofts BI- und CRM-Plattformen f\u00fcr erweiterte Analysen integrieren und bietet ein kontinuierlich wachsendes Integrations-\u00d6kosystem. Okta / Auth0 Nach der \u00dcbernahme von Auth0 will Okta das CIAM-Produkt von Auth0 als eigenst\u00e4ndiges Angebot neben den hauseigenen CIAM-Funktionen beibehalten, um Kunden maximale Flexibilit\u00e4t bei der Implementierung zu bieten. Nichtsdestotrotz wird es zu \u00dcberschneidungen und Integrationen kommen \u2013 Okta hat bereits mehrere Funktionen kombiniert, um die F\u00e4higkeit zu Zusammenarbeit und Innovation zu beschleunigen. Auth0 bietet zwar einige Workforce-IAM-Funktionen an, aber diese Plattform ist mit CIAM-Anwendungsf\u00e4llen gro\u00df geworden \u2013 entsprechend stark ausgepr\u00e4gt ist der Fokus auf diesen Bereich. Laut den Analysten von Gartner eignet sich die CIAM-L\u00f6sung von Auth0 vor allem dann, wenn Entwickler Access Management f\u00fcr Verbraucher in individuell entwickelte, API-lastige Anwendungen einbauen m\u00fcssen. Dazu kombiniert die Plattform \u201cgro\u00dfartige UX-Flows und UI-Anpassungsf\u00e4higkeiten\u201d mit \u201cumfassenden Entwickler-Tools und vollst\u00e4ndiger API-Unterst\u00fctzung\u201d, hei\u00dft es in Gartners Magic Quadrant. Das gesamte Okta-CIAM-Portfolio verf\u00fcgt \u00fcber eine Reihe von Konnektoren f\u00fcr Business Intelligence, CRM, Marketing-Analytics und -Automatisierung, andere IAM-Plattformen, beliebte SaaS-Anwendungen und Plattformen zur Betrugsbek\u00e4mpfung. Raum nach oben gibt es bei diesem Produkt, wenn es darum geht, Ger\u00e4teintelligenz und Verhaltensbiometrie in die nativen Funktionen der Plattform zu integrieren. OneLogin Der Identity-as-a-Service (IdaaS)-Anbieter OneLogin geh\u00f6rt in Gartners Magic Quadrant f\u00fcr Access Management zur Spitzengruppe und bietet einige abgespeckte, entwicklerfreundliche CIAM-Funktionen. Die k\u00f6nnten speziell f\u00fcr Unternehmen, die eine erschwingliche Option f\u00fcr den Aufbau einer st\u00e4rkeren Kundenauthentifizierung suchen, hilfreich sein. Laut Gartner liegt die St\u00e4rke von OneLogin auch in den erschwinglichen Preisen, die das Unternehmen f\u00fcr externe Zugriffsmanagement-Anwendungen aufruft. Die L\u00f6sung selbst zeichnet sich dabei durch seine flexible Erweiterbarkeit mit umfangreicher Entwicklerunterst\u00fctzung und seine robusten APIs aus. Die Serverless Smart-Hooks- API -Funktion soll Entwickler dabei unterst\u00fctzen, CIAM-Workflows und -Richtlinien anzupassen, um m\u00f6glichst nahtlose und sichere Benutzererfahrungen w\u00e4hrend der Anmeldung zu gew\u00e4hrleisten. Entlastung gibt es auch, wenn es um Single-Sign-On geht \u2013 auch hier unterst\u00fctzt das Tool dabei, entsprechende Funktionen in Consumer-Apps einzubauen. Im Gegensatz zu vielen anderen CIAM-L\u00f6sungen in dieser \u00dcbersicht, geh\u00f6ren allerdings keine Out-of-the-Box-Funktionen f\u00fcr Consent Management oder gesch\u00e4ftsorientierte Funktionen wie Marketing-Analysen und Automatisierung zum Paket \u2013 es handelt sich in erster Linie um eine Authentifizierungs- und Autorisierungsl\u00f6sung. Nach der \u00dcbernahme durch One Identity war erwartet worden, dass sich das Portfolio st\u00e4rker in Richtung Workforce IAM entwickeln wird. Davon ist ein Jahr sp\u00e4ter allerdings noch nichts zu sehen. Ping Identity Ping Identity ist einer der ersten Enterprise-IAM-Anbieter, der in CIAM-Gew\u00e4sser abtaucht. Dabei \u00fcberzeugt er vor allem in Sachen Identit\u00e4snachweise, -orchestrierung und Analytics-Funktionen \u2013 auch der Umfang der unterst\u00fctzten Authentifikatoren sowie die Dokumentation und Sicherheit der API-Konnektoren sind positiv hervorzuheben. Ein \u201cFraud\u201d-Modul sp\u00fcrt dar\u00fcber hinaus mit Hilfe von Echtzeit-Verhaltensnavigation, Verhaltensbiometrie, Ger\u00e4te- und Netzwerkattributen potenzielle, betr\u00fcgerische Angriffe auf. Auch die Integration mit externen Betrugserkennungs-Plattformen ist m\u00f6glich. Ping Identity hebt sich von anderen Anbietern zudem dadurch ab, dass es den FIDO-2-Standard nicht nur unterst\u00fctzt, sondern einen entsprechend zertifizierten Server betreibt. Die Analysten von KuppingerCole sehen auch Schwachpunkte, etwa die nur rudiment\u00e4re Verwaltung von Berechtigungen f\u00fcr Verbraucher, die in den meisten F\u00e4llen zus\u00e4tzliche Entwicklungs- und Integrationsarbeit erfordern. Auch die noch in der Entwicklung befindlichen Out-of-the-Box-Konnektoren f\u00fcr erweiterte Business Intelligence, Customer Relationship Management und Marketing-Analytics bem\u00e4ngeln die Analysten \u2013 bewerten das Ping-Identity-Offering aber dennoch sehr positiv. Laut Gartner geh\u00f6rt Ping Identity zu den \u201cerschwinglicheren Optionen auf dem CIAM-Markt\u201d. Im August 2023 \u00fcbernahm der Ping-Identity-Mutterkonzern Thoma Bravo den Sicherheitsanbieter Forge Rock \u2013 und integrierte dessen Potfolio in Ping Identity. (fm) Sie wollen weitere interessante Beitr\u00e4ge rund um das Thema IT-Sicherheit lesen? Unser kostenloser Newsletter liefert Ihnen alles, was Sicherheitsentscheider und -experten wissen sollten, direkt in Ihre Inbox.",
+      "link": "https://www.csoonline.com/article/3492789/customer-identity-access-management-die-6-besten-ciam-tools.html",
+      "source": "CSO Online",
+      "type": "general",
+      "type_label": "General Security & Blogs",
+      "published": "2026-02-09T03:00:00+00:00",
+      "published_ts": 1770606000,
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Windows / Microsoft",
+        "Cloud / SaaS",
+        "Identity / Access",
+        "Network / OT / ICS",
+        "Crypto / Web3"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Hackers Actively Exploiting SolarWinds Web Help Desk RCE Vulnerability to Deploy Custom Tools",
+      "summary": "Active exploitation of a remote code execution (RCE) vulnerability in SolarWinds Web Help Desk (WHD) is accelerating, with attackers rapidly weaponizing compromised instances to deploy legitimate but heavily abused administrative tooling. According to observations from Huntress, 84 endpoints across 78 organizations within its partner base are currently running SolarWinds Web Help Desk, underscoring the broad [\u2026] The post Hackers Actively Exploiting SolarWinds Web Help Desk RCE Vulnerability to Deploy Custom Tools appeared first on Cyber Security News .",
+      "link": "https://cybersecuritynews.com/solarwinds-vulnerability-actively-exploited/",
+      "source": "Cyber Security News (FeedBurner)",
+      "type": "general",
+      "type_label": "General Security & Blogs",
+      "published": "2026-02-09T02:51:27+00:00",
+      "published_ts": 1770605487,
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": true
     },
     {
       "title": "The unsurprising reason why your iPhone doesn't have solid-state batteries yet - as good as they are",
@@ -4388,6 +4560,18 @@
         "Windows / Microsoft",
         "Network / OT / ICS"
       ],
+      "curated": false
+    },
+    {
+      "title": "Why Rising Cybersecurity Spend Still Isn\u2019t Convincing Boards on ROI in APAC",
+      "summary": "Cybersecurity budgets are rising across APAC, but CIOs and CISOs still face board scrutiny. Here\u2019s why cybersecurity ROI remains hard to prove. The post Why Rising Cybersecurity Spend Still Isn\u2019t Convincing Boards on ROI in APAC appeared first on TechRepublic .",
+      "link": "https://www.techrepublic.com/article/cybersecurity-roi-in-apac/",
+      "source": "TechRepublic \u2013 Security",
+      "type": "general",
+      "type_label": "General Security & Blogs",
+      "published": "2026-02-06T15:08:52+00:00",
+      "published_ts": 1770390532,
+      "smart_groups": [],
       "curated": false
     },
     {
@@ -113468,47 +113652,6 @@
         "Phishing / Social Engineering"
       ],
       "curated": true
-    },
-    {
-      "title": "Looking for technical forensics mock interview",
-      "summary": "I\u2019m looking for a mock interview around forensics and investigations. I\u2019ve been in the industry for many years but not within forensics. I\u2019m prepping for interviews and one round is specific to forensics. Are there platforms that offer this and not just engin interviews? Or someone in this sub with mid to high level experience in forensics submitted by /u/brc55 [link] [comments]",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1q8ufkq/looking_for_technical_forensics_mock_interview/",
-      "source": "/r/cybersecurity",
-      "type": "osint",
-      "type_label": "OSINT, Communities & Subreddits",
-      "published": "2026-01-10T04:22:15+00:00",
-      "published_ts": 1768018935,
-      "smart_groups": [
-        "Network / OT / ICS"
-      ],
-      "curated": false
-    },
-    {
-      "title": "Teri Radichel on Substack",
-      "summary": "Pondering publishing on Substack I\u2019m pondering publishing on Substack so if you are following here you might want to sign up on my Stubstack feed. Teri Radichel ~ Security and Technology Research | Substack And now, I need your help. I would like to know if there is any interest in any of the following services. One of the things I\u2019m pondering doing on Substack is a Q & A service where people can submit written questions and I will answer them if I know the answer or possibly research the answers or get help from other experts if I don\u2019t. Is this something people would be willing to pay for? What are your questions? What if you could expense the subscription to your company? The founding tier is more expensive because that is the tier at which you can ask and I will answer questions. Other tiers can read the Q & A. I\u2019m not sure I\u2019m actually going to do this without some additional research. Let me know what information you need and are willing to pay for by signing up for my Substack feed and dropping me a line. Note that I won\u2019t blatantly promote products I don\u2019t use or spend a lot of time for a small amount of money doing a lot of legwork to research and market a product. I\u2019m not an influencer. But if there was a substantial subscription from a company and its employees I would use and write about a product \u2014 honestly. I could try it out and write about my experience using it as I have written about many other products in this blog. I will not write exactly what a company tells me to write or deal with editors from the company other than basic spelling and grammar. I have not had good experiences with a lot of editors (except the editor for my book \u2014 who was amazing.) Not a fan of people rewriting my work to say something other than I intended to say. What about materials for educators teaching classes? Do you need help? Anyway, I\u2019m not sure what I\u2019m going to do just yet. I\u2019ll keep you posted here. But sign up on Substack for both free and paid posts and let me know if you have any interest in any particular paid content. I like Medium, but the problem is I make absolutely no money here so I cannot justify a ton of time. That\u2019s why my posts have dropped off a bit. I am also hesitant to share proprietary research I\u2019m working on through my business but with paid subscriptions \u2014 maybe? I wish there was a way to also allow subscriptions on GitHub and I could write and share code more easily. Pondering ideas. Drop me a line on LinkedIn if you have any particular needs you\u2019d be willing to pay for that would be worth my time to set up over there and I\u2019ll do it. If not, I\u2019ll just keep posting here or there infrequently. Or both. Follow here \u2014 and on Substack \u2014 for more. Teri Radichel ~ Security and Technology Research | Substack Teri Radichel | \u00a9 2nd Sight Lab 2025 About Teri Radichel: ~~~~~~~~~~~~~~~~~~~~ \u2b50\ufe0f Author : Cybersecurity Books \u2b50\ufe0f Presentations : Presentations by Teri Radichel \u2b50\ufe0f Recognition : SANS Award , AWS Security Hero Former SANS, IANS Faculty \u2b50\ufe0f Certifications : SANS ~ GSE 240 \u2b50\ufe0f Education : BA Business, Master of Software Engineering, Master of Infosec \u2b50\ufe0f Company : Penetration Tests & Security Research ~ 2nd Sight Lab Cloud, SAAS, and Application Penetration Testing ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ \ud83d\udd12 Request a penetration test Follow for more stories like this: ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ \u2764\ufe0f Sign Up my Medium Email List \u2764\ufe0f X, Threads, Blusky, Instagram, AWS BuildID: @teriradichel \u2764\ufe0f LinkedIn: https://www.linkedin.com/in/teriradichel \u2764\ufe0f Mastodon: @teriradichel@infosec.exchange \u2764\ufe0f Facebook: 2nd Sight Lab Teri Radichel on Substack was originally published in Cloud Security on Medium, where people are continuing the conversation by highlighting and responding to this story.",
-      "link": "https://medium.com/cloud-security/teri-radichel-on-substack-c901a9170061?source=rss-863161906cc5------2",
-      "source": "Medium \u2013 @2ndsightlab",
-      "type": "general",
-      "type_label": "General Security & Blogs",
-      "published": "2026-01-10T04:04:41+00:00",
-      "published_ts": 1768017881,
-      "smart_groups": [
-        "Ransomware",
-        "Cloud / SaaS"
-      ],
-      "curated": false
-    },
-    {
-      "title": "A16z raises $15B, says crypto a 'key' to America winning next 100 years",
-      "summary": "Crypto remains a key technology for maintaining America\u2019s technological edge, according to a16z, which has raised another $15 billion to back American-aligned tech investments.",
-      "link": "https://cointelegraph.com/news/a16z-raises-15-billion-says-crypto-crucial-to-americas-future?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound",
-      "source": "Cointelegraph.com News",
-      "type": "crypto",
-      "type_label": "Crypto & Blockchain Security",
-      "published": "2026-01-10T02:56:33+00:00",
-      "published_ts": 1768013793,
-      "smart_groups": [],
-      "curated": false
     },
     {
       "title": "Talleres Palomares Suffers Alleged Breach According to Dark Web Reports | UpGuard",
