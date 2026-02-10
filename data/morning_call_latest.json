@@ -1,21 +1,36 @@
 {
-  "generated_at": "2026-02-09T07:21:29.015084+00:00",
-  "analysis_date": "2026-02-09",
+  "generated_at": "2026-02-10T07:22:18.599925+00:00",
+  "analysis_date": "2026-02-10",
   "model": "gpt-5.1",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-02-09T05:32:16.518003+00:00",
+  "source_generated_at": "2026-02-10T05:31:05.153590+00:00",
   "source_days_back": 30,
-  "source_total_items": 8208,
-  "total_items_in_window_all": 90,
-  "total_items_in_window_curated": 15,
-  "morning_call_markdown": "### Executive Summary\n- Active exploitation of a SolarWinds Web Help Desk RCE is reported; threat actors are deploying custom tooling via this vector.\n- Ongoing campaigns are abusing free Firebase developer accounts to send phishing emails that bypass basic reputation checks.\n- Weekly roundups highlight continued exploit use of recent 0‑days (Office, ESXi, Notepad++ supply chain) and ransomware operations; expect copycat and follow-on activity.\n\n---\n\n### High-priority items (immediate attention)\n\n- **SolarWinds Web Help Desk RCE – active exploitation**\n  - What happened: Attackers are actively exploiting a SolarWinds Web Help Desk remote code execution flaw to deploy custom tools.\n  - Why it matters operationally: Direct path to server takeover and lateral movement from a helpdesk asset that often has visibility into internal systems; high-value in financial environments.\n  - Recommended immediate actions: Identify if we run SolarWinds Web Help Desk (on-prem or hosted), verify patch/mitigation status; increase monitoring on any such servers (web logs, process creation, outbound connections); if unpatched and internet-exposed, treat as at-risk, review for compromise indicators (new services, webshell-like files, unusual admin logins).\n\n- **Phishing via abused Firebase developer accounts**\n  - What happened: Threat actors are using free Firebase developer accounts to send phishing emails and host malicious content.\n  - Why it matters operationally: Firebase/Google domains often have good reputation and may bypass simple URL filtering and user suspicion.\n  - Recommended immediate actions: Tune email filters to flag URLs pointing to suspicious Firebase projects (especially new/low-reputation subpaths); add user awareness note for helpdesk scripts: “treat unexpected login / MFA / payment emails with Firebase links as high suspicion”; hunt for recent emails containing `firebaseio.com`, `firebasestorage.googleapis.com` and similar domains.\n\n- **Recent 0‑day exploitation & ransomware activity (Office, ESXi, Notepad++ supply chain)**\n  - What happened: Weekly summaries report active exploitation of recent Office and ESXi 0‑days and the Notepad++ supply chain incident, including follow-on ransomware campaigns.\n  - Why it matters operationally: Financial sector is a prime target for ransomware and supply-chain abuse; unpatched or overlooked software (Office, ESXi, dev tools) can be entry points.\n  - Recommended immediate actions: Confirm with platform teams that emergency updates/mitigations for the latest Office and ESXi vulnerabilities and Notepad++ supply chain issues are applied on our estate; hunt for anomalous ESXi activity (snapshot, disk operations) and Office spawning child processes (cmd, powershell, wscript) in the last 14 days.\n\n- **Windows defense evasion via service misconfiguration/abuse**\n  - What happened: New research (“The Service Run Failed Successfully”) describes techniques for abusing Windows services for defense evasion and persistence.\n  - Why it matters operationally: Adversaries and red teams rapidly adopt these TTPs, making service-based persistence harder to spot via traditional AV/EDR rules.\n  - Recommended immediate actions: Run a quick hunt for recently created/modified services, services pointing to non-standard paths (user-writable, temp, public shares), and services running under unexpected accounts; escalate anything linked to unusual binaries or directories.\n\n- **Malware and APT activity roundups**\n  - What happened: Recent malware newsletters highlight ongoing APT and commodity malware campaigns leveraging fresh CVEs, phishing, and living‑off‑the‑land (LOTL) techniques.\n  - Why it matters operationally: Increases baseline noise and the chance of multi-stage intrusions starting from opportunistic initial access (phish, web exploit).\n  - Recommended immediate actions: Tighten triage on alerts involving LOLBins (PowerShell, mshta, wscript, rundll32) launched from user context, especially following email or browser activity; ensure any “malware blocked” events are checked for lateral movement or secondary payloads, not auto-closed.\n\n---\n\n### Monitoring & detection recommendations\n\n- **SolarWinds / Web app exploitation (RCE)**\n  - Log sources: Web Help Desk logs, reverse proxy/WAF, Windows/Linux syslogs, EDR on SolarWinds hosts.\n  - Focus: Look for unusual POSTs to admin/API endpoints, file uploads, or 500 errors followed by new processes; EDR for `cmd`, `powershell`, `bash`, `wget/curl` spawned by web server processes. (ATT&CK T1190, T1059)\n\n- **Firebase-based phishing and credential theft**\n  - Log sources: Secure email gateway, mail server logs, proxy/web gateway, endpoint browser logs, IdP (SSO/MFA) logs.\n  - Focus: Identify spikes in clicks to Firebase-hosted URLs; correlate with failed/successful logins from atypical IPs or devices shortly after clicks. (T1566, T1110)\n\n- **Office / Notepad++ / user apps as initial access**\n  - Log sources: EDR, Office telemetry, application whitelisting logs.\n  - Focus: Office/Notepad++ spawning scripting interpreters or archive tools (powershell, cscript, wscript, mshta, cmd, 7z, rar); unsigned child binaries from user profile or temp directories executing shortly after document open. (T1204, T1566.001, T1059)\n\n- **ESXi and virtualization infrastructure**\n  - Log sources: vCenter/ESXi logs, hypervisor management tools, backup logs, firewall logs around management interfaces.\n  - Focus: Unusual snapshot, suspend, or encryption-like mass disk operations; new or modified cron jobs or startup scripts; remote logins to ESXi from new admin accounts or from non-admin workstations. (T1486, T1078)\n\n- **Windows service abuse and persistence**\n  - Log sources: Windows Event Logs (System, Security – 4697, 7045), EDR.\n  - Focus: New services created or existing services whose binary path changed; services pointing to user-writable paths or uncommon directories; services configured to run with elevated privileges but owned by non-admin users. (T1543.003, T1569.002)\n\n- **Malware/LOTL activity post-phish**\n  - Log sources: EDR, DNS logs, firewall, proxy.\n  - Focus: LOLBins (rundll32, regsvr32, mshta, powershell, wmic) making external network connections, especially to rare domains/IPs; suspicious DNS patterns (DGAs, high entropy names) immediately after email events. (T1059, T1105)\n\n- **Cloud / SaaS and CIAM-related signals**\n  - Log sources: Cloud provider audit logs, IdP/CIAM logs, CASB.\n  - Focus: Impossible travel, anomalous OAuth app consents, new API tokens or service principals created outside change windows; repeated failed logins followed by successful ones from new devices. (T1078, T1136, T1528)\n\n- **Developer and supply-chain exposure**\n  - Log sources: Git/CI pipelines, developer endpoints, proxy.\n  - Focus: Downloads or updates of dev tools (e.g., Notepad++, IDE plugins) from non-official mirrors; CI jobs pulling binaries from personal or unfamiliar repositories; new build scripts or dependencies added without change tickets. (T1195, T1553)\n\n---\n\n### Medium-term follow-ups\n\n- **SolarWinds/Web Help Desk hardening**\n  - Confirm asset inventory and ownership; ensure all SolarWinds components are patched promptly; enforce network segmentation and WAF protection for management interfaces.\n\n- **Phishing control improvements**\n  - Refine URL and domain reputation models to treat newly created Firebase and similar PaaS-hosted apps as higher risk; update phishing training materials with current examples and guidance for staff in high-risk roles (finance, treasury, trading).\n\n- **Patch and vulnerability management (Office, ESXi, dev tools)**\n  - Validate that the latest Office, ESXi, and Notepad++/similar tool patches are in the formal baseline; add recent 0‑days and supply-chain issues into vuln scanning profiles and patch SLAs, prioritizing systems with external exposure or privileged access.\n\n- **Service and persistence configuration standards**\n  - Work with Windows engineering to define/implement a baseline for allowed services and service paths; integrate regular checks for anomalous services into configuration management and compliance scanning.\n\n- **Cloud deception / canary objects and API deception**\n  - Evaluate open-source and commercial deception platforms (e.g., canary tokens in cloud storage, fake APIs) to detect lateral movement and credential abuse earlier in cloud and hybrid environments.\n\n- **Governance / framework alignment**\n  - Use interest in NIST CSF 2.0 and CIAM best practices to review our current controls, especially around identity, access management, and incident response mapping; update playbooks and tabletop scenarios to reflect current ransomware and supply-chain TTPs.",
+  "source_total_items": 8485,
+  "total_items_in_window_all": 343,
+  "total_items_in_window_curated": 89,
+  "morning_call_markdown": "### Executive Summary\n- Active exploitation of Ivanti EPMM and SolarWinds Web Help Desk (WHD) to plant stealth backdoors and admin tools; these are privileged, internet-facing systems and must be assumed targeted.\n- Multiple critical pre‑auth RCEs in BeyondTrust remote support and Fortinet FortiClient EMS put remote access and endpoint management infrastructure at risk of takeover.\n- Ransomware operations (Black Basta, Global Group, payment/fintech providers) and access brokers continue to leverage phishing, weak passwords and BYOVD, with signs of renewed focus on encryption impact.\n\n---\n\n### High-priority items (immediate attention)\n\n- **Ivanti EPMM zero-days – sleeper backdoors being deployed**\n  - What happened: Multiple reports show Ivanti EPMM devices being actively exploited to install long‑lived, dormant backdoors; EU/Dutch government compromise confirmed.\n  - Why it matters: EPMM is typically internet‑facing and integrated with IdP/MDM; compromise provides privileged access into internal and mobile estates.\n  - Recommended immediate actions:  \n    - Identify any Ivanti EPMM in our environment; verify emergency patches and vendor hardening guidance applied.  \n    - Pull recent logs from Ivanti, VPN, and perimeter firewalls; hunt for webshell-like activity, unusual outbound connections, and new local accounts/certs. Escalate any Ivanti-related anomaly for IR.\n\n- **SolarWinds Web Help Desk (WHD) RCE – active in the wild**\n  - What happened: Threat actors are exploiting WHD flaws (likely used as zero‑days initially) to gain RCE and then install Zoho agents, Velociraptor DFIR tool, and custom malware.\n  - Why it matters: WHD often runs with high privileges and talks to AD, ticketing and CMDB; compromise gives lateral movement staging and stealth admin tooling inside the network.\n  - Recommended immediate actions:  \n    - Inventory any WHD instances (on‑prem or hosted); confirm patched/isolated. If internet‑facing and unpatched during the last ~30 days, treat as suspected compromised.  \n    - Collect WHD server logs, PowerShell/command-line logs, and new service/agent installs for hunting; look for Velociraptor/Zoho agents or new scheduled tasks and outbound C2‑like traffic.\n\n- **Critical pre‑auth RCE in BeyondTrust remote support (CVE‑2026‑1731)**\n  - What happened: BeyondTrust released fixes for an easy‑to‑exploit pre‑auth RCE in remote access tools; public advisories emphasize severity.\n  - Why it matters: Remote support systems provide privileged access into endpoints and servers; a pre‑auth RCE on an internet‑reachable instance is equivalent to a jump‑host compromise.\n  - Recommended immediate actions:  \n    - Confirm whether any BeyondTrust remote support/PRA instances are in use; if yes, validate patch level against vendor advisory and restrict external exposure where possible.  \n    - Increase monitoring on BeyondTrust hosts: web logs for anomalous requests, new accounts, unplanned support sessions, or new outbound connections; flag any unexpected admin activity for escalation.\n\n- **Fortinet FortiClient EMS critical RCE**\n  - What happened: A critical FortiClient EMS vulnerability allows remote code execution; multiple advisories highlight potential for external exploitation.\n  - Why it matters: EMS manages endpoint agents and can push scripts/configs; compromise can be used to distribute malware or disable controls across large fleets.\n  - Recommended immediate actions:  \n    - Identify any FortiClient EMS servers; confirm they are patched per the latest Fortinet PSIRT notice and not exposed directly to the internet.  \n    - Hunt on EMS hosts for recent unexpected management tasks, policy pushes, or binary deployments; correlate with EDR/AV alerts on endpoints immediately following EMS activity.\n\n- **Ransomware & access broker activity targeting payment and infra providers**\n  - What happened: BridgePay/payment tech providers hit by ransomware; Warlock and Black Basta operations highlighted, with BYOVD usage and offline-encrypting payloads; access broker campaign (“ClickFix”) dropping Python backdoors on Windows.\n  - Why it matters: Financial/payment ecosystem is clearly in scope; access brokers plus BYOVD make EDR evasion and rapid encryption more likely if initial footholds succeed.\n  - Recommended immediate actions:  \n    - Tighten monitoring of payment‑adjacent systems (gateways, processors, external‑facing apps), especially for new services/drivers (BYOVD), bulk file modifications and shadow copy deletion.  \n    - Emphasize rapid triage of phishing, remote access anomalies, and suspicious Python/PowerShell execution on Windows; ensure containment playbooks for ransomware are ready and practiced.\n\n---\n\n### Monitoring & detection recommendations\n\n- **Ivanti EPMM / edge device exploitation**  \n  - Log sources: WAF/perimeter firewall, Ivanti/MDM logs, VPN, DNS.  \n  - Hunt for: Unusual HTTP POSTs to admin/API paths, new device admin accounts, config changes outside maintenance windows, unexpected outbound to rare domains/IPs. (T1190, T1505, T1071)\n\n- **SolarWinds WHD and other helpdesk/admin tooling abuse**  \n  - Log sources: Application server logs, Windows event logs (Sysmon/EDR), AD logs.  \n  - Hunt for: New services or scheduled tasks shortly after web requests, installation of Velociraptor/Zoho agents, odd PowerShell/command lines from WHD servers, lateral connections to DCs. (T1059, T1105, T1021)\n\n- **Remote support & EMS infrastructure (BeyondTrust, FortiClient EMS)**  \n  - Log sources: Product audit logs, reverse proxy/WAF, EDR on management servers.  \n  - Hunt for: Auth attempts from unusual IP ranges, web requests with abnormal headers/long parameters, sudden spikes in remote sessions or policy pushes; correlate any such events with endpoint alerts. (T1133, T1078, T1068)\n\n- **Ransomware/BYOVD and Windows service abuse**  \n  - Log sources: EDR, Windows security and system logs, driver install logs.  \n  - Hunt for: New or unsigned kernel drivers, changes to service recovery options (mapped to “RecoverIt”-style abuse), bulk file renames/encrypt‑like patterns, vssadmin/wbadmin invocations, killing of security processes. (T1068, T1561.001, T1489)\n\n- **Phishing and DKIM replay / invoice abuse (Apple/PayPal, signature phishing spike)**  \n  - Log sources: Email security gateway, M365/Google Workspace, EDR.  \n  - Hunt for: Invoices or payment notifications from high‑trust brands with mismatched reply‑to/URLs, high‑risk links or attachments, and user clicks leading to credential theft pages; prioritize investigation of finance and treasury user reports. (T1566, T1556.003)\n\n- **Access broker & RAT campaigns (ClickFix, NetSupport RAT, Vortex Werewolf, DKnife)**  \n  - Log sources: EDR, proxy/DNS, VPN/IdP.  \n  - Hunt for: New Python processes spawning from unusual directories, NetSupport/remote admin binaries running on user endpoints, Tor‑related traffic from corporate hosts, anomalous MFA usage or new device registrations following phishing. (T1204, T1105, T1219, T1071.001)\n\n- **Cloud and infrastructure worming (TeamPCP worm, cloud exploitation)**  \n  - Log sources: Cloud provider logs (CloudTrail/Activity Logs), container/orchestration logs, IAM.  \n  - Hunt for: Rapid creation of new cloud instances/containers, unexpected SSH keys or credentials added, outbound scanning from cloud workloads, and new high‑privilege roles assigned to service principals. (T1087, T1069, T1046)\n\n- **AI/LLM tool impersonation and “security tool” malware**  \n  - Log sources: EDR, web proxy, software inventory.  \n  - Hunt for: Installation of unapproved “security” or “AI assistant” tools by admins, unusual network connections from those binaries to non‑enterprise domains, and execution of scripts or downloads initiated by them. (T1204, T1195, T1105)\n\n---\n\n### Medium-term follow-ups\n\n- **Comprehensive review of edge and EoS devices**  \n  - Align with guidance to retire/scrap unsupported edge devices; update asset inventory, prioritize replacement/segmentation, and track EoL exceptions formally.\n\n- **Remote access and admin tool hardening**  \n  - Perform a security configuration review of BeyondTrust, FortiClient EMS, SolarWinds, Zoho agents and any remote admin tools; enforce MFA, IP allow‑listing, and strict logging/alerting on admin actions.\n\n- **Ransomware resilience enhancements**  \n  - Validate backup integrity and isolation; test restoration for critical payment and core banking systems; refine/benchmark ransomware playbooks with a focus on rapid isolation and communication with business owners.\n\n- **Email and social engineering defenses for finance/payments staff**  \n  - Run targeted awareness for finance, treasury, and payment ops users on invoice fraud, DKIM replay emails, and “signature phishing”; ensure VIP mailbox rules and forwarding alerts are in place.\n\n- **Logging and telemetry improvements for critical management servers**  \n  - Ensure full EDR and central logging on Ivanti, WHD, EMS, and remote support servers; enable detailed HTTP, PowerShell, and process creation logging with retention suitable for retro hunts.\n\n- **AI/automation security governance**  \n  - Establish guidelines for AI agent/extension use (desktop and cloud); require security review for any third‑party “AI skill/extension” deployed in the environment and integrate with software allow‑listing where possible.",
   "highlights": [
     {
-      "title": "New “Crypto Scanner” Tool Helps Developers Identify Quantum Risks Before Q-Day",
-      "link": "https://gbhackers.com/new-crypto-scanner-tool-helps-developers-identify-quantum-risks/",
+      "title": "Threat Actors Using Ivanti EPMM Flaws to Install Stealth Backdoors",
+      "link": "https://gbhackers.com/threat-actors-using-ivanti-epmm-flaws/",
       "source": "GBHackers News",
-      "published": "2026-02-09T04:56:21+00:00",
+      "published": "2026-02-10T05:14:40+00:00",
+      "smart_groups": [
+        "Curated",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Cloud / SaaS",
+        "Malware / Payloads"
+      ],
+      "curated": true
+    },
+    {
+      "title": "0-Click RCE Found in Claude Desktop Extensions, Putting 10,000+ Users at Risk",
+      "link": "https://gbhackers.com/0-click-rce-found-in-claude-desktop-extensions/",
+      "source": "GBHackers News",
+      "published": "2026-02-10T04:54:41+00:00",
       "smart_groups": [
         "Curated",
         "Vulnerabilities / CVEs"
@@ -23,61 +38,34 @@
       "curated": true
     },
     {
-      "title": "Hackers Leveraging Free Firebase Developer Accounts to Send Phishing Emails",
-      "link": "https://cybersecuritynews.com/hackers-leveraging-free-firebase-developer-accounts/",
-      "source": "Cyber Security News (FeedBurner)",
-      "published": "2026-02-09T03:55:07+00:00",
+      "title": "Andrew Morris finds iOS AdGuard is written by Russians and injects 20K lines into your browser",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1r0q6oq/andrew_morris_finds_ios_adguard_is_written_by/",
+      "source": "/r/cybersecurity",
+      "published": "2026-02-10T03:45:04+00:00",
       "smart_groups": [
         "Curated",
-        "Exploit / PoC",
-        "Phishing / Social Engineering"
+        "Vulnerabilities / CVEs"
       ],
       "curated": true
     },
     {
-      "title": "Customer Identity & Access Management: Die besten CIAM-Tools",
-      "link": "https://www.csoonline.com/article/3492789/customer-identity-access-management-die-6-besten-ciam-tools.html",
+      "title": "Anthropic’s DXT poses “critical RCE vulnerability” by running with full system privileges",
+      "link": "https://www.csoonline.com/article/4129820/anthropics-dxt-poses-critical-rce-vulnerability-by-running-with-full-system-privileges.html",
       "source": "CSO Online",
-      "published": "2026-02-09T03:00:00+00:00",
+      "published": "2026-02-10T03:19:04+00:00",
       "smart_groups": [
         "Curated",
         "Vulnerabilities / CVEs",
-        "Windows / Microsoft",
-        "Cloud / SaaS",
-        "Identity / Access",
-        "Network / OT / ICS",
+        "Exploit / PoC",
         "Crypto / Web3"
       ],
       "curated": true
     },
     {
-      "title": "Hackers Actively Exploiting SolarWinds Web Help Desk RCE Vulnerability to Deploy Custom Tools",
-      "link": "https://cybersecuritynews.com/solarwinds-vulnerability-actively-exploited/",
-      "source": "Cyber Security News (FeedBurner)",
-      "published": "2026-02-09T02:51:27+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": true
-    },
-    {
-      "title": "I tried a Claude Code rival that's local, open source, and completely free - how it went",
-      "link": "https://www.zdnet.com/article/claude-code-alternative-free-local-open-source-goose/",
-      "source": "ZDNet – Security",
-      "published": "2026-02-09T02:16:00+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Good resources for learning NIST CSF 2.0",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1qzint4/good_resources_for_learning_nist_csf_20/",
+      "title": "tools dirb, dirbuster and methodology for web Pentest",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1r0p9x4/tools_dirb_dirbuster_and_methodology_for_web/",
       "source": "/r/cybersecurity",
-      "published": "2026-02-08T19:43:37+00:00",
+      "published": "2026-02-10T03:03:15+00:00",
       "smart_groups": [
         "Curated",
         "Vulnerabilities / CVEs"
@@ -85,50 +73,59 @@
       "curated": true
     },
     {
-      "title": "Cybersecurity Weekly Newsletter – Notepad++ hack, Office 0-Day, ESXi 0-day Ransomware Attacks and More",
-      "link": "https://cybersecuritynews.com/cybersecurity-newsletter-weekly-february/",
-      "source": "Cyber Security News (FeedBurner)",
-      "published": "2026-02-08T16:26:34+00:00",
+      "title": "Falcon Identity vs Defender for Identity, is there room for both?",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1r0nz9t/falcon_identity_vs_defender_for_identity_is_there/",
+      "source": "/r/cybersecurity",
+      "published": "2026-02-10T02:06:18+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Detection Engineers, What’s your actual ratio of \"Studying System Behavior\" vs. \"Building Rules\"?",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1r0mzt2/detection_engineers_whats_your_actual_ratio_of/",
+      "source": "/r/cybersecurity",
+      "published": "2026-02-10T01:22:43+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Prometei botnet exploits weak passwords on UK construction firm's server",
+      "link": "https://www.scworld.com/brief/prometei-botnet-exploits-weak-passwords-on-uk-construction-firms-server",
+      "source": "SCM feed for Latest",
+      "published": "2026-02-10T00:54:30+00:00",
+      "smart_groups": [
+        "Curated",
+        "Exploit / PoC",
+        "Malware / Payloads"
+      ],
+      "curated": true
+    },
+    {
+      "title": "BridgePay hit by ransomware attack, disrupting payment gateway services",
+      "link": "https://www.scworld.com/brief/bridgepay-hit-by-ransomware-attack-disrupting-payment-gateway-services",
+      "source": "SCM feed for Latest",
+      "published": "2026-02-10T00:45:49+00:00",
       "smart_groups": [
         "Curated",
         "Ransomware",
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": true
-    },
-    {
-      "title": "New tool blocks imposter attacks disguised as safe commands",
-      "link": "https://www.bleepingcomputer.com/news/security/new-tool-blocks-imposter-attacks-disguised-as-safe-commands/",
-      "source": "BleepingComputer",
-      "published": "2026-02-08T15:26:48+00:00",
-      "smart_groups": [
-        "Curated",
         "Vulnerabilities / CVEs"
       ],
       "curated": true
     },
     {
-      "title": "trappsec: an open-source framework for API deception",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1qzbeuf/trappsec_an_opensource_framework_for_api_deception/",
-      "source": "/r/cybersecurity",
-      "published": "2026-02-08T15:13:30+00:00",
+      "title": "China-linked DKnife framework targets Chinese users with advanced man-in-the-middle attacks",
+      "link": "https://www.scworld.com/brief/china-linked-dknife-framework-targets-chinese-users-with-advanced-man-in-the-middle-attacks",
+      "source": "SCM feed for Latest",
+      "published": "2026-02-10T00:32:45+00:00",
       "smart_groups": [
         "Curated",
-        "Vulnerabilities / CVEs"
-      ],
-      "curated": true
-    },
-    {
-      "title": "OverTheWire Bandit: a complete walkthrough with in-depth explanations",
-      "link": "https://www.reddit.com/r/netsec/comments/1qzau40/overthewire_bandit_a_complete_walkthrough_with/",
-      "source": "/r/netsec",
-      "published": "2026-02-08T14:50:37+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "Linux / Unix",
-        "Network / OT / ICS"
+        "Malware / Payloads"
       ],
       "curated": true
     }
