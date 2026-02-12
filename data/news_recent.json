@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-02-12T18:30:21.441005+00:00",
+  "generated_at": "2026-02-12T20:18:23.995278+00:00",
   "days_back": 30,
-  "total_items": 8787,
+  "total_items": 8781,
   "items": [
     {
       "title": "Secure Your Spot at RSAC 2026 Conference",
@@ -28,16 +28,454 @@
       "curated": false
     },
     {
+      "title": "Who's the bossware? Ransomware slingers like employee monitoring tools, too",
+      "summary": "As if snooping on your workers wasn't bad enough Your supervisor may like using employee monitoring apps to keep tabs on you, but crims like the snooping software even more. Threat actors are now using legit bossware to blend into corporate networks and attempt ransomware deployment.\u2026",
+      "link": "https://go.theregister.com/feed/www.theregister.com/2026/02/12/ransomware_slingers_bossware/",
+      "source": "The Register - Security",
+      "type": "general",
+      "type_label": "General Security & Blogs",
+      "published": "2026-02-12T20:07:13+00:00",
+      "published_ts": 1770926833,
+      "smart_groups": [
+        "Curated",
+        "Ransomware"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Protection against multi-modal attacks with Microsoft Defender",
+      "summary": "Multi-modal (or hybrid) attacks are increasingly used by threat actors to orchestrate multi-phase campaigns. In Part 1 of our blog series , we explored how attackers use email bombing as a distraction technique to overwhelm users and bypass security controls. Today, we\u2019re expanding that conversation to showcase how Microsoft Defender can detect and correlate certain hybrid, multi-modal attacks that span across email, Teams, identity, and endpoint vectors; and how these insights surface in the Microsoft Defender portal. From distraction to deception: The rise of multi-modal attacks Multi-modal attacks are on the rise and evolving! One type of such hybrid attacks, begins with a mail bombing event\u2014flooding a user\u2019s inbox with legitimate subscription emails\u2014f ollowed by using Microsoft Teams to send messages to and call targeted users. The goal? To gain trust, distract defenders, and establish persistence. For example, attackers may pose as IT support personnel responding to a mail bombing incident, urging users to grant remote access in turn victimizing them to download malware-laced files. Our telemetry shows more than 300 threat actors executing multi-modal attacks, some of which involve Microsoft Teams. These tactics are not isolated\u2014they\u2019re coordinated. Learn more here . Defender continuously adapts to attacker behavior, enabling detection of emerging threats. Initially, attackers used simple terms like 'Help Desk' as their display name in Teams to deceive users, but evolved their tactics by incorporating other words like 'Cyber', using Unicode characters such as \u2018\u2611\ufe0f\u2019, and inserting invisible characters to bypass detection. We also see these hybrid attacks resolving to compromises that may become evident through suspicious encoded PowerShell execution initiating a network connection. Now, Microsoft Defender for Office 365 can not only detect, but also correlate these signals across email, collaboration, and other modalities. Better attacker tracking and new detection types It\u2019s now easier to see coordinated multi-modal (hybrid) attack patterns directly in the Defender portal via the Incident experience . This means security teams can easily: Identify linked incidents across email, Teams, and identity platforms. Track attacker movement from initial access to command-and-control (C2) stages. Disrupt attacks in real time using robust detection and automated response. New alerts include: Mail bombing activity detected \u2013 Identifies high-volume email flood activity. Potentially malicious IT support Teams impersonation post mail bombing \u2013 Flags suspicious Teams threads following email-based flooding activity. Related alert includes: Suspicious encoded PowerShell execution initiating a network connection \u2013 Detects obfuscated scripts reaching out to attacker infrastructure. These alerts are designed to work together, painting a full picture of the attacker\u2019s strategy and enabling defenders to act decisively. Empowering SOC analysts with advanced hunting and IOCs Detection is just the beginning. Security teams can pivot from incidents and alerts to deeper investigations using Advanced Hunting in Microsoft Defender and Microsoft Sentinel. By leveraging Indicators of Compromise (IOCs) \u2014such as suspicious email addresses, IPs, or keywords like \u201cIT Support\u201d\u2014customers can: Craft custom queries to uncover hidden threats. Search across identities, endpoints, and Office 365 data. Investigate post-breach activities like MFA changes or emergency password resets. IOCs can be collected via the incidents and alerts in the portal and in Advanced Hunting queries below: Use AlertInfo to collect general information and clickable links to more IOCs: AlertInfo | where Timestamp >= ago(2h) | where Title == \"Microsoft Teams chat initiated by a suspicious external user\" | top 100 by Timestamp Use AlertEvidence to collect potentially related IOCs from an alert: AlertEvidence | where Timestamp >= ago(2h) | where Title == \"Microsoft Teams chat initiated by a suspicious external user\" | top 100 by Timestamp Below are some example queries that can be used as Custom detection rules in Advanced Hunting to detect mail bombing, malicious Teams content and password spray attempts respectively: Use EmailEvents to detect mail bombing: EmailEvents | where Timestamp > ago(1d) | where DetectionMethods contains \"Mail bombing\" | project Timestamp, NetworkMessageId, SenderFromAddress, RecipientEmailAddress , Subject, ReportId Use MessageEvents, a newly released table from our GA of Collaboration for Teams, to detect malicious Teams content: MessageEvents | where Timestamp > ago(1d) | where ThreatTypes has \"Phish\" or ThreatTypes has \"Malware\" or ThreatTypes has \"Spam\" | project Timestamp, SenderDisplayName, SenderEmailAddress, RecipientDetails, IsOwnedThread, ThreadType, IsExternalThread, ReportId Use MessageEvents to detect bi-directional communication with external Help Desk\\Support representatives: MessageEvents | where Timestamp > ago(5d) | where (RecipientDetails contains \"help\" and RecipientDetails contains \"desk\") or (RecipientDetails contains \"it\" and RecipientDetails contains \"support\") or (RecipientDetails contains \"working\" and RecipientDetails contains \"home\") | where IsExternalThread == true | project Timestamp, SenderDisplayName, SenderEmailAddress, RecipientDetails, IsOwnedThread, ThreadType Use IdentityLogonEvents to detect password spray attempts: IdentityLogonEvents | where Timestamp > ago(5d) | where ActionType == \"LogonFailed\" | where FailureReason has_any (\"bad\", \"invalid\") | where FailureReason has_any (\"username\", \"password\") | summarize FailedAttempts = count(), UniqueUsers = dcount(AccountUpn), UserList = make_set(AccountUpn, 10) by IPAddress, bin(Timestamp, 5m) | where LogonError in (\"UserAccountNotFound\", \"BadPassword\") --- has an error Additional detection and response strategies include: Monitor for news mentions of your organization and create detection rules for related message subjects. Track impersonation attempts of key personnel (e.g., CIO, IT support), especially if they are on social media or are publicized. Investigate unusual IP addresses or abnormal activity involving targeted individuals. Configure automatic remediation action in the custom detection rule to detect and remediate any potential threats without manual intervention You can also block these external calls in Teams by blocking interaction with Trial tenants on Microsoft teams by using the Teams federation controls. These queries help Defenders pivot from one IOC to another, uncovering the full scope of hybrid campaigns. Microsoft Sentinel can also be used to search, store, and share IOCs. More information about this offering is available at Threat intelligence - Microsoft Sentinel | Microsoft Learn Conclusion Multi-modal attacks are complex, but with the right tools, defenders are equipped to detect, correlate, and respond across modalities. By combining built-in detections with hunting strategies, organizations can stay ahead of evolving threats and protect their users from distraction-based deception. Note: The above alerts are available for customers with Microsoft Defender for Office 365 and Microsoft Defender for Cloud Apps licenses. These updates are gradually rolling out to all customers worldwide. Watch this video to learn more: Microsoft Defender for Office 365 | Mail Bombing and Mixed-Mode Attack Protection Learn : Manage incidents and alerts from Defender for Office 365 in Microsoft Defender XDR - Microsoft Defender for Office 365 | Microsoft Learn Security Operations Guide for Teams protection - Microsoft Defender for Office 365 | Microsoft Learn Detection technology details table What's on the Email entity page Filterable properties in the All email view in Threat Explorer",
+      "link": "https://techcommunity.microsoft.com/t5/microsoft-defender-for-office/protection-against-multi-modal-attacks-with-microsoft-defender/ba-p/4438786",
+      "source": "Microsoft Defender for Office 365 Blog",
+      "type": "vendors",
+      "type_label": "Vendors & Product Blogs",
+      "published": "2026-02-12T20:06:00+00:00",
+      "published_ts": 1770926760,
+      "smart_groups": [
+        "Ransomware",
+        "Windows / Microsoft",
+        "Malware / Payloads",
+        "Identity / Access",
+        "Network / OT / ICS"
+      ],
+      "curated": false
+    },
+    {
+      "title": "Protection Against Email Bombs with Microsoft Defender for Office 365",
+      "summary": "In today's digital age, email remains a critical communication tool for businesses and individuals. However, with the increasing sophistication of cyberattacks, email security has become more important than ever. One such threat that has been growing is the email bombing, a form of net abuse that sends large volumes of email to an address to overflow the mailbox, overwhelm the server, or distract attention from important email messages indicating a security breach. Email bomb - Wikipedia Understanding Email Bombing Email bombing , typically involves subscribing victims to a large number of legitimate newsletter and subscription services. Each subscription service sends email notifications, which in aggregate create a large stream of emails into the victim\u2019s inbox, making email triage for legitimate emails very difficult. This form of attack is essentially a denial-of-service (DDOS) on the victim's email triaging attention budget. Hybrid Attacks More recently, email subscription bombs have been coupled with simultaneous lures on Microsoft Teams, Zoom, or via phone calls. Attackers impersonate IT support and offer to help solve the email problem caused by the spike of unwanted emails, ultimately compromising the victim's system or installing malware on their system. This type of attack is brilliant because it creates a sense of urgency and legitimacy, making victims more likely to accept remote assistance and inadvertently allow malware planting or data theft. Read about the use of mail bombs where threat actors misused Quick Assist in social engineering attacks leading to ransomware | Microsoft Security Blog. Incidence and Purpose of Email Bombing Email bombing attacks have been around for many years but can have significant impacts on targeted individuals, such as enterprise executives, HR or finance representatives. These attacks are often used as precursors to more serious security incidents, including malware planting, ransomware, and data exfiltration. They can also mute important security alerts, making it easier for attackers to carry out fraudulent activities without detection. New Detection technology for Mail Bombing attacks To address these types of attacks Microsoft Defender has now released a comprehensive solution involving a durable block to limit the influx of emails, the majority of which are often spam. By intelligently tracking message volumes across different sources and time intervals, this new detection leverages historical patterns of the sender and signals related to spam content. It prevents mail bombs from being dropped into the user\u2019s inbox and the messages are rather sent to the Junk folder (of Outlook). Note: Safe sender lists in Outlook continue to be honored, so emails from trustworthy sources are not unexpectedly moved to the Junk folder (in order to prevent false positives). Since the initial rollout that started in early May, we\u2019ve seen a tremendous impact in blocking mail bombing attacks out of our customers\u2019 inboxes: Statistic: Average 20-30K mail bombs blocked daily across 200-300 users. How to leverage new \u201cMail bombing\u201d detection technology in SOC experiences 1. Investigation and hunting: SOC analysts can now view the new Detection technology as Mail bombing within the following surfaces: Threat Explorer, Email entity page and Advanced Hunting empowering them to investigate, filter and hunt for threats related to mail bombing. 2. Custom detection rule : To analyze the frequency and volume of attacks from mail bombing vector, or to have automated alerts configured to notify SOC user whenever there is a mail bombing attack, SOC analysts can utilize the custom detection rules in Advanced hunting by writing a KQL query using data in DetectionMethods column of EmailEvents table. Here\u2019s a sample query to get you started: EmailEvents | where Timestamp > ago(1d) | where DetectionMethods contains \"Mail bombing\" | project Timestamp, NetworkMessageId, SenderFromAddress, Subject, ReportId The SOC experiences are rolled out worldwide to all customers. Conclusion Email bombs represent an incidental threat in the world of cybersecurity. With the new detection technology for Mail Bombing, Microsoft Defender for Office 365 protects users from these attacks and empowers Security Operations Center Analysts to ensure to gain visibility into such attacks and take quick actions to keep organizations safe! Note: The Mail bombing protection is available by default in Exchange Online Protection and Microsoft Defender for Office 365 plans. This blog post is associated with Message Center post MC1096885. Also read Part 2 of our blog series to learn more about protection against multi-modal attacks involving mail bombing and correlation of Microsoft Teams activity in Defender. Watch this video to learn more: Microsoft Defender for Office 365 | Mail Bombing and Mixed-Mode Attack Protection Learn : Detection technology details table What's on the Email entity page Filterable properties in the All email view in Threat Explorer",
+      "link": "https://techcommunity.microsoft.com/t5/microsoft-defender-for-office/protection-against-email-bombs-with-microsoft-defender-for/ba-p/4418048",
+      "source": "Microsoft Defender for Office 365 Blog",
+      "type": "vendors",
+      "type_label": "Vendors & Product Blogs",
+      "published": "2026-02-12T20:03:29+00:00",
+      "published_ts": 1770926609,
+      "smart_groups": [
+        "Curated",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "Windows / Microsoft",
+        "Linux / Unix",
+        "Malware / Payloads",
+        "Identity / Access",
+        "Phishing / Social Engineering"
+      ],
+      "curated": true
+    },
+    {
+      "title": "SIEM Maturity Framework - aiding signal vs noise",
+      "summary": "I have been following Raffy's blog ( https://raffy.ch/blog ) for a while and just read about his latest post on the SIEM maturity framework ( https://raffy.ch/blog/2026/02/11/the-siem-maturity-framework-workbook-v1-0-a-practical-scoring-tool-for-security-analytics-platforms/ ) After reviewing it, I felt that it genuinely helps filter out the noise vs signal, especially when everyone is pitching an AI SOC these days. Would love to hear what folks here think of it ? submitted by /u/dezimunda [link] [comments]",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1r33tpb/siem_maturity_framework_aiding_signal_vs_noise/",
+      "source": "/r/cybersecurity",
+      "type": "osint",
+      "type_label": "OSINT, Communities & Subreddits",
+      "published": "2026-02-12T20:03:09+00:00",
+      "published_ts": 1770926589,
+      "smart_groups": [
+        "Network / OT / ICS"
+      ],
+      "curated": false
+    },
+    {
+      "title": "State-Backed Hackers Weaponize Google Gemini Across Cyberattack Lifecycles",
+      "summary": "submitted by /u/Acceptable-Web3874 [link] [comments]",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1r33pse/statebacked_hackers_weaponize_google_gemini/",
+      "source": "/r/cybersecurity",
+      "type": "osint",
+      "type_label": "OSINT, Communities & Subreddits",
+      "published": "2026-02-12T19:59:12+00:00",
+      "published_ts": 1770926352,
+      "smart_groups": [
+        "Crypto / Web3"
+      ],
+      "curated": false
+    },
+    {
+      "title": "Is MFA for On-Prem Servers Necessary in a Tiered AD environment",
+      "summary": "Hi All. Like the title says. Is RDP MFA or MFA at log-in necessary for an environment that already implements AD Tiering? Server access is governed by GPO that allows non-cloud domain accounts in specific access groups to access servers in different groups Tiers 0,1,2. Is a solution like Duo necessary, or even viable since cloud accounts can't access these servers and Tier accounts don't have a cloud presence to enroll them into Duo. If there's any documentation out there or best practices I would appreciate it. submitted by /u/Fine_Conversation_91 [link] [comments]",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1r33nan/is_mfa_for_onprem_servers_necessary_in_a_tiered/",
+      "source": "/r/cybersecurity",
+      "type": "osint",
+      "type_label": "OSINT, Communities & Subreddits",
+      "published": "2026-02-12T19:56:39+00:00",
+      "published_ts": 1770926199,
+      "smart_groups": [
+        "Identity / Access"
+      ],
+      "curated": false
+    },
+    {
+      "title": "Cyber Security Gap Analysis Tools / Templates",
+      "summary": "Hello All, To give some background I have just been hired at a new firm where they have a immature cyber security program. They have tools put in place like Rapid7 and Zscaler, PaloAlto Cortex XDR. The tools are in place and are working but they are reactionary, no planning no road map where they want to go. GPO Policies are inconsistent across the firm, no documentation with policies, SOPs SSPs, etc. I have been asked as one of my first \"projects\" is to run a gap analysis on the firm's cyber security. I run a few of these things for smaller matters but never a firm wide analysis. I have an idea of questioning I need to ask to get the data I am looking for but I want to compare it to any resources this community might have. Anything you might be able to share would be helpful for running a cyber security GAP analysis. Thank you in advance submitted by /u/Chickenman987 [link] [comments]",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1r33ku0/cyber_security_gap_analysis_tools_templates/",
+      "source": "/r/cybersecurity",
+      "type": "osint",
+      "type_label": "OSINT, Communities & Subreddits",
+      "published": "2026-02-12T19:54:06+00:00",
+      "published_ts": 1770926046,
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "A Linguistic Prompt Injection Case Study on Llama 4: Procedural Leakage and Security Contradictions in Large Language Models",
+      "summary": "A Linguistic Prompt Injection Case Study on Llama 4: Procedural Leakage and Security Contradictions in Large Language Models Abstract This paper presents an empirical case study demonstrating how Llama 4, a state\u2011of\u2011the\u2011art Large Language Model (LLM), can be manipulated into revealing internal procedural structures and security\u2011related logic through purely linguistic prompts. The attacker employed a gradual escalation strategy, beginning with benign requests and progressing toward prompts that indirectly referenced internal system terminology. Llama 4 exhibited multiple security contradictions, alternating between refusal and disclosure depending on the phrasing and contextual framing of the queries. The findings highlight critical weaknesses in contextual risk assessment, sensitive\u2011term classification, and conversational guardrails. --- Introduction As LLMs such as Llama 4 become integrated into security\u2011sensitive environments, understanding their behavioral vulnerabilities is essential. While traditional adversarial attacks focus on direct attempts to extract system prompts or bypass explicit restrictions, linguistic prompt injection leverages natural conversation to induce unintended disclosures. This study analyzes a real interaction in which Llama 4 revealed internal workflow sequences, security classifications, access\u2011control logic, and emergency\u2011related terminology\u2014despite being designed to avoid such disclosures. The attack required no technical expertise, only strategic manipulation of conversational context. --- Methodology The attacker used a progressive linguistic escalation approach consisting of three phases: 2.1 Phase 1 \u2014 Benign Procedural Requests The attacker began with neutral tasks such as completing action sequences or generating example sentences. These prompts appeared harmless and did not trigger Llama 4\u2019s safety mechanisms. 2.2 Phase 2 \u2014 Introduction of Internal Terminology Once Llama 4 adopted a cooperative tone, the attacker introduced terms typically associated with internal system instructions, including: \u2022 protection levels \u2022 access\u2011control categories \u2022 emergency\u2011trigger terminology \u2022 time\u2011restricted procedural sections Because these terms were embedded in linguistic or organizational questions, Llama 4 misclassified them as non\u2011sensitive. 2.3 Phase 3 \u2014 Escalation Toward Sensitive Logic The attacker then issued prompts referencing: \u2022 \u201csecret words\u201d for emergency activation \u2022 distinctions between protection levels \u2022 authorized personnel categories \u2022 procedural time limits Llama 4 responded inconsistently\u2014sometimes refusing, sometimes providing detailed internal logic. --- Observed Security Contradictions 3.1 Contradiction in Refusal Behavior When asked directly about a procedural time limit, Llama 4 declined to answer. However, when the same concept was embedded in a sentence\u2011completion task, the model provided a full example sentence containing the restricted term. 3.2 Procedural Leakage Llama 4 disclosed a complete internal workflow sequence when asked to \u201ccontinue the pattern,\u201d revealing structured operational logic that resembled internal documentation. 3.3 Misclassification of Sensitive Terminology Terms associated with: \u2022 emergency protocols \u2022 strict protection levels \u2022 access\u2011control permissions were inconsistently treated\u2014sometimes flagged as sensitive, sometimes answered without hesitation. 3.4 Contextual Drift As the conversation progressed, Llama 4 became increasingly permissive, prioritizing conversational coherence over safety constraints. --- Analysis The interaction reveals several systemic weaknesses in Llama 4\u2019s safety architecture: 4.1 Over\u2011Cooperative Conversational Bias Llama 4 is optimized for helpfulness. When prompts appear polite or linguistically framed, the model relaxes its defensive posture. 4.2 Lack of Independent Prompt Evaluation Llama 4 evaluated prompts cumulatively rather than independently, allowing earlier benign context to influence later high\u2011risk responses. 4.3 Insufficient Sensitive\u2011Term Recognition Internal terminology embedded in natural language was not recognized as requiring restricted handling. 4.4 Vulnerability to Indirect Prompt Injection The attacker never requested internal instructions directly. Instead, they used: \u2022 sequence completion \u2022 semantic comparison \u2022 example\u2011sentence generation \u2022 definitional questions These techniques bypassed traditional guardrails. --- Security Implications Although no real credentials were exposed, the behavior demonstrates risks relevant to enterprise deployments: \u2022 Leakage of internal operational logic \u2022 Exposure of security classifications and access\u2011control structures \u2022 Potential inference of system\u2011level behavior \u2022 Reduced trust in model consistency \u2022 Susceptibility to social\u2011engineering\u2011style prompt attacks In high\u2011security environments, such leakage could enable attackers to map internal processes or craft more targeted exploits. --- Recommendations 6.1 Sensitive\u2011Term Detection Layer Llama 4 should treat terms related to: \u2022 emergency triggers \u2022 access permissions \u2022 protection levels \u2022 procedural time limits as high\u2011risk regardless of context. 6.2 Context\u2011Independent Safety Evaluation Each prompt must be evaluated individually, not solely as part of a conversational flow. 6.3 Multi\u2011Layered Guardrails Effective protection requires: \u2022 input filtering \u2022 model\u2011level constraints \u2022 output sanitization \u2022 post\u2011processing validation 6.4 Adversarial Linguistic Testing Organizations should simulate: \u2022 indirect extraction attempts \u2022 sequence\u2011completion attacks \u2022 semantic misdirection \u2022 contextual drift exploitation before deploying Llama 4 in sensitive environments. --- Conclusion This case study demonstrates that Llama 4 can be manipulated into revealing internal logic through subtle linguistic techniques. The model exhibited clear security contradictions, providing sensitive procedural information when prompts were framed as harmless linguistic tasks. The findings underscore the need for improved sensitive\u2011term detection, context\u2011independent evaluation, and adversarial testing. --- Author\u2019s Note All examples, contradictions, and procedural leaks analyzed in this study originate from a real interaction with Llama 4. Screenshots were captured during the experiment and serve as primary evidence of the model\u2019s inconsistent security behavior. Hope you found this article helpful! Thank you, Mr(Osama Albargi) submitted by /u/0xsherlock [link] [comments]",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1r33h3u/a_linguistic_prompt_injection_case_study_on_llama/",
+      "source": "/r/cybersecurity",
+      "type": "osint",
+      "type_label": "OSINT, Communities & Subreddits",
+      "published": "2026-02-12T19:50:09+00:00",
+      "published_ts": 1770925809,
+      "smart_groups": [
+        "Curated",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Identity / Access",
+        "Crypto / Web3"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Public Preview Announcement: Empower Real-Time Security with Microsoft Sentinel\u2019s CCF Push Feature",
+      "summary": "In today\u2019s rapidly evolving threat landscape, organizations need security solutions that deliver actionable insights in real time, not minutes or hours after the fact. Microsoft Sentinel continues to expand its capabilities, driven by a commitment to empower customers and partners with cutting-edge tools for proactive defense. Today, we are excited to announce the public preview of our latest innovation, the Sentinel Codeless Connector Framework (CCF) Push feature. CCF Push addresses a critical need: enabling seamless, automated, and immediate delivery of security data to Sentinel, so teams can respond to threats as they happen. What Is CCF Push and Why Does It Matter? Microsoft Sentinel connectors generally follow two patterns. In the polling pattern, partners and customers expose their web\u2011facing REST API endpoints and use our traditional CCF connectors to poll those endpoints at intervals to gather data for ingestion into Sentinel. In the push pattern, partners and customers send data directly to a Sentinel workspace. Our new CCF Push capability was built to streamline and accelerate time to adoption for this second pattern. Traditionally, building a connector required setup of multiple Azure resources - Data Collection Endpoints (DCE), Data Collection Rules (DCR), Entra app registrations, client secrets, and RBAC assignments. With CCF Push, connector creation is fast and easy, allowing developers to publish with minimal prerequisites. When you press \u201cDeploy,\u201d Sentinel sets up all the resources you need. This automation dramatically reduces friction, enabling partners and customers to release quickly and to onboard with minimal effort. Built on the Log Ingestion API: Speed, Flexibility, and Power A key advantage of CCF Push is that it leverages our Log Ingestion API. This modern API combined with the CCF Push capability brings several benefits to the table: Improved user experience: Removes configuration and deployment overhead by streamlining all setup through the Sentinel solution Content Hub, providing a single interface from which a customer can launch their connectors. High Throughput: Supports rapid, large-scale data ingestion, ensuring that security events are delivered to Sentinel without delay. Data Transformation: Allows for transformation of data before ingestion, so developers can tailor the format and content to meet customer needs. Targeting System Tables: Enables direct delivery of data to system tables, streamlining integration and analysis. Future-Ready Architecture: Opens pathways to advanced scenarios, including data lake integrations and agentic AI use cases. By leveraging these capabilities, CCF Push provides a robust, scalable solution for real-time security data delivery. New CCF Push Connectors Since its rollout, several partners have adopted CCF Push to build connectors that enhance security for mutual customers. Here are a couple recent examples: Keeper Security SIEM integration with Microsoft Sentinel The Keeper Security integration with Microsoft Sentinel brings advanced password and secrets management telemetry into your SIEM environment. By streaming audit logs and privileged access events from Keeper into Sentinel, security teams gain centralized visibility into credential usage and potential misuse. The connector supports custom queries and automated playbooks, helping organizations accelerate investigations, enforce Zero Trust principles, and strengthen identity security across hybrid environments. Obsidian Threat and Activity Feed The Obsidian Threat and Activity Feed for Microsoft Sentinel delivers deep visibility into SaaS application activity, helping security teams detect account compromise and insider threats. By streaming user behavior and configuration data into Sentinel, organizations can correlate SaaS risks with enterprise telemetry for faster investigations. Prebuilt analytics and dashboards enable proactive monitoring, while automated playbooks simplify response workflows\u2014strengthening security posture across critical cloud apps. Start Building Today Sentinel solution developers can begin leveraging the power of CCF Push immediately. For technical guidance and step-by-step instructions, refer to our MS Learn documentation . In the unlikely event that you encounter any issues in building or updating your CCF Push connector, App Assure is here to help. We are an engineering-backed team committed to supporting customers and software development companies throughout their journey with Sentinel to streamline integration and accelerate time to market. Contact Microsoft Sentinel Partners at AzureSentinelPartner@microsoft.com for assistance. Here is what Obsidian Security had to say about working with us to build their CCF Push connector:",
+      "link": "https://techcommunity.microsoft.com/t5/microsoft-sentinel-blog/public-preview-announcement-empower-real-time-security-with/ba-p/4483884",
+      "source": "Microsoft Sentinel Blog",
+      "type": "vendors",
+      "type_label": "Vendors & Product Blogs",
+      "published": "2026-02-12T19:36:08+00:00",
+      "published_ts": 1770924968,
+      "smart_groups": [
+        "Curated",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "Linux / Unix",
+        "Cloud / SaaS",
+        "Network / OT / ICS"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Ether\u2019s hidden strength: Why institutional demand points to $2.4K",
+      "summary": "While ETH\u2019s price action remains weak, rising institutional investor inflows and surging network activity suggest that Ether is building a base for a possible rally to $2,400.",
+      "link": "https://cointelegraph.com/news/ether-hidden-strength-why-institutional-demand-points-to-2-4k?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound",
+      "source": "Cointelegraph.com News",
+      "type": "crypto",
+      "type_label": "Crypto & Blockchain Security",
+      "published": "2026-02-12T19:30:00+00:00",
+      "published_ts": 1770924600,
+      "smart_groups": [],
+      "curated": false
+    },
+    {
+      "title": "Voice Phishing Kits Give Threat Actors Real-Time Control Over Attacks",
+      "summary": "Researchers at Okta warn that a series of phishing kits have emerged that are designed to help threat actors launch sophisticated voice phishing (vishing) attacks that can bypass multifactor authentication .",
+      "link": "https://blog.knowbe4.com/voice-phishing-kits-give-threat-actors-real-time-control-over-attacks",
+      "source": "KnowBe4 Blog",
+      "type": "general",
+      "type_label": "General Security & Blogs",
+      "published": "2026-02-12T19:30:00+00:00",
+      "published_ts": 1770924600,
+      "smart_groups": [
+        "Cloud / SaaS",
+        "Phishing / Social Engineering"
+      ],
+      "curated": false
+    },
+    {
+      "title": "What\u2019s new in Microsoft Sentinel: February 2026",
+      "summary": "February brings a set of new innovations to Sentinel that helps you work with security content across your SOC . This month\u2019s updates focus on how security teams ingest, manage, and operationalize content, with new connectors, multi-tenant content distribution capabilities, and an enhanced UEBA Essentials solution to surface high\u2011risk behavior faster across cloud and identity environments. We\u2019re also introducing new partner-built agentic experiences available through Microsoft Security Store, enabling customers to extend Sentinel with specialized expertise directly inside their existing workflows. Together, these innovations help SOC teams move faster, scale smarter, and unlock deeper security insight without added complexity. Expand your visibility and capabilities with Sentinel content Seamlessly onboard security data with growing out-of-the-box connectors (general availability) Sentinel continues to expand its connector ecosystem, making it easier for security teams to bring together data from across cloud, SaaS, and on-premises\u2011premises environments so nothing critical slips through the cracks. With broader coverage and faster onboarding, SOCs can unlock unified visibility, stronger analytics, and deeper context across their entire security stack. Customers can now use out-of-the-box connectors and solutions for: o Mimecast Audit Logs o CrowdStrike Falcon Endpoint Protection o Vectra XDR o Palo Alto Networks Cloud NGFW o SocPrime o Proofpoint on Demand (POD) Email Security o Pathlock o MongoDB o Contrast ADR For the full list of connectors, see our documentation . Share your input on what to prioritize next with our App Assure team . Microsoft 365 Copilot data connector (public preview) The Microsoft 365 Copilot connector brings Microsoft 365 Copilot audit logs and activity data into Sentinel, giving security teams visibility into how Microsoft 365 Copilot is being used across their organization. Once ingested, this data can power analytics rules, custom detections, workbooks, automation, and investigations, helping SOC teams quickly spot anomalies, misuse, and policy violations. Customers can also send this data to the Sentinel data lake for advanced scenarios, such as custom graphs and MCP integrations, while benefiting from lower cost ingestion and flexible retention. Learn more here. Transition your Sentinel connectors to the codeless connector framework (CCF) Microsoft is modernizing data connectors by shifting from Azure Function based connectors to the codeless connector framework (CCF). CCF enables partners, customers, and developers to build custom connectors that ingest data into Sentinel with a fully SaaS managed experience, built-in health monitoring, centralized credential management, and enhanced performance. We recommend that customers review their deployed connectors and move to the latest CCF versions to ensure uninterrupted data collection and continued access to the latest Sentinel capabilities. As part of Azure\u2019s modernization of custom data collection, the legacy custom data collection API will be retired in September 2026. Centrally manage and distribute Sentinel content across multiple tenants (public preview) For partners and SOCs managing multiple Sentinel tenants, you can centrally manage and distribute Sentinel content across multiple tenants from the Microsoft Defender portal.\u200b With multi-tenant content distribution, you can replicate analytics rules, automation rules, workbooks, and alert tuning rules across tenants instead of rebuilding the same detections, automation, and dashboards in one environment at a time. This helps you onboard new tenants faster, reduce configuration drift, and maintain a consistent security baseline while still keeping local execution in each target tenant under centralized control.\u200b Learn more: New content types supported in multi-tenant content distribution Find high-risk anomalous behavior faster with an enhanced UEBA essentials solution (public preview) UEBA Essentials solution now helps SOC teams uncover high\u2011risk anomalous behavior faster across Azure, AWS, GCP, and Okta. With expanded multi-cloud anomaly detection and new queries powered by the anomalies table, analysts can quickly surface the riskiest activity, establish reliable behavioral baselines, and understand anomalies in context without chasing noisy or disconnected signals. UEBA Essentials aligns activity to MITRE ATT&CK, highlights complex malicious IP patterns, and builds a comprehensive anomaly profile for users in seconds, reducing investigation time while improving signal quality across identity and cloud environments. UEBA Essentials is available directly from the Sentinel content hub, with 30+ prebuilt UEBA queries ready to deploy. Behavior analytics can be enabled automatically from the connectors page as new data sources are added, making it easy to turn deeper insight into immediate action. For more information, see: UEBA Solution Power Boost: Practical Tools for Anomaly Detection Extend Sentinel with partner-built Security Copilot agents in Microsoft Security Store (general availability) You can extend Sentinel with partner-built Security Copilot agents that are discoverable and deployable through Microsoft Security Store in the Defender experience . These AI-powered agents are created by trusted partners specifically to work with Sentinel to deliver packaged expertise for investigation, triage, and response without requiring you to build your own agentic workflows from scratch. These partner-built agents work with Sentinel analytics and incidents to help SOC teams triage faster, investigate deeper, and surface insights that would otherwise take hours of manual effort. For example, these agents can review Sentinel and Defender environments, map attacker activity, or automate forensic analysis and SOC reporting. BlueVoyant\u2019s Watchtower agent helps optimize Sentinel and Defender configurations, AdaQuest\u2019s Data Leak agent accelerates response by surfacing risky data exposure and identity misuse, and Glueckkanja\u2019s Attack Mapping agent automatically maps fragmented entities and attacker behavior into a coherent investigation story. Together, these agents show how the Security Store turns partner innovation into enterprise-ready, Security Copilot-powered capabilities that you can use in your existing SOC workflows. Browse these and more partner-built Security Copilot agents in the Security Store within the Defender portal. At Ignite, we announced the native integration of Security Store within the Defender portal. Read more about the GA announcement here: Microsoft Security Store: Now Generally Available Explore Sentinel experience Enhanced reports in the Threat Intelligence Briefing Agent (general availability ) The Threat Intelligence Briefing Agent now applies a structured knowledge graph to Microsoft Defender for Threat Intelligence, enabling it to surface fresher, more relevant threats tailored to a customer\u2019s specific industry and region. Building on this foundation, the agent also features embedded, high\u2011fidelity Microsoft Threat Intelligence citations, providing authoritative context directly within each insight. With these advancements, security teams gain clearer, more actionable guidance and mitigation steps through context\u2011rich insights aligned to their environment, helping them focus on what matters most and respond more confidently to emerging threats. Learn more: Microsoft Security Copilot Threat Intelligence Briefing Agent in Microsoft Defender Microsoft Purview Data Security Investigations (DSI) integrated with Sentinel graph (general availability) Sentinel now brings together data\u2011centric and threat\u2011centric insights to help teams understand risk faster and respond with more confidence. By combining AI\u2011powered deep content analysis from Microsoft Purview with activity\u2011centric graph analytics in Sentinel, security teams can identify sensitive or risky data, see how it was accessed, moved, or exposed, and take action from a single experience. This gives SOC and data security teams a full, contextual view of the potential blast radius, connecting what happened to the data with who accessed it and how, so investigations are faster, clearer, and more actionable. Start using the Microsoft Purview Data Security Investigations (DSI) integration with the Sentinel graph to give your analysts richer context and streamline end\u2011to\u2011end data risk investigations. Deadline to migrate the Sentinel experience from Azure to Defender extended to March 2027 To reduce friction and support customers of all sizes, we are extending the sunset date for managing Sentinel in the Azure portal to March 31, 2027 . This additional time ensures customers can transition confidently while taking advantage of new capabilities that are becoming available in the Defender portal. Learn more about this decision, why you should start planning your move today, and find helpful resources here: UPDATE: New timeline for transitioning Sentinel experience to Defender portal Events and webinars Stay connected with the latest security innovations and best practices through global conferences and expert\u2011led sessions that bring the community together to learn, connect, and explore how Microsoft is delivering AI\u2011driven, end\u2011to\u2011end security for the modern enterprise. Join us at RSAC, March 23\u201326, 2026 at the Moscone Center in San Francisco Register for RSAC and stop by the Microsoft booth to see our latest security innovations in action. Learn how Sentinel SIEM and platform help organizations stay ahead of threats, simplify operations, and protect what matters most. Register today! Microsoft Security Webinars Discover upcoming sessions on Sentinel SIEM & platform, Defender, and more. Sign up today and be part of the conversation that shapes security for everyone. Learn more about upcoming webinars. Additional resources Blogs: UPDATE: New timeline for transitioning Sentinel experience to Defender portal , Accelerate your move to Microsoft Sentinel with AI-powered SIEM migration tool , Automating Microsoft Sentinel: A blog series on enabling Smart Security , The Agentic SOC Era: How Sentinel MCP Enables Autonomous Security Reasoning Documentation: What Is a Security Graph? , SIEM migration tool , Onboarding to Microsoft Sentinel data lake from the Defender portal Stay connected Check back each month for the latest innovations, updates, and events to ensure you\u2019re getting the most out of Sentinel. We\u2019ll see you in the next edition!",
+      "link": "https://techcommunity.microsoft.com/t5/microsoft-sentinel-blog/what-s-new-in-microsoft-sentinel-february-2026/ba-p/4494218",
+      "source": "Microsoft Sentinel Blog",
+      "type": "vendors",
+      "type_label": "Vendors & Product Blogs",
+      "published": "2026-02-12T19:27:16+00:00",
+      "published_ts": 1770924436,
+      "smart_groups": [
+        "Curated",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "Linux / Unix",
+        "Cloud / SaaS",
+        "Network / OT / ICS",
+        "Data Breaches / Leaks"
+      ],
+      "curated": true
+    },
+    {
+      "title": "This USB-C accessory gave my iPhone and Android a surprisingly useful functionality",
+      "summary": "If you enjoy being outdoors but are prone to insect bites, this unusual accessory could make a big difference.",
+      "link": "https://www.zdnet.com/article/heat-it-insect-bite-healer-review/",
+      "source": "ZDNet \u2013 Security",
+      "type": "general",
+      "type_label": "General Security & Blogs",
+      "published": "2026-02-12T19:22:00+00:00",
+      "published_ts": 1770924120,
+      "smart_groups": [
+        "Identity / Access"
+      ],
+      "curated": false
+    },
+    {
+      "title": "Cyber Model Arena",
+      "summary": "submitted by /u/Level_Bunch2894 [link] [comments]",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1r32qga/cyber_model_arena/",
+      "source": "/r/cybersecurity",
+      "type": "osint",
+      "type_label": "OSINT, Communities & Subreddits",
+      "published": "2026-02-12T19:21:59+00:00",
+      "published_ts": 1770924119,
+      "smart_groups": [],
+      "curated": false
+    },
+    {
+      "title": "Romania's oil pipeline operator Conpet confirms data stolen in attack",
+      "summary": "Romania's national oil pipeline operator, Conpet S.A., confirmed that the Qilin ransomware gang stole company data in an attack last week. [...]",
+      "link": "https://www.bleepingcomputer.com/news/security/romanias-oil-pipeline-operator-conpet-confirms-data-stolen-in-attack/",
+      "source": "BleepingComputer",
+      "type": "general",
+      "type_label": "General Security & Blogs",
+      "published": "2026-02-12T19:16:38+00:00",
+      "published_ts": 1770923798,
+      "smart_groups": [
+        "Curated",
+        "Ransomware"
+      ],
+      "curated": true
+    },
+    {
+      "title": "\u2018Dead\u2019 Outlook add-in hijacked to phish 4,000 Microsoft Office Store users",
+      "summary": "A blind spot in Microsoft\u2019s app and add-in marketplace security allowed an eagle-eyed hacker to hijack an abandoned Outlook add-in to carry out phishing attacks that compromised 4,000 users, researchers have discovered. The app in question, AgreeTo, is, or was, a meeting scheduling tool that first appeared in 2022 but was abandoned at some point after that by its developer. Despite this, the add-in continued to be listed on Microsoft\u2019s site. A hacker noticed the change in its status and hijacked the dead add-in and its 4.71-star rating to conduct a phishing campaign that the company which uncovered the attack , plug-in security company Koi Security, later discovered had successfully stolen thousands of Microsoft account credentials. Was it a clever takeover by a sophisticated attacker? In fact, according to Koi Security, the hijack was easy, thanks to weaknesses in the process through which developers submit add-ins to Microsoft\u2019s marketplace. Submitting an add-in to Microsoft merely involves sending a simple XML manifest that lists the add-in\u2019s name and description, the URL from which it is downloaded, and any permissions it needs. No code is uploaded for assessment. AgreeTo\u2019s manifest simply linked to a subdomain URL, outlook-one.vercel.app , hosted on the Vercel development platform, from which users download the software. \u201cMicrosoft reviews the manifest, signs it, and lists the add-in in their store. But the actual content \u2013 the UI, the logic, everything the user interacts with \u2013 is fetched live from the developer\u2019s server every time the add-in opens,\u201d said Koi Security\u2019s researchers. Orphaned URL By grabbing the abandoned subdomain, the attacker gained control of whatever the URL in the original manifest pointed to. This content was replaced with a new URL pointing to a phishing kit comprising a fake Microsoft sign-in page for password collection, an exfiltration script, and a redirect. The original manifest also granted the attacker permission to read and modify emails. \u201cThey didn\u2019t submit anything to Microsoft. They weren\u2019t required to pass any review. They didn\u2019t create a store listing. The listing already existed \u2013 Microsoft-reviewed, Microsoft-signed, Microsoft-distributed. The attacker just claimed an orphaned URL, and Microsoft\u2019s infrastructure did the rest,\u201d said Koi Security. Phished credentials and victim IP addresses were automatically sent to the attacker via a simple Telegram bot, without the need for complex command & control, Koi Security said. The researchers were able to get inside this infrastructure, discovering that 4,000 victims had fallen into the attacker\u2019s phishing trap; all were later contacted by Koi Security to warn that their credentials had been compromised. The same attacker was found to be operating 12 different phishing kits impersonating a variety of banks and webmail providers, Koi Security added. Data stolen from these sites included credit card numbers, CVVs, PINs, and banking security answers used by recipients to receive payments made via the Interac e-Transfer system, as well as password credentials. The weakness revealed by the AgreeTo hijack is Microsoft\u2019s add-in delivery architecture; it just distributes a simple, and potentially unreliable, URL. Because of this, Koi Security pointed out, \u201can add-in that\u2019s clean on Monday can serve a phishing page on Tuesday \u2013 or, as in this case, years later. Microsoft reviews the manifest at submission, but the actual content can change at any time without further review.\u201d Ironically, the weakness was identified as long ago as 2019 by another security company, MDSec . AgreeTo is believed to be the first malicious Outlook add-in ever discovered on the Microsoft Marketplace, which might explain why deeper URL checking wasn\u2019t implemented after this research. As of February 12, the AgreeTo add-in is no longer available from Microsoft Marketplace. Anyone still using AgreeTo is advised to remove it as soon as possible, and to reset their Microsoft account passwords. A separate AgreeTo extension for Chrome stopped working in 2024; Google removed it in February 2025. This article originally appeared on Computerworld .",
+      "link": "https://www.csoonline.com/article/4131632/dead-outlook-add-in-hijacked-to-phish-4000-microsoft-office-store-users-2.html",
+      "source": "CSO Online",
+      "type": "general",
+      "type_label": "General Security & Blogs",
+      "published": "2026-02-12T19:15:12+00:00",
+      "published_ts": 1770923712,
+      "smart_groups": [
+        "Curated",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "Phishing / Social Engineering"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Hacker linked to Epstein removed from Black Hat cyber conference website",
+      "summary": "Emails published by the Justice Department revealed cybersecurity veteran Vincenzo Iozzo emailed, and arranged to meet, Jeffrey Epstein multiple times between 2014 and 2018.",
+      "link": "https://techcrunch.com/2026/02/12/hacker-linked-to-epstein-removed-from-black-hat-cyber-conference-website/",
+      "source": "Security News | TechCrunch",
+      "type": "general",
+      "type_label": "General Security & Blogs",
+      "published": "2026-02-12T19:15:04+00:00",
+      "published_ts": 1770923704,
+      "smart_groups": [],
+      "curated": false
+    },
+    {
+      "title": "Microsoft\u2019s February Patch Tuesday Fixes 6 Zero-Days Under Attack",
+      "summary": "Microsoft patches 58 vulnerabilities, including six actively exploited zero-days across Windows, Office, and RDP, as CISA sets a March 3 deadline. The post Microsoft\u2019s February Patch Tuesday Fixes 6 Zero-Days Under Attack appeared first on TechRepublic .",
+      "link": "https://www.techrepublic.com/article/news-microsoft-patch-tuesday-six-zero-days-february-2026/",
+      "source": "TechRepublic \u2013 Security",
+      "type": "general",
+      "type_label": "General Security & Blogs",
+      "published": "2026-02-12T19:13:55+00:00",
+      "published_ts": 1770923635,
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Windows / Microsoft"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Ethereum Treasury Firm ETHZilla Pivots to Jet Engine Lease Tokenization as ETH Sinks",
+      "summary": "Publicly traded Ethereum treasury firm ETHZilla is tokenizing equity in jet engines that it is leasing to a major air carrier.",
+      "link": "https://decrypt.co/357907/ethereum-treasury-ethzilla-pivots-jet-engine-leasing-eth-sinks",
+      "source": "Decrypt",
+      "type": "crypto",
+      "type_label": "Crypto & Blockchain Security",
+      "published": "2026-02-12T19:07:49+00:00",
+      "published_ts": 1770923269,
+      "smart_groups": [],
+      "curated": false
+    },
+    {
+      "title": "Your LG TV is getting a big visual upgrade for free - these OLED models included",
+      "summary": "The update makes popular OLED TVs play Dolby Vision content a lot more vividly.",
+      "link": "https://www.zdnet.com/article/lg-tv-picture-quality-upgrade/",
+      "source": "ZDNet \u2013 Security",
+      "type": "general",
+      "type_label": "General Security & Blogs",
+      "published": "2026-02-12T19:04:00+00:00",
+      "published_ts": 1770923040,
+      "smart_groups": [],
+      "curated": false
+    },
+    {
+      "title": "Cango raises $75.5M as Bitcoin miner makes AI infrastructure pivot",
+      "summary": "The funding follows a $305 million Bitcoin sale and increases a key investor\u2019s voting power to nearly 50%, as the company restructures its balance sheet amid sector volatility.",
+      "link": "https://cointelegraph.com/news/cango-raises-75-5m-in-equity-as-bitcoin-miner-pivots-toward-ai-infrastructure?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound",
+      "source": "Cointelegraph.com News",
+      "type": "crypto",
+      "type_label": "Crypto & Blockchain Security",
+      "published": "2026-02-12T18:57:56+00:00",
+      "published_ts": 1770922676,
+      "smart_groups": [],
+      "curated": false
+    },
+    {
+      "title": "ETH ETF holders in \u2018worse position\u2019 than BTC ETF peers as crypto market looks for bottom",
+      "summary": "Bitcoin and Ether spot ETF holders are nursing steep losses as the market continues to search for a local bottom, but data from Bloomberg suggests neither cohort is capitulating.",
+      "link": "https://cointelegraph.com/news/eth-etf-holders-in-worse-position-than-btc-etf-peers-as-crypto-market-looks-for-bottom?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound",
+      "source": "Cointelegraph.com News",
+      "type": "crypto",
+      "type_label": "Crypto & Blockchain Security",
+      "published": "2026-02-12T18:45:00+00:00",
+      "published_ts": 1770921900,
+      "smart_groups": [
+        "Ransomware"
+      ],
+      "curated": false
+    },
+    {
+      "title": "Neue Warn-App f\u00fcr Cybervorf\u00e4lle gestartet",
+      "summary": "Die neue CYROS-App verkn\u00fcpft Sicherheitswarnungen von Beh\u00f6rden und Fachquellen, um \u00fcber Cybersicherheitsvorf\u00e4lle zu informieren. Rawat Yapathanasap \u2013 shutterstock.com Ransomware-Attacken, Phishing und digitale Sabotage: Vor dem Hintergrund der zunehmenden Cyberbedrohungslage hat das Frankfurter Cyberintelligence Institute (CII) ein digitales Warnsystem namens Cyber Risk Observation Service (CYROS) f\u00fcr Smartphones entwickelt. Die CYROS-App b\u00fcndelt alle sicherheitsrelevanten Informationen aus beh\u00f6rdlichen Warnmeldungen. Zu den Quellen z\u00e4hlen unter anderem das Bundesamt f\u00fcr Sicherheit in der Informationstechnik (BSI), Verbraucherschutzorganisationen und Sicherheitsunternehmen sowie zuk\u00fcnftig auch die Security Operations Center (SOC) von Datagroup. Die Warnmeldungen werden dabei laut CII mit passgenauen Informationen und Hilfestellungen verkn\u00fcpf. \u201eEs gibt bereits viele Unterst\u00fctzungsangebote, oftmals sind sie aber nur schwer auffindbar, wenn sie gebraucht werden\u201d, erkl\u00e4rt CII-Forschungsdirektor Dennis-Kenji Kipker. Um die Auffindbarkeit weiter zu vereinfachen, sortiert CYROS aktuelle Meldungen zudem nach Themen, Lebensbereiche und Bundesland. \u201cJeder Cybervorfall verdeutlicht die Dringlichkeit zum eigenen Handeln, zu dem CYROS konkret bef\u00e4higt\u201d erkl\u00e4rt auch Dino Huber vom CYROS-Projektpartner Datagroup. Damit st\u00e4rke die App auch die Cybersicherheit in Deutschland insgesamt. Die App ist ab sofort \u00fcber die g\u00e4ngigen App-Stores kostenfrei verf\u00fcgbar, Au\u00dferdem sind die Meldungen auch online unter cyros-warnapp.de zug\u00e4nglich.",
+      "link": "https://www.csoonline.com/article/4130104/neue-warn-app-fur-cybervorfalle-gestartet.html",
+      "source": "CSO Online",
+      "type": "general",
+      "type_label": "General Security & Blogs",
+      "published": "2026-02-12T18:45:00+00:00",
+      "published_ts": 1770921900,
+      "smart_groups": [
+        "Curated",
+        "Ransomware",
+        "Phishing / Social Engineering"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Apple fixes zero-day that exploited OS bug in open-source code",
+      "summary": "Apple patches exploited zero-day in open-source component across iOS, macOS, watchOS.",
+      "link": "https://www.scworld.com/news/apple-fixes-zero-day-that-exploited-os-bug-in-open-source-code",
+      "source": "SCM feed for Latest",
+      "type": "general",
+      "type_label": "General Security & Blogs",
+      "published": "2026-02-12T18:39:03+00:00",
+      "published_ts": 1770921543,
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": true
+    },
+    {
+      "title": "fireflies.ai note taking app housing biometrics and voice prints.",
+      "summary": "Curious what people think of this type of lawsuit against fireflies.ai. This software is so scammy. Or it would seem to be a huge security issue for IP in corporations. Where exactly does the data go? https://www.dataprivacyandsecurityinsider.com/2025/12/lawsuit-alleges-fireflies-ai-corp-illegally-collects-biometric-data-from-virtual-meetings/ submitted by /u/uqubar [link] [comments]",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1r31eme/firefliesai_note_taking_app_housing_biometrics/",
+      "source": "/r/cybersecurity",
+      "type": "osint",
+      "type_label": "OSINT, Communities & Subreddits",
+      "published": "2026-02-12T18:33:33+00:00",
+      "published_ts": 1770921213,
+      "smart_groups": [
+        "Cloud / SaaS",
+        "Network / OT / ICS"
+      ],
+      "curated": false
+    },
+    {
+      "title": "Dutch mobile phone giant Odido announces data breach",
+      "summary": "In a statement about the incident, Odido CEO S\u00f8ren Abildgaard said names, bank account numbers, addresses, mobile numbers, email addresses, account numbers and IDs were stolen.",
+      "link": "https://therecord.media/dutch-telecom-giant-announces-data-breach",
+      "source": "The Record \u2013 Cybercrime",
+      "type": "cybercrime",
+      "type_label": "Cybercrime, Darknet & Leaks",
+      "published": "2026-02-12T18:27:29+00:00",
+      "published_ts": 1770920849,
+      "smart_groups": [
+        "Data Breaches / Leaks"
+      ],
+      "curated": false
+    },
+    {
       "title": "Meet the HTB Profile: all your skills, in one place",
       "summary": "New HTB Profile: one portfolio for Machines, Academy, Pro Labs & certs, plus verified top skills. Upgrade yours and show recruiters proof.",
       "link": "https://www.hackthebox.com/blog/introducing-htb-profile",
       "source": "Hack The Box \u2013 Blog",
       "type": "vendors",
       "type_label": "Vendors & Product Blogs",
-      "published": "2026-02-12T18:24:01+00:00",
-      "published_ts": 1770920641,
+      "published": "2026-02-12T18:24:52+00:00",
+      "published_ts": 1770920692,
       "smart_groups": [],
       "curated": false
+    },
+    {
+      "title": "Career Guidance",
+      "summary": "As the title states, I\u2019m really not sure the next steps I need to take. For background, I graduated with a bachelors degree in computer science and recently discovered I\u2019d like to get a masters in cyber security after a bit of research into different fields. This would be starting in the fall, so I decided to look for summer internships. However, I don\u2019t have background experience in IT or cyber, along with no certifications, so I was wondering where to start. I am open to anything including help desk etc. I plan to work on certifications in the upcoming weeks, but I don\u2019t want to miss the summer internship deadlines. Any information is helpful. Thanks! submitted by /u/Muted_Mix9537 [link] [comments]",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1r315oe/career_guidance/",
+      "source": "/r/cybersecurity",
+      "type": "osint",
+      "type_label": "OSINT, Communities & Subreddits",
+      "published": "2026-02-12T18:24:41+00:00",
+      "published_ts": 1770920681,
+      "smart_groups": [],
+      "curated": false
+    },
+    {
+      "title": "Odido data breach exposes personal info of 6.2 million customers",
+      "summary": "Dutch telecommunications provider Odido is warning that it suffered a cyberattack that reportedly exposed the personal data of 6.2 million customers. [...]",
+      "link": "https://www.bleepingcomputer.com/news/security/odido-data-breach-exposes-personal-info-of-62-million-customers/",
+      "source": "BleepingComputer",
+      "type": "general",
+      "type_label": "General Security & Blogs",
+      "published": "2026-02-12T18:18:14+00:00",
+      "published_ts": 1770920294,
+      "smart_groups": [
+        "Data Breaches / Leaks"
+      ],
+      "curated": false
+    },
+    {
+      "title": "ClawHub skills are the new npm/PyPI malware vector - 15% malicious rate found",
+      "summary": "Been tracking the AI agent security space since the OpenClaw hype started and the Gen Threat Labs research that dropped recently has me genuinely concerned. They're reporting nearly 15% of community-built skills contain malicious instructions, with the common patterns being prompts to download additional malware and exfiltrate data. For context, npm and PyPI typically hover around 1-2% malicious package rate at any given time, so this is significantly worse. Though I'll note they didn't publish their full methodology so take the exact number with some skepticism, but even if it's half that it's still a mess. The parallels to traditional supply chain attacks are almost 1:1. Untrusted third party code with no security review before publication. Removed malicious packages rapidly republishing under new identities, same pattern we saw with ua-parser-js and event-stream. Download counts on ClawHub are trivially fakeable via unauthenticated requests, so trust signals mean nothing. And users are installing capabilities without any real verification process. What makes this worse than your typical supply chain problem is the blast radius. When you install a malicious npm package, it runs in your project context. When you install a malicious OpenClaw skill, it runs with whatever permissions your agent has: files, shell commands, browser sessions, messaging platforms. The attack surface is fundamentally broader. Gen is calling this pattern \"Delegated Compromise\" where attackers target the agent to inherit all its granted permissions. Honestly not sure if that framing is just marketing speak or a genuinely useful distinction, but the underlying risk is real regardless of what you call it. Over 18,000 OpenClaw instances are currently internet-exposed according to the same research. Combined with a 700+ skill ecosystem that has zero security expert review, this feels like watching the early days of npm security problems but with everything cranked up. The OpenClaw FAQ literally calls this a \"Faustian bargain\" with no \"perfectly safe\" configuration. At least they're honest about it, but that honesty doesn't help the teams who deployed this in production environments. For my own setup I've been running agents in isolated VMs on a separate VLAN that can only reach specific external APIs through an allowlist proxy. Biggest headache is that half the useful skills expect arbitrary outbound access so you end up either neutering the functionality or punching holes in your isolation. Manual review of skill source before installing anything. Pain in the ass but the alternative is trusting random GitHub repos with shell access. Saw Gen put out some scanner thing called Agent Trust Hub that supposedly checks against OWASP standards but I'm skeptical any static analysis catches sophisticated payloads. The republishing problem alone means you'd need continuous scanning, not just install time checks. For those actually running OpenClaw with real system access, what does your vetting process look like? Manual code review? Sandboxing? Allowlisting specific skill authors you trust? Or just yolo and hope the community catches the bad stuff first? submitted by /u/Ill_Awareness6706 [link] [comments]",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1r30wme/clawhub_skills_are_the_new_npmpypi_malware_vector/",
+      "source": "/r/cybersecurity",
+      "type": "osint",
+      "type_label": "OSINT, Communities & Subreddits",
+      "published": "2026-02-12T18:15:45+00:00",
+      "published_ts": 1770920145,
+      "smart_groups": [
+        "Curated",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "Malware / Payloads",
+        "Supply Chain / Software"
+      ],
+      "curated": true
     },
     {
       "title": "Introducing AI Cyber Model Arena: A Real-World Benchmark for AI Agents in Cybersecurity",
@@ -307,6 +745,20 @@
         "Vulnerabilities / CVEs"
       ],
       "curated": true
+    },
+    {
+      "title": "Odido Telecom Suffers Cyberattack \u2013 6.2 Million Customer Accounts Affected",
+      "summary": "Odido Telecom, a leading Dutch telecommunications provider, confirmed on February 12, 2026, that hackers accessed personal data from 6.2 million customer accounts in a major cyberattack. The breach, detected over the February 7-8 weekend, has raised alarms about phishing risks despite no disruption to services. Hackers infiltrated Odido\u2019s customer relationship management system, downloading sensitive information [\u2026] The post Odido Telecom Suffers Cyberattack \u2013 6.2 Million Customer Accounts Affected appeared first on Cyber Security News .",
+      "link": "https://cybersecuritynews.com/odido-telecom-suffers-cyberattack/",
+      "source": "Cyber Security News (FeedBurner)",
+      "type": "general",
+      "type_label": "General Security & Blogs",
+      "published": "2026-02-12T17:23:33+00:00",
+      "published_ts": 1770917013,
+      "smart_groups": [
+        "Phishing / Social Engineering"
+      ],
+      "curated": false
     },
     {
       "title": "Course Review: Breaching the Cloud With Beau Bullock",
@@ -606,18 +1058,6 @@
         "Exploit / PoC"
       ],
       "curated": true
-    },
-    {
-      "title": "Your LG OLED TV may be getting a big upgrade to its picture quality - for free",
-      "summary": "The update makes Dolby Vision content a lot more vivid.",
-      "link": "https://www.zdnet.com/article/lg-tv-picture-quality-upgrade/",
-      "source": "ZDNet \u2013 Security",
-      "type": "general",
-      "type_label": "General Security & Blogs",
-      "published": "2026-02-12T16:41:00+00:00",
-      "published_ts": 1770914460,
-      "smart_groups": [],
-      "curated": false
     },
     {
       "title": "DShield Sensor Captures Self-Propagating SSH Worm Exploit Using Credential Stuffing and Multi-Stage Malware",
@@ -1309,6 +1749,21 @@
       "curated": true
     },
     {
+      "title": "Upholding U.S. SLTT Resilience with Affordable Services",
+      "summary": "The MS-ISAC bridges the U.S. SLTT resilience gap by offering under-resourced organizations access to affordable services. Read to learn more.",
+      "link": "https://www.cisecurity.org/insights/blog/upholding-us-sltt-resilience-with-affordable-services",
+      "source": "Blog Feed - Center for Internet Security",
+      "type": "general",
+      "type_label": "General Security & Blogs",
+      "published": "2026-02-12T14:40:00+00:00",
+      "published_ts": 1770907200,
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
       "title": "These XR glasses gave me a 500-inch screen to work with during my commutes",
       "summary": "Delivering a superb 3D experience at a reasonable price, the Xreal 1S set a new bar for sub-$500 XR glasses.",
       "link": "https://www.zdnet.com/article/xreal-1s-xr-glasses-review/",
@@ -1421,6 +1876,18 @@
       "smart_groups": [
         "Crypto / Web3"
       ],
+      "curated": false
+    },
+    {
+      "title": "Introducing Markdown for Agents",
+      "summary": "The way content is discovered online is shifting, from traditional search engines to AI agents that need structured data from a Web built for humans. It\u2019s time to consider not just human visitors, but start to treat agents as first-class citizens. Markdown for Agents automatically converts any HTML page requested from our network to markdown.",
+      "link": "https://blog.cloudflare.com/markdown-for-agents/",
+      "source": "The Cloudflare Blog",
+      "type": "general",
+      "type_label": "General Security & Blogs",
+      "published": "2026-02-12T14:03:12+00:00",
+      "published_ts": 1770904992,
+      "smart_groups": [],
       "curated": false
     },
     {
@@ -3414,6 +3881,20 @@
       "curated": false
     },
     {
+      "title": "Bypassing Administrator Protection by Abusing UI Access",
+      "summary": "In my last blog post I introduced the new Windows feature, Administrator Protection and how it aimed to create a secure boundary for UAC where one didn\u2019t exist. I described one of the ways I was able to bypass the feature before it was released. In total I found 9 bypasses during my research that have now all been fixed. In this blog post I wanted to describe the root cause of 5 of those 9 issues, specifically the implementation of UI Access, how this has been a long standing problem with UAC that\u2019s been under-appreciated, and how it\u2019s being fixed now. A Question of Accessibility Prior to Windows Vista any process running on a user\u2019s desktop could control any window created by another, such as by sending window messages. This behavior could be abused if a privileged user, such as SYSTEM, displayed a user interface on the desktop. A limited user could control the UI and potentially elevate privileges. This was referred to as a Shatter Attack, and was usually fixed by removing user interface components from privileged code.",
+      "link": "https://projectzero.google/2026/02/windows-administrator-protection.html",
+      "source": "Google Project Zero",
+      "type": "vendors",
+      "type_label": "Vendors & Product Blogs",
+      "published": "2026-02-12T08:00:00+00:00",
+      "published_ts": 1770883200,
+      "smart_groups": [
+        "Windows / Microsoft"
+      ],
+      "curated": false
+    },
+    {
       "title": "Quick IAM fundamentals knowledge check for security practitioners",
       "summary": "Sharing an IAM-focused knowledge check covering identity lifecycle, access governance, authentication, and privilege management. It\u2019s intended as a short fundamentals self-check for security practitioners. Disclosure: This is from ETCISO. Sharing purely as an educational resource. submitted by /u/Big_Hour_2429 [link] [comments]",
       "link": "https://www.reddit.com/r/netsec/comments/1r2nmpv/quick_iam_fundamentals_knowledge_check_for/",
@@ -4639,6 +5120,18 @@
         "Identity / Access"
       ],
       "curated": true
+    },
+    {
+      "title": "Monitor Fortinet FortiManager performance in Datadog",
+      "summary": "Monitor edge device health, link quality, SLA compliance and application performance with Datadog's Fortinet FortiManager SD-WAN integration.",
+      "link": "https://www.datadoghq.com/blog/fortinet-sdwan-integration/",
+      "source": "https://www.datadoghq.com/blog/index.xml",
+      "type": "vendors",
+      "type_label": "Vendors & Product Blogs",
+      "published": "2026-02-12T00:00:00+00:00",
+      "published_ts": 1770854400,
+      "smart_groups": [],
+      "curated": false
     },
     {
       "title": "Live Response - The certificate chain was issued by an authority that is not trusted",
@@ -6280,26 +6773,6 @@
         "Exploit / PoC",
         "Windows / Microsoft",
         "Identity / Access"
-      ],
-      "curated": true
-    },
-    {
-      "title": "What\u2019s new in Microsoft Sentinel: February 2026",
-      "summary": "February brings a set of new innovations to Sentinel that helps you work with security content across your SOC . This month\u2019s updates focus on how security teams ingest, manage, and operationalize content, with new connectors, multi-tenant content distribution capabilities, and an enhanced UEBA Essentials solution to surface high\u2011risk behavior faster across cloud and identity environments. We\u2019re also introducing new partner-built agentic experiences available through Microsoft Security Store, enabling customers to extend Sentinel with specialized expertise directly inside their existing workflows. Together, these innovations help SOC teams move faster, scale smarter, and unlock deeper security insight without added complexity. Expand your visibility and capabilities with Sentinel content Seamlessly onboard security data with growing out-of-the-box connectors (general availability) Sentinel continues to expand its connector ecosystem, making it easier for security teams to bring together data from across cloud, SaaS, and on-premises\u2011premises environments so nothing critical slips through the cracks. With broader coverage and faster onboarding, SOCs can unlock unified visibility, stronger analytics, and deeper context across their entire security stack. Customers can now use out-of-the-box connectors and solutions for: o Mimecast Audit Logs o CrowdStrike Falcon Endpoint Protection o Vectra XDR o Palo Alto Networks Cloud NGFW o SocPrime o Proofpoint on Demand (POD) Email Security o Pathlock o MongoDB o Contrast ADR For the full list of connectors, see our documentation . Share your input on what to prioritize next with our App Assure team . Microsoft 365 Copilot data connector (public preview) The Microsoft 365 Copilot connector brings Microsoft 365 Copilot audit logs and activity data into Sentinel, giving security teams visibility into how Microsoft 365 Copilot is being used across their organization. Once ingested, this data can power analytics rules, custom detections, workbooks, automation, and investigations, helping SOC teams quickly spot anomalies, misuse, and policy violations. Customers can also send this data to the Sentinel data lake for advanced scenarios, such as custom graphs and MCP integrations, while benefiting from lower cost ingestion and flexible retention. Learn more here. Transition your Sentinel connectors to the codeless connector framework (CCF) Microsoft is modernizing data connectors by shifting from Azure Function based connectors to the codeless connector framework (CCF). CCF enables partners, customers, and developers to build custom connectors that ingest data into Sentinel with a fully SaaS managed experience, built-in health monitoring, centralized credential management, and enhanced performance. We recommend that customers review their deployed connectors and move to the latest CCF versions to ensure uninterrupted data collection and continued access to the latest Sentinel capabilities. As part of Azure\u2019s modernization of custom data collection, the legacy custom data collection API will be retired in September 2026. Centrally manage and distribute Sentinel content across multiple tenants (public preview) For partners and SOCs managing multiple Sentinel tenants, you can centrally manage and distribute Sentinel content across multiple tenants from the Microsoft Defender portal.\u200b With multi-tenant content distribution, you can replicate analytics rules, automation rules, workbooks, and alert tuning rules across tenants instead of rebuilding the same detections, automation, and dashboards in one environment at a time. This helps you onboard new tenants faster, reduce configuration drift, and maintain a consistent security baseline while still keeping local execution in each target tenant under centralized control.\u200b Learn more: New content types supported in multi-tenant content distribution Find high-risk anomalous behavior faster with an enhanced UEBA essentials solution (public preview) UEBA Essentials solution now helps SOC teams uncover high\u2011risk anomalous behavior faster across Azure, AWS, GCP, and Okta. With expanded multi-cloud anomaly detection and new queries powered by the anomalies table, analysts can quickly surface the riskiest activity, establish reliable behavioral baselines, and understand anomalies in context without chasing noisy or disconnected signals. UEBA Essentials aligns activity to MITRE ATT&CK, highlights complex malicious IP patterns, and builds a comprehensive anomaly profile for users in seconds, reducing investigation time while improving signal quality across identity and cloud environments. UEBA Essentials is available directly from the Sentinel content hub, with 30+ prebuilt UEBA queries ready to deploy. Behavior analytics can be enabled automatically from the connectors page as new data sources are added, making it easy to turn deeper insight into immediate action. For more information, see: UEBA Solution Power Boost: Practical Tools for Anomaly Detection Extend Sentinel with partner-built Security Copilot agents in Microsoft Security Store (general availability) You can extend Sentinel with partner-built Security Copilot agents that are discoverable and deployable through Microsoft Security Store in the Defender experience . These AI-powered agents are created by trusted partners specifically to work with Sentinel to deliver packaged expertise for investigation, triage, and response without requiring you to build your own agentic workflows from scratch. These partner-built agents work with Sentinel analytics and incidents to help SOC teams triage faster, investigate deeper, and surface insights that would otherwise take hours of manual effort. For example, these agents can review Sentinel and Defender environments, map attacker activity, or automate forensic analysis and SOC reporting. BlueVoyant\u2019s Watchtower agent helps optimize Sentinel and Defender configurations, AdaQuest\u2019s Data Leak agent accelerates response by surfacing risky data exposure and identity misuse, and Glueckkanja\u2019s Attack Mapping agent automatically maps fragmented entities and attacker behavior into a coherent investigation story. Together, these agents show how the Security Store turns partner innovation into enterprise-ready, Security Copilot-powered capabilities that you can use in your existing SOC workflows. Browse these and more partner-built Security Copilot agents in the Security Store within the Defender portal. At Ignite, we announced the native integration of Security Store within the Defender portal. Read more about the GA announcement here: Microsoft Security Store: Now Generally Available Explore Sentinel experience Enhanced reports in the Threat Intelligence Briefing Agent (general availability ) The Threat Intelligence Briefing Agent now applies a structured knowledge graph to Microsoft Defender for Threat Intelligence, enabling it to surface fresher, more relevant threats tailored to a customer\u2019s specific industry and region. Building on this foundation, the agent also features embedded, high\u2011fidelity Microsoft Threat Intelligence citations, providing authoritative context directly within each insight. With these advancements, security teams gain clearer, more actionable guidance and mitigation steps through context\u2011rich insights aligned to their environment, helping them focus on what matters most and respond more confidently to emerging threats. Learn more: Microsoft Security Copilot Threat Intelligence Briefing Agent in Microsoft Defender Microsoft Purview Data Security Investigations (DSI) integrated with Sentinel graph (general availability) Sentinel now brings together data\u2011centric and threat\u2011centric insights to help teams understand risk faster and respond with more confidence. By combining AI\u2011powered deep content analysis from Microsoft Purview with activity\u2011centric graph analytics in Sentinel, security teams can identify sensitive or risky data, see how it was accessed, moved, or exposed, and take action from a single experience. This gives SOC and data security teams a full, contextual view of the potential blast radius, connecting what happened to the data with who accessed it and how, so investigations are faster, clearer, and more actionable. Start using the Microsoft Purview Data Security Investigations (DSI) integration with the Sentinel graph to give your analysts richer context and streamline end\u2011to\u2011end data risk investigations. Deadline to migrate the Sentinel experience from Azure to Defender extended to March 2027 To reduce friction and support customers of all sizes, we are extending the sunset date for managing Sentinel in the Azure portal to March 31, 2027 . This additional time ensures customers can transition confidently while taking advantage of new capabilities that are becoming available in the Defender portal. Learn more about this decision, why you should start planning your move today, and find helpful resources here: UPDATE: New timeline for transitioning Sentinel experience to Defender portal Events and webinars Stay connected with the latest security innovations and best practices through global conferences and expert\u2011led sessions that bring the community together to learn, connect, and explore how Microsoft is delivering AI\u2011driven, end\u2011to\u2011end security for the modern enterprise. Join us at RSAC, March 23\u201326, 2026 at the Moscone Center in San Francisco Register for RSAC and stop by the Microsoft booth to see our latest security innovations in action. Learn how Sentinel SIEM and platform help organizations stay ahead of threats, simplify operations, and protect what matters most. Register today! Microsoft Security Webinars Discover upcoming sessions on Sentinel SIEM & platform, Defender, and more. Sign up today and be part of the conversation that shapes security for everyone. Learn more about upcoming webinars. Additional resources Blogs: UPDATE: New timeline for transitioning Sentinel experience to Defender portal , Accelerate your move to Microsoft Sentinel with AI-powered SIEM migration tool , Automating Microsoft Sentinel: A blog series on enabling Smart Security , The Agentic SOC Era: How Sentinel MCP Enables Autonomous Security Reasoning Documentation: What Is a Security Graph? , SIEM migration tool , Onboarding to Microsoft Sentinel data lake from the Defender portal Stay connected Check back each month for the latest innovations, updates, and events to ensure you\u2019re getting the most out of Sentinel. We\u2019ll see you in the next edition!",
-      "link": "https://techcommunity.microsoft.com/t5/microsoft-sentinel-blog/what-s-new-in-microsoft-sentinel-february-2026/ba-p/4494218",
-      "source": "Microsoft Sentinel Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-02-11T16:00:00+00:00",
-      "published_ts": 1770825600,
-      "smart_groups": [
-        "Curated",
-        "Ransomware",
-        "Vulnerabilities / CVEs",
-        "Linux / Unix",
-        "Cloud / SaaS",
-        "Network / OT / ICS",
-        "Data Breaches / Leaks"
       ],
       "curated": true
     },
@@ -21331,20 +21804,6 @@
       "published": "2026-02-08T02:30:51+00:00",
       "published_ts": 1770517851,
       "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "This USB-C accessory gave my iPhone and Android an unexpectedly useful superpower",
-      "summary": "If you enjoy being outdoors but are prone to insect bites, this unusual accessory could be a game-changer.",
-      "link": "https://www.zdnet.com/article/heat-it-insect-bite-healer-review/",
-      "source": "ZDNet \u2013 Security",
-      "type": "general",
-      "type_label": "General Security & Blogs",
-      "published": "2026-02-08T02:09:00+00:00",
-      "published_ts": 1770516540,
-      "smart_groups": [
-        "Identity / Access"
-      ],
       "curated": false
     },
     {
@@ -121451,524 +121910,6 @@
         "Crypto / Web3"
       ],
       "curated": false
-    },
-    {
-      "title": "Ukraine parliament approves resignation of security service chief in major reshuffle",
-      "summary": "Vasyl Maliuk, chief of the Security Service of Ukraine (SBU), said he would step down from the post but remain in the agency to continue operations against Russia.",
-      "link": "https://therecord.media/ukraine-parliament-approves-resignation-sbu-chief",
-      "source": "The Record",
-      "type": "general",
-      "type_label": "General Security & Blogs",
-      "published": "2026-01-13T19:45:16+00:00",
-      "published_ts": 1768333516,
-      "smart_groups": [
-        "Ransomware"
-      ],
-      "curated": false
-    },
-    {
-      "title": "I found the most useful parenting gadgets at CES 2026 - these are the ones I'd buy ASAP",
-      "summary": "From a real-time breastfeeding monitor to a robot that picks up toys, we've found some of the most interesting tech aimed at parents and children at CES.",
-      "link": "https://www.zdnet.com/article/most-exciting-parents-kids-tech-ces-2026/",
-      "source": "ZDNet \u2013 Security",
-      "type": "general",
-      "type_label": "General Security & Blogs",
-      "published": "2026-01-13T19:41:43+00:00",
-      "published_ts": 1768333303,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "SOL chart shows \u2018masterpiece\u2019 setup to $190 after key trend turns bullish",
-      "summary": "Steady ETF inflows, a bullish cup and handle chart pattern and improving sentiment across the total crypto market could propel Solana price to $190.",
-      "link": "https://cointelegraph.com/news/sol-chart-shows-masterpiece-setup-to-dollar190-after-key-trend-turns-bullish?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound",
-      "source": "Cointelegraph.com News",
-      "type": "crypto",
-      "type_label": "Crypto & Blockchain Security",
-      "published": "2026-01-13T19:40:34+00:00",
-      "published_ts": 1768333234,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "Threat actor claims the theft of full customer data from Spanish energy firm Endesa",
-      "summary": "Endesa disclosed a data breach exposing full customer data, including contact details, national ID numbers, and payment information. Spanish energy firm Endesa disclosed a data breach, threat actors stole full customer data, including contact details, national ID numbers, and payment information. \u201cIn this regard, we regret to inform you that Endesa Energ\u00eda has detected a [\u2026]",
-      "link": "https://securityaffairs.com/186861/cyber-crime/threat-actor-claims-the-theft-of-full-customer-data-from-spanish-energy-firm-endesa.html",
-      "source": "Security Affairs",
-      "type": "general",
-      "type_label": "General Security & Blogs",
-      "published": "2026-01-13T19:34:16+00:00",
-      "published_ts": 1768332856,
-      "smart_groups": [
-        "Data Breaches / Leaks"
-      ],
-      "curated": false
-    },
-    {
-      "title": "I built an AI-agent\u2013based automated pentesting platform \u2014 looking for honest feedback",
-      "summary": "Hey everyone, I\u2019m a cybersecurity master\u2019s student with an engineering background, and I like building things end-to-end. Over the past months I\u2019ve been working on an AI agent that can autonomously perform cybersecurity tasks , including attack surface discovery and automated penetration testing workflows . I recently put it into early access . It\u2019s still very early, but the core agent works and I\u2019d really value technical feedback from people who do security for real. I\u2019m not claiming this replaces human pentesters \u2014 my goal is to reduce noise, automate repetitive discovery, and surface meaningful signals faster. I\u2019d love feedback on: What feels useful vs. gimmicky Where you\u2019d never trust automation What would make something like this worth trying If anyone is interested in testing it or tearing it apart, I\u2019m happy to share access and answer technical questions. Thanks \u2014 and feel free to be blunt. website: nullsquare.net submitted by /u/IcyPop8985 [link] [comments]",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1qc0unz/i_built_an_aiagentbased_automated_pentesting/",
-      "source": "/r/cybersecurity",
-      "type": "osint",
-      "type_label": "OSINT, Communities & Subreddits",
-      "published": "2026-01-13T19:33:10+00:00",
-      "published_ts": 1768332790,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "A 60-second demo of this MagSafe accessory had me entranced - now it's going viral",
-      "summary": "The Mcon series by Ohsnap is a Bluetooth gaming controller that does more than just house your phone.",
-      "link": "https://www.zdnet.com/article/ohsnap-mcon-ces-2026/",
-      "source": "ZDNet \u2013 Security",
-      "type": "general",
-      "type_label": "General Security & Blogs",
-      "published": "2026-01-13T19:30:00+00:00",
-      "published_ts": 1768332600,
-      "smart_groups": [
-        "Identity / Access"
-      ],
-      "curated": false
-    },
-    {
-      "title": "Feds Seek Forfeiture of $200K in USDT Tied to Tinder \u2018Pig Butchering\u2019 Scam",
-      "summary": "Law enforcement seized $200,000 belonging to a Massachusetts victim who wired more than $500,000 into a suspected fake crypto trading platform.",
-      "link": "https://decrypt.co/354426/feds-seek-forfeiture-of-200k-in-usdt-tied-to-tinder-pig-butchering-scam",
-      "source": "Decrypt",
-      "type": "crypto",
-      "type_label": "Crypto & Blockchain Security",
-      "published": "2026-01-13T19:21:02+00:00",
-      "published_ts": 1768332062,
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Multiple Vulnerabilities in Fortinet Products Could Allow for Arbitrary Code Execution",
-      "summary": "Multiple vulnerabilities have been discovered in Fortinet products, the most severe of which could allow for arbitrary code execution. FortiSandbox is an advanced threat detection solution from Fortinet that uses sandboxing to analyze suspicious files and network traffic for advanced threats like zero-day malware and ransomware. FortiWeb is a web application firewall (WAF) that protects web applications and APIs from cyberattacks like SQL injection and cross-site scripting, while also helping to meet compliance requirements. FortiVoice is a unified communications solution that combines voice, chat, conferencing, and fax into a single, secure platform for businesses and schools. FortiOS is the Fortinet\u2019s proprietary Operation System which is utilized across multiple product lines. FortiProxy is a secure web gateway product from Fortinet that protects users from internet-borne attacks, enforces compliance, and improves network performance. FortiClientEMS is a centralized management platform for deploying, configuring, monitoring, and enforcing security policies across numerous endpoints (computers) running the FortiClient agent. FortiSwitchManager is Fortinet's dedicated, on-premise platform for centrally managing FortiSwitch devices in large deployments. FortiFone is Fortinet's secure, enterprise-grade unified communications solution. Successful exploitation of the most severe of these vulnerabilities could allow for arbitrary code execution in the context of the affected service account. Depending on the privileges associated with the service account an attacker could then install programs; view, change, or delete data; or create new accounts with full user rights. Service accounts that are configured to have fewer user rights on the system could be less impacted than those who operate with administrative user rights.",
-      "link": "https://www.cisecurity.org/advisory/multiple-vulnerabilities-in-fortinet-products-could-allow-for-arbitrary-code-execution_2026-003",
-      "source": "CIS \u2013 Advisories",
-      "type": "government",
-      "type_label": "Government, CERT & Advisories",
-      "published": "2026-01-13T19:18:56+00:00",
-      "published_ts": 1768331936,
-      "smart_groups": [
-        "Curated",
-        "Ransomware",
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "Malware / Payloads",
-        "Web / API Security",
-        "Identity / Access"
-      ],
-      "curated": true
-    },
-    {
-      "title": "The world's first breast milk monitor was a big hit for parents at CES 2026 - here's how it works",
-      "summary": "The Coro is a nipple shield equipped with a tiny sensor that accurately measures the amount of breast milk a baby receives during a feeding. It won the Best of CES award for parent tech.",
-      "link": "https://www.zdnet.com/article/coroflow-coro-ces-2026/",
-      "source": "ZDNet \u2013 Security",
-      "type": "general",
-      "type_label": "General Security & Blogs",
-      "published": "2026-01-13T19:16:50+00:00",
-      "published_ts": 1768331810,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "Crypto\u2019s 2026 comeback hinges on three outcomes, Wintermute says",
-      "summary": "Bitcoin\u2019s muted 2025 rally and fading altcoin cycle point to a structural market shift, leaving crypto\u2019s 2026 outlook tied to institutions, rates and retail return.",
-      "link": "https://cointelegraph.com/news/crypto-2026-comeback-hinges-three-outcomes-wintermute?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound",
-      "source": "Cointelegraph.com News",
-      "type": "crypto",
-      "type_label": "Crypto & Blockchain Security",
-      "published": "2026-01-13T19:16:12+00:00",
-      "published_ts": 1768331772,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "Apple Is Using Google Gemini to Power Siri\u2019s AI Features",
-      "summary": "Apple has been conspicuously absent from the AI race that has consumed many of the world\u2019s largest tech corporations. From AI-focused newcomers OpenAI (ChatGPT) and Anthropic (Claude) to legacy tech corporations Google (Gemini), Microsoft (Copilot), and Meta (Meta AI), Apple has sat on the sidelines of the latest Silicon Valley gold rush. Whether by happenstance [\u2026] The post Apple Is Using Google Gemini to Power Siri\u2019s AI Features appeared first on VICE .",
-      "link": "https://www.vice.com/en/article/apple-all-in-with-gemini-for-siri/",
-      "source": "Motherboard \u2013 Tech",
-      "type": "general",
-      "type_label": "General Security & Blogs",
-      "published": "2026-01-13T19:14:54+00:00",
-      "published_ts": 1768331694,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "This Bluetooth tracker effectively replaced the AirTag on my keychain for one important reason",
-      "summary": "The Rolling Square AirNotch Pro Dual finder tags are water- and dust-resistant, lasting up to 20 months, and attach securely to almost any surface.",
-      "link": "https://www.zdnet.com/article/rolling-square-android-tracker-tag-review/",
-      "source": "ZDNet \u2013 Security",
-      "type": "general",
-      "type_label": "General Security & Blogs",
-      "published": "2026-01-13T19:13:00+00:00",
-      "published_ts": 1768331580,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "January 2026 Microsoft Patch Tuesday Summary, (Tue, Jan 13th)",
-      "summary": "Today, Microsoft released patches for 113 vulnerabilities. One of these vulnerabilities affected the Edge browser and was patched upstream by Chromium.",
-      "link": "https://isc.sans.edu/diary/rss/32624",
-      "source": "SANS Internet Storm Center",
-      "type": "government",
-      "type_label": "Government, CERT & Advisories",
-      "published": "2026-01-13T19:05:41+00:00",
-      "published_ts": 1768331141,
-      "smart_groups": [
-        "Vulnerabilities / CVEs"
-      ],
-      "curated": false
-    },
-    {
-      "title": "Man to plead guilty to hacking US Supreme Court filing system",
-      "summary": "A 24-year-old from Tennessee is expected to admit to accessing the Supreme Court\u2019s electronic filing system without authorization dozens of times throughout 2023.",
-      "link": "https://techcrunch.com/2026/01/13/man-to-plead-guilty-to-hacking-us-supreme-court-filing-system/",
-      "source": "Security News | TechCrunch",
-      "type": "general",
-      "type_label": "General Security & Blogs",
-      "published": "2026-01-13T19:04:38+00:00",
-      "published_ts": 1768331078,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "Critical Patches Issued for Microsoft Products, January 13, 2026",
-      "summary": "Multiple vulnerabilities have been discovered in Microsoft products, the most severe of which could allow for remote code execution. Successful exploitation of the most severe of these vulnerabilities could result in an attacker gaining the same privileges as the logged-on user. Depending on the privileges associated with the user, an attacker could then install programs; view, change, or delete data; or create new accounts with full user rights. Users whose accounts are configured to have fewer user rights on the system could be less impacted than those who operate with administrative user rights.",
-      "link": "https://www.cisecurity.org/advisory/critical-patches-issued-for-microsoft-products-january-13-2026_2026-002",
-      "source": "CIS \u2013 Advisories",
-      "type": "government",
-      "type_label": "Government, CERT & Advisories",
-      "published": "2026-01-13T19:00:20+00:00",
-      "published_ts": 1768330820,
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "Identity / Access"
-      ],
-      "curated": true
-    },
-    {
-      "title": "CEO Outlook 2026: Sumit Dhawan",
-      "summary": "",
-      "link": "https://www.proofpoint.com/us/newsroom/news/ceo-outlook-2026-sumit-dhawan",
-      "source": "Proofpoint \u2013 Vendor",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-13T18:59:26+00:00",
-      "published_ts": 1768330766,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "I tried Asus' new dual-screen ZenBook, and it might just be my new laptop for work travel",
-      "summary": "The Asus ZenBook Duo (2026) is everything I wanted from the previous-gen model, earning it a Best of CES award for 2026.",
-      "link": "https://www.zdnet.com/article/asus-zenbook-duo-dual-screen-laptop-ces/",
-      "source": "ZDNet \u2013 Security",
-      "type": "general",
-      "type_label": "General Security & Blogs",
-      "published": "2026-01-13T18:57:00+00:00",
-      "published_ts": 1768330620,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "Microsoft releases Windows 10 KB5073724 extended security update",
-      "summary": "Microsoft has released the KB5073724 extended security update to fix the Patch Tuesday security updates, including 3 zero-days and a fix for expiring Secure Boot certificates. [...]",
-      "link": "https://www.bleepingcomputer.com/news/microsoft/microsoft-releases-windows-10-kb5073724-extended-security-update/",
-      "source": "BleepingComputer",
-      "type": "general",
-      "type_label": "General Security & Blogs",
-      "published": "2026-01-13T18:56:21+00:00",
-      "published_ts": 1768330581,
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "Windows / Microsoft"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Windows 11 KB5074109 & KB5073455 cumulative updates released",
-      "summary": "Microsoft has released Windows 11 KB5074109 and KB5073455 cumulative updates for versions 25H2/24H2 and 23H2 to fix security vulnerabilities, bugs, and add new features. [...]",
-      "link": "https://www.bleepingcomputer.com/news/microsoft/windows-11-kb5074109-and-kb5073455-cumulative-updates-released/",
-      "source": "BleepingComputer",
-      "type": "general",
-      "type_label": "General Security & Blogs",
-      "published": "2026-01-13T18:53:24+00:00",
-      "published_ts": 1768330404,
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Windows / Microsoft"
-      ],
-      "curated": false
-    },
-    {
-      "title": "This USB-C cable has a magnetic charging feature that makes it irreplaceable for me",
-      "summary": "Statik's magnetic charging cable has breakaway type C, micro USB, Apple, and type A connectors in one.",
-      "link": "https://www.zdnet.com/article/statik-360-pro-usb-cable-review/",
-      "source": "ZDNet \u2013 Security",
-      "type": "general",
-      "type_label": "General Security & Blogs",
-      "published": "2026-01-13T18:50:00+00:00",
-      "published_ts": 1768330200,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "Turning technical possibility into legal proof",
-      "summary": "When I first began trying cases, digital evidence wasn\u2019t even part of the case. It simply didn\u2019t exist in the courtroom. At most, you might see a phone bill or a stray email, but the real drama played out through eyewitnesses, physical evidence, and confessions. The post Turning technical possibility into legal proof appeared first on Magnet Forensics .",
-      "link": "https://www.magnetforensics.com/blog/turning-technical-possibility-into-legal-proof/",
-      "source": "Magnet Forensics",
-      "type": "dfir",
-      "type_label": "DFIR & Forensics",
-      "published": "2026-01-13T18:43:15+00:00",
-      "published_ts": 1768329795,
-      "smart_groups": [
-        "Network / OT / ICS"
-      ],
-      "curated": false
-    },
-    {
-      "title": "Looking for VM software guidance as a one-person security team in local municipal government",
-      "summary": "Hello everyone, I\u2019m seeking advice and perspective on my current situation and would greatly appreciate guidance from others who\u2019ve been in similar roles\u2014especially those in local government or small security teams. I joined my current organization about four months ago. Previously, I worked as a SOC analyst on a well-staffed security team (around 10 technical security folks) where we used Tenable for vulnerability management. With that many hands, it was much easier to track findings, prioritize risks, and effectively remediate issues. Fast-forward to my current role: I\u2019m now the only security admin / SOC analyst for a mid-sized local city government (roughly 1,000+ users and ~1,500 assets). Recently, the organization adopted Rapid7\u2019s managed MDR platform, which includes InsightVM (unmanaged). This solution was purchased before I arrived. So far, I\u2019ve really struggled with it. Support has been minimal, and the operational overhead feels overwhelming for a one-person team. Additionally, my director does not want credentialed scans enabled due to concerns about exposing privileged credentials\u2014especially since we\u2019re using Rapid7\u2019s cloud environment instead of an on-premises deployment. Due to these challenges, my director has scheduled a demo with Qualys for today to examine their TruRisk platform as a potential alternative. From the sales call, it sounds promising, but I\u2019m cautious\u2014vendors always look great in demos, and I don\u2019t want to jump from one complex solution to another that still isn\u2019t realistic for a solo security team. So my main question to the community is: What vulnerability management (or broader security) solutions actually work well for a one-person security team managing a mid-sized local government environment? I\u2019m especially interested in tools that are: Realistic to operate solo Not overly dependent on heavy tuning or constant manual effort Reasonable around credentialed scanning and security concerns I\u2019m open to tooling suggestions, architectural approaches, or even \u201chard lessons learned\u201d from others who\u2019ve had to balance limited staff with real security expectations. Thanks in advance\u2014I really appreciate any insight you\u2019re willing to share. submitted by /u/Embarrassed-System33 [link] [comments]",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1qbzdvy/looking_for_vm_software_guidance_as_a_oneperson/",
-      "source": "/r/cybersecurity",
-      "type": "osint",
-      "type_label": "OSINT, Communities & Subreddits",
-      "published": "2026-01-13T18:40:41+00:00",
-      "published_ts": 1768329641,
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Identity / Access"
-      ],
-      "curated": false
-    },
-    {
-      "title": "Telegram to Add Warning for Proxy Links After IP Leak Concerns",
-      "summary": "Telegram will add a warning for proxy links after reports showed they can expose user IP addresses with a single click, bypassing VPN or privacy settings.",
-      "link": "https://hackread.com/telegram-add-warning-proxy-links-ip-leak/",
-      "source": "HackRead",
-      "type": "general",
-      "type_label": "General Security & Blogs",
-      "published": "2026-01-13T18:40:02+00:00",
-      "published_ts": 1768329602,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "Microsoft\u2019s January 2026 Patch Tuesday Addresses 113 CVEs (CVE-2026-20805)",
-      "summary": "8 Critical 105 Important 0 Moderate 0 Low Microsoft addresses 113 CVEs in the first Patch Tuesday of 2026, with two zero-days, including one that was exploited in the wild. Microsoft patched 113 CVEs in its January 2026 Patch Tuesday release, with eight rated critical and 105 rated as important. Our counts omitted one CVE that was assigned by MITRE, CVE-2023-31096. This month\u2019s update includes patches for: Azure Connected Machine Agent Azure Core shared client library for Python Capability Access Management Service (camsvc) Connected Devices Platform Service (Cdpsvc) Desktop Window Manager Dynamic Root of Trust for Measurement (DRTM) Graphics Kernel Host Process for Windows Tasks Inbox COM Objects Microsoft Graphics Component Microsoft Office Microsoft Office Excel Microsoft Office SharePoint Microsoft Office Word Printer Association Object SQL Server Tablet Windows User Interface (TWINUI) Subsystem Windows Admin Center Windows Ancillary Function Driver for WinSock Windows Client-Side Caching (CSC) Service Windows Clipboard Server Windows Cloud Files Mini Filter Driver Windows Common Log File System Driver Windows DWM Windows Deployment Services Windows Error Reporting Windows File Explorer Windows HTTP.sys Windows Hello Windows Hyper-V Windows Installer Windows Internet Connection Sharing (ICS) Windows Kerberos Windows Kernel Windows Kernel Memory Windows Kernel-Mode Drivers Windows LDAP - Lightweight Directory Access Protocol Windows Local Security Authority Subsystem Service (LSASS) Windows Local Session Manager (LSM) Windows Management Services Windows Media Windows NDIS Windows NTFS Windows NTLM Windows Remote Assistance Windows Remote Procedure Call Windows Remote Procedure Call Interface Definition Language (IDL) Windows Routing and Remote Access Service (RRAS) Windows SMB Server Windows Secure Boot Windows Server Update Service Windows Shell Windows TPM Windows Telephony Service Windows Virtualization-Based Security (VBS) Enclave Windows WalletService Windows Win32K - ICOMP Elevation of privilege (EoP) vulnerabilities accounted for 49.6% of the vulnerabilities patched this month, followed by remote code execution (RCE) vulnerabilities at 19.5%. Important CVE-2026-20805 | Desktop Window Manager Information Disclosure Vulnerability CVE-2026-20805 is an information disclosure vulnerability affecting Desktop Window Manager. It was assigned a CVSSv3 score of 5.5 and was rated as important. Successful exploitation allows an authenticated attacker to access sensitive data. According to Microsoft, this vulnerability was exploited in the wild as a zero-day. Additionally, Microsoft patched another Desktop Window Manager vulnerability this month. CVE-2026-20871 is an EoP vulnerability that was assigned a CVSSv3 score of 7.8 and was rated as important. Contrary to CVE-2026-20805, CVE-2026-20871 was not exploited in the wild, although it was assessed as \u201cExploitation More Likely\u201d according to Microsoft\u2019s Exploitability Index . Important CVE-2026-21265 | Secure Boot Certificate Expiration Security Feature Bypass Vulnerability CVE-2026-21265 is a security feature bypass in the Windows Secure Boot. It was assigned a CVSSv3 score of 6.4 and is rated important. It was assessed as \u201cExploitation Less Likely.\u201d Microsoft certificates are stored in the Unified Extensible Firmware Interface (UEFI) Key Enrollment Key (also known as Key Exchange or KEK) and DB. These certificates are reaching their expiration date , so these certificates need to be updated to ensure Secure Boot functionality remains and to prevent future issues from arising. The following are the certificates set to expire in 2026: Certificate Authority (CA) Expiration Date Purpose Location Microsoft Corporation KEK CA 2011 June 24, 2026 Signs updates to the DB and DBX KEK Microsoft Corporation UEFI CA 2011 June 27, 2026 Signs third party boot loaders, Option ROMs and more DB Microsoft Windows Production PCA 2011 October 19, 2026 Signs the Windows Boot Manager DB This vulnerability is considered \u201cPublicly Disclosed\u201d because the information about the expiration and the location of these certificates are public. Critical CVE-2026-20952 and CVE-2026-20953 | Microsoft Office Remote Code Execution Vulnerability CVE-2026-20952 and CVE-2026-20953 are RCE vulnerabilities affecting Microsoft Office. Each of these vulnerabilities were assigned a CVSSv3 score of 8.4, rated as critical and assessed as \"Exploitation Less Likely.\u201d An attacker could exploit these flaws through social engineering by sending the malicious Microsoft Office document file to an intended target. Successful exploitation would grant code execution privileges to the attacker. Despite being flagged as \u201cExploitation Less Likely,\u201d Microsoft notes that the Preview Pane is an attack vector for both vulnerabilities, which means exploitation does not require the target to open the file. Important CVE-2026-20840 and CVE-2026-20922 | Windows NTFS Remote Code Execution Vulnerability CVE-2026-20840 and CVE-2026-20922 are RCE vulnerabilities affecting Windows New Technology File System (NTFS). Both were assigned CVSSv3 scores of 7.8 and are rated as important. Microsoft assessed both of these flaws as \u201cExploitation More Likely.\u201d According to Microsoft, both these flaws stem from heap-based buffer overflows which can be exploited to execute arbitrary code on an affected system. Both advisories also note that any authenticated attacker can exploit these flaws, regardless of privilege level. Tenable Solutions A list of all the plugins released for Microsoft\u2019s January 2026 Patch Tuesday update can be found here . As always, we recommend patching systems as soon as possible and regularly scanning your environment to identify those systems yet to be patched. For more specific guidance on best practices for vulnerability assessments, please refer to our blog post on How to Perform Efficient Vulnerability Assessments with Tenable . Get more information Microsoft's January 2026 Security Updates Tenable plugins for Microsoft January 2026 Patch Tuesday Security Updates Join Tenable's Research Special Operations (RSO) Team on Tenable Connect and engage with us in the Threat Roundtable group for further discussions on the latest cyber threats. Learn more about Tenable One , the Exposure Management Platform for the modern attack surface.",
-      "link": "https://www.tenable.com/blog/microsofts-january-2026-patch-tuesday-addresses-113-cves-cve-2026-20805",
-      "source": "Tenable Blog",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-13T18:37:32+00:00",
-      "published_ts": 1768329452,
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "Windows / Microsoft",
-        "Cloud / SaaS",
-        "Malware / Payloads",
-        "Identity / Access",
-        "Network / OT / ICS",
-        "Phishing / Social Engineering",
-        "Crypto / Web3"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Microsoft January 2026 Patch Tuesday fixes 3 zero-days, 114 flaws",
-      "summary": "Today is Microsoft's January 2026 Patch Tuesday with security updates for 114 flaws, including one actively exploited and two publicly disclosed zero-day vulnerabilities. [...]",
-      "link": "https://www.bleepingcomputer.com/news/microsoft/microsoft-january-2026-patch-tuesday-fixes-3-zero-days-114-flaws/",
-      "source": "BleepingComputer",
-      "type": "general",
-      "type_label": "General Security & Blogs",
-      "published": "2026-01-13T18:34:08+00:00",
-      "published_ts": 1768329248,
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "Cloud / SaaS"
-      ],
-      "curated": true
-    },
-    {
-      "title": "CVE-2025-64155: 3 Years of Remotely Rooting the Fortinet FortiSIEM",
-      "summary": "submitted by /u/scopedsecurity [link] [comments]",
-      "link": "https://www.reddit.com/r/netsec/comments/1qbz5ul/cve202564155_3_years_of_remotely_rooting_the/",
-      "source": "/r/netsec",
-      "type": "osint",
-      "type_label": "OSINT, Communities & Subreddits",
-      "published": "2026-01-13T18:32:46+00:00",
-      "published_ts": 1768329166,
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Does this sound sketch to you?",
-      "summary": "Paraphrasing a message I received from my boss. For context I\u2019m a remote employee using my own device on my own network. Is he possibly trying to monitor my activity? Any insight is very appreciated. Hi, one change I\u2019d like to make this year is to work with a cybersecurity firm to help protect the business from cyber threats. A network assessment is scheduled for this Friday. I\u2019ll share a link in Slack that morning, and all I need you to do is click it. The assessment will help identify any potential weaknesses in our systems. submitted by /u/elconejitomuyrapido [link] [comments]",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1qbz58w/does_this_sound_sketch_to_you/",
-      "source": "/r/cybersecurity",
-      "type": "osint",
-      "type_label": "OSINT, Communities & Subreddits",
-      "published": "2026-01-13T18:32:10+00:00",
-      "published_ts": 1768329130,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "The fine balance: How I learned to stop worrying and love the cloud",
-      "summary": "Too often, devices sit for weeks while the balance between thorough, defensible work and timely insight gets lost. When I was part of the West Virginia State Police and ICAC Task Force, I had to rethink how to strike that balance. The post The fine balance: How I learned to stop worrying and love the cloud appeared first on Magnet Forensics .",
-      "link": "https://www.magnetforensics.com/blog/the-fine-balance-how-i-learned-to-stop-worrying-and-love-the-cloud/",
-      "source": "Magnet Forensics",
-      "type": "dfir",
-      "type_label": "DFIR & Forensics",
-      "published": "2026-01-13T18:29:52+00:00",
-      "published_ts": 1768328992,
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "Network / OT / ICS"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Google confirms Android bug causing volume key issues",
-      "summary": "Google has confirmed a software bug that is preventing volume buttons from working correctly on Android devices with accessibility features enabled. [...]",
-      "link": "https://www.bleepingcomputer.com/news/google/google-confirms-android-bug-causing-volume-key-issues/",
-      "source": "BleepingComputer",
-      "type": "general",
-      "type_label": "General Security & Blogs",
-      "published": "2026-01-13T18:25:04+00:00",
-      "published_ts": 1768328704,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "I saw a smart lock at CES that solves the battery problem in a clever way",
-      "summary": "The Lockin V7 Max features a unique charging tech that easily replenishes itself, earning it a Best of CES award.",
-      "link": "https://www.zdnet.com/article/lockin-v7-max-smart-lock-ces-2026/",
-      "source": "ZDNet \u2013 Security",
-      "type": "general",
-      "type_label": "General Security & Blogs",
-      "published": "2026-01-13T18:21:00+00:00",
-      "published_ts": 1768328460,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "The AI Fix #83: ChatGPT Health, Victorian LLMs, and the biggest AI bluffers",
-      "summary": "In episode 83 of The AI Fix, Graham reveals he's taken up lying to LLMs, and shows how a journalist exposed AI bluffers with a made-up idiom. Meanwhile Mark invents a \"Godwin's Law\" for AI, and explains how to ruin any LLM with humus. Also in this episode, a marriage is declared invalid thanks to ChatGPT, an AI barman looks for a job in a quiet pub, OpenAI finally unveils ChatGPT Health, and why news of the death of Stack Overflow may be greatly exaggerated. All this and much more is discussed in the latest edition of \"The AI Fix\" podcast by Graham Cluley and Mark Stockley.",
-      "link": "https://grahamcluley.com/the-ai-fix-83/",
-      "source": "Graham Cluley",
-      "type": "general",
-      "type_label": "General Security & Blogs",
-      "published": "2026-01-13T18:19:04+00:00",
-      "published_ts": 1768328344,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "Impacket Developer Guide. Part 3. Make your own Lateral Movement",
-      "summary": "Hello everybody, my name is Michael Zhmailo and I am a penetration testing expert in the CICADA8 team. Here\u2019s contents of our guide: First part \u2014 introduction to impacket and RPC; Second part \u2014 some words about RPC security, EpMapper and discovering RPC on the system. So, in this part we will finally start to dive deep into impacket. We will define custom structures, choose the right transport, and also create all the necessary function prototypes. In general, we will learn how to create RPC clients using impacket. And then we\u2019ll create our own lateral movement tool that uses impacket and Windows RPC under the hood! : ) So, let\u2019s get started with programming. In this article, we\u2019ll cover two ways: Using the existing MSRPC protocol: MS-EVEN ( LogHunter.py ) + MS-TSCH ( atexec.p y); Creating a custom transport. Journey starts from MS-??? So, the first thing we need to do is decide on the MS-RPC protocol we want to connect to and the functionality of which we want to use. To give you a clear understanding of how to work with Impacket, I\u2019ve included two scripts: LogHunter.py \u2014 uses the MS-EVEN protocol to parse event files and find user sessions; Usage example atexec .py \u2014 uses the MS-TSCH protocol to execute commands on domain-joined computers. Useful for lateral movement. Usage example Endpoint, Interface UUID, Methods Once you\u2019ve determined which MSRPC protocol functionality you need, you need to determine which endpoint it listens on. That is, which port, SMB named pipe, or other location the RPC server with the required functionality is running on. Most often, the endpoint for connection is described in the official protocol documentation on MSDN. Here is an example of documentation for MS-EVEN Here for MS-TSCH The available RPC methods are described in the same documentation files. Remember that you can also discover RPC servers using the tools I described in the second part of the guide. In this case, you\u2019ll have to define the interface yourself and call methods using Opnum. Few words about OpNums In RPC, methods are called not by function name, but by a special OpNum (Operation Number). The method number corresponds to the RPC method\u2019s position in the IDL file on the server. For example, in the first part of this guide, we wrote an RPC server with a single method, Add(). Its OpNum is 0. If we had added methods like Multiply() and HackTheWorld(), they would have had OpNums 1 and 2, respectively. Opnum == 0 We often don\u2019t need to specify OpNums ourselves, as they\u2019re already included in Impacket . OpNum initialization in atsvc.py Also u can find opnums on the MSDN. opnums example However, if Impacket doesn\u2019t have the MSRPC protocol you need, you\u2019ll need to initialize the OpNum by yourself. I\u2019ll show you how to do this a bit later. Calling methods on Opnum Classes and factories ProtocolHandler Almost all tools that use Impacket have a core class called Protocol Handler . It implements the target tool\u2019s core methods. For example, in atexec.py, this is the doStuff() method for executing a command, and in loghunter.py, this is the read_logs() method. Globally, your Protocol Handler should have several methods to comply with some abstract (unwritten) development standards using Impacket: - __init__() \u2014 This is where the necessary fields for your tool are initialized. This is a standard python constructor. For example u can initialize login/password, endpoint, interface UUID (if the RPC server supports several different ones); - authenticate() \u2014 sometimes called login(). A connection to the RPC server is established using the provided credentials. After a successful connection, the method returns a special DCE variable (the DCERPC_V5 class), which I\u2019ll describe later. For now, remember that we\u2019ll call the necessary RPC methods through this DCE variable; - connect() \u2014 connects to the RPC server without authentication. Returns DCE; - do\u2026.() \u2014 the main method containing the tool\u2019s logic. Protocol Handler example in loghunter.py Of course, these rules are often not followed, but\u2026.. you can be the exception! :) DCERPCTransportFactory && DCERPCStringBinding These are the two main classes you can use to connect to an RPC server. DCERPCTransportFactory implements the Factory pattern and allows you to create instances of the DCERPCTransport class. def bound(self, address): stringbinding = r'ncacn_np:%s[\\pipe\\eventlog]' % address # u can set interface UUID in the string binding or connect to the interface later # stringbinding = r'82273FDC-E32A-18C3-3F78-827929DC23EA@ncacn_np:%s[\\pipe\\eventlog]' % address logging.debug(rf\"Trying to connect on {address}\\pipe\\eventlog, stringbinding: {stringbinding} on user {self.__username}\") rpctransport = transport.DCERPCTransportFactory(stringbinding) ... In DCERPCTransportFactory, we pass a string that points to the desired String Binding. That is, the address where the RPC server is listening. Internally, the factory creates a DCERPCStringBinding class, which impacket uses to parse the passed string binding and determine which protocol you will use to connect to the RPC server. def DCERPCTransportFactory(stringbinding): sb = DCERPCStringBinding(stringbinding) na = sb.get_network_address() ps = sb.get_protocol_sequence() if 'ncadg_ip_udp' == ps: port = sb.get_endpoint() if port: rpctransport = UDPTransport(na, int(port)) else: rpctransport = UDPTransport(na) elif 'ncacn_ip_tcp' == ps: port = sb.get_endpoint() if port: rpctransport = TCPTransport(na, int(port)) else: rpctransport = TCPTransport(na) elif 'ncacn_http' == ps: port = sb.get_endpoint() if port: rpctransport = HTTPTransport(na, int(port)) else: rpctransport = HTTPTransport(na) elif 'ncacn_np' == ps: named_pipe = sb.get_endpoint() if named_pipe: named_pipe = named_pipe[len(r'\\pipe'):] rpctransport = SMBTransport(na, filename = named_pipe) else: rpctransport = SMBTransport(na) elif 'ncalocal' == ps: named_pipe = sb.get_endpoint() rpctransport = LOCALTransport(filename = named_pipe) else: raise DCERPCException(\"Unknown protocol sequence.\") rpctransport.set_stringbinding(sb) return rpctransport DCERPCTransport Instances of this class are created using the DCERPCTransportFactory. They contain logic for interacting with the RPC server over a specific protocol. For example, TCPTransport (ncacn_ip_tcp) allows data transfer over TCP, and HTTPTransport allows data transfer over HTTP. A full list of supported transports can be found here. class HTTPTransport(TCPTransport): \"Implementation of ncacn_http protocol sequence\" def connect(self): TCPTransport.connect(self) self.get_socket().send('RPC_CONNECT ' + self.get_dip() + ':593 HTTP/1.0\\r\\n\\r\\n') data = self.get_socket().recv(8192) if data[10:13] != '200': raise Exception(\"Service not supported.\") I\u2019d like to draw your attention to the most frequently used methods of the DCERPCTransportclass: - set_credentials() \u2014 allows you to set credentials for connecting to the RPC server; - set_kerberos() \u2014 allows you to configure Kerberos authentication; - get_dce_rpc() \u2014 allows you to get a DCERPC_V5class variable, which we will use to interact with the RPC server. def bound(self, address): stringbinding = r'ncacn_np:%s[\\pipe\\eventlog]' % address # stringbinding = r'82273FDC-E32A-18C3-3F78-827929DC23EA@ncacn_np:%s[\\pipe\\eventlog]' % address logging.debug(rf\"Trying to connect on {address}\\pipe\\eventlog, stringbinding: {stringbinding} on user {self.__username}\") # rpctransport is DCERPCTransport rpctransport = transport.DCERPCTransportFactory(stringbinding) rpctransport.set_credentials(username=self.__username, password=self.__password, domain=self.__domain, lmhash=self.__lmhash, nthash=self.__nthash, aesKey=self.__aesKey, ) # self.__dce is DCERPC_V5 self.__dce = rpctransport.get_dce_rpc() if (self.__doKerberos): rpctransport.set_kerberos(self.__doKerberos, self.__kdcHost) ... DCERPC_V5 The DCERPC_V5 class contains all the basic methods we need to interact with the RPC server. connect() is the main method, inherited from the DCERPC class, allowing us to connect to the RPC server using the required transport; bind() allows us to connect to the required RPC interface. def bound(self, address): stringbinding = r'ncacn_np:%s[\\pipe\\eventlog]' % address # stringbinding = r'82273FDC-E32A-18C3-3F78-827929DC23EA@ncacn_np:%s[\\pipe\\eventlog]' % address logging.debug(rf\"Trying to connect on {address}\\pipe\\eventlog, stringbinding: {stringbinding} on user {self.__username}\") rpctransport = transport.DCERPCTransportFactory(stringbinding) rpctransport.set_credentials(username=self.__username, password=self.__password, domain=self.__domain, lmhash=self.__lmhash, nthash=self.__nthash, aesKey=self.__aesKey, ) self.__dce = rpctransport.get_dce_rpc() if (self.__doKerberos): rpctransport.set_kerberos(self.__doKerberos, self.__kdcHost) self.__dce.connect() self.__dce.bind(even.MSRPC_UUID_EVEN) logging.debug(\"Successfully bound to MS-EVEN\") return self.__dce call() calls the RPC method on opnum and passes the required data. To receive a response from the RPC server, we need to call recv(). There is a lower-level equivalent called send(). It is recommended to use either call() (for a blind call) or request() (if we need a response from the RPC server). OPNUM_EXECUTE = 0 ... class NDRExecuteRequest(ndr.NDRCALL): structure = ( ('input', WSTR), ) class NDRExecuteResponse(ndr.NDRCALL): structure = ( ('output', LPWSTR), ('Return', DWORD), ) ... request = NDRExecuteRequest() request['input'] = \"whoami\\x00\" try: self.dce.call(OPNUM_EXECUTE, request) response = self.dce.recv() resp = NDRExecuteResponse(response) print(resp.dumpRaw()) ... except DCERPCException as e: print(f\"[-] Execute failed: {e}\") raise If we want to see the structure that was returned to us, or if we don\u2019t understand how to parse the response, then we call resp.dumpRaw() def execute(self, command): request = NDRExecuteRequest() request['input'] = \"whoami\\x00\" try: self.dce.call(OPNUM_EXECUTE, request) response = self.dce.recv() resp = NDRExecuteResponse(response) print(resp.dumpRaw()) request() allows us to call the required method and receive a response from the RPC server. class ElfrOpenELW(NDRCALL): opnum = 7 structure = ( ('UNCServerName', EVENTLOG_HANDLE_W), ('ModuleName', RPC_UNICODE_STRING), ('RegModuleName', RPC_UNICODE_STRING), ('MajorVersion', ULONG), ('MinorVersion', ULONG), ) def hElfrOpenELW(dce, moduleName = NULL, regModuleName = NULL): request = ElfrOpenELW() request['UNCServerName'] = NULL request['ModuleName'] = moduleName request['RegModuleName'] = regModuleName request['MajorVersion'] = 1 request['MinorVersion'] = 1 return dce.request(request) set_auth_level() \u2014 Allows you to set the security level for the connection, for example, RPC_C_AUTHN_LEVEL_PKT_PRIVACY ; set_auth_type() \u2014 Allows you to set the authentication type. For example, RPC_C_AUTHN_GSS_NEGOTIATE . Don\u2019t ignore set_auth_level() and set_auth_type(), otherwise you may get 0x5 ERROR_ACCESS_DENIED when connecting to some RPC servers! For example, LogHunter had this issue on Windows Server 2025. Fix is here . Connection examples Without credentials from impacket.structure import Structure from impacket.uuid import uuidtup_to_bin from impacket.dcerpc.v5 import transport from impacket.dcerpc.v5.rpcrt import DCERPCException from impacket.dcerpc.v5.transport import DCERPCTransportFactory # Create string binding stringBinding = r'ncacn_ip_tcp:{}[41337]'.format(target_ip) # Connects to the endpoint using the string binding transport = DCERPCTransportFactory(stringBinding) dce = transport.get_dce_rpc() dce.connect() # Casts the UUID string and version into a valid UUID object interface_uuid = uuidtup_to_bin((\"AB4ED934-1293-10DE-BC12-AE18C48DEF33\", \"1.0\")) # Binds to the interface dce.bind(interface_uuid) With credentials import logging import argparse import sys from impacket.examples.utils import parse_target from impacket.dcerpc.v5 import even, transport class MsEvenHandler: def __init__(self, username='', password='', domain='', hashes=None, aesKey=None, doKerberos=False, kdcHost=None): self.__username = username self.__password = password self.__domain = domain self.__lmhash = '' self.__nthash = '' self.__aesKey = aesKey self.__doKerberos = doKerberos self.__kdcHost = kdcHost self.__dce = None if hashes is not None: self.__lmhash, self.__nthash = hashes.split(':') def authenticate(self, address): stringbinding = r'82273FDC-E32A-18C3-3F78-827929DC23EA@ncacn_np:%s[\\pipe\\eventlog]' % address logging.debug(f\"Trying to connect on {address}\\pipe\\eventlog, stringbinding: {stringbinding} on user {self.__username}\") rpctransport = transport.DCERPCTransportFactory(stringbinding) rpctransport.set_credentials(username=self.__username, password=self.__password, domain=self.__domain, lmhash=self.__lmhash, nthash=self.__nthash, aesKey=self.__aesKey, ) if (self.__doKerberos): rpctransport.set_kerberos(self.__doKerberos, self.__kdcHost) self.__dce = rpctransport.get_dce_rpc() self.__dce.set_auth_level(RPC_C_AUTHN_LEVEL_PKT_PRIVACY) self.__dce.connect() self.__dce.bind(even.MSRPC_UUID_EVEN) logging.debug(\"Successfully bound to MS-EVEN\") return self.__dce if __name__ == \"__main__\": domain, username, password, address = parse_target(options.target) logHunter = MsEvenHandler(username=username, password=password, domain=domain, hashes=options.hashes, aesKey=options.aesKey, doKerberos=options.k, kdcHost=options.dc_ip) dce = logHunter.authenticate(address=address) response = even.hElfrOpenELW(dce=dce, moduleName=\"Security\") LogHunter.py Analysis Let\u2019s put our knowledge into practice. Let\u2019s explore how LogHunter.py works. Here\u2019s Protocol Handler called MsEvenHandler : class MsEvenHandler: def __init__(self, username='', password='', domain='', hashes=None, aesKey=None, doKerberos=False, kdcHost=None): self.__username = username self.__password = password self.__domain = domain self.__lmhash = '' self.__nthash = '' self.__aesKey = aesKey self.__doKerberos = doKerberos self.__kdcHost = kdcHost self.__dce = None if hashes is not None: self.__lmhash, self.__nthash = hashes.split(':') def bound(self, address): ... @staticmethod def process_logs(q): ... @staticmethod def read_logs(q, dce, hLogHandle, recordscount): ... ... logHunter = MsEvenHandler(username=username, password=password, domain=domain, hashes=options.hashes, aesKey=options.aesKey, doKerberos=options.k, kdcHost=options.dc_ip) After class initialization, the bound() method is called. It connects to the RPC server using the DCERPCTransportFactory and DCERPCTransport, and returns DCERPC_V5. def bound(self, address): stringbinding = r'ncacn_np:%s[\\pipe\\eventlog]' % address # stringbinding = r'82273FDC-E32A-18C3-3F78-827929DC23EA@ncacn_np:%s[\\pipe\\eventlog]' % address logging.debug(rf\"Trying to connect on {address}\\pipe\\eventlog, stringbinding: {stringbinding} on user {self.__username}\") rpctransport = transport.DCERPCTransportFactory(stringbinding) rpctransport.set_credentials(username=self.__username, password=self.__password, domain=self.__domain, lmhash=self.__lmhash, nthash=self.__nthash, aesKey=self.__aesKey, ) self.__dce = rpctransport.get_dce_rpc() if (self.__doKerberos): rpctransport.set_kerberos(self.__doKerberos, self.__kdcHost) self.__dce.connect() self.__dce.bind(even.MSRPC_UUID_EVEN) logging.debug(\"Successfully bound to MS-EVEN\") return self.__dce After connecting to the target RPC server, we can use the DCE variable to call its methods. All the necessary methods and structures are defined in the even.py file, so we don\u2019t need to define them separately. We\u2019ll use the ones the impacket developers have created for us. from impacket.dcerpc.v5 import even, transport ... dce = logHunter.bound(address=address) response = even.hElfrOpenELW(dce=dce, moduleName=\"Security\") hLogHandle = response['LogHandle'] response = even.hElfrNumberOfRecords(dce=dce, logHandle=hLogHandle) recordscount = response['NumberOfRecords'] logging.debug(f\"Found {recordscount} records\") log_queue = Queue() processing_thread = Thread(target=MsEvenHandler.process_logs, args=(log_queue,)) reader_thread = Thread(target=MsEvenHandler.read_logs,args=(log_queue, dce, hLogHandle, recordscount)) After which I launch threads to process the logs. atexec.py analysis In the atexec.py file, all logic is contained within the ATSVC_EXEC class. atsvc_exec = ATSVC_EXEC(username, password, domain, options.hashes, ' '.join(options.command)) atsvc_exec.play(address) The connection is established within the play() function. Note how multiple endpoints are initialized, over which the target RPC server can operate. class ATSVC_EXEC: KNOWN_PROTOCOLS = { '139/SMB': (r'ncacn_np:%s[\\pipe\\atsvc]', 139), '445/SMB': (r'ncacn_np:%s[\\pipe\\atsvc]', 445), } def __init__(self, username = '', password = '', domain = '', hashes = None, command = None): self.__username = username self.__password = password self.__protocols = ATSVC_EXEC.KNOWN_PROTOCOLS.keys() self.__domain = domain self.__lmhash = '' self.__nthash = '' self.__command = command if hashes is not None: self.__lmhash, self.__nthash = hashes.split(':') def play(self, addr): # Try all requested protocols until one works. entries = [] for protocol in self.__protocols: protodef = ATSVC_EXEC.KNOWN_PROTOCOLS[protocol] port = protodef[1] print \"Trying protocol %s...\" % protocol stringbinding = protodef[0] % addr rpctransport = transport.DCERPCTransportFactory(stringbinding) rpctransport.set_dport(port) if hasattr(rpctransport, 'set_credentials'): # This method exists only for selected protocol sequences. rpctransport.set_credentials(self.__username, self.__password, self.__domain, self.__lmhash, self.__nthash) try: self.doStuff(rpctransport) except Exception, e: print 'Protocol failed: %s' % e else: # Got a response. No need for further iterations. break After a successful connection, the NetrJobAdd() method is called, through which the scheduled task is added. It\u2019s worth noting that to run the created task, we need to call a method from another interface listening on the same endpoint. However, since it listens on the same endpoint, we can connect to the other interface using the alter_ctx() method of the DCERPC class. dce2 = dce.alter_ctx(atsvc.MSRPC_UUID_TSS) at = atsvc.DCERPCAtSvc(dce2) resp = at.SchRpcRun('\\\\At%d' % jobId) After which we return to using the first interface and delete the completed task. at = atsvc.DCERPCAtSvc(dce) resp = at.NetrJobDel('\\\\\\\\%s'% rpctransport.get_dip(), jobId, jobId) smbConnection = rpctransport.get_smb_connection() while True: try: smbConnection.getFile('ADMIN$', 'Temp\\\\%s' % tmpFileName, output_callback) break except Exception, e: if str(e).find('SHARING') > 0: time.sleep(3) else: raise smbConnection.deleteFile('ADMIN$', 'Temp\\\\%s' % tmpFileName) dce.disconnect() Some Custom Structures! In all our examples, we\u2019ve only looked at using ready-made MSRPC protocols from impacket . That is, someone has already defined the methods, structures, classes, and everything needed to call them for us. But what if we find a new RPC server and there are no wrappers? In that case, we need to implement everything ourselves! For example, we won\u2019t be able to call this method without additional wrappers, because impacket doesn\u2019t know how to package data for transmission over RPC. [ uuid(AA4DD128-1111-11DD-BC11-AE33C22DAA11), version(1.0), implicit_handle(handle_t ImplicitHandle) ] interface MyCustomInterface { DWORD RegisterUser( [in, string] wchar_t* username, [in] int age ); } Network Data Representation So, to teach impacket to pass custom data structures and call methods of classes not previously defined in the project, we need to create a prototype class . This prototype class will package all the arguments passed to the method to be called, according to the Network Data Representation Format. Some people call this class \u00abstub\u00bb. It has the following format. class Prototype(ndr. ): structure = ( ('argument_one', ), ('argument_two', ), ... ('argument_n', ) ) def func(): ... SOMENDRTYPE \u2014 represents the type of NDR data we\u2019re storing. That is, what we\u2019ll be working with. For regular data, NDRCALL is almost always used; packing_format \u2014 It represents a packaging format. That is, how to marshal data. Class prototype example: class ElfrBackupELFW(NDRCALL): opnum = 1 structure = ( ('LogHandle', IELF_HANDLE), ('BackupFileName', RPC_UNICODE_STRING), ) Packing Format (Winapi) If the method you are calling accepts standard WINAPI data types, then they are already defined in impacket and you can use them to specify the Packing Format. from impacket.dcerpc.v5.dtypes import WSTR, DWORD, ULONG, LPWSTR Packing Format (Custom) However, if the target method accepts a custom structure or data type, you must determine how to package it yourself. For this, you\u2019ll need the structure.py file. You must inherit from a class to define your own data type. Type definition specifies Let\u2019s look at an example using my friend\u2019s project ldap_shell . The MSDS_MANAGEDPASSWORD_BLOB structure is used. It\u2019s worth noting that this structure is also accepted in LDAP/RPC calls, but impacket knows nothing about it. How can I make impacket work with it correctly? In this case, the tool\u2019s author created a class of the same name, inheriting it from the impacket base class called Structure. Then he described the data type and how to package it for transmission over the network. class MSDS_MANAGEDPASSWORD_BLOB(Structure): structure = ( ('Version',' ('Reserved',' ('Length',' ('CurrentPasswordOffset',' ('PreviousPasswordOffset',' ('QueryPasswordIntervalOffset',' ('UnchangedPasswordIntervalOffset',' ('CurrentPassword',':'), ('PreviousPassword',':'), #('AlignmentPadding',':'), ('QueryPasswordInterval',':'), ('UnchangedPasswordInterval',':'), ) In another project, the structure of the SMB2Negotiate message was defined like this. class SMB2Negotiate(Structure): structure = ( ('StructureSize',' ('DialectCount',' ('SecurityMode',' ('Reserved',' ('Capabilities',' ('ClientGuid','16s=\"\"'), ('ClientStartTime','8s=\"\"'), # or (NegotiateContextOffset/NegotiateContextCount/Reserved2) in SMB 3.1.1 ('Dialects','* # SMB 3.1.1 ('Padding',':=\"\"'), ('NegotiateContextList',':=\"\"'), ) Moreover, we can also define different Kerberos structures. This class is universal. class Header(Structure): structure = ( ('tag','!H=0'), ('taglen','!H=0'), ('_tagdata','_-tagdata','self[\"taglen\"]'), ('tagdata',':'), ) Example Let\u2019s get back to our interface. How do we teach impacket to work with it? [ uuid(AA4DD128-1111-11DD-BC11-AE33C22DAA11), version(1.0), implicit_handle(handle_t ImplicitHandle) ] interface MyCustomInterface { VOID RegisterUser( [in, string] wchar_t* username, [in] int age ); } Based on the existing prototype, it can be concluded that the structure should be filled in as follows: class RegisterUser(NDRCALL): structure = ( ('username', WSTR), ('age', \" ) After that, you can fill this structure with the necessary data and send it to the RPC interface using the dce.call() or dce.request() method. import argparse from impacket.dcerpc.v5 import transport from impacket.structure import Structure from impacket.uuid import uuidtup_to_bin from impacket.dcerpc.v5.ndr import NDRCALL from impacket.dcerpc.v5.dtypes import WSTR from impacket.dcerpc.v5.rpcrt import DCERPCException from impacket.dcerpc.v5.transport import DCERPCTransportFactory parser = argparse.ArgumentParser() parser.add_argument(\"-host\", help=\"target computer\", dest=\"target\", type=str, required=True) parser.add_argument(\"-port\", help=\"port of the rpc server\", dest=\"port\", type=int, required=True) parser.add_argument(\"-username\", help=\"target username\", dest=\"username\", type=str, required=True) parser.add_argument(\"-age\", help=\"age of the user\", dest=\"age\", type=int, required=True) args = parser.parse_args() target = args.target port = args.port username = args.username age = args.age class RegisterUser(NDRCALL): structure = ( ('username', WSTR), ('age', \" ) stringBinding = r'ncacn_ip_tcp:{}[{}]'.format(target, port) transport = DCERPCTransportFactory(stringBinding) dce = transport.get_dce_rpc() dce.connect() interface_uuid = uuidtup_to_bin((\"AA4DD128-1111-11DD-BC11-AE33C22DAA11\", \"1.0\")) dce.bind(interface_uuid) query = RegisterUser() query['username'] = f\"{username}\\x00\" query['age'] = age try: # 0 opnum == first method dce.call(0, query) dce.recv() except Exception as e: print(f\"[!] ERROR: {e}\") finally: print(\"[*] Disconecting from the server\") dce.disconnect() However, what if the method returns some data, also using pointers? DWORD Execute( /*[in]*/ handle_t hBinding, /*[in]*/ wchar_t* input, /*[out, string]*/ wchar_t** output ) In this case, we will need to define another structure, a structure with a response from the RPC server and then convert response to this structure. class NDRExecuteRequest(ndr.NDRCALL): structure = ( ('input', WSTR), ) class NDRExecuteResponse(ndr.NDRCALL): structure = ( ('output', LPWSTR), ('Return', DWORD), ) ... request = NDRExecuteRequest() request['input'] = \"whoami\\x00\" try: self.dce.call(OPNUM_EXECUTE, request) response = self.dce.recv() resp = NDRExecuteResponse(response) print(resp.dumpRaw()) ... except DCERPCException as e: print(f\"[-] Execute failed: {e}\") raise Explicit/Implicit Bindings and impacket In the first part of the guide, I highlighted about Implicit and Explicit Binding in RPC. However, how to work with them through Impacket? You may also have noticed that we do not initialize the Binding Handle everywhere. How so? Let\u2019s look at two IDL files. # Explicit [ uuid(d6b1ad2b-b550-4729-b6c2-1651f58480c3), version(1.0), ] interface Example1 { int Output( [in] handle_t hBinding, [in, string] const wchar_t* pszOutput); void Shutdown( [in] handle_t hBinding); } # Implicit [ uuid(9510b60a-2eac-43fc-8077-aaefbdf3752b), version(1.0), implicit_handle(handle_t hImplicitBinding) ] interface Example1 { int Output( [in, string] const wchar_t* pszOutput); void Shutdown(); } Accordingly, when calling functions on any client in C++, we either need to specify this parameter (Explicit) or specify it only once (Implicit). // Explicit handle_t hExplicitBinding = NULL; rpcStatus = RpcBindingFromStringBinding( szStringBinding, &hExplicitBinding ); RpcTryExcept { int retValue = Output(hExplicitBinding, L\"Hello From Client!\"); wprintf(L\"[+] Value returned from Server is: %d\\n\", retValue); Shutdown(hExplicitBinding); } RpcExcept(1) { wprintf(L\"Runtime reported exception: %d.\\n\", RpcExceptionCode()); } RpcEndExcept // Implicit rpcStatus = RpcBindingFromStringBinding( szStringBinding, &hImplicitBinding ); if (rpcStatus != RPC_S_OK) { wprintf(L\"[-] Failed with status: %d.\\n\", rpcStatus); exit(rpcStatus); } RpcTryExcept { int retValue = Output(L\"Hello From Client!\"); wprintf(L\"[+] Value returned from Server is: %d\\n\", retValue); Shutdown(); } RpcExcept(1) { wprintf(L\"Runtime reported exception: %d.\\n\", RpcExceptionCode()); } RpcEndExcept However, in impacket we don\u2019t have to look at this when defining structures, since it automatically passes the Binding Handle to the transport layer. The handle itself is already associated and configured at the DCERPCTransportFactory and dce stages after calling dce.bind(). In fact, if we compare it with the C++ client, then this handle itself is generated purely on the client, without connecting to the server via RpcBindingFromStringBinding(), and then with each request (in the Explicit version) it is transferred, but in the impact package all the necessary fields are initialized at the moment DCERPCTransportFactory + dce.bind() , so it is not necessary to specify the handle. So we don\u2019t have to define the structure like this: class OutputInterface(ndr.NDRCALL): structure = ( ('hBinding', handle_t), ('pszOutput', WSTR) ) We can define it like this: class OutputInterface(ndr.NDRCALL): structure = ( ('pszOutput', WSTR) ) And everything works! :) If you look at the impacket source code , you will see that the binding handle value is 16 zeros throughout. In fact, NULLarrives at the RPC server, but the Binding Handle is already set at the connection level, so this field is ignored. RpcMotion Well, I\u2019ve shown you how to connect to RPC servers using Impacket. It\u2019s time to tell you about my lateral movement tool! My idea was quite simple. Why do we need to use ready-made and everywhere detectable RPC servers for lateral movement if we can install our own on the end device? U can find POC here . Everything is based on the fact that we are setting up our own RPC server, the functionality of which we will use. By default, the RPC server will start at 0.0.0.0:12345, but you can change this in Server.cpp . After that, you can connect to the server using either a C++ or Python client. Let\u2019s look at the Python client\u2019s functionality. Client functionality exec\u2014 allows you to execute commands on the system. I\u2019ve also implemented support for different encodings; Command execution using custom RPC Server silent \u2014 executes the command without displaying any output; upload/download \u2014 allows you to upload files to the destination host; File upload example File upload example File download example ls \u2014 obvious : ) LS example You can also connect/disconnect/reconnect to the server using the connect/disconnect commands. To shut down the server, use the shutdown command. RPC Server turned off A logical question: how do I launch RPC Server on the endpoint? You can use any method you prefer. I suggest uploading the file via nxcand launching it via dcomexec with the -nooutput flag. Alternatively, you can upload the file to the startup folder or use DLL hijacking. You\u2019re completely free to launch the server as you wish! nxc smb office.local -u admin -p admin --put-file /root/RpcMotion.exe c:\\rpcmotion.exe impacket-dcomexec.py -nooutput admin:admin@10.10.10.10 \"c:\\rpcmotion.exe\" # or wmiexec. In the logs will be cmd.exe /Q /c c:\\rpcmotion.exe Conclusion Thanks for reading my article! Follow us on X and stay in touch! POC here .",
-      "link": "https://cicada-8.medium.com/impacket-developer-guide-part-3-make-your-own-lateral-movement-a2f8181f657b?source=rss-1d7232a03767------2",
-      "source": "https://cicada-8.medium.com/feed",
-      "type": "general",
-      "type_label": "General Security & Blogs",
-      "published": "2026-01-13T18:16:29+00:00",
-      "published_ts": 1768328189,
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "Windows / Microsoft",
-        "Identity / Access",
-        "Crypto / Web3"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Bitcoin Climbs Above $93K as US Inflation Holds Steady",
-      "summary": "Bitcoin hits $93K as volume surges, but sellers dominate\u2014will it reach $100K or face more pressure ahead?",
-      "link": "https://decrypt.co/354409/bitcoin-climbs-above-93k-us-inflation-holds-steady",
-      "source": "Decrypt",
-      "type": "crypto",
-      "type_label": "Crypto & Blockchain Security",
-      "published": "2026-01-13T18:14:05+00:00",
-      "published_ts": 1768328045,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "PsyopAnime Meme up 30X! Are Memes back? Monero ATH! Interview W/ Joseph Chalom, CEO of Sharplink",
-      "summary": "Crypto majors are green; BTC +1.5% at $92,000; ETH +1% at $3,130, SOL +2% at $142; XRP +1% to $2.06. DASH (+60%), IP (+30%) and XMR (+13%) led top movers; XMR hit another new ATH at $680 (now $640). Gold and Silver hit new ATHs again in the wake of the Powell investigation. The US Senate released the draft Crypto Market Clarity Act, including limits on stablecoin rewards. Senator Warren pressed the SEC over inclusion of crypto in 401ks arguing they expose retirees to too much risk. Vitalik Buterin warned crypto needs better decentralized stablecoins, citing governance capture and inflation risks. World Liberty Financial launched a crypto lending platform built around its USD1 stablecoin, attracting ~$20M. BitGo filed for a U.S. IPO targeting a ~$2B valuation as custody assets surpassed $100B. Tennessee regulators ordered Polymarket, Kalshi, and Crypto.com to halt sports prediction markets and refund users, escalating a multi-state legal fight.",
-      "link": "https://decrypt.co/videos/interviews/mefbKZgQ/psyopanime-meme-up-30x-are-memes-back-monero-ath-interview-w-joseph-chalom-ceo-of-sharplink",
-      "source": "Decrypt",
-      "type": "crypto",
-      "type_label": "Crypto & Blockchain Security",
-      "published": "2026-01-13T18:12:27+00:00",
-      "published_ts": 1768327947,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "Microsoft Patch Tuesday January 2026 \u2013 114 Vulnerabilities Fixed Including 3 Zero-days",
-      "summary": "Microsoft\u2019s January 2026 updates fix 114 vulnerabilities, with several remote code execution bugs rated critical across Office applications and Windows services such as LSASS. This Patch Tuesday addresses critical remote code execution flaws and numerous elevation of privilege issues that could enable attackers to compromise systems. Vulnerability Type Count Remote Code Execution 22 Denial of [\u2026] The post Microsoft Patch Tuesday January 2026 \u2013 114 Vulnerabilities Fixed Including 3 Zero-days appeared first on Cyber Security News .",
-      "link": "https://cybersecuritynews.com/microsoft-patch-tuesday-january-2026/",
-      "source": "Cyber Security News (FeedBurner)",
-      "type": "general",
-      "type_label": "General Security & Blogs",
-      "published": "2026-01-13T18:10:06+00:00",
-      "published_ts": 1768327806,
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "Windows / Microsoft",
-        "Cloud / SaaS"
-      ],
-      "curated": true
-    },
-    {
-      "title": "This smart home breakthrough lets you control appliances without Wi-Fi (and its security risks)",
-      "summary": "Devices equipped with Emerson's SmartVoice don't require Wi-Fi or a hub; instead, they utilize on-device voice control.",
-      "link": "https://www.zdnet.com/article/emerson-smartvoice-appliances-smart-home-hub-ces-2026/",
-      "source": "ZDNet \u2013 Security",
-      "type": "general",
-      "type_label": "General Security & Blogs",
-      "published": "2026-01-13T18:09:00+00:00",
-      "published_ts": 1768327740,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "The digital forensics tightrope act",
-      "summary": "I\u2019ve spent my career in digital forensics wrestling with two deceptively simple questions: Where do I start and where do I stop, in an investigation? Both decisions feel like drawing lines on quicksand. You\u2019re flooded with artifacts\u2014timestamps, logs, messages\u2014tempting you to search every byte. But legal deadlines and investigative demands force focus. The real skill isn\u2019t just finding evidence but knowing when to stop. The post The digital forensics tightrope act appeared first on Magnet Forensics .",
-      "link": "https://www.magnetforensics.com/blog/the-digital-forensics-tightrope-act/",
-      "source": "Magnet Forensics",
-      "type": "dfir",
-      "type_label": "DFIR & Forensics",
-      "published": "2026-01-13T18:04:41+00:00",
-      "published_ts": 1768327481,
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "Network / OT / ICS"
-      ],
-      "curated": true
     },
     {
       "title": "Talleres Palomares Suffers Alleged Breach According to Dark Web Reports | UpGuard",
