@@ -1,93 +1,43 @@
 {
-  "generated_at": "2026-02-15T07:06:33.322403+00:00",
-  "analysis_date": "2026-02-15",
+  "generated_at": "2026-02-16T07:20:14.673542+00:00",
+  "analysis_date": "2026-02-16",
   "model": "gpt-5.1",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-02-15T06:31:46.764416+00:00",
+  "source_generated_at": "2026-02-16T06:38:28.338456+00:00",
   "source_days_back": 30,
-  "source_total_items": 8344,
-  "total_items_in_window_all": 105,
-  "total_items_in_window_curated": 30,
-  "morning_call_markdown": "### Executive Summary\n- CISA added multiple actively exploited vulnerabilities (Ivanti, BeyondTrust, Microsoft, Apple, Notepad++, SolarWinds) to the KEV catalog; several involve remote code execution on edge/IT admin tools.\n- A single actor is reportedly behind ~83% of recent Ivanti RCE exploitation, indicating focused campaigns against exposed VPN/remote access infrastructure.\n- New abuse vectors observed in the wild: malicious Chrome extensions exfiltrating data and malvertising/download campaigns targeting macOS via fake AI-related content and Google Ads.\n\n---\n\n### High-priority items (immediate attention)\n\n- **Actively exploited Ivanti RCE (single actor driving majority of attacks)**\n  - What happened: Reports show ~83% of recent Ivanti RCE activity tied to one threat actor, with ongoing mass exploitation of exposed devices.\n  - Why it matters operationally: Compromise of Ivanti devices provides initial access, credential theft, and pivot into internal network (VPN/edge exposure, often with privileged context).\n  - Recommended immediate actions:  \n    - Confirm inventory and external exposure of Ivanti products; verify emergency patching / mitigations are applied and configurations match vendor guidance.  \n    - Review last 30 days of VPN and device logs for anomalous auth, configuration changes, or new admin accounts; increase monitoring on remaining exposed devices.\n\n- **BeyondTrust RS & PRA vulnerability now in CISA KEV**\n  - What happened: CISA added a flaw in BeyondTrust Remote Support (RS) and Privileged Remote Access (PRA) to KEV as actively exploited.\n  - Why it matters operationally: These tools provide high-privilege remote access; exploitation could give attackers direct privileged entry to core systems.\n  - Recommended immediate actions:  \n    - Identify any BeyondTrust RS/PRA instances (on-prem or cloud-connected) used by IT/third parties; confirm patched to vendor’s latest fixed versions.  \n    - Tighten monitoring around privileged remote sessions: unusual endpoints accessed, session times, and new integrations or connectors.\n\n- **CISA KEV updates: Microsoft, Apple, Notepad++, SolarWinds (incl. Notepad++ RCE under active exploitation)**\n  - What happened: CISA flagged new vulnerabilities in Microsoft, Apple, SolarWinds, and Notepad++ as known exploited, including a Notepad++ code execution flaw.\n  - Why it matters operationally: Mix of endpoint, admin-tool, and platform bugs being leveraged in the wild; Notepad++ and SolarWinds often present on admin workstations and servers.\n  - Recommended immediate actions:  \n    - Confirm emergency patch status for: supported Windows/Office, macOS/iOS where in scope, SolarWinds products, and Notepad++; if not patched, prioritize admin and jump hosts.  \n    - Hunt for suspicious child processes spawned by Notepad++ and SolarWinds services on servers and admin workstations.\n\n- **Malware campaigns via Google Ads and AI-related downloads targeting macOS**\n  - What happened: Threat actors abusing Google Ads and “Claude artifacts” / AI-related downloads to distribute macOS malware payloads.\n  - Why it matters operationally: Financial org employees (esp. dev/data/AI teams) may seek AI tools, potentially bypassing usual software channels, leading to initial access on high-value Mac endpoints.\n  - Recommended immediate actions:  \n    - Tighten web filtering around ad-driven downloads and unknown AI tools; block known software-download TLDs where not needed and enforce allowlists for dev/AI tooling.  \n    - On macOS endpoints, monitor for recently installed unsigned apps, new persistence (LaunchAgents/Daemons), and security tools being disabled.\n\n- **Malicious Chrome extensions exfiltrating data at scale**\n  - What happened: Over 300 Chrome extensions reported as leaking/stealing user data.\n  - Why it matters operationally: Browser extensions can exfiltrate credentials, session cookies, and internal web-app data (including banking/financial back-office tools).\n  - Recommended immediate actions:  \n    - Enforce or validate existing Chrome/Edge extension allowlists on corporate-managed browsers; remove non-approved extensions remotely where possible.  \n    - Monitor web proxy and CASB logs for suspicious outbound connections initiated by browser extension identifiers or unusual domains from browser processes.\n\n---\n\n### Monitoring & detection recommendations\n\n- **VPN / remote access exploitation (Ivanti, BeyondTrust) – ATT&CK T1133, T1078**\n  - Log sources: VPN logs, Ivanti/BeyondTrust appliance logs, firewall, IdP.  \n  - Hunt for: logins from new geo/IPs, impossible travel, new device registrations, newly created or elevated admin accounts, unexpected configuration/API changes.\n\n- **Privilege escalation and lateral movement from compromised admin tools (SolarWinds, Notepad++, BeyondTrust) – T1059, T1078.004, T1021**\n  - Log sources: EDR, Windows Event Logs (Sysmon/Security), SolarWinds/BeyondTrust audit logs.  \n  - Hunt for: admin tools spawning shells/scripting (cmd, powershell, bash), new service creations, credential dumping tool behavior, and unusual RDP/SMB connections from management servers.\n\n- **Endpoint exploitation via Notepad++ and other user apps – T1203, T1059**\n  - Log sources: EDR, application logs, Windows Security logs.  \n  - Hunt for: Notepad++ launching PowerShell/cmd/wscript, writing executables to temp/AppData, or loading unusual DLLs; recent crashes followed by new binaries appearing.\n\n- **Browser-based exfiltration and session theft (malicious extensions, AI/malvertising) – T1185, T1567**\n  - Log sources: Web proxy/secure web gateway, CASB, browser management, EDR network telemetry.  \n  - Hunt for: high-volume data uploads to unfamiliar domains from browser processes, repeated access to new AI-download or file-sharing sites, and new extension installs in managed profiles.\n\n- **Phishing and account takeover (email-based breaches, forum activity) – T1566, T1078**\n  - Log sources: Secure email gateway, mail server logs, IdP, EDR.  \n  - Hunt for: targeted phishing around telecom/health/financial themes, OAuth consent grants to unfamiliar apps, MFA fatigue or multiple failed logins followed by success.\n\n- **macOS malware via fake AI tools – T1204, T1547**\n  - Log sources: macOS EDR, unified log collection, MDM.  \n  - Hunt for: recently installed unsigned apps, new LaunchAgents/LaunchDaemons, modification of Gatekeeper/SIP, and new outbound connections immediately after installation events.\n\n- **Data exfiltration and collection (Chrome extensions, new breach forums) – T1114, T1530, T1041**\n  - Log sources: DLP, CASB, web proxy, file shares, email.  \n  - Hunt for: abnormal exports/reports from internal apps, large email attachments to personal accounts, and sustained small outbound flows outside normal business apps.\n\n- **Abuse of IP reputation gaps in signup/online services – T1090, T1190**\n  - Log sources: Web application logs, WAF, anti-fraud systems.  \n  - Hunt for: high-volume signups or login attempts from new IP ranges/ASNs, mismatched geo vs. customer profiles, or automated behavior patterns.\n\n---\n\n### Medium-term follow-ups\n\n- **Comprehensive review of KEV-listed technologies in environment**\n  - Map all Ivanti, BeyondTrust, SolarWinds, Microsoft, Apple, Notepad++ instances; align patch SLAs so KEV-listed vulns are remediated within mandated timelines.\n\n- **Harden remote access and privileged tooling**\n  - Enforce MFA and IP allowlists on VPN/privileged-access tools; implement PAM controls and session recording for BeyondTrust and equivalent solutions.\n\n- **Browser and extension governance**\n  - Implement/strengthen enterprise policies for Chrome/Edge/Firefox: strict allowlists, blocking consumer sync, and regular audits of installed extensions and permissions.\n\n- **Software acquisition and AI tooling policy**\n  - Formalize rules for downloading AI tools, IDE plugins, and productivity apps (Windows/macOS); ensure only approved repositories and app stores are used.\n\n- **Admin workstation and jump host security baseline**\n  - Ensure hardened baselines: limited internet access from admin workstations, dedicated accounts, application allowlisting, and removal of unnecessary tools like generic editors where risky.\n\n- **Third-party and vendor risk related to remote support**\n  - Validate that external vendors using BeyondTrust/other remote-support tools are following patching and MFA requirements; update contracts and onboarding checklists accordingly.",
+  "source_total_items": 8265,
+  "total_items_in_window_all": 129,
+  "total_items_in_window_curated": 29,
+  "morning_call_markdown": "### Executive Summary\n- Active exploitation of a critical BeyondTrust Privileged Access flaw is leading to full AD compromise; verify exposure and monitor for post-exploitation behavior immediately.  \n- A new Chrome 0‑day RCE is being exploited in the wild; prioritize browser patching for high‑risk users and tighten web exploitation monitoring.  \n- Stealer/banking malware campaigns (Lumma, Ninja Browser) and mobile RAT/APK scams are ramping up, including abuse of Google Groups and social media; reinforce email/web/mobile monitoring for credential and session theft.\n\n---\n\n### High-priority items (immediate attention)\n\n- **BeyondTrust privilege management / PAM RCE exploited for AD takeover**\n  - What happened: Attackers are actively exploiting a critical BeyondTrust flaw to gain full Active Directory control.\n  - Why it matters operationally: Direct path to domain admin and privileged account abuse in environments using BeyondTrust (PAM, EPM, remote support).\n  - Recommended immediate actions for the SOC today:  \n    - Confirm with infra/identity team whether any BeyondTrust products are in use, exposed externally, and whether they are patched to the latest advisory level.  \n    - Today, hunt for: unusual logons from BeyondTrust service accounts, sudden privilege escalation, new domain admins, GPO changes, or unexpected remote sessions originating from BeyondTrust infrastructure.\n\n- **Chrome 0‑day RCE actively exploited in ongoing campaigns**\n  - What happened: A Chrome/Chromium 0‑day enabling remote code execution is being exploited in the wild across Windows and Linux.\n  - Why it matters operationally: Compromise via drive‑by browsing or malicious links, especially for staff with elevated access or access to sensitive internal portals.\n  - Recommended immediate actions for the SOC today:  \n    - Verify enforced auto‑update status for Chrome/Edge/Chromium in EDR/asset inventory; flag endpoints running outdated builds in sensitive segments.  \n    - Heighten monitoring for browser‑spawned child processes (PowerShell, cmd, script interpreters) and any newly dropped executables or LOLBins from browser directories.\n\n- **Lumma Stealer & Ninja Browser malware via Google Groups and web/email**\n  - What happened: CTM360 reports active campaigns distributing Lumma Stealer and Ninja Browser malware using Google Groups as a delivery/hosting mechanism.\n  - Why it matters operationally: These families target browser data, credentials, cookies, and potentially financial portals; abuse of Google’s infrastructure makes traffic blend in.\n  - Recommended immediate actions for the SOC today:  \n    - Add focused detections for new executable/script downloads from `groups.google.com` or other Google domains, followed by process execution or credential access.  \n    - Review recent email and web proxy logs for links to suspicious Google Groups threads or unusual file types (archives, scripts, ISO, LNK) leading to new processes.\n\n- **Stealthy PowerShell delivery via ClickFix / nslookup‑based attack**\n  - What happened: A “ClickFix” style attack uses `nslookup` to fetch PowerShell payloads over DNS, often initiated through user interaction (phishing/HTML or similar).\n  - Why it matters operationally: DNS‑based payload retrieval can bypass some web proxies and URL filters, with PowerShell used for second‑stage execution.\n  - Recommended immediate actions for the SOC today:  \n    - Hunt for events where `nslookup.exe` is launched by Office apps, browsers, or script hosts, especially followed by `powershell.exe`, `pwsh.exe`, or `cmd.exe`.  \n    - Implement/verify alerts on encoded or long PowerShell commands, and unusual DNS query patterns to rare domains or TXT records from user endpoints.\n\n- **Mobile surveillance / fraud campaigns via malicious RAT/APK (ZeroDayRAT & scams)**\n  - What happened: Reports of ZeroDayRAT targeting Android/iOS for real‑time surveillance and multiple scams via malicious APK links (e.g., fake bills, gifts).\n  - Why it matters operationally: High risk to employees’ personal and BYOD devices used for corporate email, MFA, and banking; can lead to account takeover or data theft.\n  - Recommended immediate actions for the SOC today:  \n    - Coordinate with mobile/HR to push urgent advisory: install apps only from official stores, no side‑loaded APKs, scrutinize bill/gift/payment links.  \n    - For corporate‑managed mobiles, verify MDM policies to block unknown sources and monitor for newly installed high‑risk apps and abnormal access to corporate resources.\n\n---\n\n### Monitoring & detection recommendations\n\n- **BeyondTrust / privileged access compromise**\n  - Log sources: AD logs, BeyondTrust/PAM logs, SIEM, EDR on PAM servers.  \n  - Hunt for: new domain admins, mass group membership changes, service account logins from atypical hosts, unusual lateral movement from PAM infrastructure (T1078, T1075/T1021).\n\n- **Browser exploitation (Chrome 0‑day) & stealers**\n  - Log sources: EDR, web proxy/secure web gateway, DNS logs.  \n  - Hunt for: browser (`chrome.exe`, `msedge.exe`, `firefox.exe`) spawning `cmd.exe`, `powershell.exe`, `wscript.exe`, `cscript.exe`, or unknown binaries; file downloads from newly seen domains preceding new process execution (T1189, T1204, T1203).\n\n- **Google Groups abuse (Lumma/Ninja)**\n  - Log sources: Email gateway, web proxy, DNS, EDR.  \n  - Hunt for: downloads of EXE/DLL/JS/VBS/ZIP/ISO from `groups.google.com` or Google Docs/Drive followed by execution; multiple credential store access events shortly after such downloads (T1566, T1555).\n\n- **DNS‑based delivery (ClickFix / nslookup → PowerShell)**\n  - Log sources: EDR, Sysmon, DNS logs.  \n  - Hunt for: `nslookup.exe` or `dig` invoked by Office/Adobe/browser processes, or repeated TXT lookups to rare domains; subsequent encoded or obfuscated PowerShell (T1071.004, T1059.001).\n\n- **Credential and session theft (stealers, browser malware)**\n  - Log sources: EDR, IdP/SSO, VPN, CASB.  \n  - Hunt for: multiple new device logins for same user from different geos in short time, sudden password changes or MFA re‑enrollments, mass session invalidations, or known‑compromised user behavior (T1556, T1558).\n\n- **Mobile/BYOD access anomalies**\n  - Log sources: IdP/SSO, MDM, email logs, VPN.  \n  - Hunt for: new mobile devices registering for MFA outside normal regions/time, rapid switch of devices for the same user, repeated failed logins from mobile networks, unusual client types.\n\n- **General malware / data theft**\n  - Log sources: EDR, DLP, proxy, endpoint firewall.  \n  - Hunt for: new unknown binaries accessing multiple browser credential stores, exfiltration‑like outbound connections to IPs/domains not seen before, especially shortly after a user opens email attachments or web downloads (T1041, T1040).\n\n---\n\n### Medium-term follow-ups\n\n- **BeyondTrust / PAM hardening and patch SLAs**\n  - Ensure asset inventory is accurate for all PAM/BeyondTrust components; verify patch timelines, network segmentation, and least‑privilege for service accounts; review vendor’s latest hardening guidance.\n\n- **Enterprise browser management**\n  - Confirm all major browsers are centrally managed with enforced auto‑update, extension control, and script restrictions; standardize baseline rules in EDR for browser child processes and exploit behavior.\n\n- **DNS and PowerShell policy tightening**\n  - Implement or refine PowerShell Constrained Language Mode and script signing where feasible; deploy enhanced DNS logging and anomaly detection for exfiltration/command channels.\n\n- **Stealer/banking malware awareness for staff**\n  - Run focused awareness snippets for high‑risk groups (finance, trading, executives) on malicious “Google Groups/Drive” links and fake APK/bill/gift scams; refresh secure browser and password hygiene guidance.\n\n- **Mobile security and MFA hygiene**\n  - Review BYOD and corporate mobile policies; ensure MDM/EMM coverage for any device accessing sensitive apps; validate that high‑risk accounts use phishing‑resistant MFA and have strict device trust checks.\n\n- **Threat intel integration & KEV prioritization**\n  - Cross‑check CISA KEV and vendor feeds for the BeyondTrust and Chrome vulnerabilities; ensure our vulnerability and detection priorities align with active exploitation signals rather than purely CVSS scores.",
   "highlights": [
     {
-      "title": "Indian Woman Falls Prey to Cyber Blackmail, Extorted of Lakhs, Forced into Prostitution: Police Complaint Filed",
-      "link": "https://www.news4hackers.com/indian-woman-falls-prey-to-cyber-blackmail-extorted-of-lakhs-forced-into-prostitution-police-complaint-filed/",
+      "title": "ZeroDayRAT Exploit Targets Android & iOS, Enabling Real-Time Surveillance and Massive Data Theft",
+      "link": "https://gbhackers.com/zerodayrat-exploit-targets-android-ios/",
+      "source": "GBHackers News",
+      "published": "2026-02-16T06:06:58+00:00",
+      "smart_groups": [
+        "Curated",
+        "Exploit / PoC"
+      ],
+      "curated": true
+    },
+    {
+      "title": "In GitHub’s advisory pipeline, some advisories move faster than others",
+      "link": "https://www.helpnetsecurity.com/2026/02/16/github-security-advisorie-review-timelines-study/",
+      "source": "Help Net Security",
+      "published": "2026-02-16T06:00:46+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Maximizing Cybersecurity Effectiveness: Leveraging CISA’s KEV List for Smarter Threat Management",
+      "link": "https://www.news4hackers.com/maximizing-cybersecurity-effectiveness-leveraging-cisas-kev-list-for-smarter-threat-management/",
       "source": "News4Hackers",
-      "published": "2026-02-15T05:01:28+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Beyond just backup & restore, what would make a vendor truly valuable in the security lifecycle?",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1r52tdz/beyond_just_backup_restore_what_would_make_a/",
-      "source": "/r/cybersecurity",
-      "published": "2026-02-15T02:18:15+00:00",
-      "smart_groups": [
-        "Curated",
-        "Ransomware"
-      ],
-      "curated": true
-    },
-    {
-      "title": "First Ever OffSec USA Chapter Meetup - DMV Area!",
-      "link": "https://www.reddit.com/r/netsec/comments/1r51491/first_ever_offsec_usa_chapter_meetup_dmv_area/",
-      "source": "/r/netsec",
-      "published": "2026-02-15T00:54:40+00:00",
-      "smart_groups": [
-        "Curated",
-        "Exploit / PoC",
-        "Network / OT / ICS",
-        "Crypto / Web3"
-      ],
-      "curated": true
-    },
-    {
-      "title": "DOJ Epstein file EFTA01133110.pdf flagged suspicious on VirusTotal behavior tab – anyone else see this?",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1r4w67b/doj_epstein_file_efta01133110pdf_flagged/",
-      "source": "/r/cybersecurity",
-      "published": "2026-02-14T21:16:37+00:00",
-      "smart_groups": [
-        "Curated",
-        "Exploit / PoC",
-        "Malware / Payloads",
-        "Identity / Access"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Nevada unveils new statewide data classification policy months after cyberattack",
-      "link": "https://databreaches.net/2026/02/14/nevada-unveils-new-statewide-data-classification-policy-months-after-cyberattack/?pk_campaign=feed&pk_kwd=nevada-unveils-new-statewide-data-classification-policy-months-after-cyberattack",
-      "source": "DataBreaches.net",
-      "published": "2026-02-14T20:42:34+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs"
-      ],
-      "curated": true
-    },
-    {
-      "title": "I'm the Customer SaaS Companies Need to Worry About",
-      "link": "https://nostarch.com/blog/im-customer-saas-companies-need-worry-about",
-      "source": "https://nostarch.com/rss.xml",
-      "published": "2026-02-14T20:27:12+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "Cloud / SaaS",
-        "Network / OT / ICS"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Monthly VulPen Scan Question",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1r4rvy0/monthly_vulpen_scan_question/",
-      "source": "/r/cybersecurity",
-      "published": "2026-02-14T18:22:58+00:00",
+      "published": "2026-02-16T05:31:35+00:00",
       "smart_groups": [
         "Curated",
         "Vulnerabilities / CVEs",
@@ -96,21 +46,35 @@
       "curated": true
     },
     {
-      "title": "Abuse-prevention design: using IP reputation as one signal in signup defense-in-depth",
-      "link": "https://www.reddit.com/r/netsec/comments/1r4qcry/abuseprevention_design_using_ip_reputation_as_one/",
-      "source": "/r/netsec",
-      "published": "2026-02-14T17:23:39+00:00",
+      "title": "Don’t panic over CISA’s KEV list, use it smarter",
+      "link": "https://www.helpnetsecurity.com/2026/02/16/cisa-kev-catalog-video/",
+      "source": "Help Net Security",
+      "published": "2026-02-16T05:30:09+00:00",
       "smart_groups": [
         "Curated",
-        "Vulnerabilities / CVEs"
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
       ],
       "curated": true
     },
     {
-      "title": "Ivanti RCE Attacks: 83% Linked to Notorious Threat Actor",
-      "link": "https://www.news4hackers.com/ivanti-rce-attacks-83-linked-to-notorious-threat-actor/",
+      "title": "Attackers Exploit Critical BeyondTrust Flaw to Seize Full Active Directory Control",
+      "link": "https://gbhackers.com/attackers-exploit-critical-beyondtrust-flaw/",
+      "source": "GBHackers News",
+      "published": "2026-02-16T05:26:55+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Windows / Microsoft"
+      ],
+      "curated": true
+    },
+    {
+      "title": "MOS: Modular Open-Source Operating System for Servers and Home Labs",
+      "link": "https://www.news4hackers.com/mos-modular-open-source-operating-system-for-servers-and-home-labs/",
       "source": "News4Hackers",
-      "published": "2026-02-14T17:01:49+00:00",
+      "published": "2026-02-16T05:17:52+00:00",
       "smart_groups": [
         "Curated",
         "Vulnerabilities / CVEs"
@@ -118,13 +82,50 @@
       "curated": true
     },
     {
-      "title": "FOSS MCP servers for cited legal text (EU + national: SE/NL/DE/SI) — feedback wanted",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1r4pkny/foss_mcp_servers_for_cited_legal_text_eu_national/",
-      "source": "/r/cybersecurity",
-      "published": "2026-02-14T16:53:39+00:00",
+      "title": "Lotus Blossom Hackers Breach Official Notepad++ Hosting Infrastructure",
+      "link": "https://gbhackers.com/notepad-breached/",
+      "source": "GBHackers News",
+      "published": "2026-02-16T05:03:08+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Identity / Access"
+      ],
+      "curated": true
+    },
+    {
+      "title": "US Gift Scam: Lakhs Lost in Instagram Friendship Turned Cyber Trap",
+      "link": "https://www.news4hackers.com/us-gift-scam-lakhs-lost-in-instagram-friendship-turned-cyber-trap/",
+      "source": "News4Hackers",
+      "published": "2026-02-16T05:01:45+00:00",
+      "smart_groups": [
+        "Curated",
+        "Exploit / PoC"
+      ],
+      "curated": true
+    },
+    {
+      "title": "MOS: Open-source modular OS for servers and homelabs",
+      "link": "https://www.helpnetsecurity.com/2026/02/16/mos-open-source-modular-os-servers-homelabs/",
+      "source": "Help Net Security",
+      "published": "2026-02-16T05:00:00+00:00",
       "smart_groups": [
         "Curated",
         "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Chrome 0-Day Enables Remote Code Execution in Ongoing Campaign",
+      "link": "https://gbhackers.com/chrome-0-day-enables-remote-code-execution/",
+      "source": "GBHackers News",
+      "published": "2026-02-16T04:51:47+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Windows / Microsoft",
+        "Linux / Unix"
       ],
       "curated": true
     }
