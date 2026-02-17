@@ -1,21 +1,33 @@
 {
-  "generated_at": "2026-02-16T07:20:14.673542+00:00",
-  "analysis_date": "2026-02-16",
+  "generated_at": "2026-02-17T07:15:12.110844+00:00",
+  "analysis_date": "2026-02-17",
   "model": "gpt-5.1",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-02-16T06:38:28.338456+00:00",
+  "source_generated_at": "2026-02-17T06:22:10.795362+00:00",
   "source_days_back": 30,
-  "source_total_items": 8265,
-  "total_items_in_window_all": 129,
-  "total_items_in_window_curated": 29,
-  "morning_call_markdown": "### Executive Summary\n- Active exploitation of a critical BeyondTrust Privileged Access flaw is leading to full AD compromise; verify exposure and monitor for post-exploitation behavior immediately.  \n- A new Chrome 0‑day RCE is being exploited in the wild; prioritize browser patching for high‑risk users and tighten web exploitation monitoring.  \n- Stealer/banking malware campaigns (Lumma, Ninja Browser) and mobile RAT/APK scams are ramping up, including abuse of Google Groups and social media; reinforce email/web/mobile monitoring for credential and session theft.\n\n---\n\n### High-priority items (immediate attention)\n\n- **BeyondTrust privilege management / PAM RCE exploited for AD takeover**\n  - What happened: Attackers are actively exploiting a critical BeyondTrust flaw to gain full Active Directory control.\n  - Why it matters operationally: Direct path to domain admin and privileged account abuse in environments using BeyondTrust (PAM, EPM, remote support).\n  - Recommended immediate actions for the SOC today:  \n    - Confirm with infra/identity team whether any BeyondTrust products are in use, exposed externally, and whether they are patched to the latest advisory level.  \n    - Today, hunt for: unusual logons from BeyondTrust service accounts, sudden privilege escalation, new domain admins, GPO changes, or unexpected remote sessions originating from BeyondTrust infrastructure.\n\n- **Chrome 0‑day RCE actively exploited in ongoing campaigns**\n  - What happened: A Chrome/Chromium 0‑day enabling remote code execution is being exploited in the wild across Windows and Linux.\n  - Why it matters operationally: Compromise via drive‑by browsing or malicious links, especially for staff with elevated access or access to sensitive internal portals.\n  - Recommended immediate actions for the SOC today:  \n    - Verify enforced auto‑update status for Chrome/Edge/Chromium in EDR/asset inventory; flag endpoints running outdated builds in sensitive segments.  \n    - Heighten monitoring for browser‑spawned child processes (PowerShell, cmd, script interpreters) and any newly dropped executables or LOLBins from browser directories.\n\n- **Lumma Stealer & Ninja Browser malware via Google Groups and web/email**\n  - What happened: CTM360 reports active campaigns distributing Lumma Stealer and Ninja Browser malware using Google Groups as a delivery/hosting mechanism.\n  - Why it matters operationally: These families target browser data, credentials, cookies, and potentially financial portals; abuse of Google’s infrastructure makes traffic blend in.\n  - Recommended immediate actions for the SOC today:  \n    - Add focused detections for new executable/script downloads from `groups.google.com` or other Google domains, followed by process execution or credential access.  \n    - Review recent email and web proxy logs for links to suspicious Google Groups threads or unusual file types (archives, scripts, ISO, LNK) leading to new processes.\n\n- **Stealthy PowerShell delivery via ClickFix / nslookup‑based attack**\n  - What happened: A “ClickFix” style attack uses `nslookup` to fetch PowerShell payloads over DNS, often initiated through user interaction (phishing/HTML or similar).\n  - Why it matters operationally: DNS‑based payload retrieval can bypass some web proxies and URL filters, with PowerShell used for second‑stage execution.\n  - Recommended immediate actions for the SOC today:  \n    - Hunt for events where `nslookup.exe` is launched by Office apps, browsers, or script hosts, especially followed by `powershell.exe`, `pwsh.exe`, or `cmd.exe`.  \n    - Implement/verify alerts on encoded or long PowerShell commands, and unusual DNS query patterns to rare domains or TXT records from user endpoints.\n\n- **Mobile surveillance / fraud campaigns via malicious RAT/APK (ZeroDayRAT & scams)**\n  - What happened: Reports of ZeroDayRAT targeting Android/iOS for real‑time surveillance and multiple scams via malicious APK links (e.g., fake bills, gifts).\n  - Why it matters operationally: High risk to employees’ personal and BYOD devices used for corporate email, MFA, and banking; can lead to account takeover or data theft.\n  - Recommended immediate actions for the SOC today:  \n    - Coordinate with mobile/HR to push urgent advisory: install apps only from official stores, no side‑loaded APKs, scrutinize bill/gift/payment links.  \n    - For corporate‑managed mobiles, verify MDM policies to block unknown sources and monitor for newly installed high‑risk apps and abnormal access to corporate resources.\n\n---\n\n### Monitoring & detection recommendations\n\n- **BeyondTrust / privileged access compromise**\n  - Log sources: AD logs, BeyondTrust/PAM logs, SIEM, EDR on PAM servers.  \n  - Hunt for: new domain admins, mass group membership changes, service account logins from atypical hosts, unusual lateral movement from PAM infrastructure (T1078, T1075/T1021).\n\n- **Browser exploitation (Chrome 0‑day) & stealers**\n  - Log sources: EDR, web proxy/secure web gateway, DNS logs.  \n  - Hunt for: browser (`chrome.exe`, `msedge.exe`, `firefox.exe`) spawning `cmd.exe`, `powershell.exe`, `wscript.exe`, `cscript.exe`, or unknown binaries; file downloads from newly seen domains preceding new process execution (T1189, T1204, T1203).\n\n- **Google Groups abuse (Lumma/Ninja)**\n  - Log sources: Email gateway, web proxy, DNS, EDR.  \n  - Hunt for: downloads of EXE/DLL/JS/VBS/ZIP/ISO from `groups.google.com` or Google Docs/Drive followed by execution; multiple credential store access events shortly after such downloads (T1566, T1555).\n\n- **DNS‑based delivery (ClickFix / nslookup → PowerShell)**\n  - Log sources: EDR, Sysmon, DNS logs.  \n  - Hunt for: `nslookup.exe` or `dig` invoked by Office/Adobe/browser processes, or repeated TXT lookups to rare domains; subsequent encoded or obfuscated PowerShell (T1071.004, T1059.001).\n\n- **Credential and session theft (stealers, browser malware)**\n  - Log sources: EDR, IdP/SSO, VPN, CASB.  \n  - Hunt for: multiple new device logins for same user from different geos in short time, sudden password changes or MFA re‑enrollments, mass session invalidations, or known‑compromised user behavior (T1556, T1558).\n\n- **Mobile/BYOD access anomalies**\n  - Log sources: IdP/SSO, MDM, email logs, VPN.  \n  - Hunt for: new mobile devices registering for MFA outside normal regions/time, rapid switch of devices for the same user, repeated failed logins from mobile networks, unusual client types.\n\n- **General malware / data theft**\n  - Log sources: EDR, DLP, proxy, endpoint firewall.  \n  - Hunt for: new unknown binaries accessing multiple browser credential stores, exfiltration‑like outbound connections to IPs/domains not seen before, especially shortly after a user opens email attachments or web downloads (T1041, T1040).\n\n---\n\n### Medium-term follow-ups\n\n- **BeyondTrust / PAM hardening and patch SLAs**\n  - Ensure asset inventory is accurate for all PAM/BeyondTrust components; verify patch timelines, network segmentation, and least‑privilege for service accounts; review vendor’s latest hardening guidance.\n\n- **Enterprise browser management**\n  - Confirm all major browsers are centrally managed with enforced auto‑update, extension control, and script restrictions; standardize baseline rules in EDR for browser child processes and exploit behavior.\n\n- **DNS and PowerShell policy tightening**\n  - Implement or refine PowerShell Constrained Language Mode and script signing where feasible; deploy enhanced DNS logging and anomaly detection for exfiltration/command channels.\n\n- **Stealer/banking malware awareness for staff**\n  - Run focused awareness snippets for high‑risk groups (finance, trading, executives) on malicious “Google Groups/Drive” links and fake APK/bill/gift scams; refresh secure browser and password hygiene guidance.\n\n- **Mobile security and MFA hygiene**\n  - Review BYOD and corporate mobile policies; ensure MDM/EMM coverage for any device accessing sensitive apps; validate that high‑risk accounts use phishing‑resistant MFA and have strict device trust checks.\n\n- **Threat intel integration & KEV prioritization**\n  - Cross‑check CISA KEV and vendor feeds for the BeyondTrust and Chrome vulnerabilities; ensure our vulnerability and detection priorities align with active exploitation signals rather than purely CVSS scores.",
+  "source_total_items": 8485,
+  "total_items_in_window_all": 287,
+  "total_items_in_window_curated": 94,
+  "morning_call_markdown": "### Executive Summary\n- Actively exploited Chrome zero‑day (CVE‑2026‑2441) and a critical BeyondTrust domain‑takeover vuln are now priority patch/hunt items; CISA ordered 72h remediation for BeyondTrust.\n- Multiple campaigns abusing remote access (ScreenConnect phishing), Outlook/Office add‑ins and DNS‑based delivery (ClickFix) increase initial access risk for endpoints and email.\n- Ransomware (LockBit 5.0, BridgePay‑linked incidents, healthcare/hospital outages) remains highly active across Windows, Linux, and ESXi – reinforce controls on privileged access and hypervisors.\n\n---\n\n### High-priority items (immediate attention)\n\n- **Chrome zero‑day – CVE‑2026‑2441 exploited in the wild**  \n  • What happened: Google released an emergency patch for a Chrome zero‑day being actively exploited (multiple sources).  \n  • Why it matters: Browser RCE is a common entry vector for drive‑by and phishing‑linked intrusions on user workstations and admin laptops.  \n  • Recommended immediate actions: Confirm enterprise Chrome/Chromium‑based browsers auto‑update is enabled and working; start checking EDR for suspicious browser‑spawned processes and new child binaries from Chrome today.\n\n- **BeyondTrust privilege escalation – active exploitation & CISA 72h directive (CVE‑2026‑1731)**  \n  • What happened: Critical BeyondTrust flaw is being exploited in the wild; CISA ordered US agencies to patch within 72 hours.  \n  • Why it matters: Successful exploitation can lead to full domain control via compromised PAM infrastructure.  \n  • Recommended immediate actions: Inventory any BeyondTrust products (on‑prem or SaaS); verify patch/mitigation status today; if exposed, pull VPN/firewall logs for anomalous access to those hosts and hunt for unusual directory/privileged account activity around them.\n\n- **ScreenConnect misuse via phishing (“fake Social Security emails”)**  \n  • What happened: Campaigns are abusing ScreenConnect remote access links delivered via convincing social‑themed phishing to hijack PCs.  \n  • Why it matters: Remote support tools can provide instant, high‑privilege interactive access bypassing standard malware patterns.  \n  • Recommended immediate actions: Tighten email detections for ScreenConnect/remote‑tool URLs; monitor for new ScreenConnect agents/installers; flag any outbound ScreenConnect sessions from endpoints not used by IT support.\n\n- **LockBit 5.0 and ongoing ransomware activity (BridgePay, hotel, hospital cases)**  \n  • What happened: LockBit 5.0 now targets Windows, Linux, ESXi; multiple organizations (payments provider, hotel, hospital) reported ransomware‑linked or “network disruption” incidents.  \n  • Why it matters: Multi‑platform lockers directly threaten banking back‑office, Linux app servers and hypervisors hosting critical financial systems.  \n  • Recommended immediate actions: Review EDR for known pre‑ransom behaviors (mass LSASS access, shadow copy deletion, suspicious ESXi commands); confirm recent backups and hypervisor hardening; ensure response runbooks and isolation procedures are immediately accessible.\n\n- **Office/Outlook add‑ins & ClickFix DNS‑based delivery**  \n  • What happened: Reports of Outlook add‑ins being hijacked plus a “ClickFix” attack chain abusing nslookup/DNS lookups to fetch RAT payloads.  \n  • Why it matters: These are low‑friction vectors on user workstations that can bypass traditional email attachment scanning and use living‑off‑the‑land binaries.  \n  • Recommended immediate actions: Hunt for nslookup / curl / powershell / certutil invoked by Office processes (WINWORD/OUTLOOK/EXCEL) in the last 7 days; monitor for new or changed Outlook add‑ins, especially from non‑standard paths.\n\n---\n\n### Monitoring & detection recommendations\n\n- **Browser zero‑day & drive‑by attacks (Chrome CVE‑2026‑2441)**  \n  • Logs: EDR, web proxy, DNS.  \n  • Hunt for Chrome spawning scripting interpreters or LOLBins (powershell.exe, cmd.exe, wscript.exe, mshta.exe) and immediate outbound C2 (ATT&CK T1203, T1059).\n\n- **BeyondTrust / PAM exploitation**  \n  • Logs: BeyondTrust application logs, Windows Security logs on domain controllers, VPN/firewall logs around PAM servers.  \n  • Look for new privileged accounts, unexpected group membership changes, unusual logons to DCs from PAM hosts, and interactive logins at odd hours (T1068, T1078).\n\n- **Remote access abuse (ScreenConnect & similar tools)**  \n  • Logs: Endpoint app inventory/EDR, proxy, firewall, email gateway.  \n  • Alert on installation or execution of ScreenConnect, AnyDesk, TeamViewer, etc. on non‑IT endpoints; watch for outbound connections to new ScreenConnect/cloud‑RMM domains (T1105, T1219).\n\n- **Office/Outlook add‑ins and ClickFix DNS‑based delivery**  \n  • Logs: EDR, DNS logs, Office 365 audit logs (if applicable).  \n  • Hunt for Office processes issuing high‑volume nslookup or unusual DNS queries and dropping binaries/scripts to temp directories; alert on new or disabled security add‑ins (T1204, T1059, T1071.004).\n\n- **Ransomware staging and execution (LockBit 5.0, current incidents)**  \n  • Logs: EDR, Windows event logs, ESXi/hypervisor logs, backup system logs.  \n  • Monitor for: mass file modifications, shadow copy deletions (vssadmin, wmic), ESXi shell commands that snapshot/unregister VMs, sudden backup failure spikes (T1486, T1490).\n\n- **Malicious GitHub / open‑source supply chain**  \n  • Logs: Developer endpoints, CI/CD, proxy logs for github.com and package registries.  \n  • Flag `git clone` / package install from unknown repos into production‑adjacent systems; watch for build servers spawning network scanners or credential dumpers shortly after pulling new code (T1195, T1552).\n\n- **WordPress/Joomla and web‑app plugin vulns (CleanTalk, Novarain/Tassos, FileZen)**  \n  • Logs: WAF, web server logs, CMS logs.  \n  • Look for spikes in unusual parameters, SQLi‑like patterns, and direct requests to plugin paths; monitor for unexpected admin logins or file uploads (T1190, T1505).\n\n- **Mobile spyware / ZeroDayRAT (Android/iOS)**  \n  • Logs: MDM/EAM, VPN, IdP.  \n  • Watch for new, unapproved mobile apps on corporate devices, sudden new VPN endpoints from unusual geos, or repeated MFA prompts indicating device compromise (T1404, T1430 – mobile).\n\n---\n\n### Medium-term follow-ups\n\n- **Patch management: browsers & privileged systems**  \n  • Ensure Chrome/Edge and other Chromium browsers are in a rapid update ring; verify all BeyondTrust, VPN, File transfer (FileZen) and PAM systems are on latest patches and removed from direct internet exposure where possible.\n\n- **Remote‑tool governance**  \n  • Formalize policy on allowed remote access tools (ScreenConnect, RMMs); enforce via application control and proxy allowlists; add periodic reviews to detect shadow IT remote tools.\n\n- **Ransomware resilience review**  \n  • Re‑validate RTO/RPO and offline backup coverage for core banking, payments, SWIFT, trading platforms, and ESXi clusters; test restore procedures at least in tabletop if not live.\n\n- **Email and collaboration hardening**  \n  • Tighten controls on Outlook/Office add‑ins (allow‑list trusted publishers); revisit phishing training with emphasis on “remote help” lures and fake government/benefits emails.\n\n- **Developer and supply‑chain security**  \n  • Brief dev/DevOps on the active malicious GitHub repo campaign and open‑source registry funding/risks; enforce pinned dependencies and repository allow‑listing for build pipelines.\n\n- **AI/agent and SSRF protections (LangChain SSRF, OpenClaw discussions)**  \n  • For any internal AI/agent deployments or API‑driven microservices, review network egress rules, metadata service access, and SSRF mitigations (input validation, IMDSv2, service‑to‑service allow‑lists).",
   "highlights": [
     {
-      "title": "ZeroDayRAT Exploit Targets Android & iOS, Enabling Real-Time Surveillance and Massive Data Theft",
-      "link": "https://gbhackers.com/zerodayrat-exploit-targets-android-ios/",
+      "title": "Langchain Community SSRF Bypass Vulnerability Exposes Internal Services to Unauthorized Access",
+      "link": "https://gbhackers.com/langchain-community-ssrf-bypass-vulnerability/",
       "source": "GBHackers News",
-      "published": "2026-02-16T06:06:58+00:00",
+      "published": "2026-02-17T05:22:12+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Malware / Payloads"
+      ],
+      "curated": true
+    },
+    {
+      "title": "ScreenConnect Hijacking: Hackers Exploit Fake Social Security Emails to Control PCs",
+      "link": "https://www.news4hackers.com/screenconnect-hijacking-hackers-exploit-fake-social-security-emails-to-control-pcs-2/",
+      "source": "News4Hackers",
+      "published": "2026-02-17T05:12:54+00:00",
       "smart_groups": [
         "Curated",
         "Exploit / PoC"
@@ -23,10 +35,21 @@
       "curated": true
     },
     {
-      "title": "In GitHub’s advisory pipeline, some advisories move faster than others",
-      "link": "https://www.helpnetsecurity.com/2026/02/16/github-security-advisorie-review-timelines-study/",
-      "source": "Help Net Security",
-      "published": "2026-02-16T06:00:46+00:00",
+      "title": "ScreenConnect Hijacking: Hackers Exploit Fake Social Security Emails to Control PCs",
+      "link": "https://www.news4hackers.com/screenconnect-hijacking-hackers-exploit-fake-social-security-emails-to-control-pcs/",
+      "source": "News4Hackers",
+      "published": "2026-02-17T05:10:07+00:00",
+      "smart_groups": [
+        "Curated",
+        "Exploit / PoC"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Last Week in Security (LWiS) - 2026-02-16",
+      "link": "https://blog.badsectorlabs.com/last-week-in-security-lwis-2026-02-16.html",
+      "source": "https://blog.badsectorlabs.com/feeds/all.atom.xml",
+      "published": "2026-02-17T04:59:00+00:00",
       "smart_groups": [
         "Curated",
         "Vulnerabilities / CVEs"
@@ -34,98 +57,77 @@
       "curated": true
     },
     {
-      "title": "Maximizing Cybersecurity Effectiveness: Leveraging CISA’s KEV List for Smarter Threat Management",
-      "link": "https://www.news4hackers.com/maximizing-cybersecurity-effectiveness-leveraging-cisas-kev-list-for-smarter-threat-management/",
-      "source": "News4Hackers",
-      "published": "2026-02-16T05:31:35+00:00",
+      "title": "Hackers Abuse ScreenConnect to Hijack PCs via Fake Social Security Emails",
+      "link": "https://hackread.com/hackers-screenconnect-hijack-pcs-fake-social-security-emails/",
+      "source": "HackRead",
+      "published": "2026-02-17T04:48:54+00:00",
       "smart_groups": [
         "Curated",
         "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Don’t panic over CISA’s KEV list, use it smarter",
-      "link": "https://www.helpnetsecurity.com/2026/02/16/cisa-kev-catalog-video/",
-      "source": "Help Net Security",
-      "published": "2026-02-16T05:30:09+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Attackers Exploit Critical BeyondTrust Flaw to Seize Full Active Directory Control",
-      "link": "https://gbhackers.com/attackers-exploit-critical-beyondtrust-flaw/",
-      "source": "GBHackers News",
-      "published": "2026-02-16T05:26:55+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
         "Windows / Microsoft"
       ],
       "curated": true
     },
     {
-      "title": "MOS: Modular Open-Source Operating System for Servers and Home Labs",
-      "link": "https://www.news4hackers.com/mos-modular-open-source-operating-system-for-servers-and-home-labs/",
-      "source": "News4Hackers",
-      "published": "2026-02-16T05:17:52+00:00",
+      "title": "Montana hospital restores phones as cyber-related network disruptions persist",
+      "link": "https://databreaches.net/2026/02/16/montana-hospital-restores-phones-as-cyber-related-network-disruptions-persist/?pk_campaign=feed&pk_kwd=montana-hospital-restores-phones-as-cyber-related-network-disruptions-persist",
+      "source": "DataBreaches.net",
+      "published": "2026-02-17T01:43:39+00:00",
       "smart_groups": [
         "Curated",
+        "Ransomware",
         "Vulnerabilities / CVEs"
       ],
       "curated": true
     },
     {
-      "title": "Lotus Blossom Hackers Breach Official Notepad++ Hosting Infrastructure",
-      "link": "https://gbhackers.com/notepad-breached/",
-      "source": "GBHackers News",
-      "published": "2026-02-16T05:03:08+00:00",
+      "title": "Exploit available for new Chrome zero-day vulnerability, says Google",
+      "link": "https://www.csoonline.com/article/4132879/exploit-available-for-new-chrome-zero-day-vulnerability-says-google.html",
+      "source": "CSO Online",
+      "published": "2026-02-17T00:48:21+00:00",
       "smart_groups": [
         "Curated",
-        "Vulnerabilities / CVEs",
-        "Identity / Access"
-      ],
-      "curated": true
-    },
-    {
-      "title": "US Gift Scam: Lakhs Lost in Instagram Friendship Turned Cyber Trap",
-      "link": "https://www.news4hackers.com/us-gift-scam-lakhs-lost-in-instagram-friendship-turned-cyber-trap/",
-      "source": "News4Hackers",
-      "published": "2026-02-16T05:01:45+00:00",
-      "smart_groups": [
-        "Curated",
-        "Exploit / PoC"
-      ],
-      "curated": true
-    },
-    {
-      "title": "MOS: Open-source modular OS for servers and homelabs",
-      "link": "https://www.helpnetsecurity.com/2026/02/16/mos-open-source-modular-os-servers-homelabs/",
-      "source": "Help Net Security",
-      "published": "2026-02-16T05:00:00+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Chrome 0-Day Enables Remote Code Execution in Ongoing Campaign",
-      "link": "https://gbhackers.com/chrome-0-day-enables-remote-code-execution/",
-      "source": "GBHackers News",
-      "published": "2026-02-16T04:51:47+00:00",
-      "smart_groups": [
-        "Curated",
+        "Ransomware",
         "Vulnerabilities / CVEs",
         "Exploit / PoC",
         "Windows / Microsoft",
         "Linux / Unix"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Marietta  also affected by BridgePay ransomware attack.",
+      "link": "https://databreaches.net/2026/02/16/marietta-also-affected-by-bridgepay-ransomware-attack/?pk_campaign=feed&pk_kwd=marietta-also-affected-by-bridgepay-ransomware-attack",
+      "source": "DataBreaches.net",
+      "published": "2026-02-16T23:44:21+00:00",
+      "smart_groups": [
+        "Curated",
+        "Ransomware",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Exploiting Reversing (ER) series | Article 06 | A Deep Dive Into Exploiting a Minifilter Driver (N-day) | Extended Version",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1r6nn3c/exploiting_reversing_er_series_article_06_a_deep/",
+      "source": "/r/cybersecurity",
+      "published": "2026-02-16T22:10:34+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Crypto / Web3"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Cybersecurity as a hobbie",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1r6n698/cybersecurity_as_a_hobbie/",
+      "source": "/r/cybersecurity",
+      "published": "2026-02-16T21:53:04+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
       ],
       "curated": true
     }
