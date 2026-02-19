@@ -1,33 +1,34 @@
 {
-  "generated_at": "2026-02-18T07:17:07.782713+00:00",
-  "analysis_date": "2026-02-18",
+  "generated_at": "2026-02-19T07:15:36.504555+00:00",
+  "analysis_date": "2026-02-19",
   "model": "gpt-5.1",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-02-18T06:28:58.549434+00:00",
+  "source_generated_at": "2026-02-19T06:25:09.364286+00:00",
   "source_days_back": 30,
-  "source_total_items": 8819,
-  "total_items_in_window_all": 401,
-  "total_items_in_window_curated": 108,
-  "morning_call_markdown": "### Executive Summary\n\n- Actively exploited zero-days in Google Chrome and Dell RecoverPoint (BRICKSTORM/UNC6201) plus newly exploited Ivanti EPMM CVEs significantly raise the risk of endpoint and virtualization compromise.\n- Mobile and firmware threats (Keenadu Android backdoor, ZeroDayRAT, Android supply-chain implants) increase risk to staff/execs using personal and corporate mobile devices.\n- Ransomware remains highly active (Phobos ecosystem, industrial targets) and CISA added more known‑exploited CVEs, underscoring the need to tighten initial access and patching of internet-facing services.\n\n---\n\n### High-priority items (immediate attention)\n\n- **Google Chrome zero-day (CVE-2026-2441) – in-the-wild exploitation**\n  - What happened: Google released an emergency Chrome update for a critical RCE zero-day exploited via malicious webpages.\n  - Why it matters: Unpatched browsers on workstations/VDI can be compromised via drive‑by attacks, leading to credential theft and lateral movement.\n  - Recommended immediate actions for the SOC today:  \n    - Validate via EDR/asset mgmt which endpoints/VDI are below the fixed Chrome version; escalate to IT for priority update.  \n    - Increase monitoring for browser-spawned child processes (PowerShell, cmd.exe, curl, regsvr32, mshta, wscript) and suspicious DLL loads from browser processes.\n\n- **Dell RecoverPoint for VMs zero-day exploited by UNC6201 (BRICKSTORM / GRIMBOLT)**\n  - What happened: China-linked actors have been exploiting a Dell RecoverPoint for VMs zero-day since mid‑2024 using “ghost NICs” and custom malware (per Google Cloud / multiple reports).\n  - Why it matters: RecoverPoint is used in virtualized storage/DR; compromise can give adversaries deep access to hypervisors, snapshots and replication traffic, ideal for data theft and ransomware staging.\n  - Recommended immediate actions for the SOC today:  \n    - Confirm whether any Dell RecoverPoint for VMs or related Dell storage appliances are in our environment or with critical hosting/DR providers; if yes, verify patch/mitigation status and external exposure.  \n    - Hunt in logs around those systems for anomalous management access (new admin users, logins from unusual IPs/time zones, unexpected NICs/interfaces or replication config changes).\n\n- **Ivanti EPMM critical vulns actively exploited (Unit42 report)**\n  - What happened: New Ivanti EPMM CVEs (CVE-2026-1281, CVE-2026-1340) are reported as exploited in the wild to deploy malware.\n  - Why it matters: EPMM controls mobile endpoints and often sits internet-facing; compromise can enable device enrollment abuse, profile tampering, and pivot into internal networks.\n  - Recommended immediate actions for the SOC today:  \n    - Identify any Ivanti EPMM instances (internal or managed service); verify against latest vendor guidance that patches/mitigations are applied.  \n    - Review WAF/VPN/firewall and EPMM logs for anomalous authentication attempts, new device enrollments from atypical locations, and sudden config changes over the last 30–60 days.\n\n- **CISA “Known Exploited Vulnerabilities” additions + VSCode extension and Android supply-chain abuse**\n  - What happened: CISA added four more KEVs (exploited in the wild); separate reports detail malicious forks on GitHub, VSCode extension flaws, and Trojanized Android devices/firmware.\n  - Why it matters: Attackers are relying on widely used dev tools and supply-chain vectors; dev and mobile users are high‑value targets for credential theft and initial access.\n  - Recommended immediate actions for the SOC today:  \n    - Cross-check our vuln management feed against CISA’s new KEVs; ensure any internet-facing or high‑impact assets are prioritized for patching or compensating controls.  \n    - For developers, monitor for installation of new/unapproved VSCode extensions or binaries from GitHub; coordinate with DevSecOps to highlight today’s supply-chain risks.\n\n- **Ransomware landscape & Phobos affiliate arrest**\n  - What happened: Authorities arrested a Phobos ransomware affiliate; other reports show rising ransomware against industrial operations and a noisy but possibly fake “0APT” group.\n  - Why it matters: Arrests do not materially reduce ransomware risk; affiliates rebrand, and industrial/financial operations remain high‑value targets.\n  - Recommended immediate actions for the SOC today:  \n    - Maintain heightened focus on initial access patterns: phishing → infostealers → RDP/VPN abuse → C2; ensure rapid triage of any credential theft or suspicious remote access events.  \n    - Re-validate that EDR ransomware protections are enabled in “block” mode on servers and endpoints; confirm immutable backups and their isolation status with infra teams (not to fix, but to flag gaps).\n\n---\n\n### Monitoring & detection recommendations\n\n- **Browser zero-day exploitation (Chrome / Firefox RCEs)**  \n  - Log sources: EDR, browser telemetry, web proxy.  \n  - Monitor for browsers spawning scripting tools or LOLBins (PowerShell, wscript, mshta, rundll32, regsvr32) and network connections to newly observed domains after a single page visit (T1203, T1204).\n\n- **Dell RecoverPoint / storage / virtualization abuse**  \n  - Log sources: Storage/VMware logs, management plane, firewall around DR/backup networks.  \n  - Hunt for new or modified network interfaces, changes to replication or snapshot configs, and admin logins from non-standard admin hosts or foreign IPs (T1078, T1098).\n\n- **Ivanti EPMM and other internet-facing admin portals**  \n  - Log sources: VPN/WAF, EPMM audit logs, reverse proxies.  \n  - Detect spikes in failed logins, requests to unusual paths, access from Tor/VPN ASNs, and new device enrollments or policy pushes outside change windows (T1190, T1078).\n\n- **Mobile & firmware threats (Keenadu, ZeroDayRAT, Android supply-chain malware)**  \n  - Log sources: MDM/UEM, mobile security gateway, corporate email/O365 logs.  \n  - Watch for new/unknown mobile devices enrolling, devices suddenly jailbroken/rooted, or mobile logins from atypical geos; monitor for OAuth token grants to suspicious mobile apps (T1404, T1550).\n\n- **Malicious dev tooling and GitHub/VSCode exploitation**  \n  - Log sources: EDR on dev machines, web proxy, GitHub/SCM audit logs.  \n  - Detect new code tools or extensions installed outside standard images; watch for CLI tools (git, curl, wget, node, python) spawning network connections to low-reputation hosts shortly after installs (T1129, T1195).\n\n- **Credential theft and infostealer campaigns (Matanbuchus 3.0 / StealC / CRESCENTHARVEST)**  \n  - Log sources: EDR, email security, DNS, proxy.  \n  - Look for macro-less MSI/SFX installers executed from Downloads or temp dirs; unusual archive/executable attachments; and outbound connections to newly registered domains on uncommon ports (T1204, T1105).\n\n- **Ransomware precursors (Phobos ecosystem, industrial targeting)**  \n  - Log sources: EDR, Windows event logs, RDP/VPN, AD/IdP.  \n  - Hunt for lateral movement (new RDP from workstations to servers), mass credential validation, new admin accounts, or mass shadow copy deletion and backup enumeration (T1021, T1489, T1486).\n\n- **Cloud/SaaS abuse (Atlassian Cloud spam, M365 MFA-bypass phishing)**  \n  - Log sources: Atlassian/M365 audit logs, secure email gateway, IdP.  \n  - Monitor for OAuth consent to unverified apps, inbox rules that auto-forward or delete, unusual use of legacy auth, and login anomalies followed by large data exports (T1539, T1114, T1078.004).\n\n---\n\n### Medium-term follow-ups\n\n- **Browser & endpoint patching discipline**  \n  - Ensure Chrome, Firefox, Edge, and core plugins are on auto-update with enforced baselines; validate via regular reports that no endpoints lag more than one version behind.\n\n- **Review of backup/DR and storage security**  \n  - With Dell RecoverPoint exploitation in mind, jointly review storage/replication security: network segmentation, MFA on consoles, logging coverage, and ability to detect tampering with recovery points.\n\n- **Mobile/MDM security posture**  \n  - Reassess reliance on BYOD; ensure MDM/UEM controls, conditional access, and mobile threat defense are in place for any device that accesses sensitive banking systems.\n\n- **Supply-chain risk in dev & third-party SaaS**  \n  - Work with DevSecOps to formalize allowlists for VSCode extensions, GitHub actions, and third‑party SDKs; verify vendors’ exposure to open-source registry risks and that SBOMs are available for critical apps.\n\n- **Ransomware tabletop and runbooks**  \n  - Update playbooks to reflect current affiliate TTPs (industrial/financial focus); run a short tabletop on recovery from a hypervisor/storage-layer compromise scenario.\n\n- **AI/LLM and MCP/agent security**  \n  - Given multiple pieces on AI agent and MCP-server exploitation, catalog any internal AI/agent deployments and plan security reviews: network isolation, secret handling, and logging for prompt and tool misuse.",
+  "source_total_items": 8980,
+  "total_items_in_window_all": 406,
+  "total_items_in_window_curated": 115,
+  "morning_call_markdown": "### Executive Summary\n- Active exploitation of a critical Dell RecoverPoint for VMs zero‑day (CVE‑2026‑22769) and Ivanti EPMM zero‑days targeting corporate networks; CISA has ordered urgent patching for some environments.\n- New zero‑day in Google Chrome and several widely used enterprise components (VS Code extensions, PDF platforms, SmarterMail, Grandstream VoIP, Honeywell CCTV) expose high‑value endpoints and collaboration systems to RCE and account takeover.\n- Threat actors are rapidly weaponizing communication and AI platforms (Telegram, AI assistants as covert C2, poisoned AI frameworks) to evade traditional controls and deliver stealer/backdoor payloads.\n\n---\n\n### High-priority items (immediate attention)\n\n- **Dell RecoverPoint for VMs zero‑day (CVE‑2026‑22769) – actively exploited by China‑linked APT**\n  - What happened: Critical RCE (CVSS 10.0) in Dell RecoverPoint for VMs has been exploited in the wild since mid‑2024 by UNC6201/China‑linked actors; CISA and multiple vendors issued urgent advisories.\n  - Why it matters operationally: Targets storage/replication for virtual infrastructures – compromise here can give deep access to VM data, backups and lateral movement into core systems.\n  - Recommended immediate actions: \n    - Confirm if any RecoverPoint for VMs instances exist (on‑prem or hosted); if yes, verify version and patch/mitigate per Dell/CIS advisory ASAP.\n    - Until patched: strictly restrict management interfaces (VPN/jump‑host only), monitor logs for new/unknown admin accounts, configuration changes, and suspicious API calls; enable enhanced EDR scrutiny on adjacent hypervisors/management jump boxes.\n\n- **Ivanti EPMM zero‑days under active exploitation (mobile device management edge)**\n  - What happened: Multiple critical Ivanti EPMM (MobileIron) zero‑days are being exploited in the wild to gain access to corporate networks.\n  - Why it matters operationally: EPMM sits at the perimeter managing mobile endpoints; compromise can give device enrollment control, credential theft, and pivot into internal networks and mail systems.\n  - Recommended immediate actions:\n    - Inventory if Ivanti EPMM is used by us or key third‑party providers; if present, enforce vendor mitigations/patches immediately and geo/IP‑restrict access.\n    - Hunt for signs of web‑shells, anomalous admin logins, config/download activity from EPMM servers; add temporary WAF rules and close any direct internet exposure where feasible.\n\n- **Google Chrome zero‑day (CVE‑2026‑2441) – arbitrary code execution**\n  - What happened: New Chrome zero‑day allows arbitrary code execution; CIS and others issued an advisory, exploitation suspected/possible.\n  - Why it matters operationally: Browser RCE is a common initial access vector on workstations and admin endpoints, impacting all major OS platforms.\n  - Recommended immediate actions:\n    - Enforce urgent Chrome/Edge‑Chromium updates via endpoint management; verify patch levels for high‑value users (admin, trading, treasury, payments ops).\n    - Monitor EDR for browser‑spawned child processes executing scripts, LOLBins, or encoded PowerShell (T1203, T1059); tighten application control on high‑risk roles.\n\n- **Rapidly weaponized email/web stack flaws (SmarterMail, PDF platforms, VS Code extensions)**\n  - What happened: Critical SmarterMail bugs actively shared on Telegram, 16+ zero‑days in major PDF platforms enabling account takeover/data exfil, and critical flaws in four VS Code extensions (>125M installs).\n  - Why it matters operationally: These affect email servers, SaaS PDF services and developer endpoints that often handle regulated financial/customer data and source code.\n  - Recommended immediate actions:\n    - Confirm we do NOT run exposed SmarterMail; if we/partners do, enforce latest patches, restrict admin interfaces, and review recent auth logs for anomalies.\n    - Identify enterprise PDF platforms and VS Code usage on developer/admin workstations; ensure latest versions/extensions, and increase monitoring for unusual OAuth/logins from new locations and abnormal PDF‑related downloads.\n\n- **AI assistants, Telegram and AI frameworks abused for covert C2 and malware delivery**\n  - What happened: Research shows AI assistants (e.g., Copilot, Grok) being used as covert C2 relays; Telegram channels are driving weaponization of SmarterMail exploits; OpenClaw AI framework was poisoned with malicious “skills” for data theft/backdoors.\n  - Why it matters operationally: Command‑and‑control is shifting into “legitimate” services (AI APIs, messaging, code frameworks), reducing detection by simple domain/IP blocklists.\n  - Recommended immediate actions:\n    - Review egress and proxy policies for AI API endpoints and Telegram; enable TLS inspection where policy allows, and baseline high‑volume/odd‑hour traffic to those services.\n    - On dev and data‑science endpoints, monitor process trees and network connections for AI tools/frameworks spawning shells, accessing sensitive file paths, or connecting to unusual external IPs (T1105, T1071).\n\n---\n\n### Monitoring & detection recommendations\n\n- **Storage / backup & virtualization (Dell RecoverPoint, hypervisors)**\n  - Log sources: RecoverPoint/array logs, VMware/Hyper‑V logs, management jump hosts, EDR on hypervisors; hunt for new admin accounts, changed replication targets, unusual snapshot deletions (T1070, T1485).\n\n- **Perimeter management & mobile (Ivanti EPMM, similar appliances)**\n  - Log sources: Appliance syslog, WAF, VPN/firewall, IdP; look for anomalous POSTs to management APIs, new device enrollments, unknown admin sessions from foreign ASNs (T1190, T1133).\n\n- **Browser exploitation & user endpoints (Chrome zero‑day, PDF platform bugs)**\n  - Log sources: EDR, browser crash logs, proxy; hunt for browser‑initiated downloads spawning child processes, unexpected PDF reader processes making outbound connections, or script interpreters launched by PDF/viewer processes (T1203, T1204, T1059).\n\n- **Email/web stack (SmarterMail, Atlassian Jira trust scams, PDF SaaS)**  \n  - Log sources: Mail server logs, mail gateways, Jira/cloud app logs, CASB; monitor for unusual OAuth grants, new mail rules, mass downloads/exports, and login attempts from TOR/VPN or atypical geos (T1078, T1114, T1530).\n\n- **Voice/IoT/OT surface (Grandstream VoIP, Honeywell CCTV)**\n  - Log sources: Network firewall, NAC, syslog from VoIP/CCTV; alert on external connections to management interfaces, HTTP/HTTPS from the internet to these devices, and firmware/config changes outside maintenance windows (T1190, T1133).\n\n- **Developer & admin workstations (VS Code extensions, AI frameworks, ClickFix/Cuckoo Stealer)**\n  - Log sources: EDR, proxy, code‑repo logs; look for VS Code or CLI tools spawning credential dumpers, shell processes, or connecting to new domains after extension/“skill” installs (T1555, T1105).\n\n- **Covert C2 via AI assistants / Telegram / SaaS**\n  - Log sources: Proxy/DNS, EDR, SaaS access logs; flag long‑lived or high‑volume connections to AI APIs and Telegram from servers or admin workstations, or processes maintaining persistent HTTPS sessions to these services (T1071.001/004).\n\n- **Windows legacy exploitation (ActiveX, CISA KEV additions)**\n  - Log sources: EDR, Windows event logs, application logs; track use of legacy ActiveX/video components, odd COM object execution, and unusual parent‑child process chains involving IE/legacy apps (T1203, T1129).\n\n---\n\n### Medium-term follow-ups\n\n- **Patch & asset review for critical infrastructure components**\n  - Complete a targeted review of our inventory for Dell RecoverPoint, Ivanti, Grandstream VoIP, Honeywell CCTV, SmarterMail, and TeamT5/Zimbra products; ensure a clear owner, patch cadence, and network segmentation.\n\n- **Harden developer and data‑science environments**\n  - Establish policy on VS Code extension approval, AI frameworks (OpenClaw‑like), and package managers (Homebrew); introduce allow‑lists and endpoint hardening for dev/admin machines.\n\n- **Browser and PDF platform governance**\n  - Standardize corporate browser build with rapid auto‑update and restricted plugins; review contracts and security posture of any SaaS PDF platforms and enforce SSO, logging, and least‑privilege access.\n\n- **AI and messaging egress policy**\n  - Define acceptable use and monitoring requirements for AI assistants, AI APIs, and encrypted messaging (Telegram, etc.) from corporate endpoints, with specific rules for privileged users.\n\n- **Ransomware/stealth‑first trends and tabletop**\n  - Use the recent reports (record ransomware 2025, “digital parasite” stealth campaigns) to update our incident runbooks; simulate a scenario where storage/backup systems are compromised first.\n\n- **Threat intel & KEV backlog alignment**\n  - Align our vulnerability management queue with the latest CISA KEV entries (Chromium CSS, Windows ActiveX, anti‑ransomware tool, Zimbra, etc.); ensure all KEV items present in our environment have clear remediation dates and compensating controls.",
   "highlights": [
     {
-      "title": "Zero-Day Google Chrome Vulnerability (CVE-2026-2441) | UpGuard",
-      "link": "https://www.upguard.comnews/google-data-breach-2026-02-17",
-      "source": "UpGuard – News",
-      "published": "2026-02-18T06:25:34+00:00",
+      "title": "Public mobile networks are being weaponized for combat drone operations",
+      "link": "https://www.helpnetsecurity.com/2026/02/19/enea-mobile-connected-drones-report/",
+      "source": "Help Net Security",
+      "published": "2026-02-19T06:00:33+00:00",
       "smart_groups": [
         "Curated",
         "Vulnerabilities / CVEs",
-        "Data Breaches / Leaks"
+        "Exploit / PoC",
+        "Web / API Security"
       ],
       "curated": true
     },
     {
-      "title": "Overcoming Open Source Patching Delays: Strategies for Faster Security Updates",
-      "link": "https://www.news4hackers.com/overcoming-open-source-patching-delays-strategies-for-faster-security-updates/",
+      "title": "AI-Powered Debt Collection: Reducing Judgment and Increasing Consumer Comfort",
+      "link": "https://www.news4hackers.com/ai-powered-debt-collection-reducing-judgment-and-increasing-consumer-comfort/",
       "source": "News4Hackers",
-      "published": "2026-02-18T06:02:09+00:00",
+      "published": "2026-02-19T05:36:57+00:00",
       "smart_groups": [
         "Curated",
         "Vulnerabilities / CVEs"
@@ -35,67 +36,34 @@
       "curated": true
     },
     {
-      "title": "Everyone uses open source, but patching still moves too slowly",
-      "link": "https://www.helpnetsecurity.com/2026/02/18/open-source-adoption-patching-challenges/",
-      "source": "Help Net Security",
-      "published": "2026-02-18T06:00:12+00:00",
+      "title": "Garden Plan 2026",
+      "link": "https://shellsharks.com/garden-plan-2026",
+      "source": "https://shellsharks.com/feeds/all-feed.xml",
+      "published": "2026-02-19T05:15:00+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Persistent Security Gaps: Why Attackers Keep Exploiting the Same Vulnerabilities",
+      "link": "https://www.news4hackers.com/persistent-security-gaps-why-attackers-keep-exploiting-the-same-vulnerabilities/",
+      "source": "News4Hackers",
+      "published": "2026-02-19T05:08:59+00:00",
       "smart_groups": [
         "Curated",
         "Ransomware",
-        "Vulnerabilities / CVEs"
-      ],
-      "curated": true
-    },
-    {
-      "title": "OpenClaw AI ‘Log Poisoning’ Flaw Enables Malicious Content Injection",
-      "link": "https://gbhackers.com/openclaw-ai-log-poisoning-flaw/",
-      "source": "GBHackers News",
-      "published": "2026-02-18T05:49:05+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs"
-      ],
-      "curated": true
-    },
-    {
-      "title": "CRESCENTHARVEST Malware Campaign Uses Iran Protest Lures to Deploy Info‑Stealing RAT",
-      "link": "https://gbhackers.com/crescentharvest-malware-campaign/",
-      "source": "GBHackers News",
-      "published": "2026-02-18T05:44:33+00:00",
-      "smart_groups": [
-        "Curated",
-        "Malware / Payloads"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Open Source Registries Face Financial Crisis Threatening Software Supply Chain Security and Integrity",
-      "link": "https://www.news4hackers.com/open-source-registries-face-financial-crisis-threatening-software-supply-chain-security-and-integrity/",
-      "source": "News4Hackers",
-      "published": "2026-02-18T05:23:41+00:00",
-      "smart_groups": [
-        "Curated",
         "Vulnerabilities / CVEs",
-        "Supply Chain / Software"
+        "Exploit / PoC"
       ],
       "curated": true
     },
     {
-      "title": "SecureClaw: Dual Stack Open-Source Security Plugin and Skill for OpenClaw",
-      "link": "https://www.news4hackers.com/secureclaw-dual-stack-open-source-security-plugin-and-skill-for-openclaw/",
+      "title": "Fake Bank Accounts Opened in Students’ Names, Crores Routed Through Cyber Fraud; Tutor Absconding",
+      "link": "https://www.news4hackers.com/fake-bank-accounts-opened-in-students-names-crores-routed-through-cyber-fraud-tutor-absconding/",
       "source": "News4Hackers",
-      "published": "2026-02-18T05:22:15+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs"
-      ],
-      "curated": true
-    },
-    {
-      "title": "World Cup Triggers Betting Web, Fake ‘Dream11′-like Sites Target Users’ Wallets",
-      "link": "https://www.news4hackers.com/world-cup-triggers-betting-web-fake-dream11-like-sites-target-users-wallets/",
-      "source": "News4Hackers",
-      "published": "2026-02-18T05:17:06+00:00",
+      "published": "2026-02-19T05:03:32+00:00",
       "smart_groups": [
         "Curated",
         "Exploit / PoC"
@@ -103,10 +71,10 @@
       "curated": true
     },
     {
-      "title": "SecureClaw: Dual stack open-source security plugin and skill for OpenClaw",
-      "link": "https://www.helpnetsecurity.com/2026/02/18/secureclaw-open-source-security-plugin-skill-openclaw/",
-      "source": "Help Net Security",
-      "published": "2026-02-18T05:00:45+00:00",
+      "title": "Choosing and Implementing a DPDP Tech Stack: Consent, Logs, and Governance",
+      "link": "https://jisasoftech.com/choosing-and-implementing-a-dpdp-tech-stack-consent-logs-and-governance/",
+      "source": "JISA Softech",
+      "published": "2026-02-19T04:37:14+00:00",
       "smart_groups": [
         "Curated",
         "Vulnerabilities / CVEs"
@@ -114,15 +82,50 @@
       "curated": true
     },
     {
-      "title": "Dell 0-Day Vulnerability Targeted by Chinese Hackers Since Mid-2024 for Ongoing Malware Campaign",
-      "link": "https://gbhackers.com/dell-0-day-vulnerability/",
-      "source": "GBHackers News",
-      "published": "2026-02-18T04:50:32+00:00",
+      "title": "We kept missing AI API security edge cases, so we built a repeatable 12-test scan workflow",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1r8pi3y/we_kept_missing_ai_api_security_edge_cases_so_we/",
+      "source": "/r/cybersecurity",
+      "published": "2026-02-19T04:22:47+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Web / API Security",
+        "Data Breaches / Leaks"
+      ],
+      "curated": true
+    },
+    {
+      "title": "OpenAI Launches EVMbench to Detect, Patch, and Exploit Vulnerabilities in Blockchain Environments",
+      "link": "https://cybersecuritynews.com/openai-evmbench/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-02-19T03:33:24+00:00",
       "smart_groups": [
         "Curated",
         "Vulnerabilities / CVEs",
         "Exploit / PoC",
-        "Malware / Payloads"
+        "Crypto / Web3"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Fed Economists Praise Prediction Markets as States Step Up Enforcement",
+      "link": "https://decrypt.co/358529/fed-economists-prediction-markets-states-step-up-enforcement",
+      "source": "Decrypt",
+      "published": "2026-02-19T03:18:34+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Guardian AI-Penetration Testing Tool Connects Gemini, GPT-4 with 19 Security Tools Including Nmap",
+      "link": "https://cybersecuritynews.com/guardian-ai-penetration-testing-tool/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-02-19T03:05:02+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
       ],
       "curated": true
     }
