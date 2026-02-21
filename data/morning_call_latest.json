@@ -1,43 +1,73 @@
 {
-  "generated_at": "2026-02-20T07:13:15.615335+00:00",
-  "analysis_date": "2026-02-20",
+  "generated_at": "2026-02-21T07:00:52.279773+00:00",
+  "analysis_date": "2026-02-21",
   "model": "gpt-5.1",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-02-19T23:57:33.010160+00:00",
+  "source_generated_at": "2026-02-20T17:06:39.679057+00:00",
   "source_days_back": 30,
-  "source_total_items": 9059,
-  "total_items_in_window_all": 401,
-  "total_items_in_window_curated": 113,
-  "morning_call_markdown": "### Executive Summary\n- Active exploitation of multiple critical infrastructure/management products (BeyondTrust, Ivanti, Dell RecoverPoint, Windows Admin Center, Grandstream VoIP, Honeywell CCTV); several are now in CISA KEV and under mass scanning.\n- Significant supply‑chain/“tooling abuse” risks around OpenClaw and fake RMM / remote tools, plus new AI‑assisted malware (Android & Windows) and phishing targeting financial users.\n- Ransomware and major outages (healthcare, semiconductor, tribal schools) reinforce need to tighten remote access, backup integrity, and response readiness.\n\n---\n\n### High-priority items (immediate attention)\n\n- **BeyondTrust CVE-2026-1731 under active exploitation (VShell & SparkRAT)**\n  - What: Unit 42 reports attackers chaining the BeyondTrust flaw to deploy VShell and SparkRAT via RCE.\n  - Why it matters: Direct foothold into privileged access/privileged session infrastructure; high‑value for lateral movement in a bank.\n  - Actions:  \n    - Identify all BeyondTrust assets; confirm patch/mitigation status and restrict external access today.  \n    - Hunt for VShell/SparkRAT artifacts, new services, unusual outbound traffic from those hosts; enable high‑severity alerting on any processes spawned by BeyondTrust services.\n\n- **Ivanti EPMM and related Ivanti zero‑days – global exploitation surge**\n  - What: Multiple reports of surging attacks against two critical Ivanti EPMM bugs and earlier zero‑days (dating back to July 2025).\n  - Why it matters: Internet‑facing MDM/VPN used as entry points by ransomware and state actors; often directly exposed to the internet.\n  - Actions:  \n    - Verify inventory of ALL Ivanti products (EPMM, Connect Secure, Policy Secure); confirm emergency patching or isolation from internet.  \n    - Increase logging and alerting on Ivanti perimeter devices (auth anomalies, config changes, system reboots); run compromise assessment using vendor/CERT guidance.\n\n- **Actively exploited Dell RecoverPoint flaw used to drop “GrimBolt” malware (CISA KEV)**\n  - What: China‑linked actors exploiting Dell RecoverPoint vulnerability to deploy GrimBolt malware; CISA orders 72‑hour patch for federal agencies.\n  - Why it matters: RecoverPoint touches storage/replication and potentially backup workflows; compromise here undermines data integrity and recovery.\n  - Actions:  \n    - Confirm whether we or critical third parties use Dell RecoverPoint; if yes, validate patch level and restrict management interfaces (VPN/jump‑box only).  \n    - For any RecoverPoint‑adjacent segments, hunt for new scheduled tasks/services, anomalous admin logins, and outbound C2‑like traffic starting late Jan 2026.\n\n- **Critical Windows Admin Center privilege escalation (CVE-2026-26119)**\n  - What: Microsoft disclosed and patched a critical elevation‑of‑privilege in Windows Admin Center; widely covered and likely to see exploit PoC soon.\n  - Why it matters: Once an attacker has any server foothold, this bug can accelerate privilege escalation to domain or server admin, especially in mixed on‑prem/Cloud environments.\n  - Actions:  \n    - Identify all WAC instances; ensure Feb patches are applied and access restricted to admin workstations only.  \n    - Monitor for abnormal usage of WAC (new IPs hitting the WAC port, new admins, unexpected server enrollments).\n\n- **Supply-chain and remote‑tool abuse: OpenClaw malicious skills + fake RMM vendor/RAT**\n  - What: Massive OpenClaw marketplace poisoning (malicious skills including SSH key theft & reverse shells) and a fake remote‑management vendor used to distribute a RAT.\n  - Why it matters: Directly affects developer/IT tooling pipelines and remote support workflows; high risk of “trusted tool” malware in financial environments.\n  - Actions:  \n    - Coordinate with DEV/IT: freeze or strictly review any new OpenClaw skills or similar AI “helper” tools; validate in a sandbox before use.  \n    - Flag and review any new/unknown RMM client installs and outbound connections; treat “new RMM” detections like potential RAT (block by default, require approval).\n\n---\n\n### Monitoring & detection recommendations\n\n- **BeyondTrust / Privileged Access exploitation**  \n  - Log sources: BeyondTrust logs, Windows Security logs, EDR, firewall/proxy.  \n  - Hunt for: New/rare processes spawned by BeyondTrust services, outbound SSH/RDP from BeyondTrust servers to unusual destinations, new admin accounts. (ATT&CK T1059, T1021, T1078)\n\n- **Ivanti / VPN / MDM perimeter**  \n  - Log sources: VPN/MDM logs, WAF, firewall, NIDS.  \n  - Hunt for: Sudden spikes in HTTP 500/404/302 to Ivanti paths, anomalous admin logins from new geos, unexpected config exports or device wipes. (T1133, T1190)\n\n- **Dell RecoverPoint / storage & backup adjacency**  \n  - Log sources: Storage/backup logs, hypervisor logs, network flows.  \n  - Hunt for: New or modified replication jobs, unexplained snapshot deletions, admin sessions outside maintenance windows, outbound connections from management IPs to internet. (T1485, T1486, T1071)\n\n- **Windows Admin Center & privileged escalation**  \n  - Log sources: Windows Event Logs (Security, PowerShell, Sysmon), WAC logs, EDR.  \n  - Hunt for: Non‑admin workstations accessing WAC endpoints, token theft or unusual LSASS access, new local admins shortly after WAC sessions. (T1068, T1055, T1078)\n\n- **RATs / fake RMM, SparkRAT, VShell and tooling abuse**  \n  - Log sources: EDR, proxy, DNS, asset inventory.  \n  - Hunt for: New unsigned binaries or remote tools installed on servers, processes named like common RMMs but with unusual paths, long‑lived outbound TCP sessions to rare domains/ports. (T1105, T1219)\n\n- **Android / mobile banking malware & vishing against Microsoft Entra accounts**  \n  - Log sources: MDM/MAM, IdP (Entra), email/telephony logs where available.  \n  - Hunt for: Unfamiliar mobile devices registering for MFA, repeated MFA prompts followed by new device registration, conditional access denials from high‑risk devices. (T1189, T1566)\n\n- **Grandstream VoIP (CVE-2026-2329) & Honeywell CCTV auth bypass (CVE-2026-1670)**  \n  - Log sources: Network flows, firewall, NAC, any syslog from these devices.  \n  - Hunt for: Web access to VoIP/CCTV interfaces from internet or non‑VoIP VLANs, unexplained firmware/config changes, SIP/RTP traffic from unexpected hosts. (T1190, T1040)\n\n- **OpenClaw / AI tool supply-chain**  \n  - Log sources: Developer endpoints EDR, Git/CI logs, outbound proxy.  \n  - Hunt for: New SSH key files, unexpected outbound SSH from dev laptops to new hosts, reverse shells spawned by terminals, unusual tooling installed via package managers around OpenClaw use. (T1552, T1105)\n\n---\n\n### Medium-term follow-ups\n\n- **Comprehensive exposure review against CISA KEV and recent advisories**  \n  - Align asset inventory with latest KEV entries (Dell RecoverPoint, GitLab, Chrome, Zimbra, Ivanti, Honeywell, EnOcean, etc.); prioritize patching windows over next 1–2 weeks.\n\n- **Hardening remote admin and OT/IoT surfaces (VoIP, CCTV, ICS)**  \n  - Segment and restrict management interfaces (VPN/jump‑host only), enforce strong auth, and ensure logging for VoIP, CCTV, and ICS listed in recent CISA advisories.\n\n- **Tooling governance: OpenClaw, AI agents, and remote management tools**  \n  - Establish/refresh policy for introduction of AI assistants, marketplace “skills,” and RMM tools; require security review, code scanning, and allow‑list–based deployment.\n\n- **Enhance phishing/vishing and MFA‑fatigue awareness for staff**  \n  - Update training materials with scenarios including device‑code vishing for Entra and fake financial receipts delivering XWorm; coordinate with fraud teams.\n\n- **Backup and disaster recovery validation in light of storage‑layer attacks**  \n  - Re‑assess backup architectures to ensure immutability and isolation from systems like RecoverPoint; conduct at least one realistic ransomware/BCP exercise this quarter.\n\n- **SOC content updates & automation**  \n  - Incorporate new detection logic for RATs, Ivanti/BeyondTrust exploitation, and supply‑chain compromise into SIEM/SOAR; review and tune UEBA models with latest behavior patterns.",
+  "source_total_items": 8959,
+  "total_items_in_window_all": 149,
+  "total_items_in_window_curated": 47,
+  "morning_call_markdown": "### Executive Summary\n- Active exploitation of a BeyondTrust privilege management flaw in ransomware campaigns; patching and hunting for web shells/backdoors on any BeyondTrust infrastructure is priority.\n- Multiple software supply-chain / dev-tool risks (Cline CLI, VS Code extensions, Jenkins, Chrome 0‑day PoC) increase risk from developer workstations and CI/CD to core banking and payment systems.\n- Financially motivated threats remain high: large-scale ATM malware (Ploutus) operations, fresh healthcare and tech-sector ransomware, and several finance-related data breaches underline need for strong payment, ATM and identity monitoring.\n\n---\n\n### High-priority items (immediate attention)\n\n- **BeyondTrust vulnerability exploited for web shells and ransomware (items 1, 8, 31)**  \n  - What happened: A recently disclosed BeyondTrust vulnerability is being used in the wild for web shells, backdoors and ransomware deployment.  \n  - Why it matters operationally: Direct impact on privileged access and application control infrastructure; compromise here can short-circuit many of our security controls.  \n  - Recommended immediate actions for the SOC today:  \n    - Verify with infra team whether any BeyondTrust products are in use/exposed; confirm patch status and emergency mitigations.  \n    - Hunt on relevant servers for new/odd web shell files, unusual outbound connections, and suspicious service/registry modifications; tighten monitoring on BeyondTrust service accounts.\n\n- **Chrome 0‑day with public PoC (item 38)**  \n  - What happened: A Chrome 0‑day previously exploited in the wild now has a public PoC.  \n  - Why it matters operationally: In-browser RCE can enable initial access via drive‑by or malicious links, bypassing traditional email/file filtering.  \n  - Recommended immediate actions for the SOC today:  \n    - Confirm with endpoint team that latest Chrome/Chromium-based browser versions are rolled out (force update where possible).  \n    - Increase scrutiny on web browsing telemetry: blocks/alerts for exploit kit-style activity, unusual child processes from browsers, and suspicious downloads from newly observed domains.\n\n- **Developer / CI supply-chain risks: Cline CLI malware + VS Code + Jenkins XSS (items 19, 20, 36, 15, 29)**  \n  - What happened: Cline CLI 2.3.0 supply-chain attack (OpenClaw malware), multiple critical VS Code extension vulns, and a Jenkins XSS flaw affecting build environments.  \n  - Why it matters operationally: Developer endpoints and CI/CD are high‑trust; compromise here can lead to poisoned software, credential theft, or pivot into core banking and payment systems.  \n  - Recommended immediate actions for the SOC today:  \n    - Coordinate with Dev/DevOps to identify any use of Cline CLI, affected VS Code extensions, or Internet-exposed Jenkins; ensure they are patched/removed or isolated.  \n    - Run targeted hunts on dev/CI assets for unusual code execution (e.g., PowerShell from VS Code, curl/wget from build agents), anomalous credential access, and outbound connections to rare destinations.\n\n- **ATM malware surge (Ploutus, >$20M stolen) (items 40, 42)**  \n  - What happened: FBI FLASH and reports describe a surge in Ploutus ATM malware enabling cardless cash-outs, with over $20M stolen.  \n  - Why it matters operationally: Direct threat to ATM fleets/correspondent networks; compromises often abuse remote access, software distribution or physical access plus malware.  \n  - Recommended immediate actions for the SOC today:  \n    - Validate monitoring for ATM hosts: unexpected services/processes, USB/serial device activity, new scheduled tasks, and lateral movement from corporate into ATM networks.  \n    - Correlate logs for high-velocity or out‑of‑hours ATM withdrawals and commands; ensure any remote admin channels to ATMs (RDP, VNC, vendor tools, VPN) are tightly logged and alerted on anomalies.\n\n- **Identity-driven access to financial data: single-account banking breach & PayPal incident (items 24, 11, 26)**  \n  - What happened: A single compromised account granted attackers access to 1.2M French banking records; PayPal and an Australian finance tech firm disclosed substantial data exposures.  \n  - Why it matters operationally: Reinforces that compromise of one privileged/business account can lead to massive data exfiltration in financial environments.  \n  - Recommended immediate actions for the SOC today:  \n    - Intensify monitoring for anomalous access patterns on high-value data stores and back‑office apps (large exports, atypical queries, unusual IP/geo for staff accounts).  \n    - Validate that behavioral rules and UEBA (if available) are enabled and tuned for privileged and service accounts; raise any gaps to IAM team.\n\n---\n\n### Monitoring & detection recommendations\n\n- **BeyondTrust / privileged management (ATT&CK: T1059, T1505, T1078)**  \n  - Log sources: BeyondTrust logs, Windows Security/Event Logs, EDR on those servers, network logs.  \n  - Hunt for: New/modified web-facing files, w3wp.exe (or equivalent) spawning shells/scripts, new local admins or services tied to BeyondTrust accounts, unexplained outbound traffic from these servers.\n\n- **Browser exploitation & drive‑by (Chrome 0‑day) (T1189, T1203, T1055)**  \n  - Log sources: EDR, web proxy/DNS, secure web gateway, email.  \n  - Hunt for: Browsers spawning scripting engines (powershell.exe, cmd.exe, bash), downloads of executables from newly-registered or low-reputation domains immediately followed by execution.\n\n- **Developer / CI/CD compromise (Cline, VS Code, Jenkins) (T1059, T1190, T1552)**  \n  - Log sources: EDR on dev workstations, CI/CD server logs, Git/DevOps platform logs, web server logs for Jenkins.  \n  - Hunt for:  \n    - VS Code or node/python processes spawning unusual shells or network tools, credential file access;  \n    - Jenkins requests containing suspicious script/XSS payloads and jobs downloading/executing from external URLs.\n\n- **ATM and payment system abuse (Ploutus and cash-outs) (T1059, T1021, T1041)**  \n  - Log sources: ATM host logs, HSM/payment switch logs, transaction monitoring, VPN/remote access logs.  \n  - Hunt for: Remote sessions into ATMs from unusual admin accounts, software installations or script execution on ATMs, bursts of withdrawals from same terminal or region, commands triggering dispense without matching authorization messages.\n\n- **Ransomware precursor activity (BeyondTrust, medical/tech sector incidents) (T1486, T1078, T1569)**  \n  - Log sources: EDR, AD logs, backup system logs, file server logs.  \n  - Hunt for: Mass file renames/encryption-like behavior, disabling of AV/backup agents, creation of new domain admins, remote service creation (sc.exe, wmic, PsExec).\n\n- **Data exfiltration and account misuse (banking/PayPal/youX breaches) (T1071, T1041, T1530)**  \n  - Log sources: DB and data warehouse logs, S3/Blob/object storage logs, DLP, CASB, IdP.  \n  - Hunt for: Large exports or downloads from customer/loan tables, unusual API calls from user accounts, access from atypical IP/geo/device for staff, uploads to personal cloud or unusual destinations.\n\n- **Suspicious email / social engineering themes (INTERPOL scams, fake remote support ‘TrustConnect’) (T1566, T1204)**  \n  - Log sources: Secure email gateway, proxy logs, EDR.  \n  - Hunt for: Phishing with themes of remote support, banking verification, “account review,” or law enforcement notices; attachments or links leading to remote-support-like executables or web shells.\n\n- **APT-style activity (MuddyWater campaign) (T1566, T1059, T1105)**  \n  - Log sources: Email, EDR, DNS/proxy, VPN logs.  \n  - Hunt for: Macro-laden documents or ISO/ZIP attachments, PowerShell or scripting frameworks fetching second-stage payloads, C2 over HTTP(S) with odd URIs, VPN logins from new geos for targeted staff (IT, finance, executives).\n\n---\n\n### Medium-term follow-ups\n\n- **Comprehensive review of privileged access platforms (BeyondTrust, PAM, jump servers)**  \n  - Ensure asset inventory, patch cadence, hardening baselines and logging are solid; consider tighter network segmentation and mandatory MFA for all PAM access.\n\n- **Developer security hygiene program**  \n  - Work with Dev/DevOps to formalize extension/tool approval lists (VS Code, CLI tools), enforce code-signing and artifact integrity, and integrate security scanning into CI/CD (secrets detection, dependency scanning).\n\n- **ATM network and vendor engagement**  \n  - Review contractual and technical controls with ATM vendors; confirm patch/whitelisting policies, logging coverage, and incident playbooks aligned with latest Ploutus/FBI guidance.\n\n- **Identity and access governance improvements**  \n  - Reassess privilege models for systems holding sensitive financial and customer data; implement least privilege and periodic access reviews; tune UEBA/alerting around high-impact accounts.\n\n- **Tabletop / TTP replay exercises (ransomware, supply-chain, ATM fraud)**  \n  - Run focused exercises simulating BeyondTrust exploitation, dev-tool supply-chain compromise, and ATM malware deployment to validate detection, response, and crisis communication.\n\n- **Cloud / SaaS and AI security posture**  \n  - In light of AI misuse and prompt-injection research, review security controls and governance for AI and SaaS tools used internally, ensuring they cannot access production credentials or sensitive data without proper controls.",
   "highlights": [
     {
-      "title": "Crims create fake remote management vendor that actually sells a RAT",
-      "link": "https://go.theregister.com/feed/www.theregister.com/2026/02/19/rmm_rat_trustconnect/",
-      "source": "The Register - Security",
-      "published": "2026-02-19T23:46:21+00:00",
-      "smart_groups": [
-        "Curated",
-        "Malware / Payloads"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Firmware Backdoors: The Hidden Threat to Your Online Security",
-      "link": "https://www.news4hackers.com/firmware-backdoors-the-hidden-threat-to-your-online-security-2/",
+      "title": "BeyondTrust Vulnerability Exploited for Web Shells, Backdoors, and Data Theft",
+      "link": "https://www.news4hackers.com/beyondtrust-vulnerability-exploited-for-web-shells-backdoors-and-data-theft/",
       "source": "News4Hackers",
-      "published": "2026-02-19T23:20:18+00:00",
+      "published": "2026-02-20T16:57:08+00:00",
       "smart_groups": [
         "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
         "Malware / Payloads"
       ],
       "curated": true
     },
     {
-      "title": "Leading Japanese semiconductor supplier responding to ransomware attack",
-      "link": "https://therecord.media/leading-japanese-semiconductor-supplier-ransomware",
-      "source": "The Record – Cybercrime",
-      "published": "2026-02-19T23:18:34+00:00",
+      "title": "Setting off on a self-hosting journey",
+      "link": "https://shellsharks.com/notes/2026/02/20/setting-off-on-a-self-hosting-journey",
+      "source": "https://shellsharks.com/feeds/all-feed.xml",
+      "published": "2026-02-20T16:46:00+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Malicious URLs",
+      "link": "https://www.reddit.com/r/netsec/comments/1ra0e85/malicious_urls/",
+      "source": "/r/netsec",
+      "published": "2026-02-20T16:42:43+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Web / API Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Don’t trust TrustConnect: This fake remote support tool only helps hackers",
+      "link": "https://www.csoonline.com/article/4135307/dont-trust-trustconnect-this-fake-remote-support-tool-only-helps-hackers.html",
+      "source": "CSO Online",
+      "published": "2026-02-20T16:21:58+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Malware / Payloads",
+        "Network / OT / ICS",
+        "Phishing / Social Engineering",
+        "Crypto / Web3"
+      ],
+      "curated": true
+    },
+    {
+      "title": "The Readiness Illusion. Why Tabletop Exercises fail without TTP Replays.",
+      "link": "https://www.reddit.com/r/netsec/comments/1r9zj6e/the_readiness_illusion_why_tabletop_exercises/",
+      "source": "/r/netsec",
+      "published": "2026-02-20T16:11:43+00:00",
       "smart_groups": [
         "Curated",
         "Ransomware"
@@ -45,82 +75,68 @@
       "curated": true
     },
     {
-      "title": "Firmware Backdoors: The Hidden Threat to Your Online Security",
-      "link": "https://www.news4hackers.com/firmware-backdoors-the-hidden-threat-to-your-online-security/",
+      "title": "The Readiness Illusion. Why Tabletop Exercises fail without TTP Replays.",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1r9zhht/the_readiness_illusion_why_tabletop_exercises/",
+      "source": "/r/cybersecurity",
+      "published": "2026-02-20T16:10:04+00:00",
+      "smart_groups": [
+        "Curated",
+        "Ransomware"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Using threat modeling and prompt injection to audit Comet",
+      "link": "https://blog.trailofbits.com/2026/02/20/using-threat-modeling-and-prompt-injection-to-audit-comet/",
+      "source": "https://blog.trailofbits.com/feed/",
+      "published": "2026-02-20T16:00:00+00:00",
+      "smart_groups": [
+        "Curated",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Cloud / SaaS",
+        "Phishing / Social Engineering"
+      ],
+      "curated": true
+    },
+    {
+      "title": "BeyondTrust Flaw Used for Web Shells, Backdoors, and Data Exfiltration",
+      "link": "https://thehackernews.com/2026/02/beyondtrust-flaw-used-for-web-shells.html",
+      "source": "The Hacker News",
+      "published": "2026-02-20T15:45:00+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Malware / Payloads"
+      ],
+      "curated": true
+    },
+    {
+      "title": "why the fk HR exist",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1r9yk1n/why_the_fk_hr_exist/",
+      "source": "/r/cybersecurity",
+      "published": "2026-02-20T15:36:05+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Cloud / SaaS",
+        "Web / API Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Ransomware Attacks US Clinics, ICS Vulnerabilities Rise, EU Bans AI in Parliament",
+      "link": "https://www.news4hackers.com/ransomware-attacks-us-clinics-ics-vulnerabilities-rise-eu-bans-ai-in-parliament/",
       "source": "News4Hackers",
-      "published": "2026-02-19T23:17:53+00:00",
+      "published": "2026-02-20T15:32:45+00:00",
       "smart_groups": [
         "Curated",
-        "Malware / Payloads"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Meriden, Connecticut shuts down city internet after disruption attempt",
-      "link": "https://databreaches.net/2026/02/19/meriden-connecticut-shuts-down-city-internet-after-disruption-attempt/?pk_campaign=feed&pk_kwd=meriden-connecticut-shuts-down-city-internet-after-disruption-attempt",
-      "source": "DataBreaches.net",
-      "published": "2026-02-19T23:11:23+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs"
-      ],
-      "curated": true
-    },
-    {
-      "title": "VShell and SparkRAT Observed in Exploitation of BeyondTrust Critical Vulnerability (CVE-2026-1731)",
-      "link": "https://unit42.paloaltonetworks.com/beyondtrust-cve-2026-1731/",
-      "source": "Unit 42",
-      "published": "2026-02-19T23:00:55+00:00",
-      "smart_groups": [
-        "Curated",
+        "Ransomware",
         "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Supply Chain Attack Secretly Installs OpenClaw for Cline Users",
-      "link": "https://www.darkreading.com/application-security/supply-chain-attack-openclaw-cline-users",
-      "source": "darkreading",
-      "published": "2026-02-19T22:33:59+00:00",
-      "smart_groups": [
-        "Curated"
-      ],
-      "curated": true
-    },
-    {
-      "title": "What’s your go to way to automate external security posture checks for a domain?",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1r9cz3x/whats_your_go_to_way_to_automate_external/",
-      "source": "/r/cybersecurity",
-      "published": "2026-02-19T22:05:31+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs"
-      ],
-      "curated": true
-    },
-    {
-      "title": "The #1 most downloaded skill on OpenClaw marketplace was MALWARE",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1r9cuew/the_1_most_downloaded_skill_on_openclaw/",
-      "source": "/r/cybersecurity",
-      "published": "2026-02-19T22:00:41+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "Malware / Payloads"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Firmware Backdoors Be Spying On You - PSW #914",
-      "link": "https://podcast.securityweekly.com/firmware-backdoors-be-spying-on-you-psw-914",
-      "source": "Security Weekly Podcast Network (Audio)",
-      "published": "2026-02-19T22:00:00+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "Windows / Microsoft",
-        "Malware / Payloads"
+        "Network / OT / ICS"
       ],
       "curated": true
     }
