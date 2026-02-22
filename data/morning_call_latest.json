@@ -1,34 +1,21 @@
 {
-  "generated_at": "2026-02-21T07:00:52.279773+00:00",
-  "analysis_date": "2026-02-21",
+  "generated_at": "2026-02-22T07:05:39.794443+00:00",
+  "analysis_date": "2026-02-22",
   "model": "gpt-5.1",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-02-20T17:06:39.679057+00:00",
+  "source_generated_at": "2026-02-21T22:52:35.168666+00:00",
   "source_days_back": 30,
-  "source_total_items": 8959,
-  "total_items_in_window_all": 149,
-  "total_items_in_window_curated": 47,
-  "morning_call_markdown": "### Executive Summary\n- Active exploitation of a BeyondTrust privilege management flaw in ransomware campaigns; patching and hunting for web shells/backdoors on any BeyondTrust infrastructure is priority.\n- Multiple software supply-chain / dev-tool risks (Cline CLI, VS Code extensions, Jenkins, Chrome 0‑day PoC) increase risk from developer workstations and CI/CD to core banking and payment systems.\n- Financially motivated threats remain high: large-scale ATM malware (Ploutus) operations, fresh healthcare and tech-sector ransomware, and several finance-related data breaches underline need for strong payment, ATM and identity monitoring.\n\n---\n\n### High-priority items (immediate attention)\n\n- **BeyondTrust vulnerability exploited for web shells and ransomware (items 1, 8, 31)**  \n  - What happened: A recently disclosed BeyondTrust vulnerability is being used in the wild for web shells, backdoors and ransomware deployment.  \n  - Why it matters operationally: Direct impact on privileged access and application control infrastructure; compromise here can short-circuit many of our security controls.  \n  - Recommended immediate actions for the SOC today:  \n    - Verify with infra team whether any BeyondTrust products are in use/exposed; confirm patch status and emergency mitigations.  \n    - Hunt on relevant servers for new/odd web shell files, unusual outbound connections, and suspicious service/registry modifications; tighten monitoring on BeyondTrust service accounts.\n\n- **Chrome 0‑day with public PoC (item 38)**  \n  - What happened: A Chrome 0‑day previously exploited in the wild now has a public PoC.  \n  - Why it matters operationally: In-browser RCE can enable initial access via drive‑by or malicious links, bypassing traditional email/file filtering.  \n  - Recommended immediate actions for the SOC today:  \n    - Confirm with endpoint team that latest Chrome/Chromium-based browser versions are rolled out (force update where possible).  \n    - Increase scrutiny on web browsing telemetry: blocks/alerts for exploit kit-style activity, unusual child processes from browsers, and suspicious downloads from newly observed domains.\n\n- **Developer / CI supply-chain risks: Cline CLI malware + VS Code + Jenkins XSS (items 19, 20, 36, 15, 29)**  \n  - What happened: Cline CLI 2.3.0 supply-chain attack (OpenClaw malware), multiple critical VS Code extension vulns, and a Jenkins XSS flaw affecting build environments.  \n  - Why it matters operationally: Developer endpoints and CI/CD are high‑trust; compromise here can lead to poisoned software, credential theft, or pivot into core banking and payment systems.  \n  - Recommended immediate actions for the SOC today:  \n    - Coordinate with Dev/DevOps to identify any use of Cline CLI, affected VS Code extensions, or Internet-exposed Jenkins; ensure they are patched/removed or isolated.  \n    - Run targeted hunts on dev/CI assets for unusual code execution (e.g., PowerShell from VS Code, curl/wget from build agents), anomalous credential access, and outbound connections to rare destinations.\n\n- **ATM malware surge (Ploutus, >$20M stolen) (items 40, 42)**  \n  - What happened: FBI FLASH and reports describe a surge in Ploutus ATM malware enabling cardless cash-outs, with over $20M stolen.  \n  - Why it matters operationally: Direct threat to ATM fleets/correspondent networks; compromises often abuse remote access, software distribution or physical access plus malware.  \n  - Recommended immediate actions for the SOC today:  \n    - Validate monitoring for ATM hosts: unexpected services/processes, USB/serial device activity, new scheduled tasks, and lateral movement from corporate into ATM networks.  \n    - Correlate logs for high-velocity or out‑of‑hours ATM withdrawals and commands; ensure any remote admin channels to ATMs (RDP, VNC, vendor tools, VPN) are tightly logged and alerted on anomalies.\n\n- **Identity-driven access to financial data: single-account banking breach & PayPal incident (items 24, 11, 26)**  \n  - What happened: A single compromised account granted attackers access to 1.2M French banking records; PayPal and an Australian finance tech firm disclosed substantial data exposures.  \n  - Why it matters operationally: Reinforces that compromise of one privileged/business account can lead to massive data exfiltration in financial environments.  \n  - Recommended immediate actions for the SOC today:  \n    - Intensify monitoring for anomalous access patterns on high-value data stores and back‑office apps (large exports, atypical queries, unusual IP/geo for staff accounts).  \n    - Validate that behavioral rules and UEBA (if available) are enabled and tuned for privileged and service accounts; raise any gaps to IAM team.\n\n---\n\n### Monitoring & detection recommendations\n\n- **BeyondTrust / privileged management (ATT&CK: T1059, T1505, T1078)**  \n  - Log sources: BeyondTrust logs, Windows Security/Event Logs, EDR on those servers, network logs.  \n  - Hunt for: New/modified web-facing files, w3wp.exe (or equivalent) spawning shells/scripts, new local admins or services tied to BeyondTrust accounts, unexplained outbound traffic from these servers.\n\n- **Browser exploitation & drive‑by (Chrome 0‑day) (T1189, T1203, T1055)**  \n  - Log sources: EDR, web proxy/DNS, secure web gateway, email.  \n  - Hunt for: Browsers spawning scripting engines (powershell.exe, cmd.exe, bash), downloads of executables from newly-registered or low-reputation domains immediately followed by execution.\n\n- **Developer / CI/CD compromise (Cline, VS Code, Jenkins) (T1059, T1190, T1552)**  \n  - Log sources: EDR on dev workstations, CI/CD server logs, Git/DevOps platform logs, web server logs for Jenkins.  \n  - Hunt for:  \n    - VS Code or node/python processes spawning unusual shells or network tools, credential file access;  \n    - Jenkins requests containing suspicious script/XSS payloads and jobs downloading/executing from external URLs.\n\n- **ATM and payment system abuse (Ploutus and cash-outs) (T1059, T1021, T1041)**  \n  - Log sources: ATM host logs, HSM/payment switch logs, transaction monitoring, VPN/remote access logs.  \n  - Hunt for: Remote sessions into ATMs from unusual admin accounts, software installations or script execution on ATMs, bursts of withdrawals from same terminal or region, commands triggering dispense without matching authorization messages.\n\n- **Ransomware precursor activity (BeyondTrust, medical/tech sector incidents) (T1486, T1078, T1569)**  \n  - Log sources: EDR, AD logs, backup system logs, file server logs.  \n  - Hunt for: Mass file renames/encryption-like behavior, disabling of AV/backup agents, creation of new domain admins, remote service creation (sc.exe, wmic, PsExec).\n\n- **Data exfiltration and account misuse (banking/PayPal/youX breaches) (T1071, T1041, T1530)**  \n  - Log sources: DB and data warehouse logs, S3/Blob/object storage logs, DLP, CASB, IdP.  \n  - Hunt for: Large exports or downloads from customer/loan tables, unusual API calls from user accounts, access from atypical IP/geo/device for staff, uploads to personal cloud or unusual destinations.\n\n- **Suspicious email / social engineering themes (INTERPOL scams, fake remote support ‘TrustConnect’) (T1566, T1204)**  \n  - Log sources: Secure email gateway, proxy logs, EDR.  \n  - Hunt for: Phishing with themes of remote support, banking verification, “account review,” or law enforcement notices; attachments or links leading to remote-support-like executables or web shells.\n\n- **APT-style activity (MuddyWater campaign) (T1566, T1059, T1105)**  \n  - Log sources: Email, EDR, DNS/proxy, VPN logs.  \n  - Hunt for: Macro-laden documents or ISO/ZIP attachments, PowerShell or scripting frameworks fetching second-stage payloads, C2 over HTTP(S) with odd URIs, VPN logins from new geos for targeted staff (IT, finance, executives).\n\n---\n\n### Medium-term follow-ups\n\n- **Comprehensive review of privileged access platforms (BeyondTrust, PAM, jump servers)**  \n  - Ensure asset inventory, patch cadence, hardening baselines and logging are solid; consider tighter network segmentation and mandatory MFA for all PAM access.\n\n- **Developer security hygiene program**  \n  - Work with Dev/DevOps to formalize extension/tool approval lists (VS Code, CLI tools), enforce code-signing and artifact integrity, and integrate security scanning into CI/CD (secrets detection, dependency scanning).\n\n- **ATM network and vendor engagement**  \n  - Review contractual and technical controls with ATM vendors; confirm patch/whitelisting policies, logging coverage, and incident playbooks aligned with latest Ploutus/FBI guidance.\n\n- **Identity and access governance improvements**  \n  - Reassess privilege models for systems holding sensitive financial and customer data; implement least privilege and periodic access reviews; tune UEBA/alerting around high-impact accounts.\n\n- **Tabletop / TTP replay exercises (ransomware, supply-chain, ATM fraud)**  \n  - Run focused exercises simulating BeyondTrust exploitation, dev-tool supply-chain compromise, and ATM malware deployment to validate detection, response, and crisis communication.\n\n- **Cloud / SaaS and AI security posture**  \n  - In light of AI misuse and prompt-injection research, review security controls and governance for AI and SaaS tools used internally, ensuring they cannot access production credentials or sensitive data without proper controls.",
+  "source_total_items": 8653,
+  "total_items_in_window_all": 80,
+  "total_items_in_window_curated": 22,
+  "morning_call_markdown": "### Executive Summary\n- AI-assisted threat actor compromised >600 FortiGate appliances globally; likely leveraging known FortiOS flaws and automation for rapid exploitation.\n- CISA added actively exploited Roundcube webmail vulnerabilities and a Chrome zero‑day to KEV, indicating real-world exploitation risk.\n- Critical Grandstream VoIP vulnerability enables call interception/eavesdropping; potential impact to contact centers, trading floors, and helpdesks.\n\n---\n\n### High-priority items (immediate attention)\n\n- **AI-assisted mass exploitation of FortiGate devices**\n  - What happened: Threat actor used multiple AI services to compromise >600 FortiGate devices across 55 countries via known vulnerabilities.\n  - Why it matters operationally: FortiGate is commonly used for perimeter VPN/NGFW; compromise can mean direct network access, traffic inspection, and credential theft.\n  - Recommended immediate actions for the SOC today:  \n    - Confirm our exact FortiOS/FG-VM versions and quickly check against latest Fortinet advisories; flag any unpatched VPN/SSL‑VPN interfaces exposed to Internet.  \n    - Hunt in firewall/VPN logs for anomalous logins, config changes, and new admin accounts in last 30 days; escalate any device with unusual mgmt IP access, failed logins followed by success from same IP, or unexpected policy changes.\n\n- **CISA KEV: Roundcube Webmail actively exploited**\n  - What happened: CISA added two Roundcube vulnerabilities to KEV after observing active exploitation against Internet-exposed Roundcube instances.\n  - Why it matters operationally: Exploited Roundcube can give attackers direct access to mailboxes, internal communications, and pivot paths into core systems.\n  - Recommended immediate actions for the SOC today:  \n    - Confirm with infra/email teams whether we or any critical third parties run Roundcube (on‑prem or hosted); if yes, check versions vs KEV and require emergency patching/isolation.  \n    - From webserver, WAF, and mail logs, hunt for suspicious Roundcube paths, unexpected attachments/scripts, and abnormal access patterns to `/roundcube`/`/rcmail` from foreign or rare ASNs.\n\n- **Chrome zero-day RCE via malicious webpages**\n  - What happened: New Chrome zero‑day allows code execution when a user visits malicious sites; patch has been released.\n  - Why it matters operationally: Browser-based RCE is a reliable initial access vector, particularly on workstations with broad internal access or weak app isolation.\n  - Recommended immediate actions for the SOC today:  \n    - Validate via endpoint management that latest Chrome/Chromium-based browser versions are deployed; flag non‑compliant endpoints as at‑risk.  \n    - Increase monitoring for new child processes spawned by browsers (EDR) that execute scripting/LOLBins (PowerShell, cmd, wscript, mshta) and unusual outbound connections immediately after browser activity.\n\n- **Critical Grandstream VoIP vulnerability (call interception)**\n  - What happened: Multiple sources reported a critical Grandstream phone system flaw enabling call interception/eavesdropping, likely via weak auth/encryption or direct device compromise.\n  - Why it matters operationally: VoIP used on trading floors, customer support, and internal helpdesks could leak sensitive financial and authentication information.\n  - Recommended immediate actions for the SOC today:  \n    - Confirm presence of any Grandstream PBX/IP phones and whether they are directly Internet-accessible; if so, restrict via firewall/WAF/VPN and enforce strong credentials.  \n    - Monitor VoIP/PBX logs for new admin accounts, unexpected SIP registrations, and configuration downloads from unusual IPs; escalate if found.\n\n- **Predator spyware exploiting iOS SpringBoard to conceal mic/camera use**\n  - What happened: Predator spyware uses an iOS SpringBoard vulnerability to hide active microphone/camera use from the UI.\n  - Why it matters operationally: Targets are typically high‑value individuals; if senior execs/board members’ iOS devices are compromised, attackers gain persistent surveillance and OTP/2FA interception capability.\n  - Recommended immediate actions for the SOC today:  \n    - Coordinate with mobile/exec support to confirm all managed iOS devices for execs and high-risk staff are on latest iOS with relevant security patches applied.  \n    - Reinforce guidance that sensitive financial or authentication information should not be read aloud over unsecured calls; push quick advisory to VIPs on current mobile spying risks.\n\n---\n\n### Monitoring & detection recommendations\n\n- **FortiGate / perimeter VPN exploitation (AI-assisted campaign)**\n  - Log sources: FortiGate logs, VPN authentication logs, firewall logs, NetFlow.  \n  - Focus:  \n    - Multiple failed VPN logins followed by success from new geo/ASN (T1078, T1110).  \n    - Sudden config changes, new admin accounts, or policy modifications outside change windows (T1098, T1562).  \n    - CLI/API actions from unusual IPs or via REST APIs.\n\n- **Webmail / Roundcube exploitation**\n  - Log sources: Webserver (Apache/Nginx), WAF, email server, reverse proxy.  \n  - Focus:  \n    - Requests to Roundcube endpoints with suspicious parameters, encoded payloads, or file uploads (T1190).  \n    - Spike in errors (500/502) or unusual user‑agent strings against Roundcube paths.  \n    - New mail filters/forwarding rules created without user action (T1114.003, T1114.002).\n\n- **Browser-based RCE / Chrome zero-day**\n  - Log sources: EDR, proxy/web gateway, DNS logs.  \n  - Focus:  \n    - Browser processes spawning shells, scripts, Office apps, or archive utilities (T1203, T1059).  \n    - New binaries dropped and executed under user profile directories shortly after visiting uncommon domains.  \n    - High‑entropy domain requests or short‑lived subdomains associated with drive‑by campaigns (T1189).\n\n- **VoIP / Grandstream phone exploitation**\n  - Log sources: VoIP/PBX logs, network firewall, SIP proxies, NAC.  \n  - Focus:  \n    - SIP registration attempts from non-corporate IP ranges; repeated failed registrations (T1110).  \n    - Configuration downloads or firmware upgrade actions initiated from Internet IPs.  \n    - Unusual RTP traffic patterns from phones to unknown external IPs (possible call forwarding/interception).\n\n- **Account abuse and OPSEC failures (general hardening theme)**\n  - Log sources: IdP (SSO), AD, VPN, privileged access mgmt, endpoint logs.  \n  - Focus:  \n    - Shared or generic accounts used from multiple distant geos within short timeframe (T1078).  \n    - MFA push fatigue (multiple prompts) and unusual device enrollments (T1621).  \n    - New OAuth app consents or API tokens created without clear business justification (T1528).\n\n- **Potential spyware / mobile compromise of high-value users**\n  - Log sources: MDM/MAM, mobile security agent logs, email and IdP logs.  \n  - Focus:  \n    - iOS devices with outdated OS, jailbreak indicators, or unknown profiles installed (T1620).  \n    - Anomalous OAuth/IMAP logins to exec mailboxes from mobile user‑agents/destinations unusual for that user.\n\n- **General AI-assisted attack behaviors**\n  - Log sources: All perimeter devices, EDR, SIEM correlation.  \n  - Focus:  \n    - High‑volume, low‑noise scanning across multiple services from same IP (AI-optimized discovery) (T1595).  \n    - Rapid chained exploitation of multiple services (VPN → webmail → admin portal) in short time windows (T1068/T1105).\n\n---\n\n### Medium-term follow-ups\n\n- **Patch and configuration review for FortiGate and other perimeter appliances**\n  - Ensure all Fortinet gear is at vendor‑recommended versions; validate that management interfaces are not exposed to Internet and only reachable via admin VPN/jump hosts.\n\n- **Webmail and collaboration platform exposure assessment**\n  - Inventory all externally accessible webmail/web-app UIs (Roundcube, OWA, cloud email portals); enforce WAF protection, strong auth, and regular patch SLAs aligned with KEV updates.\n\n- **Enterprise browser hardening program**\n  - Standardize on auto‑updating browser channels, disable risky plugins, enforce EDR/browser isolation for high‑risk users (traders, finance, developers).\n\n- **VoIP/UC security baseline**\n  - With network/telecom teams, define baseline for Internet exposure of PBX/phones, enforce TLS/SRTP, and integrate VoIP logs into SIEM with clear alert rules.\n\n- **Executive and high-risk user mobile security**\n  - Formalize mobile security standards for execs and key staff: mandatory MDM, rapid OS patching, separate “clean” devices for travel, and regular spyware risk briefings.\n\n- **Policy and training around OPSEC and AI in attacks**\n  - Update awareness and IR playbooks to account for AI-assisted threat activity, emphasize strong credential hygiene, and clarify rules for using external AI tools with corporate data.",
   "highlights": [
     {
-      "title": "BeyondTrust Vulnerability Exploited for Web Shells, Backdoors, and Data Theft",
-      "link": "https://www.news4hackers.com/beyondtrust-vulnerability-exploited-for-web-shells-backdoors-and-data-theft/",
-      "source": "News4Hackers",
-      "published": "2026-02-20T16:57:08+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "Malware / Payloads"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Setting off on a self-hosting journey",
-      "link": "https://shellsharks.com/notes/2026/02/20/setting-off-on-a-self-hosting-journey",
-      "source": "https://shellsharks.com/feeds/all-feed.xml",
-      "published": "2026-02-20T16:46:00+00:00",
+      "title": "'Ethereum Is Going Hard': Vitalik Buterin Backs Censorship Resistance Upgrade",
+      "link": "https://decrypt.co/358792/ethereum-going-hard-vitalik-buterin-backs-censorship-resistance-upgrade",
+      "source": "Decrypt",
+      "published": "2026-02-21T20:21:03+00:00",
       "smart_groups": [
         "Curated",
         "Vulnerabilities / CVEs"
@@ -36,107 +23,112 @@
       "curated": true
     },
     {
-      "title": "Malicious URLs",
-      "link": "https://www.reddit.com/r/netsec/comments/1ra0e85/malicious_urls/",
-      "source": "/r/netsec",
-      "published": "2026-02-20T16:42:43+00:00",
+      "title": "Matrimonial Scam: Two Arrested for Duping Divorced Women on Pretext of Marriage",
+      "link": "https://www.news4hackers.com/matrimonial-scam-two-arrested-for-duping-divorced-women-on-pretext-of-marriage/",
+      "source": "News4Hackers",
+      "published": "2026-02-21T19:34:43+00:00",
       "smart_groups": [
         "Curated",
-        "Vulnerabilities / CVEs",
-        "Web / API Security"
+        "Vulnerabilities / CVEs"
       ],
       "curated": true
     },
     {
-      "title": "Don’t trust TrustConnect: This fake remote support tool only helps hackers",
-      "link": "https://www.csoonline.com/article/4135307/dont-trust-trustconnect-this-fake-remote-support-tool-only-helps-hackers.html",
-      "source": "CSO Online",
-      "published": "2026-02-20T16:21:58+00:00",
+      "title": "Predator Spyware Exploits iOS SpringBoard Vulnerability to Conceal Microphone and Camera Activity",
+      "link": "https://www.news4hackers.com/predator-spyware-exploits-ios-springboard-vulnerability-to-conceal-microphone-and-camera-activity/",
+      "source": "News4Hackers",
+      "published": "2026-02-21T19:33:28+00:00",
       "smart_groups": [
         "Curated",
         "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": true
+    },
+    {
+      "title": "OPSEC Is the Missing Root of IT Security",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1rb06b9/opsec_is_the_missing_root_of_it_security/",
+      "source": "/r/cybersecurity",
+      "published": "2026-02-21T19:30:34+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Linux / Unix",
+        "Identity / Access"
+      ],
+      "curated": true
+    },
+    {
+      "title": "DragFix: And you thought ClickFix was a drag?",
+      "link": "https://medium.com/@delivrto/dragfix-and-you-thought-clickfix-was-a-drag-51a496773cb4?source=rss-1242be189bc------2",
+      "source": "https://blog.delivr.to/feed",
+      "published": "2026-02-21T19:14:52+00:00",
+      "smart_groups": [
+        "Curated",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
         "Exploit / PoC",
-        "Malware / Payloads",
-        "Network / OT / ICS",
+        "Identity / Access",
         "Phishing / Social Engineering",
         "Crypto / Web3"
       ],
       "curated": true
     },
     {
-      "title": "The Readiness Illusion. Why Tabletop Exercises fail without TTP Replays.",
-      "link": "https://www.reddit.com/r/netsec/comments/1r9zj6e/the_readiness_illusion_why_tabletop_exercises/",
-      "source": "/r/netsec",
-      "published": "2026-02-20T16:11:43+00:00",
-      "smart_groups": [
-        "Curated",
-        "Ransomware"
-      ],
-      "curated": true
-    },
-    {
-      "title": "The Readiness Illusion. Why Tabletop Exercises fail without TTP Replays.",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1r9zhht/the_readiness_illusion_why_tabletop_exercises/",
+      "title": "Built an AI-powered DevSecOps scanner — feedback from security professionals?",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1rave09/built_an_aipowered_devsecops_scanner_feedback/",
       "source": "/r/cybersecurity",
-      "published": "2026-02-20T16:10:04+00:00",
+      "published": "2026-02-21T16:27:18+00:00",
       "smart_groups": [
         "Curated",
-        "Ransomware"
+        "Exploit / PoC"
       ],
       "curated": true
     },
     {
-      "title": "Using threat modeling and prompt injection to audit Comet",
-      "link": "https://blog.trailofbits.com/2026/02/20/using-threat-modeling-and-prompt-injection-to-audit-comet/",
-      "source": "https://blog.trailofbits.com/feed/",
-      "published": "2026-02-20T16:00:00+00:00",
+      "title": "Hackers Leveraging Multiple AI Services to Compromise 600+ FortiGate Devices",
+      "link": "https://cybersecuritynews.com/600-fortigate-devices-hacked/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-02-21T16:00:37+00:00",
       "smart_groups": [
         "Curated",
-        "Ransomware",
-        "Vulnerabilities / CVEs",
         "Exploit / PoC",
-        "Cloud / SaaS",
-        "Phishing / Social Engineering"
+        "Crypto / Web3"
       ],
       "curated": true
     },
     {
-      "title": "BeyondTrust Flaw Used for Web Shells, Backdoors, and Data Exfiltration",
-      "link": "https://thehackernews.com/2026/02/beyondtrust-flaw-used-for-web-shells.html",
+      "title": "SuperClaw – Open-Source Framework to Red-Team AI Agents for Security Testing",
+      "link": "https://cybersecuritynews.com/superclaw-red-team-ai-agent/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-02-21T15:36:34+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "AI-Assisted Threat Actor Compromises 600+ FortiGate Devices in 55 Countries",
+      "link": "https://thehackernews.com/2026/02/ai-assisted-threat-actor-compromises.html",
       "source": "The Hacker News",
-      "published": "2026-02-20T15:45:00+00:00",
+      "published": "2026-02-21T14:49:00+00:00",
       "smart_groups": [
         "Curated",
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "Malware / Payloads"
+        "Exploit / PoC"
       ],
       "curated": true
     },
     {
-      "title": "why the fk HR exist",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1r9yk1n/why_the_fk_hr_exist/",
-      "source": "/r/cybersecurity",
-      "published": "2026-02-20T15:36:05+00:00",
+      "title": "HTB: Giveback",
+      "link": "https://0xdf.gitlab.io/2026/02/21/htb-giveback.html",
+      "source": "https://0xdf.gitlab.io/feed.xml",
+      "published": "2026-02-21T14:45:00+00:00",
       "smart_groups": [
         "Curated",
         "Vulnerabilities / CVEs",
         "Exploit / PoC",
-        "Cloud / SaaS",
-        "Web / API Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Ransomware Attacks US Clinics, ICS Vulnerabilities Rise, EU Bans AI in Parliament",
-      "link": "https://www.news4hackers.com/ransomware-attacks-us-clinics-ics-vulnerabilities-rise-eu-bans-ai-in-parliament/",
-      "source": "News4Hackers",
-      "published": "2026-02-20T15:32:45+00:00",
-      "smart_groups": [
-        "Curated",
-        "Ransomware",
-        "Vulnerabilities / CVEs",
-        "Network / OT / ICS"
+        "Cloud / SaaS"
       ],
       "curated": true
     }
