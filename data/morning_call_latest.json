@@ -1,132 +1,142 @@
 {
-  "generated_at": "2026-02-23T07:20:55.249695+00:00",
-  "analysis_date": "2026-02-23",
+  "generated_at": "2026-02-24T07:16:04.353084+00:00",
+  "analysis_date": "2026-02-24",
   "model": "gpt-5.1",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-02-22T16:58:50.302031+00:00",
+  "source_generated_at": "2026-02-23T23:07:25.153396+00:00",
   "source_days_back": 30,
-  "source_total_items": 8467,
-  "total_items_in_window_all": 47,
-  "total_items_in_window_curated": 13,
-  "morning_call_markdown": "### Executive Summary\n- Ongoing NPM/PyPI supply‑chain risks, including a new Pulsar RAT campaign using PNG images, increase compromise risk via our software dependencies and build tooling.\n- Firmware‑level Android backdoor and a Dell zero‑day (exploited since 2024) highlight the need to review vendor and endpoint exposure, especially for remote work and admin devices.\n- Sectoral targeting trends (hospitality, healthcare) and AI/automation‑driven outages underline human‑factor and automation‑risk controls relevant to our own environments.\n\n---\n\n### High-priority items (immediate attention)\n\n- **NPM supply-chain attack delivering Pulsar RAT via malicious PNGs**  \n  - What happened: Multiple reports of NPM packages using PNG steganography to drop/distribute Pulsar RAT.  \n  - Why it matters operationally: Developers and build systems pulling malicious packages can lead to endpoint compromise and lateral movement into production.  \n  - Recommended immediate actions:  \n    - Check EDR and proxy logs for known “Pulsar RAT” binary/behavioral detections; search for recent NPM package installs on dev/build machines aligning with IOCs from vendor feeds/Threat Intel.  \n    - Implement or confirm block/alert on `npm install` from non-approved registries or suspicious packages on corporate endpoints and CI/CD runners.\n\n- **Broader NPM/PyPI supply-chain risk and new open-source scanners/tools**  \n  - What happened: New OSS tools for scanning NPM/PyPI dependencies and aggregating scanner outputs; increasing community focus on malicious packages.  \n  - Why it matters operationally: Validates that misuse of dev ecosystems is active and evolving; our dev fleet and build servers are a prime target.  \n  - Recommended immediate actions:  \n    - Ensure monitoring of developer hosts and build servers is at “high sensitivity”: script interpreters, unusual network connections, credential access (T1059, T1552).  \n    - Coordinate with DevSecOps to confirm allowlists for packages/registries and to pilot dependency scanning where absent.\n\n- **Firmware‑level Android tablet backdoor (pre-installed) – potential remote-work/partner exposure**  \n  - What happened: Backdoor identified in Android tablet firmware shipped by OEM; device can be remotely controlled without user action.  \n  - Why it matters operationally: If such tablets are used by staff/contractors for corporate access, they can be a stealth foothold outside our normal EDR coverage.  \n  - Recommended immediate actions:  \n    - Ask IT to confirm whether the affected tablet models or similar low‑cost OEM devices are used to access corporate services; if unknown, treat as “assumed possible.”  \n    - Increase anomaly monitoring around mobile access: unusual IPs, impossible travel, odd user‑agent strings in VPN/IdP logs; block untrusted device types where technically feasible.\n\n- **Dell zero‑day exploited since 2024 (details limited)**  \n  - What happened: Reports that a Dell vulnerability has been exploited in the wild for ~2 years; likely affecting widely deployed hardware/firmware or drivers.  \n  - Why it matters operationally: We have high Dell footprint (assumption); exploitation could bypass OS-level controls and persist across rebuilds.  \n  - Recommended immediate actions:  \n    - Pull an inventory of Dell assets (endpoints, servers) and correlate with latest Dell advisories via Vulnerability Management; flag high‑value/admin endpoints.  \n    - Prioritize increased telemetry/hunting on Dell endpoints for persistence and driver abuse (T1547, T1068), and prepare to fast‑track patches/BIOS/firmware updates once precise CVE details are confirmed internally.\n\n- **Automation/AI agent causing AWS production deletion (Amazon Kiro case)**  \n  - What happened: Case study where an AI/automation agent deleted an AWS production environment, causing a 13‑hour outage.  \n  - Why it matters operationally: We rely on automation and possibly AI‑assisted tooling in cloud; misconfig or prompt issues can cause destructive changes without malicious actors.  \n  - Recommended immediate actions:  \n    - Confirm that destructive cloud actions (delete VPCs, IAM roles, security groups, critical S3, RDS, etc.) require MFA/change control and generate high‑severity alerts in CloudTrail/SIEM.  \n    - Review and, if needed, temporarily tighten IAM roles used by bots/automation to “least privilege + deny delete” for critical resources until governance is reassessed.\n\n---\n\n### Monitoring & detection recommendations\n\n- **Pulsar RAT / NPM supply-chain**  \n  - Log sources: EDR on developer/build hosts, web proxy/DNS, endpoint firewall; NPM and Node.js process telemetry.  \n  - Hunt: New or unusual Node.js/`npm`/`node` processes spawning PowerShell/cmd (T1059), connections to rare external domains/ports from build servers, suspicious PNG downloads followed by execution.\n\n- **General malicious dependencies (NPM/PyPI)**  \n  - Log sources: EDR, proxy, Git/CI logs, artifact repositories.  \n  - Hunt: Recent addition of obscure packages, especially typosquats; scripts executing on `postinstall` or build steps establishing outbound connections (T1195, T1105).\n\n- **Firmware/driver abuse (Android backdoor, Dell zero‑day)**  \n  - Log sources: EDR (driver loads, kernel events), MDM/mobile gateway logs, VPN/IdP.  \n  - Hunt: Devices repeatedly connecting from mobile networks with abnormal session patterns, use of outdated Dell drivers/firmware, suspicious unsigned or newly‑signed drivers (T1547.006).\n\n- **Cloud destructive/administrative activity (AI/automation risk)**  \n  - Log sources: AWS CloudTrail/Azure Activity, CI/CD audit logs, IdP.  \n  - Hunt: API calls to `Delete*`, `Terminate*`, `Revoke*`, or large config changes from service accounts or AI/automation identities outside change windows (T1489, T1565).\n\n- **Ransomware / data exfil trends (hospitality/healthcare focus but generalizable)**  \n  - Log sources: EDR, file servers, DLP, e-mail gateway.  \n  - Hunt: Sudden file rename/encryption patterns, high-volume SMB/FTP/HTTP uploads to untrusted destinations, unusual use of archivers (7zip/rar) on servers (T1486, T1041).\n\n- **Exploit activity and PoCs (Firefox RCE, Dell 0‑day, others)**  \n  - Log sources: IDS/IPS, web proxies, endpoint exploit-prevention, browser telemetry if available.  \n  - Hunt: Spikes in exploit-prevention blocks related to browser or driver exploits, anomalous child processes spawned by browsers or system utilities (T1203).\n\n- **Phishing & social engineering (hospitality campaign analogs)**  \n  - Log sources: E-mail security, secure web gateway, IdP and MFA logs.  \n  - Hunt: Increases in credential-harvesting pages, OAuth consent grants, MFA push fatigue, lookalike domains related to travel/hospitality themes (T1566, T1078).\n\n- **OSINT/Recon tooling**  \n  - Log sources: Perimeter web logs, WAF, public-facing services.  \n  - Hunt: Unusual enumeration patterns from single IPs (user‑agent anomalies, high-volume search queries) that might reflect OSINT recon against our brands (T1593, T1595).\n\n---\n\n### Medium-term follow-ups\n\n- Work with DevSecOps to formalize a policy for third‑party package use (NPM/PyPI): allowlists, periodic scans, and automatic blocking of known malicious packages in CI/CD.\n\n- Engage Endpoint and Hardware teams to:  \n  - Map Dell hardware and Android/tablet usage; ensure a plan for prompt BIOS/firmware and driver patching once vendor guidance is fully available.\n\n- Review and, if needed, update the change-management and approval process for any AI/automation agents operating in cloud or infrastructure; include “kill switch” and monitoring requirements.\n\n- Run a tabletop/awareness session with developers and admins on supply-chain and firmware risks, emphasizing secure package selection, device sourcing, and high-risk behaviors.\n\n- Align with Threat Intel to keep track of ransomware targeting patterns in adjacent sectors (hospitality, healthcare) and ensure our runbooks and playbooks are tuned for double‑extortion and data-leak scenarios.\n\n- Validate SOC playbooks around suspected supply-chain compromise (malicious library or tool): clear guidance on containment of build servers, code integrity checks, and communication with vendors/partners.",
+  "source_total_items": 8581,
+  "total_items_in_window_all": 279,
+  "total_items_in_window_curated": 68,
+  "morning_call_markdown": "### Executive Summary\n- Active exploitation of recently patched Roundcube webmail and BeyondTrust remote access vulnerabilities; CISA and others warn of ongoing attacks.\n- Hundreds of FortiGate firewalls and Ivanti EPMM/Connect Secure VPN/MDM servers have been compromised using AI-assisted mass exploitation and Chinese APT campaigns.\n- Ransomware and RAT/stealer campaigns continue via email and web (WordPress, Excel, macros, PDF/jsPDF), emphasizing need for hardened email/web controls and identity monitoring.\n\n---\n\n### High-priority items (immediate attention)\n\n- **Roundcube webmail vulnerabilities actively exploited (CISA alert)**\n  - What happened: Multiple recently patched Roundcube flaws are being exploited in the wild for remote code execution and email compromise.\n  - Why it matters: Any self-hosted Roundcube instance (incl. subsidiaries/partners) is a high-value entry point for internal mailbox takeover and lateral movement.\n  - Recommended immediate actions: Identify if any internal or third‑party Roundcube is in use; confirm patch status and isolate unpatched systems; increase monitoring of webmail logs for anomalous access, unknown admin actions, and outbound connections from webmail servers.\n\n- **BeyondTrust remote access CVE‑2026‑1731 under active attack**\n  - What happened: Ongoing exploitation of a critical vulnerability in BeyondTrust remote access products enabling unauthorized access.\n  - Why it matters: Remote access platforms are high-privilege pivots into internal networks and often integrated with our AD/IdP.\n  - Recommended immediate actions: Confirm whether any BeyondTrust products are in our environment or critical vendors; verify immediate patching or compensating controls; hunt for anomalous logins, new accounts, or configuration changes on these systems over the last 30 days.\n\n- **FortiGate firewalls mass-compromised via AI-assisted attacks**\n  - What happened: Hundreds of FortiGate devices were hacked by an attacker using AI tools to automate scanning, exploit selection, and post‑compromise actions.\n  - Why it matters: Demonstrates at‑scale, low-skill exploitation of perimeter devices; any lag in patching or exposure of management interfaces is now higher risk.\n  - Recommended immediate actions: Reconfirm our FortiGate inventory, firmware versions, and exposure (mgmt plane not on the Internet); review recent FortiGate logs for new admins, config changes, unusual outbound tunnels; ensure latest Fortinet advisories applied and consider emergency config review.\n\n- **Ivanti VPN / EPMM MDM zero‑days exploited by Chinese threat actors**\n  - What happened: Reports confirm Chinese actors used VPN/MDM flaws in Ivanti products to seize server control and pivot into customer environments.\n  - Why it matters: VPN/MDM systems bridge external devices and the core network; exploitation provides stealthy, persistent access and potential device-level control.\n  - Recommended immediate actions: Verify we (or key vendors) do not run affected Ivanti products; if present, confirm patching, disable unnecessary services, and review logs for webshell-like activity, suspicious API calls, and anomalous admin actions since initial disclosure.\n\n- **Web/email-delivered malware: APT28 macros & WordPress/Excel/JPEG-based payloads**\n  - What happened: APT28 used webhook-based macro malware; GrayCharlie is injecting malicious JS into WordPress to drop NetSupport RAT and Stealc; XWorm 7.2 is being delivered via Excel exploit hiding payloads in JPEG; new MIMICRAT and Arkanix stealer campaigns reported.\n  - Why it matters: These TTPs align with common initial access routes into financial orgs (phishing, drive‑by, weaponized docs), leading to RATs/stealers and follow-on ransomware.\n  - Recommended immediate actions: Tighten email filtering and sandboxing for Office, PDF, and archive attachments; confirm macro-blocking policies; monitor EDR for RAT/stealer behaviors (NetSupport misuse, XWorm, generic RAT patterns); prioritize triage of any new alerts involving Office, WScript/PowerShell, and outbound C2‑like traffic.\n\n---\n\n### Monitoring & detection recommendations\n\n- **Perimeter appliances (FortiGate, Ivanti, BeyondTrust) – Initial access (T1190, T1133)**\n  - Log sources: Firewall/SSL VPN logs, remote access platform logs, reverse proxy/WAF.\n  - What to monitor: Repeated failed logins, logins from unusual geos/ASNs, new admin accounts, unexpected configuration exports/changes, spikes in SSL VPN sessions, outbound connections from appliances to unknown IPs.\n\n- **Webmail & web apps (Roundcube, WordPress, jsPDF, PDF platforms) – Web exploitation (T1190, T1059)**\n  - Log sources: Web server logs, application logs, WAF, reverse proxies.\n  - What to monitor: Suspicious POSTs to Roundcube/WordPress admin or plugin endpoints, abnormal user-agents, webshell-like patterns in URLs or responses, unexpected file uploads, outbound connections from web servers.\n\n- **Email-based malware (APT28, XWorm, MIMICRAT, NetSupport RAT, Stealc, Arkanix) – Phishing & malware (T1566, T1204, T1059, T1105)**\n  - Log sources: Secure email gateway, O365/Exchange logs, EDR, DNS, web proxy.\n  - What to monitor: High-risk attachments (Office, macros, encrypted ZIPs), links to newly registered domains, process chains like `office.exe → powershell/wscript/mshta`, installations of remote support tools (NetSupport) on endpoints where not approved.\n\n- **Credential theft and stealer activity (Stealc, Arkanix, RATs) – Credential access & exfil (T1003, T1555, T1041)**\n  - Log sources: EDR, browser logs (if available), IdP/SSO, VPN, DLP.\n  - What to monitor: Access token exports, suspicious access to browser/credential stores, sudden logins using valid credentials from new locations/devices, high-volume data exfil from workstations to untrusted IPs.\n\n- **Ransomware precursors – Lateral movement & privilege escalation (T1078, T1021, T1068)**\n  - Log sources: AD/LDAP, Windows security logs, EDR, network telemetry.\n  - What to monitor: Sudden use of built‑in tools (PsExec, WMI, SMB), mass authentication failures, new service creations, shadow copy deletions, mass file renames/encrypt‑like behavior.\n\n- **OAuth / API key abuse (Google OAuth abuse, CrowdStrike API key canary) – Cloud identity (T1528, T1078)**\n  - Log sources: Cloud audit logs (Google, Azure, AWS), IdP logs, API gateway logs.\n  - What to monitor: New OAuth consents to untrusted apps, anomalous API key usage (time/geography/service), disabled MFA, and privilege escalations via service principals.\n\n- **Social engineering & account takeover (WhatsApp exploit sales, Facebook phishing ring) – Social & identity attacks (T1566, T1078)**\n  - Log sources: IdP, MDM, mobile security, helpdesk tickets.\n  - What to monitor: Repeated MFA reset requests, SIM/MFA device changes, high volume of password reset requests, new device enrollments for privileged users.\n\n- **Cryptominer BYOVD campaign (XMRig with vulnerable drivers) – Defense evasion & resource abuse (T1068, T1562, T1496)**\n  - Log sources: EDR, Sysmon, Windows event logs, hypervisor metrics.\n  - What to monitor: Installation of unsigned/vulnerable drivers, disabling of EDR, abnormal CPU/GPU usage on servers, outbound mining protocol traffic or connections to known mining pools.\n\n---\n\n### Medium-term follow-ups\n\n- **Patch and hardening review for perimeter and remote access**\n  - Comprehensive review of firmware/patch levels and configuration hardening for FortiGate, Ivanti, BeyondTrust, VPNs, and MDM; ensure management interfaces are restricted and MFA enforced.\n\n- **Email and document security posture**\n  - Validate organization-wide macro blocking, attachment sandboxing, and “safe links/attachments” policies; update user awareness on malicious Excel/PDF and delivery scams.\n\n- **Third-party and supply-chain risk**\n  - Confirm key vendors (especially outsourcing, telecom, cloud, and chip/IT suppliers) patch statuses for Ivanti, Fortinet, BeyondTrust, Roundcube; request attestation or recent pen-test results as appropriate.\n\n- **Logging and retention for critical infrastructure**\n  - Ensure adequate log retention and centralization for all perimeter devices, mail/web servers, and remote access platforms to support backward-looking hunts over several months.\n\n- **Ransomware tabletop and IR playbook refresh**\n  - Incorporate lessons from recent healthcare and aviation ransomware incidents; rehearse scenarios involving loss of core apps, remote access compromise, and data extortion.\n\n- **Developer and CI/CD security (npm/AI toolchain supply chain memo)**\n  - Engage DevSecOps to review npm/package management, CI/CD pipelines, and AI tooling integration; implement integrity checks, package pinning, and secrets management (including evaluating managed identities for SQL/on-prem as appropriate).",
   "highlights": [
     {
-      "title": "Built an open-source npm/PyPI supply chain scanner - looking for feedback",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1rbp4k0/built_an_opensource_npmpypi_supply_chain_scanner/",
+      "title": "How do you triage your vulnerabilities",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1rcvtsm/how_do_you_triage_your_vulnerabilities/",
       "source": "/r/cybersecurity",
-      "published": "2026-02-22T15:47:27+00:00",
+      "published": "2026-02-23T22:16:14+00:00",
       "smart_groups": [
         "Curated",
         "Vulnerabilities / CVEs",
-        "Cloud / SaaS",
-        "Malware / Payloads"
+        "Exploit / PoC"
       ],
       "curated": true
     },
     {
-      "title": "Amazon Kiro deleted a production environment and caused a 13-hour AWS outage. I documented 10 cases of AI agents destroying systems — same patterns every time.",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1rbnwlf/amazon_kiro_deleted_a_production_environment_and/",
-      "source": "/r/cybersecurity",
-      "published": "2026-02-22T14:57:46+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "Cloud / SaaS"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Top NATO allies believe cyberattacks on hospitals are an act of war. They’re still struggling to fight back.",
-      "link": "https://databreaches.net/2026/02/22/top-nato-allies-believe-cyberattacks-on-hospitals-are-an-act-of-war-theyre-still-struggling-to-fight-back/?pk_campaign=feed&pk_kwd=top-nato-allies-believe-cyberattacks-on-hospitals-are-an-act-of-war-theyre-still-struggling-to-fight-back",
-      "source": "DataBreaches.net",
-      "published": "2026-02-22T14:54:18+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs"
-      ],
-      "curated": true
-    },
-    {
-      "title": "SECURITY AFFAIRS MALWARE NEWSLETTER ROUND 85",
-      "link": "https://securityaffairs.com/188337/malware/security-affairs-malware-newsletter-round-85.html",
-      "source": "Security Affairs",
-      "published": "2026-02-22T14:29:12+00:00",
-      "smart_groups": [
-        "Curated",
-        "Malware / Payloads"
-      ],
-      "curated": true
-    },
-    {
-      "title": "The hospitality sector continues to be lucrative targets",
-      "link": "https://databreaches.net/2026/02/22/the-hospitality-sector-continues-to-be-lucrative-targets/?pk_campaign=feed&pk_kwd=the-hospitality-sector-continues-to-be-lucrative-targets",
-      "source": "DataBreaches.net",
-      "published": "2026-02-22T14:14:18+00:00",
+      "title": "Introducing the next generation of SOC automation: Sentinel playbook generator",
+      "link": "https://techcommunity.microsoft.com/t5/microsoft-sentinel-blog/introducing-the-next-generation-of-soc-automation-sentinel/ba-p/4494438",
+      "source": "Microsoft Sentinel Blog",
+      "published": "2026-02-23T21:17:22+00:00",
       "smart_groups": [
         "Curated",
         "Ransomware",
         "Vulnerabilities / CVEs",
-        "Phishing / Social Engineering"
+        "Crypto / Web3"
       ],
       "curated": true
     },
     {
-      "title": "Security Affairs newsletter Round 564 by Pierluigi Paganini – INTERNATIONAL EDITION",
-      "link": "https://securityaffairs.com/188332/breaking-news/security-affairs-newsletter-round-564-by-pierluigi-paganini-international-edition.html",
-      "source": "Security Affairs",
-      "published": "2026-02-22T14:14:08+00:00",
+      "title": "Microsoft Defender Experts - S.T.A.R. Series",
+      "link": "https://techcommunity.microsoft.com/t5/microsoft-security-experts-blog/microsoft-defender-experts-s-t-a-r-series/ba-p/4472199",
+      "source": "Microsoft Security Experts",
+      "published": "2026-02-23T20:56:11+00:00",
       "smart_groups": [
         "Curated",
+        "Ransomware",
         "Vulnerabilities / CVEs",
         "Exploit / PoC",
-        "Cloud / SaaS"
+        "Windows / Microsoft",
+        "Linux / Unix",
+        "Malware / Payloads",
+        "Network / OT / ICS",
+        "Phishing / Social Engineering",
+        "Crypto / Web3"
       ],
       "curated": true
     },
     {
-      "title": "Malicious PNG Images Used to Distribute Pulsar RAT via NPM Supply Chain Attack",
-      "link": "https://www.news4hackers.com/malicious-png-images-used-to-distribute-pulsar-rat-via-npm-supply-chain-attack/",
-      "source": "News4Hackers",
-      "published": "2026-02-22T14:01:42+00:00",
-      "smart_groups": [
-        "Curated"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Built a CLI tool that aggregates outputs from multiple security scanners into one report. Would you actually use this?",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1rbm3am/built_a_cli_tool_that_aggregates_outputs_from/",
-      "source": "/r/cybersecurity",
-      "published": "2026-02-22T13:38:55+00:00",
+      "title": "APT28 Targeted European Entities Using Webhook-Based Macro Malware",
+      "link": "https://thehackernews.com/2026/02/apt28-targeted-european-entities-using.html",
+      "source": "The Hacker News",
+      "published": "2026-02-23T19:41:00+00:00",
       "smart_groups": [
         "Curated",
+        "Ransomware",
         "Exploit / PoC",
-        "Supply Chain / Software"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Hackers Hide Pulsar RAT Inside PNG Images in New NPM Supply Chain Attack",
-      "link": "https://hackread.com/hackers-pulsar-rat-png-images-npm-supply-chain-attack/",
-      "source": "HackRead",
-      "published": "2026-02-22T13:08:04+00:00",
-      "smart_groups": [
-        "Curated",
-        "Windows / Microsoft"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Android Tablet Firmware Backdoor Discovered, Dell Zero-Day Exploit Exposed Since 2024",
-      "link": "https://www.news4hackers.com/android-tablet-firmware-backdoor-discovered-dell-zero-day-exploit-exposed-since-2024/",
-      "source": "News4Hackers",
-      "published": "2026-02-22T12:02:26+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
+        "Threat Actors / APT",
         "Malware / Payloads"
+      ],
+      "curated": true
+    },
+    {
+      "title": "GrayCharlie Injects Malicious JavaScript into WordPress Sites to Deliver NetSupport RAT and Stealc",
+      "link": "https://cybersecuritynews.com/graycharlie-injects-malicious-javascript/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-02-23T19:38:13+00:00",
+      "smart_groups": [
+        "Curated",
+        "Malware / Payloads"
+      ],
+      "curated": true
+    },
+    {
+      "title": "600+ FortiGate Devices Hacked by AI-Armed Amateur",
+      "link": "https://www.darkreading.com/threat-intelligence/600-fortigate-devices-hacked-ai-amateur",
+      "source": "darkreading",
+      "published": "2026-02-23T19:37:59+00:00",
+      "smart_groups": [
+        "Curated",
+        "Ransomware"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Conduent Data Breach – Largest Data Breach in U.S. History As Ransomware Group Stolen 8 TB of Data",
+      "link": "https://cybersecuritynews.com/conduent-data-breach/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-02-23T18:48:16+00:00",
+      "smart_groups": [
+        "Curated",
+        "Ransomware",
+        "Data Breaches / Leaks"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Wormable XMRig campaign leverages BYOVD and timed kill switch for stealth",
+      "link": "https://securityaffairs.com/188388/malware/wormable-xmrig-campaign-leverages-byovd-and-timed-kill-switch-for-stealth.html",
+      "source": "Security Affairs",
+      "published": "2026-02-23T18:36:09+00:00",
+      "smart_groups": [
+        "Curated",
+        "Exploit / PoC"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Anyone else getting (REF-Random letters, random name) email attacks?",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1rcp8gg/anyone_else_getting_refrandom_letters_random_name/",
+      "source": "/r/cybersecurity",
+      "published": "2026-02-23T18:18:56+00:00",
+      "smart_groups": [
+        "Curated",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "Identity / Access"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Ransomware attack forces University of Mississippi Medical Center to close clinics",
+      "link": "https://www.scworld.com/brief/ransomware-attack-forces-university-of-mississippi-medical-center-to-close-clinics",
+      "source": "SCM feed for Latest",
+      "published": "2026-02-23T18:13:03+00:00",
+      "smart_groups": [
+        "Curated",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "Network / OT / ICS"
       ],
       "curated": true
     }
