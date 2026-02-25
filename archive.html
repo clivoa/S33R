@@ -6,6 +6,7 @@
   <title>S33R Archive</title>
 
   <link rel="stylesheet" href="styles.css" />
+  <script src="ui.js"></script>
 
   <style>
     /* Layout geral archive */
@@ -121,9 +122,9 @@
     }
 
     .archive-stats-card {
-      background: rgba(0, 0, 0, 0.1);
+      background: var(--bg-soft);
       border-radius: var(--radius-lg);
-      border: 1px solid rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border-color);
       padding: 8px 10px;
     }
 
@@ -251,17 +252,18 @@
 <body>
 
   <!-- Minimal Navbar -->
-  <div class="minimal-navbar">
+  <nav class="minimal-navbar" aria-label="Primary navigation">
   <a href="index.html" class="minimal-nav-link">News</a>
 
   <div class="minimal-dropdown">
-    <span class="minimal-nav-link dropdown-toggle">Insights ▾</span>
+    <span class="minimal-nav-link dropdown-toggle" tabindex="0">Insights ▾</span>
     <div class="dropdown-menu">
       <a href="archive.html">Archive List</a>
       <a href="archive-overview.html">Year Overview</a>
+      <a href="trend.html">Trend Analytics</a>
     </div>
   </div>
-</div>
+</nav>
 
 
   <div class="archive-container">
@@ -298,6 +300,17 @@
       <div id="archive-stats"></div>
     </div>
 
+    <section class="analyst-tools" aria-label="Archive analyst tools">
+      <span class="toolbar-label">Archive Tools</span>
+      <div class="toolbar-inline">
+        <button id="archive-copy-page-links" class="btn-action" type="button" disabled>Copy page links</button>
+        <button id="archive-export-page-csv" class="btn-action" type="button" disabled>Export page CSV</button>
+        <button id="archive-search-cve" class="quick-chip" type="button">Search CVE</button>
+        <button id="archive-clear-search" class="quick-chip" type="button">Clear search</button>
+      </div>
+      <div class="kbd-hint" aria-hidden="true"><span>Shortcut</span><kbd>/</kbd><span>search</span></div>
+    </section>
+
     <div id="archive-results"></div>
     <div id="archive-pagination" class="archive-pagination"></div>
     <footer class="site-footer">
@@ -318,6 +331,58 @@
     let currentItems = [];
     let filteredItems = [];
     let currentPage = 1;
+
+    function getCurrentPageItems() {
+      if (!filteredItems || filteredItems.length === 0) return [];
+      const startIdx = (currentPage - 1) * PAGE_SIZE;
+      const endIdx = startIdx + PAGE_SIZE;
+      let pageItems = filteredItems.slice(startIdx, endIdx);
+      const groupBySource = document.getElementById("group-by-source").checked;
+      if (groupBySource) {
+        pageItems = pageItems.slice().sort((a, b) => {
+          const sa = (a.source || "").localeCompare(b.source || "");
+          if (sa !== 0) return sa;
+          const tsA = a.published_ts || 0;
+          const tsB = b.published_ts || 0;
+          return tsB - tsA;
+        });
+      }
+      return pageItems;
+    }
+
+    function updateArchiveToolButtons() {
+      const hasItems = getCurrentPageItems().length > 0;
+      const copyBtn = document.getElementById("archive-copy-page-links");
+      const csvBtn = document.getElementById("archive-export-page-csv");
+      if (copyBtn) copyBtn.disabled = !hasItems;
+      if (csvBtn) csvBtn.disabled = !hasItems;
+    }
+
+    async function copyArchivePageLinks() {
+      const links = getCurrentPageItems().map((i) => i.link).filter(Boolean);
+      if (!links.length) return window.S33R_UI?.toast("No links on current page");
+      await window.S33R_UI?.copyText(links.join("\n"), `${links.length} archive links copied`);
+    }
+
+    function exportArchivePageCsv() {
+      const items = getCurrentPageItems();
+      if (!items.length) return window.S33R_UI?.toast("No items on current page");
+      const esc = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+      const rows = [
+        ["title", "source", "published", "link", "summary"].map(esc).join(","),
+        ...items.map((item) => [
+          item.title || "",
+          item.source || "",
+          formatDateFromItem(item),
+          item.link || "",
+          item.summary || "",
+        ].map(esc).join(",")),
+      ];
+      const y = currentYear || "year";
+      const m = currentMonth || "month";
+      window.S33R_UI?.downloadText(`s33r_archive_${y}-${m}_page${currentPage}.csv`, rows.join("\n"), "text/csv;charset=utf-8");
+      window.S33R_UI?.toast("Archive CSV exported");
+    }
 
     /* ============================
        Helpers
@@ -452,6 +517,7 @@
         container.innerHTML = "<p>No items for this selection.</p>";
         document.getElementById("archive-pagination").innerHTML = "";
         computeStats([]);
+        updateArchiveToolButtons();
         return;
       }
 
@@ -492,6 +558,7 @@
       }
 
       renderPagination(filteredItems.length);
+      updateArchiveToolButtons();
     }
 
     function buildItemElement(item) {
@@ -515,6 +582,7 @@
       const pagEl = document.getElementById("archive-pagination");
       if (!totalItems || totalItems <= PAGE_SIZE) {
         pagEl.innerHTML = "";
+        updateArchiveToolButtons();
         return;
       }
 
@@ -635,7 +703,38 @@
       renderResults();
     });
 
+    document.getElementById("archive-copy-page-links").addEventListener("click", copyArchivePageLinks);
+    document.getElementById("archive-export-page-csv").addEventListener("click", exportArchivePageCsv);
+    document.getElementById("archive-search-cve").addEventListener("click", () => {
+      const el = document.getElementById("search-input");
+      el.value = el.value.trim().toLowerCase() === "cve-" ? "" : "CVE-";
+      applyFilters();
+      renderResults();
+      el.focus();
+      el.select();
+    });
+    document.getElementById("archive-clear-search").addEventListener("click", () => {
+      const el = document.getElementById("search-input");
+      el.value = "";
+      applyFilters();
+      renderResults();
+      el.focus();
+    });
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "/" && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        const tag = document.activeElement?.tagName;
+        if (!["INPUT", "TEXTAREA", "SELECT"].includes(tag)) {
+          e.preventDefault();
+          const el = document.getElementById("search-input");
+          el.focus();
+          el.select();
+        }
+      }
+    });
+
     /* Initial load */
+    updateArchiveToolButtons();
     loadYears();
   </script>
 

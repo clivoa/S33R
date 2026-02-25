@@ -6,13 +6,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="description" content="Security news feed by clivoa, powered by prebuilt JSON + public RSS sources." />
   <link rel="stylesheet" href="styles.css" />
+  <script src="ui.js"></script>
 </head>
 <body>
-  <div class="minimal-navbar">
-  
-
+  <nav class="minimal-navbar" aria-label="Primary navigation">
+  <a href="index.html" class="minimal-nav-link" aria-current="page">News</a>
   <div class="minimal-dropdown">
-    <span class="minimal-nav-link dropdown-toggle">Insights ▾</span>
+    <span class="minimal-nav-link dropdown-toggle" tabindex="0">Insights ▾</span>
     <div class="dropdown-menu">
       <a href="morning.html">Morning Call</a>
       <a href="archive.html">Archive List</a>
@@ -20,7 +20,7 @@
       <a href="trend.html">Trend Analytics</a>
     </div>
   </div>
-</div>
+</nav>
 
   <div class="page">
     <header class="site-header">
@@ -70,15 +70,29 @@
       <section class="main-content">
         <section class="filters-bar">
           <div class="filters-left">
-            <label for="news-search-input" class="filter-label">Search</label>
-            <div class="search-input-wrapper">
-              <input
-                id="news-search-input"
-                type="text"
-                class="filter-input"
-                placeholder="Search for 0-day, threat actor, CVE-2024-XXXX..."
-              />
-              <button id="news-search-btn" class="btn-primary">Search</button>
+            <div class="search-block">
+              <label for="news-search-input" class="filter-label">Search</label>
+              <div class="search-input-wrapper">
+                <div class="search-field">
+                  <span class="search-icon" aria-hidden="true">⌕</span>
+                  <input
+                    id="news-search-input"
+                    type="text"
+                    class="filter-input"
+                    placeholder="Search for 0-day, threat actor, CVE-2024-XXXX..."
+                    autocomplete="off"
+                    aria-label="Search headlines"
+                  />
+                  <button
+                    id="news-search-clear"
+                    type="button"
+                    class="search-clear-btn hidden"
+                    aria-label="Clear search"
+                    title="Clear search"
+                  >×</button>
+                </div>
+                <button id="news-search-btn" class="btn-primary" type="button">Search</button>
+              </div>
             </div>
           </div>
 
@@ -111,12 +125,34 @@
           </div>
         </section>
 
+        <section class="analyst-tools" aria-label="Analyst tools">
+          <span class="toolbar-label">Analyst Tools</span>
+          <div class="toolbar-inline" id="quick-keyword-tools">
+            <button class="quick-chip" type="button" data-keyword="">All</button>
+            <button class="quick-chip" type="button" data-keyword="CVE-">CVE</button>
+            <button class="quick-chip" type="button" data-keyword="ransomware">Ransomware</button>
+            <button class="quick-chip" type="button" data-keyword="exploit">Exploit</button>
+            <button class="quick-chip" type="button" data-keyword="APT">APT</button>
+            <button class="quick-chip" type="button" data-keyword="phishing">Phishing</button>
+            <button class="quick-chip" type="button" data-keyword="zero-day">Zero-day</button>
+          </div>
+          <div class="toolbar-inline">
+            <button id="copy-visible-links-btn" class="btn-action" type="button">Copy visible links</button>
+            <button id="copy-visible-cves-btn" class="btn-action" type="button">Copy CVEs</button>
+            <button id="export-visible-csv-btn" class="btn-action" type="button">Export CSV</button>
+            <button id="export-visible-md-btn" class="btn-action" type="button">Export brief (MD)</button>
+          </div>
+          <div class="kbd-hint" aria-hidden="true">
+            <span>Shortcuts</span><kbd>/</kbd><span>search</span><kbd>Esc</kbd><span>clear</span><kbd>Shift</kbd><kbd>T</kbd><span>theme</span>
+          </div>
+        </section>
+
         <section>
-          <div id="loading-indicator" class="loading">
+          <div id="loading-indicator" class="loading" role="status" aria-live="polite">
             <div class="spinner"></div>
             <span>Loading news from JSON cache...</span>
           </div>
-          <div id="news-list" class="news-list"></div>
+          <div id="news-list" class="news-list" aria-live="polite" aria-busy="false"></div>
         </section>
       </section>
     </main>
@@ -161,6 +197,151 @@
       daysBack: 30,
       generatedAt: null,
     };
+
+    function getVisibleItems() {
+      const limit = Math.min(state.visibleCount, state.filteredItems.length);
+      return state.filteredItems.slice(0, limit);
+    }
+
+    function extractCvesFromText(text) {
+      if (!text) return [];
+      const matches = text.match(/\bCVE-\d{4}-\d{4,7}\b/gi) || [];
+      return matches.map((m) => m.toUpperCase());
+    }
+
+    function extractCvesFromItem(item) {
+      const text = [item.title || "", item.summary || ""].join(" ");
+      return Array.from(new Set(extractCvesFromText(text)));
+    }
+
+    function collectVisibleCves() {
+      const seen = new Set();
+      getVisibleItems().forEach((item) => {
+        extractCvesFromItem(item).forEach((cve) => seen.add(cve));
+      });
+      return Array.from(seen).sort();
+    }
+
+    function renderStateCard(type, title, description) {
+      const listEl = document.getElementById("news-list");
+      listEl.innerHTML = "";
+      listEl.setAttribute("aria-busy", "false");
+
+      const stateCard = document.createElement("section");
+      stateCard.className = `state-card state-${type}`;
+      const h = document.createElement("h3");
+      h.className = "state-card-title";
+      h.textContent = title;
+      const p = document.createElement("p");
+      p.className = "state-card-desc";
+      p.textContent = description;
+      stateCard.appendChild(h);
+      stateCard.appendChild(p);
+      listEl.appendChild(stateCard);
+    }
+
+    function renderLoadingSkeletons(count = 5) {
+      const listEl = document.getElementById("news-list");
+      listEl.innerHTML = "";
+      listEl.setAttribute("aria-busy", "true");
+
+      const stack = document.createElement("div");
+      stack.className = "skeleton-stack";
+      for (let i = 0; i < count; i++) {
+        const card = document.createElement("div");
+        card.className = "skeleton-card";
+        card.innerHTML = `
+          <span class="skeleton-line w-40"></span>
+          <span class="skeleton-line w-60 h-14"></span>
+          <span class="skeleton-line w-100"></span>
+          <span class="skeleton-line w-85"></span>
+          <div class="skeleton-chip-row">
+            <span class="skeleton-chip"></span>
+            <span class="skeleton-chip"></span>
+          </div>
+        `;
+        stack.appendChild(card);
+      }
+      listEl.appendChild(stack);
+    }
+
+    function escapeCsvCell(value) {
+      const s = String(value ?? "");
+      return `"${s.replace(/"/g, '""')}"`;
+    }
+
+    async function copyVisibleLinks() {
+      const items = getVisibleItems();
+      if (!items.length) {
+        window.S33R_UI?.toast("No visible items to copy");
+        return;
+      }
+      const text = items.map((i) => i.link).filter(Boolean).join("\n");
+      await window.S33R_UI?.copyText(text, `${items.length} links copied`);
+    }
+
+    async function copyVisibleCves() {
+      const cves = collectVisibleCves();
+      if (!cves.length) {
+        window.S33R_UI?.toast("No CVEs found in visible items");
+        return;
+      }
+      await window.S33R_UI?.copyText(cves.join("\n"), `${cves.length} CVEs copied`);
+    }
+
+    function exportVisibleCsv() {
+      const items = getVisibleItems();
+      if (!items.length) {
+        window.S33R_UI?.toast("No visible items to export");
+        return;
+      }
+      const rows = [
+        ["title", "source", "published", "type", "link", "summary"].map(escapeCsvCell).join(","),
+        ...items.map((item) => [
+          item.title || "",
+          item.source || "",
+          item.published_ts ? formatDate(item.published_ts) : "",
+          item.type || "",
+          item.link || "",
+          item.summary || "",
+        ].map(escapeCsvCell).join(","))
+      ];
+      const stamp = new Date().toISOString().slice(0, 10);
+      window.S33R_UI?.downloadText(`s33r_visible_news_${stamp}.csv`, rows.join("\n"), "text/csv;charset=utf-8");
+      window.S33R_UI?.toast("CSV exported");
+    }
+
+    function exportVisibleBriefMarkdown() {
+      const items = getVisibleItems();
+      if (!items.length) {
+        window.S33R_UI?.toast("No visible items to export");
+        return;
+      }
+      const lines = [
+        `# S33R Visible Headlines (${new Date().toISOString()})`,
+        "",
+        `- Visible items: ${items.length}`,
+        `- Category: ${state.category}`,
+        `- Search: ${state.search || "(none)"}`,
+        `- Sort: ${state.sort}`,
+        `- Recent only: ${state.recentOnly ? "yes" : "no"}`,
+        "",
+      ];
+      items.forEach((item, idx) => {
+        lines.push(`## ${idx + 1}. ${item.title || "Untitled"}`);
+        lines.push(`- Source: ${item.source || "Unknown"}`);
+        lines.push(`- Date: ${item.published_ts ? formatDate(item.published_ts) : "Unknown date"}`);
+        if (item.type) lines.push(`- Category: ${TYPE_LABELS[item.type] || item.type}`);
+        const cves = extractCvesFromItem(item);
+        if (cves.length) lines.push(`- CVEs: ${cves.join(", ")}`);
+        lines.push(`- Link: ${item.link || "#"}`);
+        if (item.summary) lines.push(`- Summary: ${item.summary}`);
+        lines.push("");
+      });
+      const stamp = new Date().toISOString().slice(0, 10);
+      window.S33R_UI?.downloadText(`s33r_visible_brief_${stamp}.md`, lines.join("\n"), "text/markdown;charset=utf-8");
+      window.S33R_UI?.toast("Brief exported (.md)");
+    }
 
     function formatDate(ts) {
       if (!ts) return "Unknown date";
@@ -251,8 +432,43 @@
         body.appendChild(smartGroupsEl);
       }
 
+      const cves = extractCvesFromItem(item);
+      if (cves.length) {
+        const cveRow = document.createElement("div");
+        cveRow.className = "smart-groups";
+        cves.slice(0, 4).forEach((cve) => {
+          const badge = document.createElement("span");
+          badge.className = "badge-inline warning";
+          badge.textContent = cve;
+          cveRow.appendChild(badge);
+        });
+        if (cves.length > 4) {
+          const extra = document.createElement("span");
+          extra.className = "badge-inline";
+          extra.textContent = `+${cves.length - 4} CVEs`;
+          cveRow.appendChild(extra);
+        }
+        body.appendChild(cveRow);
+      }
+
       const footer = document.createElement("div");
       footer.className = "card-footer";
+
+      const copyBtn = document.createElement("button");
+      copyBtn.className = "btn-action";
+      copyBtn.type = "button";
+      copyBtn.textContent = "Copy link";
+      copyBtn.addEventListener("click", async () => {
+        const ok = await window.S33R_UI?.copyText(item.link || "", "Link copied");
+        if (ok) {
+          copyBtn.classList.add("copied");
+          copyBtn.textContent = "Copied";
+          setTimeout(() => {
+            copyBtn.classList.remove("copied");
+            copyBtn.textContent = "Copy link";
+          }, 1200);
+        }
+      });
 
       const btn = document.createElement("a");
       btn.className = "btn-link";
@@ -261,6 +477,7 @@
       btn.rel = "noopener noreferrer";
       btn.textContent = "Read full article";
 
+      footer.appendChild(copyBtn);
       footer.appendChild(btn);
 
       card.appendChild(top);
@@ -285,6 +502,33 @@
         genInfo.textContent = `JSON generated at ${d.toLocaleString()} (window: last ${state.daysBack} days)`;
       } else {
         genInfo.textContent = "";
+      }
+
+      const linksBtn = document.getElementById("copy-visible-links-btn");
+      const cvesBtn = document.getElementById("copy-visible-cves-btn");
+      const csvBtn = document.getElementById("export-visible-csv-btn");
+      const mdBtn = document.getElementById("export-visible-md-btn");
+      const visibleItems = getVisibleItems();
+      const visibleCount = visibleItems.length;
+      const visibleCves = collectVisibleCves().length;
+
+      [linksBtn, cvesBtn, csvBtn, mdBtn].forEach((btn) => {
+        if (!btn) return;
+        btn.disabled = visibleCount === 0;
+      });
+      if (cvesBtn) {
+        cvesBtn.disabled = visibleCves === 0;
+        cvesBtn.title = visibleCves ? `${visibleCves} unique CVEs in visible items` : "No CVEs in current view";
+      }
+
+      const quickGroup = document.getElementById("quick-keyword-tools");
+      if (quickGroup) {
+        quickGroup.querySelectorAll("button[data-keyword]").forEach((btn) => {
+          const keyword = btn.getAttribute("data-keyword") || "";
+          const active = (state.search || "").trim().toLowerCase() === keyword.toLowerCase();
+          btn.classList.toggle("is-active", active);
+          btn.setAttribute("aria-pressed", active ? "true" : "false");
+        });
       }
     }
         // Mapeia categorias -> palavras-chave esperadas nos smart_groups
@@ -595,9 +839,21 @@
     function renderList() {
       const listEl = document.getElementById("news-list");
       listEl.innerHTML = "";
+      listEl.setAttribute("aria-busy", "false");
 
       const total = state.filteredItems.length;
       const limit = Math.min(state.visibleCount, total);
+
+      if (!total) {
+        renderStateCard(
+          "empty",
+          "No results",
+          "Try another keyword, disable the 24h filter, or change category."
+        );
+        const loadingEl = document.getElementById("loading-indicator");
+        loadingEl.classList.add("hidden");
+        return;
+      }
 
       for (let i = 0; i < limit; i++) {
         const item = state.filteredItems[i];
@@ -642,6 +898,9 @@
     function initEvents() {
       // Category pills
       const catContainer = document.getElementById("category-filters");
+      Array.from(catContainer.querySelectorAll("button[data-type]")).forEach((b) => {
+        b.setAttribute("aria-pressed", b.classList.contains("pill-active") ? "true" : "false");
+      });
       catContainer.addEventListener("click", (ev) => {
         const btn = ev.target.closest("button[data-type]");
         if (!btn) return;
@@ -649,6 +908,7 @@
 
         Array.from(catContainer.querySelectorAll("button[data-type]")).forEach((b) => {
           b.classList.toggle("pill-active", b === btn);
+          b.setAttribute("aria-pressed", b === btn ? "true" : "false");
         });
 
         state.category = type || "all";
@@ -656,25 +916,56 @@
       });
 
       // Search
-            // Search (live, enquanto digita)
       const searchInput = document.getElementById("news-search-input");
       const searchBtn = document.getElementById("news-search-btn");
+      const searchClearBtn = document.getElementById("news-search-clear");
+      const quickKeywordTools = document.getElementById("quick-keyword-tools");
+
+      function updateSearchClearVisibility() {
+        const hasValue = !!searchInput.value;
+        searchClearBtn.classList.toggle("hidden", !hasValue);
+      }
 
       function doSearch() {
         state.search = searchInput.value || "";
+        updateSearchClearVisibility();
         applyFilters(true);
       }
 
       // Busca dinâmica enquanto digita, com debounce
       searchInput.addEventListener("input", () => {
+        updateSearchClearVisibility();
         debounceSearch(() => {
           doSearch();
         }, 250); // ajusta o delay se quiser mais rápido/lento
       });
 
+      searchInput.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && searchInput.value) {
+          searchInput.value = "";
+          doSearch();
+        }
+      });
+
       // Botão de busca continua funcionando (opcional)
       searchBtn.addEventListener("click", (e) => {
         e.preventDefault();
+        doSearch();
+      });
+
+      searchClearBtn.addEventListener("click", () => {
+        searchInput.value = "";
+        searchInput.focus();
+        doSearch();
+      });
+
+      quickKeywordTools?.addEventListener("click", (e) => {
+        const btn = e.target.closest("button[data-keyword]");
+        if (!btn) return;
+        const keyword = btn.getAttribute("data-keyword") || "";
+        const current = (searchInput.value || "").trim().toLowerCase();
+        const next = current === keyword.toLowerCase() ? "" : keyword;
+        searchInput.value = next;
         doSearch();
       });
 
@@ -695,11 +986,33 @@
 
       // Infinite scroll
       window.addEventListener("scroll", handleScroll);
+
+      // Analyst helpers
+      document.getElementById("copy-visible-links-btn")?.addEventListener("click", copyVisibleLinks);
+      document.getElementById("copy-visible-cves-btn")?.addEventListener("click", copyVisibleCves);
+      document.getElementById("export-visible-csv-btn")?.addEventListener("click", exportVisibleCsv);
+      document.getElementById("export-visible-md-btn")?.addEventListener("click", exportVisibleBriefMarkdown);
+
+      // Keyboard shortcuts
+      document.addEventListener("keydown", (e) => {
+        const activeTag = document.activeElement?.tagName;
+        if (e.key === "/" && !e.metaKey && !e.ctrlKey && !e.altKey) {
+          if (!["INPUT", "TEXTAREA", "SELECT"].includes(activeTag)) {
+            e.preventDefault();
+            searchInput.focus();
+            searchInput.select();
+          }
+        }
+      });
+
+      updateSearchClearVisibility();
+      updateStats();
     }
 
     async function init() {
       const loadingEl = document.getElementById("loading-indicator");
       loadingEl.classList.remove("hidden");
+      renderLoadingSkeletons();
 
       try {
         const res = await fetch(NEWS_JSON_URL);
@@ -724,15 +1037,11 @@
       } catch (err) {
         console.error("Failed to load news JSON", err);
         loadingEl.classList.add("hidden");
-        const listEl = document.getElementById("news-list");
-        listEl.innerHTML = "";
-        const errCard = document.createElement("div");
-        errCard.className = "card";
-        const p = document.createElement("p");
-        p.className = "card-body-text";
-        p.textContent = "Error while loading news feeds. Please try again later.";
-        errCard.appendChild(p);
-        listEl.appendChild(errCard);
+        renderStateCard(
+          "error",
+          "Feed unavailable",
+          "Error while loading news feeds. Please try again later."
+        );
       }
     }
 

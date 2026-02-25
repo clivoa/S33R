@@ -7,17 +7,18 @@
 
   <!-- Main project stylesheet -->
   <link rel="stylesheet" href="styles.css" />
+  <script src="ui.js"></script>
 
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <style>
     /* Page-specific layout for the Trend Analytics view */
-    
+
     .trend-layout {
       max-width: 1200px;
       margin: 0 auto;
-      padding: 1.5rem;
+      padding: 4px 0 8px;
     }
 
     .trend-header {
@@ -30,8 +31,9 @@
     }
 
     .trend-title {
-      font-size: 1.6rem;
-      font-weight: 600;
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: var(--text);
     }
 
     .window-selector {
@@ -41,42 +43,27 @@
     }
 
     .window-selector button {
-      padding: 6px 14px;
+      min-height: 36px;
+      padding: 0 14px;
       border-radius: 999px;
-
       font-size: 0.85rem;
-      font-weight: 500;
-
-      cursor: pointer;
-      outline: none;
-      border: 1px solid rgba(255, 255, 255, 0.12);
-
-      background: rgba(255, 255, 255, 0.04);
-      color: #cfcfe3;
-
-      transition: 
-        background 0.2s ease,
-        border 0.2s ease,
-        color 0.2s ease,
-        transform 0.15s ease;
+      font-weight: 600;
+      border: 1px solid var(--line-strong);
+      background: var(--surface);
+      color: var(--muted);
+      transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
     }
 
     .window-selector button:hover {
-      background: rgba(255, 255, 255, 0.1);
-      border-color: rgba(255, 255, 255, 0.25);
-      color: white;
+      background: var(--surface-2);
+      border-color: var(--line-strong);
+      color: var(--text);
     }
 
     .window-selector button.active {
-      background: rgba(145, 162, 255, 0.25);   /* tom suave puxando para azul/lilás Dracula */
-      border-color: rgba(145, 162, 255, 0.6);
-      color: #ffffff;
-      opacity: 1;
-      transform: translateY(-1px);
-    }
-
-    .window-selector button:active {
-      transform: translateY(0);
+      background: var(--accent-soft);
+      border-color: color-mix(in oklab, var(--primary) 34%, var(--line));
+      color: var(--primary);
     }
 
     .trend-grid {
@@ -92,26 +79,24 @@
       gap: 1rem;
     }
 
-    .card {
-      background: #282a36;
-      border-radius: 0.75rem;
-      padding: 1rem;
-      box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.03);
-    }
-
     .card h2 {
       font-size: 1rem;
-      margin-bottom: 0.75rem;
+      margin: 0 0 0.75rem;
     }
 
     .chart-container {
-      position: relative;
-      width: 100%;
       height: 260px;
     }
 
     .small-chart {
       height: 220px;
+    }
+
+    .trend-note {
+      margin: -2px 0 8px;
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.45;
     }
 
     @media (max-width: 900px) {
@@ -122,16 +107,17 @@
   </style>
 </head>
 <body>
-  <div class="minimal-navbar">
+  <nav class="minimal-navbar" aria-label="Primary navigation">
+    <a href="index.html" class="minimal-nav-link">News</a>
     <div class="minimal-dropdown">
-      <span class="minimal-nav-link dropdown-toggle">Insights ▾</span>
+      <span class="minimal-nav-link dropdown-toggle" tabindex="0">Insights ▾</span>
       <div class="dropdown-menu">
         <a href="index.html">News</a>
         <a href="archive.html">Archive List</a>
         <a href="archive-overview.html">Year Overview</a>
       </div>
     </div>
-  </div>
+  </nav>
   <div class="page">
     <!-- Adjust this header/nav to follow your global layout -->
     <header class="site-header">
@@ -194,7 +180,7 @@
         <!-- Emerging attack trends -->
         <article class="card">
           <h2>Emerging attack trends</h2>
-          <p style="font-size: 0.8rem; opacity: 0.8; margin-bottom: 0.5rem;">
+          <p class="trend-note">
             Counts how often terms like "ransomware", "supply chain", "0-day", etc. appear within the selected time window.
           </p>
           <div class="chart-container small-chart">
@@ -205,7 +191,7 @@
         <!-- CVE frequency ranking -->
         <article class="card">
           <h2>CVE frequency (Top 20)</h2>
-          <p style="font-size: 0.8rem; opacity: 0.8; margin-bottom: 0.5rem;">
+          <p class="trend-note">
             Top CVEs mentioned in news titles and summaries for the selected time window.
           </p>
           <div class="chart-container small-chart">
@@ -216,7 +202,7 @@
         <!-- Threat actor mentions timeline -->
         <article class="card">
           <h2>Threat actor mentions (timeline)</h2>
-          <p style="font-size: 0.8rem; opacity: 0.8; margin-bottom: 0.5rem;">
+          <p class="trend-note">
             Daily count of news items referencing named threat actors (e.g., TA577, Scattered Spider, Lazarus) over the selected time window.
           </p>
           <div class="chart-container small-chart">
@@ -255,14 +241,116 @@
     let cveChart = null;
     let threatActorChart = null;
 
+    function cssVar(name) {
+      return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    }
+
+    function chartTheme() {
+      return {
+        text: cssVar("--text"),
+        muted: cssVar("--chart-axis") || cssVar("--muted"),
+        grid: cssVar("--chart-grid"),
+        surface: cssVar("--surface"),
+        border: cssVar("--line"),
+        fillSoft: cssVar("--chart-fill-soft"),
+        palette: [
+          cssVar("--chart-series-1"),
+          cssVar("--chart-series-2"),
+          cssVar("--chart-series-3"),
+          cssVar("--chart-series-4"),
+          cssVar("--primary"),
+          cssVar("--secondary"),
+        ].filter(Boolean),
+      };
+    }
+
+    function withThemeScale(scale, theme) {
+      const cfg = scale ? { ...scale } : {};
+      cfg.grid = { color: theme.grid, ...cfg.grid };
+      cfg.border = { color: theme.grid, ...cfg.border };
+      cfg.ticks = { color: theme.muted, ...cfg.ticks };
+      return cfg;
+    }
+
+    function themeChartConfig(type, data, options) {
+      const theme = chartTheme();
+      const datasets = (data.datasets || []).map((ds, idx) => {
+        const color = theme.palette[idx % theme.palette.length] || theme.palette[0] || "#2563eb";
+        const next = { ...ds };
+        if (type === "line") {
+          next.borderColor = next.borderColor || color;
+          next.backgroundColor = next.backgroundColor || theme.fillSoft;
+          next.pointBackgroundColor = next.pointBackgroundColor || color;
+          next.pointBorderColor = next.pointBorderColor || color;
+          next.tension = next.tension ?? 0.25;
+          next.borderWidth = next.borderWidth ?? 2;
+          next.pointRadius = next.pointRadius ?? 2;
+        } else {
+          next.backgroundColor = next.backgroundColor || color;
+          next.borderColor = next.borderColor || color;
+          next.borderWidth = next.borderWidth ?? 1;
+          next.maxBarThickness = next.maxBarThickness ?? 16;
+        }
+        return next;
+      });
+
+      const basePlugins = {
+        legend: {
+          labels: { color: theme.muted },
+        },
+        tooltip: {
+          backgroundColor: theme.surface,
+          titleColor: theme.text,
+          bodyColor: theme.text,
+          borderColor: theme.border,
+          borderWidth: 1,
+        },
+      };
+
+      const mergedOptions = {
+        ...options,
+        color: theme.muted,
+        scales: {
+          x: {},
+          y: {},
+          ...(options.scales || {}),
+        },
+        plugins: {
+          ...basePlugins,
+          ...(options.plugins || {}),
+          legend: {
+            ...basePlugins.legend,
+            ...((options.plugins || {}).legend || {}),
+            labels: {
+              ...(basePlugins.legend.labels || {}),
+              ...((((options.plugins || {}).legend || {}).labels) || {}),
+            },
+          },
+          tooltip: {
+            ...basePlugins.tooltip,
+            ...((options.plugins || {}).tooltip || {}),
+          },
+        },
+      };
+
+      mergedOptions.scales.x = withThemeScale(mergedOptions.scales.x, theme);
+      mergedOptions.scales.y = withThemeScale(mergedOptions.scales.y, theme);
+
+      return {
+        data: { ...data, datasets },
+        options: mergedOptions,
+      };
+    }
+
     function createOrUpdateChart(chartRef, ctx, type, data, options = {}) {
       if (chartRef && chartRef.destroy) {
         chartRef.destroy();
       }
+      const themed = themeChartConfig(type, data, options);
       return new Chart(ctx, {
         type,
-        data,
-        options,
+        data: themed.data,
+        options: themed.options,
       });
     }
 
@@ -639,7 +727,14 @@
         })
         .catch(err => {
           console.error("Failed to load trends.json", err);
+          window.S33R_UI?.toast("Failed to load trends.json");
         });
+    });
+
+    window.addEventListener("s33r:themechange", () => {
+      if (trendsData) {
+        updateAllCharts(currentWindow);
+      }
     });
   </script>
 </body>

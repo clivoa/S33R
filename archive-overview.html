@@ -6,6 +6,7 @@
   <title>S33R Archive – Year Overview</title>
 
   <link rel="stylesheet" href="styles.css" />
+  <script src="ui.js"></script>
 
   <style>
     .overview-container {
@@ -50,7 +51,7 @@
     .overview-controls button {
       background: var(--accent);
       border: none;
-      color: #0b0c10;
+      color: #ffffff;
       padding: 6px 10px;
       border-radius: var(--radius);
       font-size: 13px;
@@ -79,8 +80,8 @@
     .overview-card {
       background: var(--bg-elevated);
       border-radius: var(--radius-xl);
-      border: 1px solid rgba(255, 255, 255, 0.05);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+      border: 1px solid var(--border-color);
+      box-shadow: var(--shadow-soft);
       padding: 18px 20px 16px;
     }
 
@@ -141,32 +142,33 @@
       position: absolute;
       padding: 4px 8px;
       font-size: 11px;
-      background: rgba(0, 0, 0, 0.9);
-      color: #f8f8f2;
+      background: var(--surface);
+      color: var(--text-primary);
       border-radius: 6px;
       pointer-events: none;
       display: none;
       z-index: 50;
-      border: 1px solid rgba(255, 255, 255, 0.12);
+      border: 1px solid var(--border-color);
       white-space: nowrap;
+      box-shadow: var(--shadow-soft);
     }
   </style>
 </head>
 <body>
 
   <!-- Minimal Navbar -->
-  <div class="minimal-navbar">
+  <nav class="minimal-navbar" aria-label="Primary navigation">
     <a href="index.html" class="minimal-nav-link">News</a>
 
     <div class="minimal-dropdown">
-      <span class="minimal-nav-link dropdown-toggle">Insights ▾</span>
+      <span class="minimal-nav-link dropdown-toggle" tabindex="0">Insights ▾</span>
       <div class="dropdown-menu">
         <a href="archive.html">Archive List</a>
         <a href="archive-overview.html">Year Overview</a>
         <a href="trend.html">Trend Analytics</a>
       </div>
     </div>
-  </div>
+  </nav>
 
   <div class="overview-container">
     <h1 class="overview-title">S33R Archive – Year Overview</h1>
@@ -318,9 +320,23 @@
       ctx.clearRect(0, 0, canvas.width, canvas.height);
     }
 
+    function overviewTheme() {
+      const cs = getComputedStyle(document.documentElement);
+      const get = (v, fallback) => (cs.getPropertyValue(v).trim() || fallback);
+      return {
+        axis: get("--chart-axis", "#6b7280"),
+        grid: get("--chart-grid", "#e5e7eb"),
+        barA: get("--chart-series-1", "#2563eb"),
+        barB: get("--chart-series-4", "#7c3aed"),
+        barC: get("--chart-series-2", "#0f766e"),
+        barD: get("--chart-series-3", "#b45309"),
+      };
+    }
+
     function drawMonthlyChart(canvas, counts) {
       const ctx = canvas.getContext("2d");
       clearCanvas(canvas);
+      const theme = overviewTheme();
 
       const labels = monthLabelsShort;
       const padding = { top: 20, right: 16, bottom: 26, left: 26 };
@@ -335,7 +351,7 @@
       const gap = slotWidth * 0.4;
 
       ctx.font = "11px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
-      ctx.fillStyle = "#888";
+      ctx.fillStyle = theme.axis;
 
       // Y axis labels (0, max)
       ctx.textAlign = "right";
@@ -351,13 +367,13 @@
 
         // bar gradient
         const grad = ctx.createLinearGradient(0, y, 0, y + barHeight);
-        grad.addColorStop(0, "#ff79c6");
-        grad.addColorStop(1, "#bd93f9");
+        grad.addColorStop(0, theme.barB);
+        grad.addColorStop(1, theme.barA);
         ctx.fillStyle = grad;
         ctx.fillRect(x, y, barWidth, barHeight);
 
         // x label
-        ctx.fillStyle = "#888";
+        ctx.fillStyle = theme.axis;
         ctx.textAlign = "center";
         ctx.textBaseline = "top";
         const labelX = x + barWidth / 2;
@@ -366,7 +382,7 @@
       });
 
       // axes
-      ctx.strokeStyle = "#444";
+      ctx.strokeStyle = theme.grid;
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.moveTo(padding.left, padding.top);
@@ -378,6 +394,7 @@
     function drawSourcesChart(canvas, topSources) {
       const ctx = canvas.getContext("2d");
       clearCanvas(canvas);
+      const theme = overviewTheme();
 
       if (!topSources || topSources.length === 0) return;
 
@@ -393,7 +410,7 @@
       ctx.font = "11px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
       ctx.textAlign = "right";
       ctx.textBaseline = "middle";
-      ctx.fillStyle = "#888";
+      ctx.fillStyle = theme.axis;
 
       topSources.forEach((entry, idx) => {
         const [src, count] = entry;
@@ -408,16 +425,16 @@
         const y = yCenter - 6;
 
         const grad = ctx.createLinearGradient(x, 0, x + width, 0);
-        grad.addColorStop(0, "#8be9fd");
-        grad.addColorStop(1, "#50fa7b");
+        grad.addColorStop(0, theme.barA);
+        grad.addColorStop(1, theme.barC);
         ctx.fillStyle = grad;
         ctx.fillRect(x, y, width, 12);
 
         // count
-        ctx.fillStyle = "#bbb";
+        ctx.fillStyle = theme.axis;
         ctx.textAlign = "left";
         ctx.fillText(String(count), x + width + 4, yCenter);
-        ctx.fillStyle = "#888";
+        ctx.fillStyle = theme.axis;
         ctx.textAlign = "right";
       });
     }
@@ -605,6 +622,10 @@
 
     monthlyCanvas.addEventListener("mouseleave", () => {
       tooltipEl.style.display = "none";
+    });
+
+    window.addEventListener("s33r:themechange", () => {
+      if (currentYear) updateYearOverview(currentYear);
     });
 
     loadYears();

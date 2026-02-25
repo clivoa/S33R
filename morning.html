@@ -5,6 +5,7 @@
     <title>S33R – SOC Morning Call</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="stylesheet" href="styles.css" />
+    <script src="ui.js"></script>
 
     <!-- Lightweight Markdown Renderer -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -16,11 +17,12 @@
         padding: 1px 8px;
         margin-right: 4px;
         border-radius: 999px;
-        background: rgba(189,147,249,0.22);
-        color: var(--accent-strong);
+        background: var(--accent-soft);
+        color: var(--accent);
         font-size: 11px;
         text-transform: uppercase;
         letter-spacing: 0.04em;
+        border: 1px solid var(--border-color);
       }
 
       /* Ajuste leve para o texto logo após a label */
@@ -57,6 +59,7 @@
         .minimal-navbar,
         .sidebar,
         .filters-bar,
+        .analyst-tools,
         .site-footer,
         .loading,
         #btn-load-latest,
@@ -159,11 +162,10 @@
   <body>
     <div class="page">
   <!-- Minimal Navbar -->
-  <div class="minimal-navbar">
-    
-
+  <nav class="minimal-navbar" aria-label="Primary navigation">
+    <a href="index.html" class="minimal-nav-link">News</a>
     <div class="minimal-dropdown">
-      <span class="minimal-nav-link dropdown-toggle">Insights ▾</span>
+      <span class="minimal-nav-link dropdown-toggle" tabindex="0">Insights ▾</span>
       <div class="dropdown-menu">
         <a href="index.html">News</a>
         <a href="archive.html">Archive List</a>
@@ -171,7 +173,7 @@
         <a href="trend.html">Trend Analytics</a>
       </div>
     </div>
-  </div>
+  </nav>
 
       <!-- Header -->
       <header class="site-header">
@@ -271,6 +273,19 @@
             <div class="status-right" id="status-counts"></div>
           </div>
 
+          <section class="analyst-tools" aria-label="Morning call analyst tools">
+            <span class="toolbar-label">Analyst Handover</span>
+            <div class="toolbar-inline">
+              <button id="btn-copy-morning-text" class="btn-action" type="button" disabled>Copy brief text</button>
+              <button id="btn-copy-morning-md" class="btn-action" type="button" disabled>Copy markdown</button>
+              <button id="btn-copy-highlights-links" class="btn-action" type="button" disabled>Copy highlight links</button>
+              <button id="btn-export-morning-md" class="btn-action" type="button" disabled>Export .md</button>
+            </div>
+            <div class="kbd-hint" aria-hidden="true">
+              <span>Shortcut</span><kbd>Shift</kbd><kbd>T</kbd><span>theme</span>
+            </div>
+          </section>
+
           <!-- Loading -->
           <div class="loading" id="loading-block">
             <div class="spinner"></div>
@@ -330,6 +345,47 @@
       const morningContent = document.getElementById("morning-content");
       const highlightsCard = document.getElementById("highlights-card");
       const highlightsList = document.getElementById("highlights-list");
+      let lastMorningData = null;
+
+      function setMorningToolButtons(enabled) {
+        [
+          "btn-copy-morning-text",
+          "btn-copy-morning-md",
+          "btn-copy-highlights-links",
+          "btn-export-morning-md",
+        ].forEach((id) => {
+          const btn = document.getElementById(id);
+          if (btn) btn.disabled = !enabled;
+        });
+      }
+
+      async function copyMorningText() {
+        const text = (morningContent.innerText || "").trim();
+        if (!text) return window.S33R_UI?.toast("No brief loaded");
+        await window.S33R_UI?.copyText(text, "Morning call text copied");
+      }
+
+      async function copyMorningMarkdown() {
+        const md = (lastMorningData && lastMorningData.morning_call_markdown) || "";
+        if (!md) return window.S33R_UI?.toast("No markdown available");
+        await window.S33R_UI?.copyText(md, "Morning call markdown copied");
+      }
+
+      async function copyHighlightLinks() {
+        const links = (lastMorningData?.highlights || [])
+          .map((h) => h.link)
+          .filter(Boolean);
+        if (!links.length) return window.S33R_UI?.toast("No highlight links");
+        await window.S33R_UI?.copyText(links.join("\n"), `${links.length} highlight links copied`);
+      }
+
+      function exportMorningMarkdown() {
+        const md = (lastMorningData && lastMorningData.morning_call_markdown) || "";
+        if (!md) return window.S33R_UI?.toast("No markdown available");
+        const date = (lastMorningData.analysis_date || new Date().toISOString().slice(0, 10)).slice(0, 10);
+        window.S33R_UI?.downloadText(`morning_call_${date}.md`, md, "text/markdown;charset=utf-8");
+        window.S33R_UI?.toast("Markdown exported");
+      }
 
       function showLoading(msg) {
         loadingBlock.classList.remove("hidden");
@@ -353,6 +409,8 @@
 
       async function fetchMorningCall(url) {
         showLoading();
+        setMorningToolButtons(false);
+        lastMorningData = null;
 
         try {
           const resp = await fetch(url, { cache: "no-cache" });
@@ -366,10 +424,12 @@
               "Could not load analysis: HTTP " + resp.status;
             statusCounts.textContent = "";
             highlightsCard.style.display = "none";
+            setMorningToolButtons(false);
             return;
           }
 
           const data = await resp.json();
+          lastMorningData = data;
           hideLoading();
 
           const analysisDate = data.analysis_date || "";
@@ -415,6 +475,7 @@
 
           // Depois de renderizar o markdown, destacamos labels SOC
           highlightSocLabels();
+          setMorningToolButtons(true);
         } catch (err) {
           console.error(err);
           hideLoading();
@@ -424,6 +485,8 @@
           statusMetaLine.textContent = "Error fetching JSON.";
           statusCounts.textContent = "";
           highlightsCard.style.display = "none";
+          lastMorningData = null;
+          setMorningToolButtons(false);
         }
       }
 
@@ -447,6 +510,11 @@
       document.getElementById("btn-print").addEventListener("click", () => {
         window.print();
       });
+
+      document.getElementById("btn-copy-morning-text").addEventListener("click", copyMorningText);
+      document.getElementById("btn-copy-morning-md").addEventListener("click", copyMorningMarkdown);
+      document.getElementById("btn-copy-highlights-links").addEventListener("click", copyHighlightLinks);
+      document.getElementById("btn-export-morning-md").addEventListener("click", exportMorningMarkdown);
       
      function highlightSocLabels() {
       const LABELS = [
@@ -509,6 +577,7 @@
 
 
       window.addEventListener("DOMContentLoaded", () => {
+        setMorningToolButtons(false);
         fetchMorningCall(LATEST_URL);
       });
     </script>
