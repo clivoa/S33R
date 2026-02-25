@@ -1,0 +1,137 @@
+{
+  "generated_at": "2026-02-25T07:16:38.561875+00:00",
+  "analysis_date": "2026-02-25",
+  "model": "gpt-5.1",
+  "window_hours": 24,
+  "source_file": "data/news_recent.json",
+  "source_generated_at": "2026-02-25T06:25:54.024857+00:00",
+  "source_days_back": 30,
+  "source_total_items": 8927,
+  "total_items_in_window_all": 392,
+  "total_items_in_window_curated": 123,
+  "morning_call_markdown": "### Executive Summary\n- Active exploitation of edge/file-transfer and infrastructure products (FileZen, Fortinet, SolarWinds Serv‑U, VMware Aria Operations); CISA added at least one to KEV – assume exploitation attempts against our perimeter.\n- Supply‑chain and dev‑tooling threats ramping up (malicious npm/nuget/Next.js, Copilot/Codespaces token leakage); high risk for CI/CD and internal tooling compromise.\n- Ransomware and APT activity intensifying (Lazarus adopting Medusa, financial sector ransomware stats, social‑engineering campaigns including vishing/BEC and fake Zoom); refresh detection and user defenses around access and data exfiltration.\n\n---\n\n### High-priority items (immediate attention)\n\n- **Actively exploited FileZen vulnerability (CVE‑2026‑25108, CISA KEV)**\n  - What happened: CISA confirmed in-the-wild exploitation of a FileZen vulnerability allowing compromise of file-transfer appliances.\n  - Why it matters: File-transfer/edge appliances are common initial access points; even if we don’t use FileZen, this indicates active mass scanning of similar services.\n  - Recommended immediate actions:  \n    - Confirm with infra teams whether any FileZen or similar file-transfer gateways (incl. legacy) exist; if yes, verify patch level/isolation and pull detailed logs for the last 30 days for compromise triage.\n\n- **Critical SolarWinds Serv‑U flaws (root access)**\n  - What happened: Four critical Serv‑U vulnerabilities were disclosed that can grant root access on affected servers.\n  - Why it matters: Serv‑U is often internet‑facing and used for SFTP/file transfer; root access enables full pivot into internal networks.\n  - Recommended immediate actions:  \n    - Identify any Serv‑U instances (asset inventory, vuln scans, inbound firewall logs to Serv‑U ports) and check if patched; if unpatched or unknown, push emergency change to restrict external access, enable verbose logging, and initiate rapid compromise assessment.\n\n- **VMware Aria Operations RCE / command injection**\n  - What happened: VMware released fixes for remote command injection in Aria Operations that can enable unauthenticated or low‑auth RCE.\n  - Why it matters: Aria is a management/monitoring platform with privileged access across virtual infrastructure; compromise equals wide lateral movement opportunity.\n  - Recommended immediate actions:  \n    - Confirm whether Aria Operations (incl. SaaS connectors) is in use; if yes, ensure it is not internet‑exposed, verify patch status, and review recent authentication/admin and command‑execution logs for anomalies.\n\n- **Developer & CI/CD supply‑chain abuse (npm ‘Sandworm_Mode’ worm, malicious Next.js & NuGet, rogue Copilot/Codespaces behavior)**\n  - What happened: Multiple reports of self‑spreading npm malware, malicious Next.js repos, malicious NuGet packages, and Copilot/Codespaces token‑leak weaknesses targeting developers and CI pipelines.\n  - Why it matters: A successful dev environment compromise can plant backdoors in internal apps, leak source code and secrets, and be difficult for classic SOC detections to see.\n  - Recommended immediate actions:  \n    - Coordinate with DevOps to: (1) validate that npm/nuget sources are restricted to trusted registries/mirrors, (2) review last 7–14 days of CI/CD runs for unusual new packages, scripts, or outbound connections; ingest CI logs into SIEM where not already present and set temporary high‑sensitivity alerts on pipeline changes and new tokens/credentials issuance.\n\n- **Ransomware & APT developments (Lazarus + Medusa, financial sector targeting, edge attack surface)**\n  - What happened: Lazarus Group now using Medusa ransomware in healthcare and other sectors; reports show 65% of financial orgs hit by ransomware recently; edge infrastructure is the main target of opportunistic exploitation.\n  - Why it matters: Financials are in the primary threat band, and APT+crimeware convergence means more sophisticated initial access and data theft prior to encryption/extortion.\n  - Recommended immediate actions:  \n    - For today’s shift, run focused hunts for: (1) anomalous SMB/RDP/SSH from edge systems into internal networks, (2) common ransomware precursors (Cobalt Strike/Sliver beacons, credential dumping, mass file enumeration, shadow copy tampering); ensure our playbooks for ransomware containment (network isolation, DC protection, backup validation) are ready and up‑to‑date.\n\n---\n\n### Monitoring & detection recommendations\n\n- **Edge systems & file-transfer/Serv‑U/FileZen‑like appliances**  \n  - Log sources: Firewall, WAF, appliance logs, NIDS.  \n  - Hunt for spikes in 404/500 errors, unusual HTTP methods, unexpected uploads/downloads, and new admin accounts or config changes (T1190, T1133, T1098).\n\n- **VMware Aria Operations and other management consoles**  \n  - Log sources: vCenter/Aria logs, OS logs on management VMs, identity logs (IdP/AD).  \n  - Monitor for logins from atypical IPs, sudo/privileged command execution, and scripts or processes spawned by web services (T1059, T1068, T1078).\n\n- **Developer & CI/CD supply chain (npm/nuget/Next.js, Copilot/Codespaces)**  \n  - Log sources: Git hosting (GitHub/GitLab), CI/CD (GitHub Actions, Azure DevOps, Jenkins), artifact registries, proxy logs.  \n  - Look for new external repos integrated recently, unusual package names, outbound connections from runners to non-standard domains, and abnormal use of GITHUB_TOKEN or PATs (T1195, T1552, T1557).\n\n- **Email, collaboration & social‑engineering (fake Zoom, vishing/BEC, leaked‑video phishing)**  \n  - Log sources: Secure email gateway, M365/Google Workspace audit, endpoint logs, DNS/proxy.  \n  - Detect messages with meeting invites from lookalike domains or sideloaded installers, HTML attachments with links to executables, unusual MFA reset attempts, and anomalous OAuth consent grants (T1566.002, T1204, T1078.004, T1528).\n\n- **Ransomware precursors and data exfiltration**  \n  - Log sources: EDR, Windows event logs, file servers, DLP, NetFlow/span.  \n  - Hunt for new scheduled tasks/services, use of vssadmin/wmic/psexec, large archive creation (7z/rar/zip), and sustained outbound data to cloud storage or unfamiliar IPs (T1053, T1562, T1021, T1041).\n\n- **WMI and living‑off‑the‑land abuse**  \n  - Log sources: EDR, Sysmon, Windows Security logs.  \n  - Look for persistent WMI event consumers, remote WMI from non‑admin hosts, and lateral execution via wmic.exe or powershell.exe in atypical contexts (T1047, T1546.003).\n\n- **Identity & OAuth (Entra ID / OAuth weaknesses, Copilot token leaks)**  \n  - Log sources: IdP (Entra ID, Okta), OAuth/M365 audit logs, cloud app logs.  \n  - Alert on high‑risk OAuth permissions grants, token use from anomalous geo/ASNs, sudden spike of admin or service principal activity, and consent to unverified apps (T1136, T1550.001, T1528).\n\n- **Web & law‑firm/partner sites as malware distribution**  \n  - Log sources: Proxy/DNS, web filtering, EDR.  \n  - Monitor for downloads of executables/archives from unexpected law‑firm or brand‑impersonation domains and newly seen domains distributing installers (T1189, T1105).\n\n---\n\n### Medium-term follow-ups\n\n- **Comprehensive edge & appliance review**  \n  - Work with network/infra teams to produce a definitive list of all internet‑facing appliances (VPN, file-transfer, monitoring, OT/ICS gateways), map to current CVEs (Serv‑U, FileZen, Fortinet, VMware, etc.), and prioritize patching/segmentation.\n\n- **CI/CD and developer security hardening**  \n  - Implement allow‑listing and provenance checks for third‑party packages; enforce least privilege for CI runners, secrets scanning in repos, and mandatory code review for dependency updates.\n\n- **Identity & OAuth governance**  \n  - Review Entra ID/OAuth configuration: limit who can grant high‑privilege app consents, enforce conditional access for risky sign‑ins, and monitor privileged service principals.\n\n- **Ransomware resilience program refresh (finance‑sector focus)**  \n  - Validate offline/immutable backups, test restore from recent points, and run a joint tabletop with SOC/IT/business lines around a Medusa‑style double‑extortion attack.\n\n- **User awareness refresh (BEC, vishing, fake meetings & leaked‑video lures)**  \n  - Update training and phishing simulations to include recent Zoom‑style lures, vishing scenarios, and “leaked‑video” links; emphasize verification of payment/beneficiary changes and MFA prompts.\n\n- **Third‑party and vendor risk**  \n  - Engage key vendors (especially those handling sensitive or transactional data) to confirm their exposure and patch status regarding Serv‑U, VMware, and similar CVEs; ensure contractual requirements for timely disclosure are enforced.",
+  "highlights": [
+    {
+      "title": "Phishing Campaign Spreads via Fake Leaked Video Links Online",
+      "link": "https://www.news4hackers.com/phishing-campaign-spreads-via-fake-leaked-video-links-online/",
+      "source": "News4Hackers",
+      "published": "2026-02-25T06:09:08+00:00",
+      "smart_groups": [
+        "Curated",
+        "Exploit / PoC",
+        "Phishing / Social Engineering"
+      ],
+      "curated": true
+    },
+    {
+      "title": "OAuth Vulnerabilities in Entra ID Could Exploit ChatGPT to Breach User Email Accounts",
+      "link": "https://gbhackers.com/oauth-vulnerabilities-in-entra-id/",
+      "source": "GBHackers News",
+      "published": "2026-02-25T06:06:32+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Identity / Access"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Microsoft adds domain libraries and Copilot integration to the quantum development kit",
+      "link": "https://www.helpnetsecurity.com/2026/02/25/microsoft-quantum-development-kit-qdk/",
+      "source": "Help Net Security",
+      "published": "2026-02-25T06:00:54+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Amazon: Low-Skill Hacker Exploits AI Tools to Breach FortiGate Devices Worldwide",
+      "link": "https://www.news4hackers.com/amazon-low-skill-hacker-exploits-ai-tools-to-breach-fortigate-devices-worldwide/",
+      "source": "News4Hackers",
+      "published": "2026-02-25T05:50:51+00:00",
+      "smart_groups": [
+        "Curated",
+        "Exploit / PoC"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Microsoft Alerts Developers of Malicious Next.js Repositories Used in Ongoing Hacker Attacks",
+      "link": "https://gbhackers.com/malicious-next-js-repositories/",
+      "source": "GBHackers News",
+      "published": "2026-02-25T05:25:03+00:00",
+      "smart_groups": [
+        "Curated",
+        "Malware / Payloads"
+      ],
+      "curated": true
+    },
+    {
+      "title": "CISA Confirms Active Exploitation of FileZen CVE-2026-25108 Vulnerability",
+      "link": "https://thehackernews.com/2026/02/cisa-confirms-active-exploitation-of.html",
+      "source": "The Hacker News",
+      "published": "2026-02-25T05:23:00+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": true
+    },
+    {
+      "title": "US Sanctions Exploit Brokers Behind Theft of Government Cyber Tools",
+      "link": "https://gbhackers.com/us-sanctions-exploit-brokers/",
+      "source": "GBHackers News",
+      "published": "2026-02-25T05:03:53+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Edge systems take the brunt of internet-wide exploitation attempts",
+      "link": "https://www.helpnetsecurity.com/2026/02/25/edge-infrastructure-attacks-internet-wide-exploitation/",
+      "source": "Help Net Security",
+      "published": "2026-02-25T05:00:47+00:00",
+      "smart_groups": [
+        "Curated",
+        "Exploit / PoC"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Password Leakage - Zero Trust, Zero Knowledge",
+      "link": "https://www.youtube.com/watch?v=2FbjrEqAAME",
+      "source": "Security Now (YouTube Playlist)",
+      "published": "2026-02-25T04:07:41+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Windows / Microsoft",
+        "Linux / Unix",
+        "Cloud / SaaS"
+      ],
+      "curated": true
+    },
+    {
+      "title": "So verändert KI Ihre GRC-Strategie",
+      "link": "https://www.csoonline.com/article/4030328/so-verandert-ki-ihre-grc-strategie.html",
+      "source": "CSO Online",
+      "published": "2026-02-25T04:00:00+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Web / API Security",
+        "Identity / Access",
+        "Network / OT / ICS",
+        "Crypto / Web3"
+      ],
+      "curated": true
+    }
+  ]
+}
