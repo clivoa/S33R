@@ -531,20 +531,42 @@
 
       const lis = morningContent.querySelectorAll("li");
 
-      lis.forEach((li) => {
-        // pega o primeiro nó de texto dentro do <li>
-        const firstNode = li.firstChild;
-        if (!firstNode || firstNode.nodeType !== Node.TEXT_NODE) {
-          return;
+      function tryTransformLabel(container) {
+        if (!container || container.querySelector?.(".mc-label")) return false;
+
+        let firstNode = container.firstChild;
+        while (
+          firstNode &&
+          firstNode.nodeType === Node.TEXT_NODE &&
+          !(firstNode.textContent || "").trim()
+        ) {
+          firstNode = firstNode.nextSibling;
         }
 
-        const originalText = firstNode.textContent || "";
-        const trimmed = originalText.trim();
-        if (!trimmed) return;
+        if (!firstNode) return false;
+
+        let labelCarrier = null;
+        let sourceText = "";
+        let isWrappedLabel = false;
+
+        if (firstNode.nodeType === Node.TEXT_NODE) {
+          labelCarrier = firstNode;
+          sourceText = firstNode.textContent || "";
+        } else if (
+          firstNode.nodeType === Node.ELEMENT_NODE &&
+          ["STRONG", "B"].includes(firstNode.nodeName)
+        ) {
+          labelCarrier = firstNode;
+          sourceText = firstNode.textContent || "";
+          isWrappedLabel = true;
+        } else {
+          return false;
+        }
+
+        const trimmed = sourceText.trim();
+        if (!trimmed) return false;
 
         for (const baseLabel of LABELS) {
-          // monta regex do tipo:
-          // ^\s*(What|What happened)\s*:?\s*(resto...)
           const pattern = new RegExp(
             "^\\s*(" +
               baseLabel.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") +
@@ -553,23 +575,39 @@
           );
 
           const match = trimmed.match(pattern);
-          if (match) {
-            const labelText = match[1]; // ex: "What", "Why it matters"
-            const rest = match[2];      // o resto da frase
+          if (!match) continue;
 
-            const labelSpan = document.createElement("span");
-            labelSpan.className = "mc-label";
-            // opcional: exibir com dois pontos e maiúsculo
-            labelSpan.textContent = labelText.toUpperCase() + ":";
+          const labelText = match[1];
+          const rest = match[2];
 
-            // insere o span antes do primeiro nó de texto
-            li.insertBefore(labelSpan, firstNode);
+          const labelSpan = document.createElement("span");
+          labelSpan.className = "mc-label";
+          labelSpan.textContent = labelText.toUpperCase() + ":";
 
-            // ajusta o texto original para conter só o resto da frase
-            firstNode.textContent = rest ? " " + rest : "";
-
-            break; // já achou label, não precisa testar os outros
+          if (isWrappedLabel) {
+            container.insertBefore(labelSpan, labelCarrier);
+            if (rest) {
+              container.insertBefore(document.createTextNode(" " + rest), labelCarrier);
+            }
+            labelCarrier.remove();
+          } else {
+            container.insertBefore(labelSpan, labelCarrier);
+            labelCarrier.textContent = rest ? " " + rest : "";
           }
+
+          return true;
+        }
+
+        return false;
+      }
+
+      lis.forEach((li) => {
+        if (tryTransformLabel(li)) return;
+
+        // Alguns renderizadores podem envolver o conteúdo do <li> em <p>
+        const firstElement = li.firstElementChild;
+        if (firstElement && firstElement.tagName === "P") {
+          tryTransformLabel(firstElement);
         }
       });
     }
