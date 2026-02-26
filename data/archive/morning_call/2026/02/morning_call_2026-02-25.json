@@ -1,0 +1,135 @@
+{
+  "generated_at": "2026-02-25T20:40:29.353573+00:00",
+  "analysis_date": "2026-02-25",
+  "model": "gpt-5.2",
+  "window_hours": 24,
+  "source_file": "data/news_recent.json",
+  "source_generated_at": "2026-02-25T19:45:59.597241+00:00",
+  "source_days_back": 30,
+  "source_total_items": 8944,
+  "total_items_in_window_all": 369,
+  "total_items_in_window_curated": 111,
+  "morning_call_markdown": "### Executive Summary\n- **Cisco Catalyst SD‑WAN auth-bypass zero‑day (CVE-2026-20127) is confirmed exploited in the wild** with government/Five Eyes warnings—treat any exposed SD‑WAN management plane as high risk.\n- **CISA flags active exploitation of FileZen command injection (CVE-2026-25108)**—internet-exposed file transfer/remote access apps remain a fast path to ransomware initial access.\n- **Developer / “AI agent” ecosystem is a growing entry point** (Claude Code RCE/API key theft, malicious NuGet/npm, job-themed repo lures, Copilot prompt-injection repo takeover) — increases risk to CI/CD secrets and internal code.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Cisco Catalyst SD‑WAN Controller/Manager auth bypass zero-day (CVE-2026-20127)**\n- **What happened:** Multiple advisories report **CVE-2026-20127** being **actively exploited since 2023** against Cisco Catalyst SD‑WAN Controller/Manager.\n- **Why it matters operationally:** SD‑WAN management compromise can enable **network-wide pivoting** (configs/credentials/tunnels) and rapid lateral movement into sensitive segments.\n- **Recommended immediate actions for the SOC today:** Identify any Cisco SD‑WAN Controller/Manager/vManage exposure and **isolate/restrict management access now**; hunt for **new admin users/config changes/session anomalies** and initiate IR if unexpected.\n\n**2) FileZen command injection (CVE-2026-25108) — active exploitation (CISA KEV)**\n- **What happened:** CISA and multiple outlets report **active exploitation** of **FileZen CVE-2026-25108** (command injection).\n- **Why it matters operationally:** Frequently used file-transfer style services get targeted for **quick footholds leading to ransomware** and credential theft; exposure is often overlooked.\n- **Recommended immediate actions for the SOC today:** **Locate FileZen instances** (especially internet-facing) and **patch/mitigate immediately**; review logs for **suspicious parameterized requests/process spawns** from the FileZen service account.\n\n**3) SolarWinds Serv‑U — four critical RCE-level vulnerabilities (patched)**\n- **What happened:** SolarWinds released fixes for **four critical Serv‑U flaws** (reports indicate potential **root/system-level code execution** depending on platform/config).\n- **Why it matters operationally:** Serv‑U is commonly deployed at the edge; unpatched systems are high-likelihood targets for **mass scanning/exploitation** and data exfiltration.\n- **Recommended immediate actions for the SOC today:** Confirm whether Serv‑U exists in the estate and **prioritize patching/compensating controls** (restrict admin interfaces, WAF/ACL); hunt for **new services, webshell-like artifacts, and unusual outbound** from Serv‑U hosts.\n\n**4) Developer-targeting & supply-chain activity (job-themed repos, malicious packages, AI tooling flaws)**\n- **What happened:** Reports highlight **malicious NuGet/npm packages**, **job-themed repo lures** delivering multi-stage backdoors, and **Claude Code flaws** enabling RCE/API key exfiltration; also **Copilot passive prompt injection** leading to repo takeover (claims; details may vary by product/version).\n- **Why it matters operationally:** Financial orgs are high-value for **source code, signing keys, CI tokens, cloud creds**—a single developer endpoint or pipeline compromise can cascade.\n- **Recommended immediate actions for the SOC today:** Increase monitoring on **developer workstations and CI runners** for suspicious package installs and token access; trigger a review for **unexpected new PATs/SSH keys, CI secret reads, and repo permission changes**.\n\n**5) Ransomware tradecraft updates & initial access patterns (ActiveMQ → RDP → LockBit; Medusa used by Lazarus)**\n- **What happened:** Reporting indicates **ActiveMQ exploitation leading to RDP enablement and LockBit deployment**; separate reporting links **Lazarus activity with Medusa ransomware** in at least one case.\n- **Why it matters operationally:** Reinforces common kill chain: **edge exploit → credential access → RDP/remote tooling → encryption**; APT-ransomware overlap raises impact potential.\n- **Recommended immediate actions for the SOC today:** Hunt for **newly enabled RDP**, firewall rule changes, and abnormal admin logons; ensure **ransomware playbooks** are ready (EDR containment, privileged account resets, backup validation).\n\n---\n\n### Monitoring & detection recommendations\n- **Cisco SD‑WAN:** Monitor SD‑WAN manager/controller **auth logs + config audit logs + AAA/TACACS** for **new accounts/role changes** and unusual admin sessions (ATT&CK **T1078 Valid Accounts**, **T1562 Impair Defenses**).\n- **FileZen/edge web apps:** From **reverse proxy/WAF + web server/app logs + EDR**, alert on **command execution chains** (web process spawning shell/interpreters) and suspicious request patterns (ATT&CK **T1190 Exploit Public-Facing Application**, **T1059 Command and Scripting Interpreter**).\n- **Serv‑U:** From **EDR + Windows Security logs / Linux auth logs + network egress**, hunt for **new binaries/services**, unexpected privilege escalation, and **rare outbound destinations** from Serv‑U hosts (ATT&CK **T1105 Ingress Tool Transfer**).\n- **Developer endpoints & CI/CD:** From **EDR + GitHub/GitLab audit logs + CI runner logs + secret manager logs**, alert on **bulk secret reads**, new **access tokens/SSH keys**, and unexpected workflow modifications (ATT&CK **T1552 Unsecured Credentials**, **T1098 Account Manipulation**).\n- **Package/supply-chain abuse:** From **proxy/DNS + endpoint telemetry**, watch for **unusual package manager activity** (nuget/npm) outside standard build windows, and downloads from non-standard feeds/registries.\n- **WebDAV / Windows Explorer delivery:** From **Windows event logs (SMB/WebClient/WebDAV where available) + email security**, hunt for **WebDAV shares, unusual UNC paths, and Explorer-launched payloads** tied to user interaction (ATT&CK **T1204 User Execution**).\n- **RDP enablement & lateral movement:** From **AD/DC logs (4624/4625/4672), firewall, VPN**, alert on **new RDP exposure**, spikes in remote logons, and admin logons from atypical sources (ATT&CK **T1021.001 Remote Services: RDP**).\n- **Vishing/social engineering:** From **IdP (Entra/Okta) + MFA logs + helpdesk ticketing**, monitor for **MFA resets, number changes, enrollment of new authenticators**, and password resets after phone-based requests (ATT&CK **T1566.004 Spearphishing via Voice**).\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** Add **CVE-2026-20127 (Cisco SD‑WAN)** and **CVE-2026-25108 (FileZen)** to top patch SLAs; verify exposure management (internet-facing discovery + ownership).\n- **Edge hardening:** Reduce management-plane exposure (SD‑WAN/Serv‑U/File transfer) with **allowlisting, MFA where supported, admin interfaces on dedicated jump networks**.\n- **DevSecOps controls:** Enforce **signed/approved dependencies**, private registries, and CI policies preventing workflows from accessing high-value secrets by default; review “AI coding assistant” usage and token scopes.\n- **Credential & token hygiene:** Rotate/limit **API keys, PATs, service principals**, and enforce short-lived credentials for CI; review for over-privileged repo/org tokens.\n- **Ransomware readiness:** Validate **offline/immutable backups**, ensure EDR containment procedures are tested, and confirm rapid isolation paths for compromised edge hosts.\n- **Awareness targeted at high-risk roles:** Brief **developers, IT admins, and helpdesk** on job-lure repos, vishing patterns, and “meeting invite” malware to reduce social-engineering success.",
+  "highlights": [
+    {
+      "title": "Inside the story of the US defense contractor who leaked hacking tools to Russia",
+      "link": "https://techcrunch.com/2026/02/25/inside-the-story-of-the-us-defense-contractor-who-leaked-hacking-tools-to-russia/",
+      "source": "Security News | TechCrunch",
+      "published": "2026-02-25T19:30:47+00:00",
+      "smart_groups": [
+        "Curated",
+        "Exploit / PoC"
+      ],
+      "curated": true
+    },
+    {
+      "title": "US Sanctions Russian Exploit Broker Over Stolen US Cyber Tools",
+      "link": "https://hackread.com/us-sanctions-russian-exploit-broker-us-cyber-tools/",
+      "source": "HackRead",
+      "published": "2026-02-25T19:29:40+00:00",
+      "smart_groups": [
+        "Curated",
+        "Exploit / PoC"
+      ],
+      "curated": true
+    },
+    {
+      "title": "CVE-2026-20127: Cisco Catalyst SD-WAN Controller/Manager Zero-Day Authentication Bypass Vulnerability Exploited in the Wild",
+      "link": "https://www.tenable.com/blog/cve-2026-20127-cisco-catalyst-sd-wan-controllermanager-zero-day-authentication-bypass",
+      "source": "Tenable Blog",
+      "published": "2026-02-25T18:51:14+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Crypto / Web3"
+      ],
+      "curated": true
+    },
+    {
+      "title": "What Windows Server 2025 Quietly Did to Your NTLM Relay",
+      "link": "https://decoder.cloud/2026/02/25/what-windows-server-2025-quietly-did-to-your-ntlm-relay/",
+      "source": "https://decoder.cloud/feed/",
+      "published": "2026-02-25T18:23:57+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Windows / Microsoft"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Critical Cisco SD-WAN bug exploited in zero-day attacks since 2023",
+      "link": "https://www.bleepingcomputer.com/news/security/critical-cisco-sd-wan-bug-exploited-in-zero-day-attacks-since-2023/",
+      "source": "BleepingComputer",
+      "published": "2026-02-25T18:01:51+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Five Eyes allies warn hackers are actively exploiting Cisco SD-WAN flaws",
+      "link": "https://therecord.media/five-eyes-warn-hackers-exploit-cisco-sd-wan",
+      "source": "The Record – Cybercrime",
+      "published": "2026-02-25T17:37:06+00:00",
+      "smart_groups": [
+        "Curated",
+        "Exploit / PoC",
+        "Cloud / SaaS"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Harness launches Artifact Registry to secure software supply chain",
+      "link": "https://www.scworld.com/brief/harness-launches-artifact-registry-to-secure-software-supply-chain",
+      "source": "SCM feed for Latest",
+      "published": "2026-02-25T17:22:16+00:00",
+      "smart_groups": [
+        "Curated",
+        "Supply Chain / Software"
+      ],
+      "curated": true
+    },
+    {
+      "title": "UnsolicitedBooker targets telecoms in Central Asia with new backdoors",
+      "link": "https://www.scworld.com/brief/unsolicitedbooker-targets-telecoms-in-central-asia-with-new-backdoors",
+      "source": "SCM feed for Latest",
+      "published": "2026-02-25T17:18:41+00:00",
+      "smart_groups": [
+        "Curated",
+        "Malware / Payloads"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Authorization and Identity Governance Inside AI Agents",
+      "link": "https://techcommunity.microsoft.com/t5/microsoft-security-community/authorization-and-identity-governance-inside-ai-agents/ba-p/4496977",
+      "source": "Microsoft Security Blog (TechCommunity)",
+      "published": "2026-02-25T17:15:34+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Linux / Unix",
+        "Cloud / SaaS",
+        "Crypto / Web3"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Claude Code Flaws Allow Remote Code Execution and API Key Exfiltration",
+      "link": "https://thehackernews.com/2026/02/claude-code-flaws-allow-remote-code.html",
+      "source": "The Hacker News",
+      "published": "2026-02-25T17:00:00+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Cloud / SaaS"
+      ],
+      "curated": true
+    }
+  ]
+}
