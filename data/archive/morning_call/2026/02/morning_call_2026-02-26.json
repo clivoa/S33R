@@ -1,0 +1,138 @@
+{
+  "generated_at": "2026-02-26T07:15:45.739434+00:00",
+  "analysis_date": "2026-02-26",
+  "model": "gpt-5.2",
+  "window_hours": 24,
+  "source_file": "data/news_recent.json",
+  "source_generated_at": "2026-02-26T02:33:58.957366+00:00",
+  "source_days_back": 30,
+  "source_total_items": 8924,
+  "total_items_in_window_all": 308,
+  "total_items_in_window_curated": 86,
+  "morning_call_markdown": "### Executive Summary\n- **Cisco Catalyst SD-WAN 0-day (CVE-2026-20127) is under active exploitation** with government/Five Eyes guidance—treat as perimeter compromise risk and prioritize hunting + emergency patching.\n- **Multiple pre-auth / critical RCE and exploited file-transfer bugs (SolarWinds Serv-U, SolarWinds Web Help Desk chains, FileZen KEV, Zyxel routers)** increase exposure across common edge/admin tooling.\n- **Developer/supply-chain & “AI tooling” attack surface is trending up** (Claude Code RCE/key theft + malicious NuGet/npm + job-interview repo lures), raising risk of credential theft and internal footholds.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Cisco Catalyst SD-WAN 0-day exploited in the wild (CVE-2026-20127)**\n- **What happened:** Multiple sources report a **critical auth bypass/0-day** in Cisco SD-WAN exploited since 2023; Five Eyes/CISA/NCSC issued urgent guidance.  \n- **Why it matters operationally:** SD-WAN controllers/managers are **high-impact edge control-plane**; compromise can enable **root/privileged access, traffic manipulation, lateral movement**.  \n- **Recommended immediate actions for the SOC today:** **Confirm asset inventory + exposure** (internet-facing controllers/managers) and **drive emergency patch/mitigation**; **hunt for anomalous admin access/config changes** on SD-WAN management plane.\n\n**2) FileZen vulnerability added to KEV + active exploitation (CVE-2026-25108)**\n- **What happened:** CISA and others flag **active exploitation** of a **FileZen command injection** flaw; added to Known Exploited Vulnerabilities.  \n- **Why it matters operationally:** File transfer tools often sit in/near DMZ and touch sensitive data; exploitation can lead to **remote code execution and data exfiltration**.  \n- **Recommended immediate actions for the SOC today:** **Identify any FileZen instances** (on-prem/DMZ) and **patch/disable external access**; **review web/app logs** for suspicious parameters/commands and **new process creation** on the host.\n\n**3) SolarWinds exposure: Serv-U critical RCEs + Web Help Desk pre-auth RCE chains**\n- **What happened:** SolarWinds released patches for **four critical Serv-U vulnerabilities**; watchTowr published **pre-auth RCE chains** affecting SolarWinds Web Help Desk (often bundled with remote access tooling).  \n- **Why it matters operationally:** These products commonly run with **high privileges** and integrate with AD/email; pre-auth/critical RCE is a direct path to **initial access (TA0001)** and rapid ransomware staging.  \n- **Recommended immediate actions for the SOC today:** **Locate all SolarWinds Serv-U/Web Help Desk deployments** and **prioritize patching/isolating**; **monitor for unexpected child processes** spawned by these services and **new local admins/service accounts**.\n\n**4) Edge device/router critical RCE risk (Zyxel routers)**\n- **What happened:** Vendors/news report a **critical RCE** impacting **multiple Zyxel router models**.  \n- **Why it matters operationally:** Branch/edge routers are frequently unmanaged at SOC depth; compromise enables **traffic interception, credential harvesting, and pivoting** into corporate networks.  \n- **Recommended immediate actions for the SOC today:** **Validate whether any Zyxel devices exist** in branch/third-party networks; **block/limit management interfaces** to trusted admin networks and **watch for config/firmware changes**.\n\n**5) Developer & “AI tooling” supply-chain / repo-lure attacks (Claude Code + malicious packages + fake interviews)**\n- **What happened:** Reports of **Claude Code collaboration/repo workflow flaws enabling RCE/API key exfiltration**, plus **malicious NuGet/npm packages** and **job-themed repo/interview lures** dropping backdoors.  \n- **Why it matters operationally:** Financial orgs rely on CI/CD and developer endpoints; stolen tokens/keys can lead to **cloud takeover, source theft, and lateral movement** (often faster than traditional phishing).  \n- **Recommended immediate actions for the SOC today:** **Alert dev/IT** to avoid running untrusted “tests/repos” and to **rotate exposed API keys/tokens** if suspected; **hunt for new persistence** on developer fleets and **unusual access to artifact registries/package managers**.\n\n---\n\n### Monitoring & detection recommendations\n- **Cisco SD-WAN management-plane hunting:** SD-WAN controller/manager **audit logs**, **AAA/IdP** (if federated), and **network device config logs** for unusual admin logins, new users, policy pushes, and config export (MITRE: **T1078**, **T1562**).  \n- **Exploit-to-process telemetry on edge/admin apps:** **EDR** on Serv-U/Web Help Desk/FileZen hosts for web/service processes spawning shells, cmd/powershell, scripting engines, or unknown binaries (MITRE: **T1203**, **T1059**).  \n- **DMZ web/app attack indicators:** **WAF/reverse proxy + web server logs** (URI/query anomalies, command-injection patterns, spikes in 4xx/5xx, unusual POSTs) mapped to FileZen/Help Desk endpoints (MITRE: **T1190**).  \n- **Network egress & C2 from “management servers”:** **Firewall/proxy/DNS** for new outbound beacons from SD-WAN/transfer/helpdesk servers to rare destinations; prioritize “first-seen” domains and long-lived TLS to low-reputation ASNs (MITRE: **T1071.001**, **T1095**).  \n- **Credential/token misuse in cloud/dev tooling:** **Cloud audit logs** (e.g., GCP/AWS/Azure) and **SCM/CI logs** for new PAT/API key creation, unusual repo clone volume, secrets access, and service account impersonation (MITRE: **T1552**, **T1528**).  \n- **Developer endpoint lure activity:** **EDR + email/web gateway** for downloads of “coding tests,” unexpected archive execution, new scheduled tasks/run keys, and unsigned binaries in user profiles (MITRE: **T1204**, **T1053.005**).  \n- **Ransomware-enabler behaviors (general):** **EDR** for rapid privilege escalation + remote execution tooling (PsExec/WMI/WinRM), mass encryption-like file ops, and deletion of shadow copies (MITRE: **T1486**, **T1021**, **T1490**).\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** Add **CVE-2026-20127 (Cisco SD-WAN)** and **CVE-2026-25108 (FileZen)** to “emergency change” playbooks; verify recurring exposure scanning for edge/admin systems.  \n- **SolarWinds product risk review:** Confirm **which teams own Serv-U/Web Help Desk**, ensure SLAs for patching, and reduce internet exposure (VPN-only, IP allowlists, admin MFA).  \n- **Branch/third-party edge visibility:** Inventory **router/firewall models** (esp. Zyxel) across subsidiaries/vendors; require **centralized syslog** and config-change alerts.  \n- **Developer security controls:** Enforce **allowlisting for package sources**, SCA scanning for NuGet/npm, and **secrets scanning + token rotation procedures**; consider tightening “AI coding tool” permissions and repo trust settings.  \n- **Identity hardening:** Re-validate controls against **credential theft → rapid breakout** (conditional access, device compliance, admin MFA, PAM/JIT) given reported sub-30-minute breakout times.  \n- **Ransomware readiness:** Re-test **offline/immutable backups** and recovery runbooks for key DMZ services (file transfer/help desk) that commonly become ransomware entry points.",
+  "highlights": [
+    {
+      "title": "Critical Cisco SD-WAN 0-Day Vulnerability Exploited Since 2023 to Gain Root Access",
+      "link": "https://cybersecuritynews.com/cisco-sd-wan-0-day-vulnerability/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-02-26T01:51:46+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Hacker Jailbreaks Claude AI to Write Exploit Code and Steal Government Data",
+      "link": "https://cybersecuritynews.com/claude-ai-exploited-2/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-02-26T01:20:38+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Claude collaboration tools left the door wide open to remote code execution",
+      "link": "https://go.theregister.com/feed/www.theregister.com/2026/02/26/clade_code_cves/",
+      "source": "The Register - Security",
+      "published": "2026-02-26T00:33:20+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Cloud / SaaS"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Example Cyber/IT Risk Taxonomy",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1rev366/example_cyberit_risk_taxonomy/",
+      "source": "/r/cybersecurity",
+      "published": "2026-02-26T00:24:53+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Crypto / Web3"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Smashing Security podcast #456: How to lose friends and DDoS people",
+      "link": "https://grahamcluley.com/smashing-security-podcast-456/",
+      "source": "Graham Cluley",
+      "published": "2026-02-26T00:16:49+00:00",
+      "smart_groups": [
+        "Curated",
+        "Ransomware"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Steaelite RAT combines data theft and ransomware management capability in one tool",
+      "link": "https://www.csoonline.com/article/4137527/steaelite-rat-combines-data-theft-and-ransomware-management-capability-in-one-tool.html",
+      "source": "CSO Online",
+      "published": "2026-02-26T00:09:25+00:00",
+      "smart_groups": [
+        "Curated",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "Windows / Microsoft",
+        "Malware / Payloads",
+        "Phishing / Social Engineering",
+        "Crypto / Web3"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Five Eyes issue emergency directive on exploited Cisco SD-WAN zero-day",
+      "link": "https://www.csoonline.com/article/4137562/five-eyes-issue-emergency-directive-on-exploited-cisco-sd-wan-zero-day.html",
+      "source": "CSO Online",
+      "published": "2026-02-25T22:49:14+00:00",
+      "smart_groups": [
+        "Curated",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Identity / Access"
+      ],
+      "curated": true
+    },
+    {
+      "title": "FTC says it won’t enforce COPPA against proper use of age verification tools",
+      "link": "https://therecord.media/ftc-says-it-wont-enforce-coppa-age-verification",
+      "source": "The Record",
+      "published": "2026-02-25T22:09:51+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Fake Next.js job interview tests backdoor developer's devices",
+      "link": "https://www.bleepingcomputer.com/news/security/fake-nextjs-job-interview-tests-backdoor-developers-devices/",
+      "source": "BleepingComputer",
+      "published": "2026-02-25T21:47:12+00:00",
+      "smart_groups": [
+        "Curated",
+        "Malware / Payloads"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Untrusted repositories turn Claude code into an attack vector",
+      "link": "https://securityaffairs.com/188508/security/untrusted-repositories-turn-claude-code-into-an-attack-vector.html",
+      "source": "Security Affairs",
+      "published": "2026-02-25T21:39:43+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Cloud / SaaS"
+      ],
+      "curated": true
+    }
+  ]
+}
