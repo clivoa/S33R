@@ -532,6 +532,24 @@ THREAT_ACTOR_NAME_REGEX = re.compile(
 )
 
 CVE_REGEX = re.compile(r"\bCVE-\d{4}-\d{4,7}\b", re.IGNORECASE)
+ACTIVE_EXPLOIT_REGEX = re.compile(
+    r"\b(active exploitation|exploited in the wild|weaponized|poc released|zero-day|0-day|rce)\b",
+    re.IGNORECASE,
+)
+
+WATCH_SURFACES_BY_VENDOR = {
+    "Microsoft": ["Entra ID sign-in logs", "Defender for Endpoint alerts", "Exchange audit logs"],
+    "Cisco": ["VPN/ASA auth logs", "NetFlow anomalies", "Cisco appliance syslogs"],
+    "Palo Alto": ["PAN-OS threat logs", "GlobalProtect auth logs", "WildFire detections"],
+    "Fortinet": ["FortiGate traffic logs", "SSL-VPN auth logs", "FortiAnalyzer alerts"],
+    "Google": ["Google Workspace audit", "Chrome EDR telemetry", "GCP audit logs"],
+    "Apple": ["MDM compliance events", "macOS EDR telemetry", "Apple mobile fleet alerts"],
+    "Cloudflare": ["WAF blocked events", "Access auth logs", "edge firewall telemetry"],
+}
+
+CAMPAIGN_MIN_ITEMS = 2
+PRIORITY_TOP_K = 20
+CLUSTER_TOP_K = 12
 
 
 # =========================================================
@@ -709,10 +727,21 @@ def build_delta_rows(current: Counter, previous: Counter, limit: int = 25) -> Li
             pct_change = 0.0
 
         direction = "flat"
-        if delta > 0:
+        status = "flat"
+        if prev == 0 and cur > 0:
             direction = "up"
+            status = "new"
+        elif cur == 0 and prev > 0:
+            direction = "down"
+            status = "dropped"
+        elif delta > 0:
+            direction = "up"
+            status = "accelerating" if prev > 0 and cur >= int(prev * 1.5) else "persistent"
         elif delta < 0:
             direction = "down"
+            status = "cooling"
+        elif cur > 0:
+            status = "persistent"
 
         rows.append(
             {
@@ -722,11 +751,232 @@ def build_delta_rows(current: Counter, previous: Counter, limit: int = 25) -> Li
                 "delta": delta,
                 "pct_change": pct_change,
                 "direction": direction,
+                "status": status,
             }
         )
 
     rows.sort(key=lambda r: (abs(r["delta"]), r["current"], r["name"]), reverse=True)
     return rows[:limit]
+
+
+def _sort_set(values: Iterable[str], limit: int = 4) -> List[str]:
+    clean = sorted({str(v).strip() for v in values if str(v).strip()})
+    if limit > 0:
+        return clean[:limit]
+    return clean
+
+
+def classify_priority_tier(score: float) -> str:
+    if score >= 80:
+        return "critical"
+    if score >= 65:
+        return "high"
+    if score >= 45:
+        return "medium"
+    return "low"
+
+
+def compute_operational_priority(
+    entry: Dict[str, Any],
+    dt: datetime,
+    now: datetime,
+    text: str,
+    cve_hits: List[str],
+    actor_hits: List[str],
+    vendor_hits: List[str],
+    malware_hits: List[str],
+    categories: List[str],
+) -> Dict[str, Any]:
+    age_hours = max(0.0, (now - dt).total_seconds() / 3600.0)
+    recency_score = max(0.0, 28.0 - min(28.0, age_hours / 3.0))
+    cve_score = min(24.0, len(cve_hits) * 8.0)
+    actor_score = min(16.0, len(actor_hits) * 6.0)
+    malware_score = min(12.0, len(malware_hits) * 4.0)
+    category_score = min(8.0, len(categories) * 1.5)
+
+    active_exploit_score = 0.0
+    if ACTIVE_EXPLOIT_REGEX.search(text):
+        active_exploit_score = 16.0
+
+    confidence_score = 0.0
+    raw_conf = entry.get("smart_group_max_confidence")
+    if isinstance(raw_conf, (int, float)):
+        confidence_score = min(10.0, max(0.0, float(raw_conf)) * 10.0)
+
+    source_quality_score = 0.0
+    raw_source_score = entry.get("source_quality_score")
+    if isinstance(raw_source_score, (int, float)):
+        source_quality_score = min(8.0, max(0.0, float(raw_source_score)) * 0.08)
+
+    curated_bonus = 8.0 if bool(entry.get("curated")) else 0.0
+
+    explicit_priority = 0.0
+    raw_priority = entry.get("priority_score")
+    if isinstance(raw_priority, (int, float)):
+        explicit_priority = min(8.0, max(0.0, float(raw_priority)) * 0.08)
+
+    total = (
+        recency_score
+        + cve_score
+        + actor_score
+        + malware_score
+        + category_score
+        + active_exploit_score
+        + confidence_score
+        + source_quality_score
+        + curated_bonus
+        + explicit_priority
+    )
+    total = max(0.0, min(100.0, total))
+
+    drivers = []
+    if cve_hits:
+        drivers.append(f"CVE signals ({len(cve_hits)})")
+    if actor_hits:
+        drivers.append(f"Actor mentions ({len(actor_hits)})")
+    if malware_hits:
+        drivers.append(f"Malware indicators ({len(malware_hits)})")
+    if active_exploit_score > 0:
+        drivers.append("Active exploitation language")
+    if bool(entry.get("curated")):
+        drivers.append("Curated/high-signal source")
+
+    if not drivers:
+        drivers.append("Recency + baseline context")
+
+    return {
+        "score": round(total, 2),
+        "tier": classify_priority_tier(total),
+        "drivers": drivers[:4],
+    }
+
+
+def build_campaign_actions(cluster: Dict[str, Any]) -> List[str]:
+    actions: List[str] = []
+    cves = cluster.get("top_cves") or []
+    vendors = cluster.get("top_vendors") or []
+    malware = cluster.get("top_malware") or []
+    actors = cluster.get("top_actors") or []
+
+    if cves:
+        top = ", ".join([c[0] for c in cves[:2]])
+        actions.append(f"Validate exposure and patch status for {top}; prioritize internet-facing assets first.")
+
+    if malware:
+        family = ", ".join([m[0] for m in malware[:2]])
+        actions.append(f"Run EDR hunts for {family} behaviors and suspicious parent-child process chains.")
+
+    for vendor, _ in vendors[:2]:
+        surfaces = WATCH_SURFACES_BY_VENDOR.get(vendor, [])
+        if surfaces:
+            actions.append(f"Increase monitoring on {vendor}: {', '.join(surfaces[:2])}.")
+            break
+
+    if actors:
+        actions.append("Map observed activity to ATT&CK techniques and tune detections for related TTPs.")
+
+    if not actions:
+        actions.append("Review top linked reports and extract actionable detections for current SOC hunts.")
+
+    return actions[:3]
+
+
+def make_campaign_key(
+    cves: List[str],
+    actors: List[str],
+    vendors: List[str],
+    malware: List[str],
+    categories: List[str],
+) -> str:
+    cve_key = ",".join(_sort_set(cves, limit=2))
+    actor_key = ",".join(_sort_set(actors, limit=2))
+    vendor_key = ",".join(_sort_set(vendors, limit=2))
+    malware_key = ",".join(_sort_set(malware, limit=2))
+    # Se já temos sinal estrutural forte (CVE/actor), não usar malware para não fragmentar a mesma campanha.
+    if cve_key or actor_key:
+        malware_key = ""
+
+    parts = [cve_key, actor_key, vendor_key, malware_key]
+    signal_dims = sum(1 for p in parts[:4] if p)
+    if signal_dims < 2:
+        return ""
+    return "|".join(p or "-" for p in parts)
+
+
+def _bump_counter(counter: Dict[str, int], key: str, step: int = 1) -> None:
+    if not key:
+        return
+    counter[key] = int(counter.get(key, 0)) + step
+
+
+def update_campaign_bucket(
+    bucket: Dict[str, Dict[str, Any]],
+    key: str,
+    entry: Dict[str, Any],
+    dt: datetime,
+    priority: Dict[str, Any],
+    cves: List[str],
+    actors: List[str],
+    vendors: List[str],
+    malware: List[str],
+    categories: List[str],
+) -> None:
+    if not key:
+        return
+
+    row = bucket.get(key)
+    if row is None:
+        row = {
+            "cluster_id": key,
+            "items_count": 0,
+            "first_seen": dt.isoformat(),
+            "last_seen": dt.isoformat(),
+            "top_links": [],
+            "top_titles": [],
+            "cves": {},
+            "actors": {},
+            "vendors": {},
+            "malware": {},
+            "categories": {},
+            "priority_sum": 0.0,
+            "priority_max": 0.0,
+            "curated_hits": 0,
+        }
+        bucket[key] = row
+
+    row["items_count"] += 1
+    row["priority_sum"] += float(priority["score"])
+    row["priority_max"] = max(float(row["priority_max"]), float(priority["score"]))
+    if bool(entry.get("curated")):
+        row["curated_hits"] += 1
+
+    iso = dt.isoformat()
+    if iso < row["first_seen"]:
+        row["first_seen"] = iso
+    if iso > row["last_seen"]:
+        row["last_seen"] = iso
+
+    link = str(entry.get("link") or "").strip()
+    title = str(entry.get("title") or "").strip()
+    if link and link not in row["top_links"] and len(row["top_links"]) < 6:
+        row["top_links"].append(link)
+    if title and title not in row["top_titles"] and len(row["top_titles"]) < 6:
+        row["top_titles"].append(title)
+
+    for cve in cves:
+        _bump_counter(row["cves"], cve)
+    for actor in actors:
+        _bump_counter(row["actors"], actor)
+    for vendor in vendors:
+        _bump_counter(row["vendors"], vendor)
+    for mal in malware:
+        _bump_counter(row["malware"], mal)
+    for cat in categories:
+        _bump_counter(row["categories"], cat)
+
+
+def top_counter_map(counter: Dict[str, int], k: int = 5) -> List[List[Any]]:
+    return [[k1, int(v1)] for k1, v1 in sorted(counter.items(), key=lambda kv: kv[1], reverse=True)[:k]]
 
 
 # =========================================================
@@ -755,6 +1005,11 @@ def main() -> None:
     co_cve_vendor: Dict[str, Counter] = {w: Counter() for w in WINDOWS}
     co_actor_malware: Dict[str, Counter] = {w: Counter() for w in WINDOWS}
     co_category_category: Dict[str, Counter] = {w: Counter() for w in WINDOWS}
+
+    # Operational outputs
+    priority_now_rows: Dict[str, List[Dict[str, Any]]] = {w: [] for w in WINDOWS}
+    campaign_current: Dict[str, Dict[str, Dict[str, Any]]] = {w: {} for w in WINDOWS}
+    campaign_previous: Dict[str, Dict[str, Dict[str, Any]]] = {w: {} for w in WINDOWS}
 
     # Threat actors
     threat_actor_daily_counter = Counter()          # date_str -> qtd notícias com actor
@@ -829,6 +1084,12 @@ def main() -> None:
                     malware_hits.add(label)
                     break
 
+        actor_list = sorted(actor_hits)
+        vendor_list = sorted(vendor_hits)
+        cve_list = sorted(cve_hits)
+        malware_list = sorted(malware_hits)
+        category_list = sorted(set(cats))
+
         # Aplicar em cada janela
         for win, days in WINDOWS.items():
             if not within_window(dt, now, days):
@@ -839,6 +1100,37 @@ def main() -> None:
                         prev_window_cves[win][cve] += 1
                     for actor in actor_hits:
                         prev_window_actors[win][actor] += 1
+
+                    prev_priority = compute_operational_priority(
+                        entry=entry,
+                        dt=dt,
+                        now=now,
+                        text=text,
+                        cve_hits=cve_list,
+                        actor_hits=actor_list,
+                        vendor_hits=vendor_list,
+                        malware_hits=malware_list,
+                        categories=category_list,
+                    )
+                    prev_key = make_campaign_key(
+                        cve_list,
+                        actor_list,
+                        vendor_list,
+                        malware_list,
+                        category_list,
+                    )
+                    update_campaign_bucket(
+                        bucket=campaign_previous[win],
+                        key=prev_key,
+                        entry=entry,
+                        dt=dt,
+                        priority=prev_priority,
+                        cves=cve_list,
+                        actors=actor_list,
+                        vendors=vendor_list,
+                        malware=malware_list,
+                        categories=category_list,
+                    )
                 continue
 
             for c in cats:
@@ -874,6 +1166,54 @@ def main() -> None:
             for i in range(len(unique_cats)):
                 for j in range(i + 1, len(unique_cats)):
                     co_category_category[win][(unique_cats[i], unique_cats[j])] += 1
+
+            priority = compute_operational_priority(
+                entry=entry,
+                dt=dt,
+                now=now,
+                text=text,
+                cve_hits=cve_list,
+                actor_hits=actor_list,
+                vendor_hits=vendor_list,
+                malware_hits=malware_list,
+                categories=category_list,
+            )
+            priority_now_rows[win].append(
+                {
+                    "title": entry.get("title"),
+                    "link": entry.get("link"),
+                    "source": entry.get("source"),
+                    "published": dt.isoformat(),
+                    "score": priority["score"],
+                    "tier": priority["tier"],
+                    "drivers": priority["drivers"],
+                    "cves": cve_list[:4],
+                    "vendors": vendor_list[:4],
+                    "actors": actor_list[:4],
+                    "malware": malware_list[:4],
+                    "categories": category_list[:5],
+                }
+            )
+
+            camp_key = make_campaign_key(
+                cve_list,
+                actor_list,
+                vendor_list,
+                malware_list,
+                category_list,
+            )
+            update_campaign_bucket(
+                bucket=campaign_current[win],
+                key=camp_key,
+                entry=entry,
+                dt=dt,
+                priority=priority,
+                cves=cve_list,
+                actors=actor_list,
+                vendors=vendor_list,
+                malware=malware_list,
+                categories=category_list,
+            )
 
         processed += 1
 
@@ -962,6 +1302,106 @@ def main() -> None:
         },
     }
 
+    priority_now_out: Dict[str, Dict[str, Any]] = {}
+    for win in WINDOWS:
+        rows = priority_now_rows[win]
+        rows.sort(key=lambda r: (float(r["score"]), r.get("published") or ""), reverse=True)
+        top_rows = rows[:PRIORITY_TOP_K]
+
+        tier_counts = Counter([r.get("tier", "low") for r in rows])
+        priority_now_out[win] = {
+            "items": top_rows,
+            "summary": {
+                "total_items": len(rows),
+                "critical": int(tier_counts.get("critical", 0)),
+                "high": int(tier_counts.get("high", 0)),
+                "medium": int(tier_counts.get("medium", 0)),
+                "low": int(tier_counts.get("low", 0)),
+            },
+        }
+
+    campaign_clusters_out: Dict[str, List[Dict[str, Any]]] = {}
+    for win in WINDOWS:
+        clusters = []
+        prev_bucket = campaign_previous[win]
+        for key, row in campaign_current[win].items():
+            items_count = int(row["items_count"])
+            if items_count < CAMPAIGN_MIN_ITEMS:
+                continue
+
+            avg_priority = float(row["priority_sum"]) / max(1, items_count)
+            unique_cves = len(row["cves"])
+            unique_actors = len(row["actors"])
+            unique_malware = len(row["malware"])
+            unique_vendors = len(row["vendors"])
+
+            last_seen_dt = parse_iso(str(row["last_seen"]))
+            age_hours = max(0.0, (now - last_seen_dt).total_seconds() / 3600.0)
+            recency_bonus = max(0.0, 12.0 - min(12.0, age_hours / 4.0))
+
+            campaign_score = (
+                min(40.0, items_count * 6.0)
+                + min(16.0, unique_cves * 6.0)
+                + min(14.0, unique_actors * 7.0)
+                + min(12.0, unique_malware * 6.0)
+                + min(10.0, unique_vendors * 4.0)
+                + recency_bonus
+                + min(16.0, avg_priority * 0.2)
+            )
+            if unique_cves == 0 and unique_actors == 0:
+                campaign_score -= 18.0
+            if unique_cves == 0 and unique_actors == 0 and unique_vendors <= 1:
+                campaign_score -= 8.0
+            campaign_score = round(max(0.0, min(100.0, campaign_score)), 2)
+
+            prev_count = int((prev_bucket.get(key) or {}).get("items_count", 0))
+            delta = items_count - prev_count
+            if prev_count == 0 and items_count > 0:
+                trend_status = "new"
+            elif delta > 0 and items_count >= int(max(1, prev_count * 1.5)):
+                trend_status = "accelerating"
+            elif delta > 0:
+                trend_status = "persistent"
+            elif delta < 0 and items_count > 0:
+                trend_status = "cooling"
+            elif delta < 0 and items_count == 0:
+                trend_status = "dropped"
+            else:
+                trend_status = "persistent"
+
+            cluster_view = {
+                "cluster_id": key,
+                "campaign_score": campaign_score,
+                "tier": classify_priority_tier(campaign_score),
+                "trend_status": trend_status,
+                "items_count": items_count,
+                "previous_items_count": prev_count,
+                "delta_items": delta,
+                "first_seen": row["first_seen"],
+                "last_seen": row["last_seen"],
+                "top_cves": top_counter_map(row["cves"], k=5),
+                "top_actors": top_counter_map(row["actors"], k=5),
+                "top_vendors": top_counter_map(row["vendors"], k=5),
+                "top_malware": top_counter_map(row["malware"], k=5),
+                "top_categories": top_counter_map(row["categories"], k=5),
+                "top_titles": row["top_titles"][:4],
+                "top_links": row["top_links"][:4],
+                "avg_priority": round(avg_priority, 2),
+                "curated_hits": int(row["curated_hits"]),
+            }
+            cluster_view["recommended_actions"] = build_campaign_actions(cluster_view)
+            clusters.append(cluster_view)
+
+        clusters.sort(
+            key=lambda r: (
+                float(r["campaign_score"]),
+                int(r["items_count"]),
+                float(r["avg_priority"]),
+            ),
+            reverse=True,
+        )
+        campaign_clusters_out[win] = clusters[:CLUSTER_TOP_K]
+
     output = {
         "generated_at": now.isoformat(),
         "windows": list(WINDOWS.keys()),
@@ -975,6 +1415,8 @@ def main() -> None:
         "threat_actor_daily": threat_actor_daily,
         "cooccurrence": cooccurrence_out,
         "delta_analytics": delta_analytics,
+        "priority_now": priority_now_out,
+        "campaign_clusters": campaign_clusters_out,
     }
 
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
