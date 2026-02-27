@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-02-27T15:06:15.186024+00:00",
+  "generated_at": "2026-02-27T16:05:15.918828+00:00",
   "days_back": 30,
-  "total_items": 8834,
+  "total_items": 8828,
   "items": [
     {
       "title": "Secure Your Spot at RSAC 2026 Conference",
@@ -26,6 +26,130 @@
       "published_ts": 1773932400,
       "smart_groups": [],
       "curated": false
+    },
+    {
+      "title": "Top 5 Microsoft Sentinel Queries for Threat Hunting",
+      "summary": "Threat hunting in Microsoft Sentinel goes beyond relying on scheduled analytics rules. It\u2019s about proactively asking better questions of your data to uncover stealthy or emerging attacker behavior before it turns into an incident. Effective hunting helps security teams spot activity that may never trigger an alert but still represents meaningful risk. Over time, these proactive hunts strengthen overall detection coverage and improve SOC maturity. In this post, I\u2019ll walk through five high\u2011value Sentinel hunting queries that security teams can use to uncover suspicious activity across identity, endpoints, and cloud resources. Each example focuses on why the hunt matters and what attacker behavior it can reveal. To make these hunts actionable and measurable, each query is explicitly mapped to MITRE ATT&CK tactics and techniques. This alignment helps teams communicate coverage, prioritize investigations, and evolve successful hunts into repeatable detections. 1. Rare Sign\u2011In Locations for Privileged Accounts Why it matters Privileged identities are prime targets. A successful sign\u2011in from an unusual geography may indicate compromised credentials or token theft. What to hunt Look for successful sign\u2011ins by privileged users from locations they rarely use. // MITRE ATT&CK: T1078 (Valid Accounts), T1078.004 (Cloud Accounts) | Tactic: Initial Access SigninLogs | where ResultType == 0 | where UserPrincipalName has_any (\"admin\", \"svc\") | summarize count() by UserPrincipalName, Location | join kind=leftanti ( SigninLogs | where TimeGenerated What to investigate next Conditional Access policies applied MFA enforcement status Correlation with device compliance or impossible travel alerts 2. Multiple Failed Logons Followed by Success Why it matters This pattern often indicates password spraying, brute force activity, or attackers testing credential validity before gaining access. What to hunt // MITRE ATT&CK: T1110 (Brute Force), T1110.003 (Password Spraying), T1110.001 (Password Guessing) | Tactic: Credential Access // Related: T1078 (Valid Accounts) once authentication succeeds SigninLogs | summarize Failed=countif(ResultType != 0), Success=countif(ResultType == 0) by UserPrincipalName, bin(TimeGenerated, 1h) | where Failed > 5 and Success > 0 What to investigate next IP reputation and ASN Whether failures span multiple users (spray behavior) Subsequent mailbox, SharePoint, or Azure activity 3. Unusual Process Execution on Endpoints Why it matters Attackers often use \u201cliving off the land\u201d binaries (LOLBins) such as powershell.exe, wmic.exe, or rundll32.exe to evade detection. What to hunt // MITRE ATT&CK: T1059 (Command and Scripting Interpreter), // T1059.001 (PowerShell), T1059.003 (Windows Command Shell) | Tactic: Execution // Related: T1218 (Signed Binary Proxy Execution) when rundll32 and other signed binaries are abused DeviceProcessEvents | where FileName in~ (\"powershell.exe\", \"wmic.exe\", \"rundll32.exe\") | where InitiatingProcessFileName !in~ (\"explorer.exe\", \"services.exe\") | project TimeGenerated, DeviceName, FileName, ProcessCommandLine, InitiatingProcessFileName, InitiatingProcessCommandLine What to investigate next Encoded or obfuscated command lines Parent process legitimacy User context and device risk score 4. Newly Created or Modified Service Principals Why it matters Service principals are often abused for persistence or privilege escalation in Azure environments. What to hunt // MITRE ATT&CK: T1098 (Account Manipulation), T1098.001 (Additional Cloud Credentials) | Tactic: Persistence AuditLogs | where OperationName in (\"Add service principal\", \"Update service principal\") | project TimeGenerated, InitiatedBy, TargetResources, OperationName What to investigate next Assigned API permissions or directory roles Token usage after creation Correlation with unfamiliar IP addresses 5. Rare Azure Resource Access Patterns Why it matters Attackers exploring your environment often access subscriptions or resource groups they\u2019ve never touched before. What to hunt // MITRE ATT&CK: T1526 (Cloud Service Discovery), T1069.003 (Permission Groups Discovery: Cloud) | Tactic: Discovery AzureActivity | summarize count() by Caller, ResourceGroup | join kind=leftanti ( AzureActivity | where TimeGenerated What to investigate next Role assignments for the caller Whether access aligns with job function Any subsequent configuration changes Summary Table This table summarizes each Sentinel threat hunting query and maps it directly to the corresponding MITRE ATT&CK tactic and technique. By aligning hunts to ATT&CK, security teams can clearly communicate what adversary behaviors are being proactively investigated and identify gaps in coverage. This mapping also makes it easier to prioritize hunts, measure maturity, and transition high\u2011value hunts into analytics rules over time. Sentinel Hunt MITRE Tactic MITRE Technique Rare privileged sign\u2011ins Initial Access T1078 \u2013 Valid Accounts Failed then successful logons Credential Access T1110 \u2013 Brute Force LOLBin execution Execution T1059 / T1218 Service principal changes Persistence T1098.001 Rare resource access Discovery T1526 / T1069.003 Final Thoughts Threat hunting in Microsoft Sentinel is most effective when it\u2019s continuous, hypothesis\u2011driven, and contextual. These queries are starting points, not finished detections. Tune them based on your environment, enrich them with UEBA insights, and align your hunts to MITRE ATT&CK techniques, as outlined in your existing Sentinel content strategy. If you consistently run hunts like these, you\u2019ll catch suspicious behavior before it triggers an alert or before an attacker reaches their objective.",
+      "link": "https://techcommunity.microsoft.com/t5/microsoft-security-community/top-5-microsoft-sentinel-queries-for-threat-hunting/ba-p/4497667",
+      "source": "Microsoft Security Blog (TechCommunity)",
+      "type": "vendors",
+      "type_label": "Vendors & Product Blogs",
+      "published": "2026-02-27T16:00:00+00:00",
+      "published_ts": 1772208000,
+      "smart_groups": [
+        "Curated",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "Windows / Microsoft",
+        "Cloud / SaaS",
+        "Identity / Access",
+        "Network / OT / ICS"
+      ],
+      "curated": true
+    },
+    {
+      "title": "This AI Agent Is Designed to Not Go Rogue",
+      "summary": "submitted by /u/jaykzo [link] [comments]",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1rgaiw8/this_ai_agent_is_designed_to_not_go_rogue/",
+      "source": "/r/cybersecurity",
+      "type": "osint",
+      "type_label": "OSINT, Communities & Subreddits",
+      "published": "2026-02-27T15:58:30+00:00",
+      "published_ts": 1772207910,
+      "smart_groups": [],
+      "curated": false
+    },
+    {
+      "title": "Network mapping",
+      "summary": "Any recommendations on open-source software that can build network diagrams using data derived from tools like Malcolm or Phosphorus? Currently using NetBox. While it imports the data, doesn\u2019t intuitively map the network. TIA submitted by /u/Dapper_Bird1 [link] [comments]",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1rgabs9/network_mapping/",
+      "source": "/r/cybersecurity",
+      "type": "osint",
+      "type_label": "OSINT, Communities & Subreddits",
+      "published": "2026-02-27T15:51:19+00:00",
+      "published_ts": 1772207479,
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Bitcoin to $30K? Analysts debate when and at what price BTC will bottom",
+      "summary": "Several analysts forecast Bitcoin extending its bear market into late 2026, with potential cycle lows between $30,000 and $45,000 backed by rising exchange reserves.",
+      "link": "https://cointelegraph.com/news/bitcoin-to-30k-analysts-debate-when-what-price-btc-price-will-bottom?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound",
+      "source": "Cointelegraph.com News",
+      "type": "crypto",
+      "type_label": "Crypto & Blockchain Security",
+      "published": "2026-02-27T15:26:31+00:00",
+      "published_ts": 1772205991,
+      "smart_groups": [],
+      "curated": false
+    },
+    {
+      "title": "In Other News: ATT&CK Advisory Council, Russian Cyberattacks Aid Missile Strikes, Predator Bypasses iOS Indicators",
+      "summary": "Other noteworthy stories that might have slipped under the radar: cyber valuations surge, OpenAI disrupts malicious AI use, ShinyHunters claims Odido breach. The post In Other News: ATT&CK Advisory Council, Russian Cyberattacks Aid Missile Strikes, Predator Bypasses iOS Indicators appeared first on SecurityWeek .",
+      "link": "https://www.securityweek.com/in-other-news-attck-advisory-council-russian-cyberattacks-aid-missile-strikes-predator-bypasses-ios-indicators/",
+      "source": "SecurityWeek",
+      "type": "general",
+      "type_label": "General Security & Blogs",
+      "published": "2026-02-27T15:23:39+00:00",
+      "published_ts": 1772205819,
+      "smart_groups": [],
+      "curated": false
+    },
+    {
+      "title": "Destroyed servers and DoS attacks: What can happen when OpenClaw AI agents interact",
+      "summary": "By testing agent-to-agent interactions, researchers observed catastrophic system failures. Here's why that's bad news for everyone.",
+      "link": "https://www.zdnet.com/article/how-ai-agents-create-new-disasters-when-they-interact/",
+      "source": "ZDNet \u2013 Security",
+      "type": "general",
+      "type_label": "General Security & Blogs",
+      "published": "2026-02-27T15:16:10+00:00",
+      "published_ts": 1772205370,
+      "smart_groups": [],
+      "curated": false
+    },
+    {
+      "title": "French DIY etailer ManoMano admits customer data stolen",
+      "summary": "Crooks claim they helped themselves to over 37M accounts during January hit on subcontractor French online marketplace ManoMano is warning customers their personal data was siphoned off after a cyberattack hit one of its customer support subcontractors \u2013 and criminals are already claiming the haul is far larger than the company's carefully worded notice suggests.\u2026",
+      "link": "https://go.theregister.com/feed/www.theregister.com/2026/02/27/manomano_breach/",
+      "source": "The Register - Security",
+      "type": "general",
+      "type_label": "General Security & Blogs",
+      "published": "2026-02-27T15:15:07+00:00",
+      "published_ts": 1772205307,
+      "smart_groups": [],
+      "curated": false
+    },
+    {
+      "title": "Crypto taxes updated, BTC stuck below $70K: Month in charts",
+      "summary": "Bitcoin struggled to breach $70,000 this month, while inflation rates decreased in Japan and some countries reevaluated crypto tax codes.",
+      "link": "https://cointelegraph.com/news/crypto-taxes-btc-stuck-70k-month-in-charts?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound",
+      "source": "Cointelegraph.com News",
+      "type": "crypto",
+      "type_label": "Crypto & Blockchain Security",
+      "published": "2026-02-27T15:09:22+00:00",
+      "published_ts": 1772204962,
+      "smart_groups": [],
+      "curated": false
+    },
+    {
+      "title": "Third-Party Patching and the Business Footprint We All Share",
+      "summary": "Everyday tools like PDF readers, email clients, and archive utilities quietly define the real attack surface. Action1 explains how third-party software drift increases exploit risk and why consistent patching reduces exposure across endpoints. [...]",
+      "link": "https://www.bleepingcomputer.com/news/security/third-party-patching-and-the-business-footprint-we-all-share/",
+      "source": "BleepingComputer",
+      "type": "general",
+      "type_label": "General Security & Blogs",
+      "published": "2026-02-27T15:00:10+00:00",
+      "published_ts": 1772204410,
+      "smart_groups": [
+        "Curated",
+        "Ransomware",
+        "Exploit / PoC",
+        "Crypto / Web3"
+      ],
+      "curated": true
     },
     {
       "title": "KubeCon + CloudNativeCon Europe 2026 Co-located Event Deep Dive: BackstageCon",
@@ -58,6 +182,30 @@
         "Cloud / SaaS"
       ],
       "curated": true
+    },
+    {
+      "title": "Gift Idea",
+      "summary": "So my fianc\u00e9e is getting ready to graduate from Eastern Michigan University with a degree in Cyber Security. I\u2019m trying to figure out something useful and meaningful to get her. What do you use a lot that maybe people wouldn\u2019t think of when getting into the field. I appreciate any and all advice. submitted by /u/dustirau [link] [comments]",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1rg8p11/gift_idea/",
+      "source": "/r/cybersecurity",
+      "type": "osint",
+      "type_label": "OSINT, Communities & Subreddits",
+      "published": "2026-02-27T14:49:43+00:00",
+      "published_ts": 1772203783,
+      "smart_groups": [],
+      "curated": false
+    },
+    {
+      "title": "Amazon, Nvidia Flood OpenAI With Cash as ChatGPT Maker\u2019s Valuation Hits $730 Billion",
+      "summary": "OpenAI just secured $110 billion in fresh investment, and announced additional collaborations with two of the big backers.",
+      "link": "https://decrypt.co/359401/amazon-nvidia-flood-openai-cash-valuation-730-billion",
+      "source": "Decrypt",
+      "type": "crypto",
+      "type_label": "Crypto & Blockchain Security",
+      "published": "2026-02-27T14:48:25+00:00",
+      "published_ts": 1772203705,
+      "smart_groups": [],
+      "curated": false
     },
     {
       "title": "Meta Cracks Down on Scam Advertisers with Enhanced Enforcement Measures",
@@ -225,6 +373,21 @@
         "Curated",
         "Exploit / PoC",
         "Malware / Payloads"
+      ],
+      "curated": true
+    },
+    {
+      "title": "South Korean Authorities Accidentally Hand Hackers $4.8M in Crypto",
+      "summary": "Kenrodgers Fabian reports: A security blunder hit South Korea as the National Tax Service accidentally exposed a crypto wallet\u2019s recovery key, leading to a $4.8 million theft. The incident happened when the tax authority published a press release photo showing the mnemonic phrase for a seized wallet. This phrase, essentially the master password for virtual... Source",
+      "link": "https://databreaches.net/2026/02/27/south-korean-authorities-accidentally-hand-hackers-4-8m-in-crypto/?pk_campaign=feed&pk_kwd=south-korean-authorities-accidentally-hand-hackers-4-8m-in-crypto",
+      "source": "DataBreaches.net",
+      "type": "cybercrime",
+      "type_label": "Cybercrime, Darknet & Leaks",
+      "published": "2026-02-27T14:32:45+00:00",
+      "published_ts": 1772202765,
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
       ],
       "curated": true
     },
@@ -471,6 +634,22 @@
       "curated": false
     },
     {
+      "title": "Critical Trend Micro Apex One Vulnerabilities Allows Malicious Code Execution",
+      "summary": "Trend Micro has released fixes for multiple Apex One vulnerabilities, ranging from High to Critical severity, including management console issues that can lead to remote code execution (RCE). The affected CVEs range from CVE-2025-71210 to CVE-2025-71217, with CVSS v3 scores ranging from 7.2 to 9.8.\u200b The February 2026 advisory lists Apex One 2019 (on\u2011prem) on Windows and [\u2026] The post Critical Trend Micro Apex One Vulnerabilities Allows Malicious Code Execution appeared first on Cyber Security News .",
+      "link": "https://cybersecuritynews.com/trend-micro-apex-one-vulnerabilities/",
+      "source": "Cyber Security News (FeedBurner)",
+      "type": "general",
+      "type_label": "General Security & Blogs",
+      "published": "2026-02-27T13:36:32+00:00",
+      "published_ts": 1772199392,
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Windows / Microsoft"
+      ],
+      "curated": true
+    },
+    {
       "title": "One of the \u2018most influential cybersecurity\u2019 roles will pay under $175,000",
       "summary": "A recent job ad is causing plenty of head-shaking, suggesting that some government high-ups appear to be out of touch with the current state of the cybersecurity job market. There is plenty of evidence that the world needs cybersecurity talent. According t o a recent ISC2 survey , 33% of organizations cannot staff their security teams adequately The result of this shortage is that these professionals are handsomely rewarded \u2014 but no-one appears to have told the UK government. Government Communications Headquarters (GCHQ, the UK equivalent of the US\u2019s National Security Agency, or NSA), has just advertised for a chief information security officer . The role, which the ad describes as \u201cone of the most influential cyber security leadership roles in the UK,\u201d offers a maximum salary of \u00a3130,000 (about $175,000) \u2014 and none of the stock options or other inducements common in industry. Successful candidates will have \u201cexpertise in securing cloud environments and emerging technologies within digital transformation programmes, alongside a strong understanding of regulatory compliance frameworks such as NIST, ISO 27001, GDPR and GovS 007. Professional certifications such as CISSP, CISM or CCISO are highly desirable,\u201d the ad said. The job ad stresses the importance of the role. \u201cAs CISO, you will work with colleagues to set and implement the organisation\u2019s cyber and information security strategy, striking the right balance between capability, acceptable risk and technological progress. You will integrate security governance into a complex set of cross-agency organisational decision-making forums ensuring that information risks are managed effectively.\u201d It\u2019s a daunting set of responsibility for a senior professional working for an organization responsible for keeping an entire nation safe from cybercriminals and hostile powers, while pulling in a salary roughly equivalent t o the salary of a security architect at a mid-level US company.",
       "link": "https://www.csoonline.com/article/4138526/one-of-the-most-influential-cybersecurity-roles-will-pay-under-175000.html",
@@ -560,6 +739,22 @@
         "Curated",
         "Vulnerabilities / CVEs",
         "Exploit / PoC"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Malicious Go Crypto Module Steals Passwords and Deploy Rekoobe Backdoor in Developer Environments",
+      "summary": "Malicious Go Crypto Module Steals Passwords and Deploys Rekoobe Backdoor in Developer Environments A newly discovered supply chain attack is putting Go developers at serious risk. A threat actor published a malicious Go module that closely mimics one of the most trusted cryptographic libraries in the ecosystem \u2014 golang.org/x/crypto \u2014 and used it to steal [\u2026] The post Malicious Go Crypto Module Steals Passwords and Deploy Rekoobe Backdoor in Developer Environments appeared first on Cyber Security News .",
+      "link": "https://cybersecuritynews.com/malicious-go-crypto-module-steals-passwords-and-deploy-rekoobe/",
+      "source": "Cyber Security News (FeedBurner)",
+      "type": "general",
+      "type_label": "General Security & Blogs",
+      "published": "2026-02-27T13:21:49+00:00",
+      "published_ts": 1772198509,
+      "smart_groups": [
+        "Curated",
+        "Malware / Payloads",
+        "Network / OT / ICS"
       ],
       "curated": true
     },
@@ -3732,6 +3927,21 @@
       "published_ts": 1772132874,
       "smart_groups": [],
       "curated": false
+    },
+    {
+      "title": "What\u2019s Running on That Port? Introducing Nerva for Service Fingerprinting",
+      "summary": "Nerva is a high-performance, open-source CLI tool that identifies what services are running on open network ports. It fingerprints 120+ protocols across TCP, UDP, and SCTP, averaging 4x faster than nmap -sV with 99% detection accuracy. Written in Go as a single binary, Nerva helps security teams rapidly move from port discovery to service identification. [\u2026] The post What\u2019s Running on That Port? Introducing Nerva for Service Fingerprinting appeared first on Praetorian .",
+      "link": "https://www.praetorian.com/blog/whats-running-on-that-port-introducing-nerva-for-service-fingerprinting/",
+      "source": "https://www.praetorian.com/feed/",
+      "type": "vendors",
+      "type_label": "Vendors & Product Blogs",
+      "published": "2026-02-26T19:04:41+00:00",
+      "published_ts": 1772132681,
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
     },
     {
       "title": "How to understand and avoid Advanced Persistent Threats",
@@ -122386,285 +122596,6 @@
       "published_ts": 1769615167,
       "smart_groups": [],
       "curated": false
-    },
-    {
-      "title": "How to keep your PC encryption key safe - from Microsoft and the FBI",
-      "summary": "Microsoft says it may give your encryption key to law enforcement upon a valid request. Here's how to protect your privacy.",
-      "link": "https://www.zdnet.com/article/how-to-keep-pc-bitlocker-encryption-key-safe-from-microsoft-fbi/",
-      "source": "ZDNet \u2013 Security",
-      "type": "general",
-      "type_label": "General Security & Blogs",
-      "published": "2026-01-28T15:36:00+00:00",
-      "published_ts": 1769614560,
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs"
-      ],
-      "curated": true
-    },
-    {
-      "title": "UK Court of Appeal Rules that RuneScape Gold is Property in $750K Theft Case",
-      "summary": "A former Jagex employee allegedly stole over 700 billion virtual gold pieces and sold them for almost $750,000 in crypto and fiat.",
-      "link": "https://decrypt.co/356170/uk-court-of-appeal-rules-that-runescape-gold-is-property-in-750k-theft-case",
-      "source": "Decrypt",
-      "type": "crypto",
-      "type_label": "Crypto & Blockchain Security",
-      "published": "2026-01-28T15:31:20+00:00",
-      "published_ts": 1769614280,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "No Agency Is Too Small",
-      "summary": "Today even small government agencies are under attack. How can they defend themselves?",
-      "link": "https://www.security.com/expert-perspectives/no-agency-too-small",
-      "source": "Broadcom \u2013 Symantec Blogs",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-28T15:30:00+00:00",
-      "published_ts": 1769614200,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "Top Wall Street Firms Met With SEC Crypto Task Force to Discuss DeFi Concerns",
-      "summary": "Citadel, SIFMA, and JPMorgan met with the SEC on Tuesday to raise concerns about the agency\u2019s aggressively pro-crypto agenda.",
-      "link": "https://decrypt.co/356166/top-wall-street-firms-met-sec-crypto-task-force-discuss-defi-concerns",
-      "source": "Decrypt",
-      "type": "crypto",
-      "type_label": "Crypto & Blockchain Security",
-      "published": "2026-01-28T15:29:09+00:00",
-      "published_ts": 1769614149,
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "Crypto / Web3"
-      ],
-      "curated": true
-    },
-    {
-      "title": "ZAP JavaScript Engine Memory Leak Issue Impacts Active Scan Usage",
-      "summary": "The ZAP (Zed Attack Proxy) project, a widely used open-source web application security scanner, has disclosed a critical memory leak in its JavaScript engine. This flaw, likely present for some time, now disrupts active scanning workflows following the introduction of a new JavaScript scan rule in the OpenAPI add-on. Security teams relying on ZAP for [\u2026] The post ZAP JavaScript Engine Memory Leak Issue Impacts Active Scan Usage appeared first on Cyber Security News .",
-      "link": "https://cybersecuritynews.com/zap-memory-leak-issue/",
-      "source": "Cyber Security News (FeedBurner)",
-      "type": "general",
-      "type_label": "General Security & Blogs",
-      "published": "2026-01-28T15:23:44+00:00",
-      "published_ts": 1769613824,
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs"
-      ],
-      "curated": true
-    },
-    {
-      "title": "HYPE price soars 58% amid exploding commodities trading on Hyperliquid",
-      "summary": "HYPE has entered a classic breakout stage after its onchain activity exploded, with a 45% price rally to $50 next in the cards.",
-      "link": "https://cointelegraph.com/news/hype-price-soars-58-percent-exploding-commodities-trading-hyperliquid?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound",
-      "source": "Cointelegraph.com News",
-      "type": "crypto",
-      "type_label": "Crypto & Blockchain Security",
-      "published": "2026-01-28T15:23:30+00:00",
-      "published_ts": 1769613810,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "Trump\u2019s acting cybersecurity chief uploaded sensitive government docs to ChatGPT",
-      "summary": "A report cited officials as saying that Homeland Security sought to determine if there was any harm to government security as a result of the lapse.",
-      "link": "https://techcrunch.com/2026/01/28/trumps-acting-cybersecurity-chief-uploaded-sensitive-government-docs-to-chatgpt/",
-      "source": "Security News | TechCrunch",
-      "type": "general",
-      "type_label": "General Security & Blogs",
-      "published": "2026-01-28T15:22:37+00:00",
-      "published_ts": 1769613757,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "Fidelity to Enter Stablecoin Market With Ethereum-Based 'Digital Dollar'",
-      "summary": "Wall Street giant Fidelity will enter the stablecoin world with the upcoming launch of its Ethereum-based Digital Dollar (FIDD).",
-      "link": "https://decrypt.co/356165/fidelity-enters-stablecoin-market-ethereum-digital-dollar",
-      "source": "Decrypt",
-      "type": "crypto",
-      "type_label": "Crypto & Blockchain Security",
-      "published": "2026-01-28T15:18:09+00:00",
-      "published_ts": 1769613489,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "South Dakota Lawmaker Takes Second Stab at Launching State Bitcoin Reserve",
-      "summary": "The bill by State Representative Logan Manhart seeks to allocate as much as 10% of the state\u2019s investment funds to the cryptocurrency.",
-      "link": "https://decrypt.co/356167/south-dakota-lawmaker-takes-second-stab-at-launching-state-bitcoin-reserve",
-      "source": "Decrypt",
-      "type": "crypto",
-      "type_label": "Crypto & Blockchain Security",
-      "published": "2026-01-28T15:14:21+00:00",
-      "published_ts": 1769613261,
-      "smart_groups": [
-        "Crypto / Web3"
-      ],
-      "curated": false
-    },
-    {
-      "title": "AI Is Rewriting Compliance Controls and CISOs Must Take Notice",
-      "summary": "AI agents are now executing regulated actions, reshaping how compliance controls actually work. Token Security explains why CISOs must rethink identity, access, and auditability as AI becomes a digital employee. [...]",
-      "link": "https://www.bleepingcomputer.com/news/security/ai-is-rewriting-compliance-controls-and-cisos-must-take-notice/",
-      "source": "BleepingComputer",
-      "type": "general",
-      "type_label": "General Security & Blogs",
-      "published": "2026-01-28T15:00:10+00:00",
-      "published_ts": 1769612410,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "Build Practical Cyber Defense Skills with This 5-Course Bundle",
-      "summary": "Train in AI threat detection, OSINT tools, and Zero Trust security models with lifetime access for just $19.99. The post Build Practical Cyber Defense Skills with This 5-Course Bundle appeared first on TechRepublic .",
-      "link": "https://www.techrepublic.com/article/advanced-cybersecurity-master-class/",
-      "source": "TechRepublic \u2013 Security",
-      "type": "general",
-      "type_label": "General Security & Blogs",
-      "published": "2026-01-28T15:00:05+00:00",
-      "published_ts": 1769612405,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "Introducing Kthena: LLM inference for the cloud native era",
-      "summary": "The Volcano community is proud to announce the launch of Kthena, a new sub-project designed for global developers and MLOps engineers. Kthena is a cloud native, high-performance system for Large Language Model (LLM) inference routing, orchestration,...",
-      "link": "https://www.cncf.io/blog/2026/01/28/introducing-kthena-llm-inference-for-the-cloud-native-era/",
-      "source": "https://www.cncf.io/feed/",
-      "type": "general",
-      "type_label": "General Security & Blogs",
-      "published": "2026-01-28T15:00:00+00:00",
-      "published_ts": 1769612400,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "Social Engineering and Microsoft SSPR: The Road to Pwnage is Paved with Good Intentions",
-      "summary": "This scenario simultaneously tests identity confirmation tooling (SSPR, MFA, Conditional Access), how users act under pressure, and the organization's ability to detect and follow-up on social engineering attacks. The post Social Engineering and Microsoft SSPR: The Road to Pwnage is Paved with Good Intentions appeared first on Black Hills Information Security, Inc. .",
-      "link": "https://www.blackhillsinfosec.com/social-engineering-and-microsoft-sspr/",
-      "source": "https://www.blackhillsinfosec.com/feed/",
-      "type": "vendors",
-      "type_label": "Vendors & Product Blogs",
-      "published": "2026-01-28T15:00:00+00:00",
-      "published_ts": 1769612400,
-      "smart_groups": [
-        "Identity / Access",
-        "Phishing / Social Engineering"
-      ],
-      "curated": false
-    },
-    {
-      "title": "WinRAR vulnerability still a go-to tool for hackers, Mandiant warns",
-      "summary": "State-sponsored hackers and financially motivated attackers continue leveraging a critical WinRAR vulnerability (CVE-2025-8088) that\u2019s been fixed over half a year ago. CVE-2025-8088 is a path traversal vulnerability that can be exploited via maliciously crafted RAR archives. \u201cThe exploit chain often involves concealing the malicious file within the ADS of a decoy file inside the archive. While the user typically views a decoy document (such as a PDF) within the archive, there are also malicious ADS \u2026 More \u2192 The post WinRAR vulnerability still a go-to tool for hackers, Mandiant warns appeared first on Help Net Security .",
-      "link": "https://www.helpnetsecurity.com/2026/01/28/winrar-vulnerability-exploited-cve-2025-8088/",
-      "source": "Help Net Security",
-      "type": "general",
-      "type_label": "General Security & Blogs",
-      "published": "2026-01-28T14:57:59+00:00",
-      "published_ts": 1769612279,
-      "smart_groups": [
-        "Curated",
-        "Ransomware",
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Data Privacy Day and Change Your Password Day",
-      "summary": "Data Privacy Day and Change Your Password Day arrive at a time when privacy concerns have shifted from niche technical debates to everyday business and personal risk. As digital services expand and data becomes increasingly distributed, the threat to privacy grows. Identity compromise, human behaviour and loss of data control now sit at the heart [\u2026] The post Data Privacy Day and Change Your Password Day appeared first on IT Security Guru .",
-      "link": "https://www.itsecurityguru.org/2026/01/28/data-privacy-day-and-change-your-password-day/?utm_source=rss&utm_medium=rss&utm_campaign=data-privacy-day-and-change-your-password-day",
-      "source": "IT Security Guru",
-      "type": "general",
-      "type_label": "General Security & Blogs",
-      "published": "2026-01-28T14:55:02+00:00",
-      "published_ts": 1769612102,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "Attack Against Poland's Grid Disrupted Communication Devices at About 30 Sites",
-      "summary": "submitted by /u/rkhunter_ [link] [comments]",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1qpdg6w/attack_against_polands_grid_disrupted/",
-      "source": "/r/cybersecurity",
-      "type": "osint",
-      "type_label": "OSINT, Communities & Subreddits",
-      "published": "2026-01-28T14:52:21+00:00",
-      "published_ts": 1769611941,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "Found some really solid free CVE labs on VantagePoint",
-      "summary": "Came across VantagePoint - https://vantagepoint.enciphers.com/ while trying out a few random labs and didn\u2019t expect much, but it\u2019s actually really good. The free labs are already worth it on their own - especially the DayZero CVE ones where you can launch recent real CVEs and mess around with them in a live setup. If you\u2019re into hands-on learning, it\u2019s definitely worth checking out. Not affiliated, just sharing \ud83d\ude42 submitted by /u/Formal-Project9920 [link] [comments]",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1qpdfiz/found_some_really_solid_free_cve_labs_on/",
-      "source": "/r/cybersecurity",
-      "type": "osint",
-      "type_label": "OSINT, Communities & Subreddits",
-      "published": "2026-01-28T14:51:37+00:00",
-      "published_ts": 1769611897,
-      "smart_groups": [
-        "Crypto / Web3"
-      ],
-      "curated": false
-    },
-    {
-      "title": "Most organizations had a third-party breach in the last year",
-      "summary": "Respondents report third party risk assessments take several months and only cover a fraction of vendors.",
-      "link": "https://www.scworld.com/news/most-organizations-had-a-third-party-breach-in-the-last-year",
-      "source": "SCM feed for Latest",
-      "type": "general",
-      "type_label": "General Security & Blogs",
-      "published": "2026-01-28T14:46:54+00:00",
-      "published_ts": 1769611614,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "Banks fear stablecoin \u2018bank run,\u2019 regulators see limited impact",
-      "summary": "Banks warn stablecoins could siphon deposits from the banking system, but policy and regulatory experts say there\u2019s little evidence of it happening yet.",
-      "link": "https://cointelegraph.com/news/banks-warn-of-stablecoin-bank-run-risk-regulators-see-limited-impact?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound",
-      "source": "Cointelegraph.com News",
-      "type": "crypto",
-      "type_label": "Crypto & Blockchain Security",
-      "published": "2026-01-28T14:45:25+00:00",
-      "published_ts": 1769611525,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "Google Chrome security advisory (AV26-060)",
-      "summary": "",
-      "link": "https://cyber.gc.ca/en/alerts-advisories/google-chrome-security-advisory-av26-060",
-      "source": "Alerts and advisories",
-      "type": "general",
-      "type_label": "General Security & Blogs",
-      "published": "2026-01-28T14:44:29+00:00",
-      "published_ts": 1769611469,
-      "smart_groups": [],
-      "curated": false
-    },
-    {
-      "title": "Veracode\u2019s platform enhancements help prevent software supply chain attacks",
-      "summary": "Veracode announced significant platform innovations introduced through the second half of 2025. Headlining the release is Package Firewall, a preventive control for software supply chains, advancing the company\u2019s mission to help organizations run secure software from code to cloud. With supply chain-related third-party breaches doubling year over year\u2014 from 15 to 30 percent according to the Verizon 2025 Data Breach Investigations Report\u2014 the need to strengthen security across the software ecosystem has never been greater. \u2026 More \u2192 The post Veracode\u2019s platform enhancements help prevent software supply chain attacks appeared first on Help Net Security .",
-      "link": "https://www.helpnetsecurity.com/2026/01/28/veracode-platform-innovations/",
-      "source": "Help Net Security",
-      "type": "general",
-      "type_label": "General Security & Blogs",
-      "published": "2026-01-28T14:41:50+00:00",
-      "published_ts": 1769611310,
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "Data Breaches / Leaks",
-        "Supply Chain / Software"
-      ],
-      "curated": true
     },
     {
       "title": "Talleres Palomares Suffers Alleged Breach According to Dark Web Reports | UpGuard",
