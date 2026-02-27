@@ -60,7 +60,7 @@ build_news_json.py
      ↓
 data/news_recent.json
      ↓
-news.html dashboard
+index.html dashboard
      ↓
 build_news_archive.py → monthly/yearly archive + signal-filtered packs
      ↓
@@ -71,7 +71,7 @@ trend.html analytics dashboard
 
 Optional:
 ```
-curated items → LLM of your choosing → briefing JSON → morning.html
+curated items → build_morning_call.py → morning_call JSON → morning.html
 ```
 
 ## High-Level Architecture
@@ -80,7 +80,7 @@ curated items → LLM of your choosing → briefing JSON → morning.html
 flowchart LR
     A[RSS Feeds] --> B[build_news_json.py]
     B --> C[data/news_recent.json]
-    C --> D[news.html Dashboard]
+    C --> D[index.html Dashboard]
 
     C --> E[build_news_archive.py]
     E --> F[data/archive/monthly & yearly]
@@ -89,8 +89,8 @@ flowchart LR
     G --> H[data/trends.json]
     H --> I[trend.html Dashboard]
 
-    C --> J[Optional: build_briefing.py]
-    J --> K[data/archive/briefing_latest.json]
+    C --> J[Optional: build_morning_call.py]
+    J --> K[data/morning_call_latest.json]
     K --> L[morning.html]
 ```
 
@@ -114,7 +114,7 @@ sequenceDiagram
 
 ```mermaid
 flowchart TD
-    A[news.html] --> B[Fetch news_recent.json]
+    A[index.html] --> B[Fetch news_recent.json]
     B --> C[Render smart groups]
     C --> D[Infinite scroll + filters]
     E[trend.html] --> F[Fetch trends.json]
@@ -206,7 +206,7 @@ The dashboard dynamically updates charts when switching windows.
 
 ## 🖥 Dashboards
 
-### 📰 `news.html`
+### 📰 `index.html`
 - Live search (updates as you type)  
 - Smart group and category filters  
 - Infinite scroll  
@@ -228,7 +228,7 @@ No AI provider is required by default.
 
 ---
 
-## 🤖 Optional: Automated Briefing (LLM-agnostic)
+## 🤖 Optional: Automated Morning Call (LLM-agnostic)
 
 S33R supports an optional module for generating a **cybersecurity daily briefing**.
 
@@ -240,8 +240,9 @@ S33R supports an optional module for generating a **cybersecurity daily briefing
 Outputs:
 
 ```
-data/archive/briefing_YYYY-MM-DD.json
-data/archive/briefing_latest.json
+data/morning_call_latest.json
+data/archive/morning_call_YYYY-MM-DD.json
+data/archive/morning_call/<YYYY>/<MM>/morning_call_YYYY-MM-DD.json
 ```
 
 Example workflow uses environment variables like:
@@ -265,8 +266,8 @@ Example workflow uses environment variables like:
 - Consolidates signal-filtered packs  
 - Rebuilds `trends.json`  
 
-### `briefing.yml` (Optional)
-- Runs an LLM-powered daily briefing if configured  
+### `morning_call.yml` (Optional)
+- Runs an LLM-powered SOC morning call if configured  
 
 All workflows run with standard GitHub Actions runners.
 
@@ -278,20 +279,26 @@ All workflows run with standard GitHub Actions runners.
 S33R/
 │
 ├── index.html
-├── news.html
 ├── archive.html
 ├── archive-overview.html
 ├── trend.html
-├── morning.html           # Optional briefing UI
+├── morning.html           # Optional morning call UI
+├── _config.yml
+├── _config.local.yml      # Local-only override (not for production)
+├── Gemfile
+├── Gemfile.lock
 │
 ├── styles.css
+├── ui.js
 │
 ├── data/
 │   ├── news_recent.json
 │   ├── trends.json
+│   ├── morning_call_latest.json
 │   └── archive/
 │       ├── yearly/
 │       ├── monthly/
+│       ├── morning_call/
 │       └── promo/
 │           └── monthly/
 │
@@ -299,7 +306,7 @@ S33R/
 │   ├── build_news_json.py
 │   ├── build_news_archive.py
 │   ├── build_trends_json.py
-│   └── build_briefing.py   # Generic LLM summarizer (optional)
+│   └── build_morning_call.py   # Optional LLM SOC brief
 │
 ├── sec_feeds.xml
 │
@@ -307,7 +314,7 @@ S33R/
     └── workflows/
         ├── update_news_json.yml
         ├── build_news_archive.yml
-        └── briefing.yml     # Optional
+        └── morning_call.yml     # Optional
 ```
 
 ---
@@ -327,13 +334,31 @@ Run pipelines manually:
 python scripts/build_news_json.py
 python scripts/build_news_archive.py
 python scripts/build_trends_json.py
+# optional:
+# python scripts/build_morning_call.py
 ```
 
-Serve locally:
+Install Jekyll dependencies:
 
 ```bash
-python -m http.server 8000
+bundle install
 ```
+
+Serve locally with Jekyll (required to process Liquid tags like `{{ ... | relative_url }}`):
+
+```bash
+bundle exec jekyll serve --config _config.yml,_config.local.yml
+```
+
+Open:
+
+```text
+http://127.0.0.1:4000/
+```
+
+Notes:
+- Do not use `python -m http.server` for this project root, because it does not render Jekyll/Liquid templates.
+- `_site/` is build output only and should not be committed.
 
 ---
 
