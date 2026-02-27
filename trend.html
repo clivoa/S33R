@@ -103,8 +103,70 @@ permalink: /trend/
       line-height: 1.45;
     }
 
+    .delta-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 0.8rem;
+      margin-top: 10px;
+    }
+
+    .delta-block {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 10px 12px;
+      background: var(--surface-2);
+    }
+
+    .delta-block h3 {
+      margin: 0 0 8px;
+      font-size: 13px;
+      color: var(--text);
+    }
+
+    .delta-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      gap: 6px;
+    }
+
+    .delta-item {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--text-2);
+      border-bottom: 1px dashed var(--line);
+      padding-bottom: 5px;
+    }
+
+    .delta-item:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+
+    .delta-up {
+      color: var(--success);
+      font-weight: 600;
+    }
+
+    .delta-down {
+      color: var(--danger);
+      font-weight: 600;
+    }
+
+    .delta-flat {
+      color: var(--muted);
+      font-weight: 600;
+    }
+
     @media (max-width: 900px) {
       .trend-grid {
+        grid-template-columns: minmax(0, 1fr);
+      }
+
+      .delta-grid {
         grid-template-columns: minmax(0, 1fr);
       }
     }
@@ -211,6 +273,27 @@ permalink: /trend/
           </p>
           <div class="chart-container small-chart">
             <canvas id="threatActorChart"></canvas>
+          </div>
+        </article>
+
+        <article class="card">
+          <h2>Delta analytics (current vs previous window)</h2>
+          <p class="trend-note">
+            Shows what increased or decreased in the selected window versus the previous period of the same size.
+          </p>
+          <div class="delta-grid">
+            <section class="delta-block">
+              <h3>Vendors</h3>
+              <ul id="delta-vendors" class="delta-list"></ul>
+            </section>
+            <section class="delta-block">
+              <h3>CVEs</h3>
+              <ul id="delta-cves" class="delta-list"></ul>
+            </section>
+            <section class="delta-block">
+              <h3>Threat actors</h3>
+              <ul id="delta-actors" class="delta-list"></ul>
+            </section>
           </div>
         </article>
       </section>
@@ -698,6 +781,52 @@ permalink: /trend/
       });
     }
 
+    function renderDeltaList(containerId, rows) {
+      const el = document.getElementById(containerId);
+      if (!el) return;
+      el.innerHTML = "";
+
+      const top = Array.isArray(rows) ? rows.slice(0, 8) : [];
+      if (!top.length) {
+        const li = document.createElement("li");
+        li.className = "delta-item";
+        li.textContent = "No data";
+        el.appendChild(li);
+        return;
+      }
+
+      top.forEach((row) => {
+        const li = document.createElement("li");
+        li.className = "delta-item";
+
+        const name = document.createElement("span");
+        name.textContent = row.name || "N/A";
+
+        const delta = Number(row.delta || 0);
+        const score = document.createElement("span");
+        score.className = delta > 0 ? "delta-up" : delta < 0 ? "delta-down" : "delta-flat";
+        if (delta > 0) {
+          score.textContent = `+${delta} (${row.current}/${row.previous})`;
+        } else {
+          score.textContent = `${delta} (${row.current}/${row.previous})`;
+        }
+
+        li.appendChild(name);
+        li.appendChild(score);
+        el.appendChild(li);
+      });
+    }
+
+    function updateDeltaPanels(win) {
+      const deltas = trendsData?.delta_analytics || {};
+      const vendors = deltas?.vendors?.[win] || [];
+      const cves = deltas?.cves?.[win] || [];
+      const actors = deltas?.threat_actors?.[win] || [];
+      renderDeltaList("delta-vendors", vendors);
+      renderDeltaList("delta-cves", cves);
+      renderDeltaList("delta-actors", actors);
+    }
+
     function updateAllCharts(win) {
       const w = getWindowSafe(win);
       currentWindow = w;
@@ -710,6 +839,7 @@ permalink: /trend/
       updateTrendChart(w);
       updateCveChart(w);
       updateThreatActorTimeline(w);
+      updateDeltaPanels(w);
     }
 
     document.addEventListener("DOMContentLoaded", () => {

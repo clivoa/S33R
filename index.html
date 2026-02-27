@@ -107,6 +107,7 @@ permalink: /
                 <option value="latest" selected>Latest first</option>
                 <option value="oldest">Oldest first</option>
                 <option value="source">Source (A–Z)</option>
+                <option value="priority">Priority score</option>
               </select>
             </div>
 
@@ -114,6 +115,13 @@ permalink: /
               <label class="checkbox-label">
                 <input id="recent-only-checkbox" type="checkbox" checked />
                 <span>Recent only (last 24 hours)</span>
+              </label>
+            </div>
+
+            <div class="filter-group recent-only-group">
+              <label class="checkbox-label">
+                <input id="high-signal-checkbox" type="checkbox" />
+                <span>High-signal only</span>
               </label>
             </div>
           </div>
@@ -198,6 +206,7 @@ permalink: /
       search: "",
       sort: "latest",
       recentOnly: true,
+      highSignalOnly: false,
       daysBack: 30,
       generatedAt: null,
     };
@@ -767,6 +776,7 @@ permalink: /
       const cat = state.category;
       const search = state.search.trim().toLowerCase();
       const recentOnly = state.recentOnly;
+      const highSignalOnly = state.highSignalOnly;
 
       const now = Date.now() / 1000;
       const ONE_DAY = 24 * 60 * 60;
@@ -802,6 +812,13 @@ permalink: /
           return false;
         }
 
+        if (highSignalOnly) {
+          const high = Array.isArray(item.smart_groups_high_confidence)
+            ? item.smart_groups_high_confidence
+            : [];
+          if (!high.length) return false;
+        }
+
         // --- filtro de busca ---
         if (search) {
           const hay = [
@@ -826,6 +843,8 @@ permalink: /
         result.sort((a, b) => (a.published_ts || 0) - (b.published_ts || 0));
       } else if (state.sort === "source") {
         result.sort((a, b) => (a.source || "").localeCompare(b.source || ""));
+      } else if (state.sort === "priority") {
+        result.sort((a, b) => (b.priority_score || 0) - (a.priority_score || 0));
       }
 
       state.filteredItems = result;
@@ -978,6 +997,12 @@ permalink: /
       const recentCheckbox = document.getElementById("recent-only-checkbox");
       recentCheckbox.addEventListener("change", () => {
         state.recentOnly = !!recentCheckbox.checked;
+        applyFilters(true);
+      });
+
+      const highSignalCheckbox = document.getElementById("high-signal-checkbox");
+      highSignalCheckbox.addEventListener("change", () => {
+        state.highSignalOnly = !!highSignalCheckbox.checked;
         applyFilters(true);
       });
 

@@ -41,6 +41,8 @@ RECENT_PATH = DATA_DIR / "news_recent.json"
 ARCHIVE_DIR = DATA_DIR / "archive"
 MONTHLY_DIR = ARCHIVE_DIR / "monthly"
 YEARLY_DIR = ARCHIVE_DIR / "yearly"
+ARCHIVE_INDEX_PATH = ARCHIVE_DIR / "archive_index.json"
+ARCHIVE_GLOBAL_INDEX_PATH = ARCHIVE_DIR / "index.json"
 
 PROMO_DIR = ARCHIVE_DIR / "promo"
 PROMO_MONTHLY_DIR = PROMO_DIR / "monthly"
@@ -165,6 +167,33 @@ def ensure_timestamp(item: Dict[str, Any]) -> float:
 
     item["published_ts"] = dt.timestamp()
     return item["published_ts"]
+
+
+def _summarize_items(items: List[Dict[str, Any]]) -> Dict[str, Any]:
+    total = len(items)
+    if total == 0:
+        return {
+            "item_count": 0,
+            "range_start": None,
+            "range_end": None,
+        }
+
+    min_ts = None
+    max_ts = None
+    for it in items:
+        ts = ensure_timestamp(it)
+        if min_ts is None or ts < min_ts:
+            min_ts = ts
+        if max_ts is None or ts > max_ts:
+            max_ts = ts
+
+    range_start = datetime.fromtimestamp(min_ts, tz=timezone.utc).isoformat() if min_ts is not None else None
+    range_end = datetime.fromtimestamp(max_ts, tz=timezone.utc).isoformat() if max_ts is not None else None
+    return {
+        "item_count": total,
+        "range_start": range_start,
+        "range_end": range_end,
+    }
 
 
 # ---------- Bucketização por mês/ano ----------
@@ -487,6 +516,131 @@ def process_morning_call_files() -> None:
         print(f"[INFO] Morning call movido: {src} -> {dest}")
 
 
+def build_archive_indices() -> None:
+    """
+    Gera índices globais para navegação rápida no frontend:
+      - data/archive/archive_index.json
+      - data/archive/index.json (alias com mesmo conteúdo)
+    """
+    years_map: Dict[int, Dict[str, Any]] = {}
+
+    # 1) Resumos mensais
+    for monthly_file in sorted(MONTHLY_DIR.glob("*/*.json")):
+        try:
+            year_str = monthly_file.parent.name
+            file_name = monthly_file.stem  # YYYY-MM
+            if "-" not in file_name:
+                continue
+            _, month_str = file_name.split("-", 1)
+            year = int(year_str)
+            month = int(month_str)
+        except (ValueError, TypeError):
+            continue
+
+        items = load_json_list(monthly_file)
+        month_summary = _summarize_items(items)
+
+        y = years_map.setdefault(
+            year,
+            {
+                "year": year,
+                "item_count": 0,
+                "range_start": None,
+                "range_end": None,
+                "months": [],
+                "yearly_path": f"archive/yearly/{year}.json",
+            },
+        )
+
+        y["months"].append(
+            {
+                "month": f"{month:02d}",
+                "item_count": month_summary["item_count"],
+                "range_start": month_summary["range_start"],
+                "range_end": month_summary["range_end"],
+                "path": f"archive/monthly/{year}/{year}-{month:02d}.json",
+            }
+        )
+        y["item_count"] += int(month_summary["item_count"])
+
+        # Atualiza range anual a partir dos meses
+        start = month_summary["range_start"]
+        end = month_summary["range_end"]
+        if start and (not y["range_start"] or start < y["range_start"]):
+            y["range_start"] = start
+        if end and (not y["range_end"] or end > y["range_end"]):
+            y["range_end"] = end
+
+    # 2) Ajusta metadados com base no yearly, se disponível
+    for yearly_file in sorted(YEARLY_DIR.glob("*.json")):
+        try:
+            year = int(yearly_file.stem)
+        except ValueError:
+            continue
+
+        items = load_json_list(yearly_file)
+        summary = _summarize_items(items)
+        y = years_map.setdefault(
+            year,
+            {
+                "year": year,
+                "item_count": 0,
+                "range_start": None,
+                "range_end": None,
+                "months": [],
+                "yearly_path": f"archive/yearly/{year}.json",
+            },
+        )
+
+        if summary["item_count"] > y["item_count"]:
+            y["item_count"] = int(summary["item_count"])
+        if summary["range_start"] and (not y["range_start"] or summary["range_start"] < y["range_start"]):
+            y["range_start"] = summary["range_start"]
+        if summary["range_end"] and (not y["range_end"] or summary["range_end"] > y["range_end"]):
+            y["range_end"] = summary["range_end"]
+
+    # Ordena anos/meses
+    years = []
+    for year in sorted(years_map.keys()):
+        row = years_map[year]
+        row["months"] = sorted(row["months"], key=lambda m: m["month"])
+        years.append(row)
+
+    # Totais e latest month
+    total_months = sum(len(y["months"]) for y in years)
+    total_items = sum(int(y["item_count"]) for y in years)
+
+    latest = None
+    for y in sorted(years, key=lambda r: r["year"], reverse=True):
+        if not y["months"]:
+            continue
+        last_month = sorted(y["months"], key=lambda m: m["month"], reverse=True)[0]
+        latest = {
+            "year": y["year"],
+            "month": last_month["month"],
+            "item_count": int(last_month["item_count"]),
+            "path": last_month["path"],
+        }
+        break
+
+    payload = {
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "latest": latest,
+        "totals": {
+            "years": len(years),
+            "months": total_months,
+            "items": total_items,
+        },
+        "years": years,
+    }
+
+    ARCHIVE_DIR.mkdir(parents=True, exist_ok=True)
+    ARCHIVE_INDEX_PATH.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    ARCHIVE_GLOBAL_INDEX_PATH.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    print(f"[INFO] Índice de archive gerado: {ARCHIVE_INDEX_PATH}")
+    print(f"[INFO] Índice global gerado: {ARCHIVE_GLOBAL_INDEX_PATH}")
+
+
 # ---------- Função principal ----------
 
 def main() -> None:
@@ -498,7 +652,10 @@ def main() -> None:
     print(f"[INFO] Carregados {len(recent_items)} itens recentes de {RECENT_PATH}")
 
     if not recent_items:
-        print("[INFO] Nenhum item recente para arquivar. Encerrando.")
+        print("[INFO] Nenhum item recente para arquivar. Atualizando apenas índices/auxiliares.")
+        process_morning_call_files()
+        process_promo_filtered_files()
+        build_archive_indices()
         return
 
     # Buckets por mês e ano
@@ -539,6 +696,7 @@ def main() -> None:
     # --------- Processa arquivos promo_filtered_* ---------
     process_morning_call_files()
     process_promo_filtered_files()
+    build_archive_indices()
 
     print("[INFO] build_news_archive.py concluído com sucesso.")
 

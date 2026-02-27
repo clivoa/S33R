@@ -218,12 +218,12 @@ permalink: /archive-overview/
   <div id="chart-tooltip"></div>
 
   <script>
-    const candidateYears = [2023, 2024, 2025, 2026, 2027];
     const monthLabelsShort = ["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"];
     const monthNames = ["January","February","March","April","May","June","July","August","September","October","November","December"];
     const DATA_BASE_URL = "{{ '/data' | relative_url }}";
 
     const yearCache = {};
+    let archiveIndex = null;
     let currentYear = null;
     let availableYears = [];
     let monthlyCountsForTooltip = [];
@@ -237,7 +237,7 @@ permalink: /archive-overview/
 
     async function fetchJSON(path) {
       try {
-        const res = await fetch(path);
+        const res = await fetch(path, { cache: "no-store" });
         if (!res.ok) return null;
         return await res.json();
       } catch {
@@ -245,22 +245,62 @@ permalink: /archive-overview/
       }
     }
 
+    async function loadArchiveIndex() {
+      const primary = await fetchJSON(`${DATA_BASE_URL}/archive/archive_index.json`);
+      if (primary && Array.isArray(primary.years)) {
+        archiveIndex = primary;
+        return archiveIndex;
+      }
+      const fallback = await fetchJSON(`${DATA_BASE_URL}/archive/index.json`);
+      if (fallback && Array.isArray(fallback.years)) {
+        archiveIndex = fallback;
+        return archiveIndex;
+      }
+      archiveIndex = null;
+      return null;
+    }
+
     async function loadYears() {
       const select = document.getElementById("year-select");
       let latest = null;
 
-      for (const y of candidateYears) {
-        const data = await fetchJSON(`${DATA_BASE_URL}/archive/yearly/${y}.json`);
-        if (Array.isArray(data) && data.length > 0) {
-          yearCache[y] = data;
-          availableYears.push(y);
+      const idx = await loadArchiveIndex();
+      if (idx && Array.isArray(idx.years) && idx.years.length > 0) {
+        const years = idx.years
+          .map((y) => Number(y.year))
+          .filter((y) => Number.isInteger(y))
+          .sort((a, b) => a - b);
 
+        years.forEach((y) => {
+          availableYears.push(y);
           const opt = document.createElement("option");
           opt.value = y;
           opt.textContent = y;
           select.appendChild(opt);
-          latest = y;
+        });
+
+        if (idx.latest?.year) {
+          latest = Number(idx.latest.year);
+        } else if (years.length) {
+          latest = years[years.length - 1];
         }
+      } else {
+        const current = new Date().getUTCFullYear();
+        for (let y = current + 1; y >= current - 12; y--) {
+          const data = await fetchJSON(`${DATA_BASE_URL}/archive/yearly/${y}.json`);
+          if (Array.isArray(data) && data.length > 0) {
+            yearCache[y] = data;
+            availableYears.push(y);
+            latest = y;
+          }
+        }
+
+        availableYears.sort((a, b) => a - b).forEach((y) => {
+          const opt = document.createElement("option");
+          opt.value = y;
+          opt.textContent = y;
+          select.appendChild(opt);
+        });
       }
 
       if (latest) {

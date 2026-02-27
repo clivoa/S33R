@@ -86,6 +86,18 @@ TRENDING_TERMS = {
     "credential stuffing": "Credential stuffing",
 }
 
+# Malware families / clusters usados para correlação Actor x Malware
+MALWARE_KEYWORDS = {
+    "Ransomware": ["ransomware", "raas", "double extortion", "locker"],
+    "Infostealer": ["infostealer", "stealer", "credential stealer", "password stealer"],
+    "Loader": ["loader", "dropper", "downloader"],
+    "Backdoor": ["backdoor", "implant", "remote access trojan", "rat"],
+    "Wiper": ["wiper", "data wiper", "disk wiper"],
+    "Botnet": ["botnet", "c2 bot", "command-and-control bot"],
+    "Banking Trojan": ["banking trojan", "banker malware"],
+    "Cryptominer": ["cryptominer", "crypto miner", "mining malware"],
+}
+
 # =========================================================
 #  Threat actors
 # =========================================================
@@ -653,6 +665,70 @@ def within_window(entry_dt: datetime, now: datetime, days: int) -> bool:
     return entry_dt >= (now - timedelta(days=days))
 
 
+def within_previous_window(entry_dt: datetime, now: datetime, days: int) -> bool:
+    current_start = now - timedelta(days=days)
+    previous_start = now - timedelta(days=2 * days)
+    return previous_start <= entry_dt < current_start
+
+
+def counter_to_sorted_list(cnt: Counter, limit: int = 0) -> List[List[Any]]:
+    rows = [[k, int(v)] for k, v in cnt.most_common()]
+    if limit > 0:
+        return rows[:limit]
+    return rows
+
+
+def pair_counter_to_rows(
+    cnt: Counter,
+    left_key: str,
+    right_key: str,
+    limit: int = 100,
+) -> List[Dict[str, Any]]:
+    rows = []
+    for (left, right), n in cnt.most_common(limit):
+        rows.append({left_key: left, right_key: right, "count": int(n)})
+    return rows
+
+
+def build_delta_rows(current: Counter, previous: Counter, limit: int = 25) -> List[Dict[str, Any]]:
+    keys = set(current.keys()) | set(previous.keys())
+    rows: List[Dict[str, Any]] = []
+
+    for name in keys:
+        cur = int(current.get(name, 0))
+        prev = int(previous.get(name, 0))
+        if cur == 0 and prev == 0:
+            continue
+
+        delta = cur - prev
+        if prev > 0:
+            pct_change = round((delta / prev) * 100.0, 2)
+        elif cur > 0:
+            pct_change = None
+        else:
+            pct_change = 0.0
+
+        direction = "flat"
+        if delta > 0:
+            direction = "up"
+        elif delta < 0:
+            direction = "down"
+
+        rows.append(
+            {
+                "name": name,
+                "current": cur,
+                "previous": prev,
+                "delta": delta,
+                "pct_change": pct_change,
+                "direction": direction,
+            }
+        )
+
+    rows.sort(key=lambda r: (abs(r["delta"]), r["current"], r["name"]), reverse=True)
+    return rows[:limit]
+
+
 # =========================================================
 #  Main
 # =========================================================
@@ -668,6 +744,17 @@ def main() -> None:
     per_window_vendors: Dict[str, Counter] = {w: Counter() for w in WINDOWS}
     per_window_trends: Dict[str, Counter] = {w: Counter() for w in WINDOWS}
     per_window_cves: Dict[str, Counter] = {w: Counter() for w in WINDOWS}
+    per_window_actors: Dict[str, Counter] = {w: Counter() for w in WINDOWS}
+
+    # Janela anterior para delta analytics
+    prev_window_vendors: Dict[str, Counter] = {w: Counter() for w in WINDOWS}
+    prev_window_cves: Dict[str, Counter] = {w: Counter() for w in WINDOWS}
+    prev_window_actors: Dict[str, Counter] = {w: Counter() for w in WINDOWS}
+
+    # Co-ocorrência
+    co_cve_vendor: Dict[str, Counter] = {w: Counter() for w in WINDOWS}
+    co_actor_malware: Dict[str, Counter] = {w: Counter() for w in WINDOWS}
+    co_category_category: Dict[str, Counter] = {w: Counter() for w in WINDOWS}
 
     # Threat actors
     threat_actor_daily_counter = Counter()          # date_str -> qtd notícias com actor
@@ -705,9 +792,11 @@ def main() -> None:
 
         # 2) Extração de nomes concretos para top_actors
         name_matches = set(m.group(0) for m in THREAT_ACTOR_NAME_REGEX.finditer(text))
+        actor_hits = set()
         for raw_name in name_matches:
             canonical = CANONICAL_TA_MAP.get(raw_name.lower(), raw_name)
             threat_actor_daily_names[date_only][canonical] += 1
+            actor_hits.add(canonical)
 
         # Categorias
         cats = get_categories(entry)
@@ -732,9 +821,24 @@ def main() -> None:
         # CVEs
         cve_hits = set(m.upper() for m in CVE_REGEX.findall(text))
 
+        # Malware labels para correlação Actor x Malware
+        malware_hits = set()
+        for label, patterns in MALWARE_KEYWORDS.items():
+            for pat in patterns:
+                if pat.lower() in text:
+                    malware_hits.add(label)
+                    break
+
         # Aplicar em cada janela
         for win, days in WINDOWS.items():
             if not within_window(dt, now, days):
+                if within_previous_window(dt, now, days):
+                    for v in vendor_hits:
+                        prev_window_vendors[win][v] += 1
+                    for cve in cve_hits:
+                        prev_window_cves[win][cve] += 1
+                    for actor in actor_hits:
+                        prev_window_actors[win][actor] += 1
                 continue
 
             for c in cats:
@@ -752,6 +856,25 @@ def main() -> None:
             for cve in cve_hits:
                 per_window_cves[win][cve] += 1
 
+            for actor in actor_hits:
+                per_window_actors[win][actor] += 1
+
+            # Co-occurrence: CVE x Vendor
+            for cve in cve_hits:
+                for vendor in vendor_hits:
+                    co_cve_vendor[win][(cve, vendor)] += 1
+
+            # Co-occurrence: Actor x Malware
+            for actor in actor_hits:
+                for malware in malware_hits:
+                    co_actor_malware[win][(actor, malware)] += 1
+
+            # Co-occurrence: Category x Category (pares únicos por item)
+            unique_cats = sorted(set(cats))
+            for i in range(len(unique_cats)):
+                for j in range(i + 1, len(unique_cats)):
+                    co_category_category[win][(unique_cats[i], unique_cats[j])] += 1
+
         processed += 1
 
     print(f"[INFO] Processed entries: {processed}, skipped (no date): {skipped_no_date}")
@@ -761,9 +884,6 @@ def main() -> None:
         {"date": d, "count": int(daily_counter[d])}
         for d in sorted(daily_counter.keys())
     ]
-
-    def counter_to_sorted_list(cnt: Counter) -> List[List[Any]]:
-        return [[k, int(v)] for k, v in cnt.most_common()]
 
     categories_out = {
         win: {k: int(v) for k, v in per_window_categories[win].most_common()}
@@ -795,6 +915,11 @@ def main() -> None:
         for win in WINDOWS
     }
 
+    top_actors_out = {
+        win: counter_to_sorted_list(per_window_actors[win])
+        for win in WINDOWS
+    }
+
     # Threat actor timeline com top_actors para tooltip
     threat_actor_daily = []
     for d in sorted(threat_actor_daily_counter.keys()):
@@ -807,6 +932,36 @@ def main() -> None:
             "top_actors": top_names,
         })
 
+    cooccurrence_out = {
+        "cve_vendor": {
+            win: pair_counter_to_rows(co_cve_vendor[win], "cve", "vendor", limit=100)
+            for win in WINDOWS
+        },
+        "actor_malware": {
+            win: pair_counter_to_rows(co_actor_malware[win], "actor", "malware", limit=100)
+            for win in WINDOWS
+        },
+        "category_category": {
+            win: pair_counter_to_rows(co_category_category[win], "left_category", "right_category", limit=120)
+            for win in WINDOWS
+        },
+    }
+
+    delta_analytics = {
+        "vendors": {
+            win: build_delta_rows(per_window_vendors[win], prev_window_vendors[win], limit=25)
+            for win in WINDOWS
+        },
+        "cves": {
+            win: build_delta_rows(per_window_cves[win], prev_window_cves[win], limit=25)
+            for win in WINDOWS
+        },
+        "threat_actors": {
+            win: build_delta_rows(per_window_actors[win], prev_window_actors[win], limit=25)
+            for win in WINDOWS
+        },
+    }
+
     output = {
         "generated_at": now.isoformat(),
         "windows": list(WINDOWS.keys()),
@@ -816,7 +971,10 @@ def main() -> None:
         "vendors": vendors_out,
         "trending_terms": trending_terms_out,
         "top_cves": top_cves_out,
+        "top_actors": top_actors_out,
         "threat_actor_daily": threat_actor_daily,
+        "cooccurrence": cooccurrence_out,
+        "delta_analytics": delta_analytics,
     }
 
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
