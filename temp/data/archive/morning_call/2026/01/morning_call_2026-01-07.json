@@ -1,0 +1,133 @@
+{
+  "generated_at": "2026-01-07T06:51:27.803345+00:00",
+  "analysis_date": "2026-01-07",
+  "model": "gpt-5.1",
+  "window_hours": 24,
+  "source_file": "data/news_recent.json",
+  "source_generated_at": "2026-01-07T05:52:22.832386+00:00",
+  "source_days_back": 30,
+  "source_total_items": 6643,
+  "total_items_in_window_all": 247,
+  "total_items_in_window_curated": 62,
+  "morning_call_markdown": "### Executive Summary\n- Active exploitation of legacy D-Link DSL routers and an unfixed TOTOLINK EX200 flaw highlight continued targeting of edge/consumer networking gear that may sit near or behind our perimeter.\n- Multiple critical software vulnerabilities (IBM API Connect, n8n, AdonisJS, macOS TCC bypass, Android Dolby codec) could impact internet-facing services, internal automation, and endpoints if in use.\n- Phishing and social-engineering campaigns (fake DocuSign, fake BSOD/DCRat, commodity loaders, Office Assistant/plugin abuse, AI-driven identity attacks) remain high-velocity and increasingly sophisticated.\n\n---\n\n### High-priority items (immediate attention)\n\n- **Legacy SOHO router exploits (D-Link DSL, TOTOLINK EX200)**\n  - What happened: Critical RCE in legacy D-Link DSL routers is under active exploitation; CERT/CC warns TOTOLINK EX200 has an unpatched full-takeover flaw.\n  - Why it matters operationally: Exposed small-office/branch/remote-worker devices can be converted into footholds or proxy nodes into our environment and used to blend malicious traffic.\n  - Recommended immediate actions:  \n    - Inventory and confirm we do NOT rely on these devices for branches, vendors, home-employee gateways; if found, treat as compromised-by-default and plan replacement/segmentation.  \n    - On perimeter sensors, flag inbound connections that appear to originate from consumer D-Link/TOTOLINK IP ranges for extra scrutiny and possible throttling.\n\n- **Critical IBM API Connect vulnerability (CVE-2025-13915)**\n  - What happened: Singapore’s cyber agency warned of a critical IBM API Connect flaw with exploit details available.\n  - Why it matters operationally: API gateways are Tier-0 for our digital banking/partner APIs; compromise can lead to auth bypass, data exfiltration, or traffic manipulation.\n  - Recommended immediate actions:  \n    - Confirm with infra/app teams whether IBM API Connect is in use (on-prem or cloud); if yes, verify patch level vs. CVE-2025-13915 and exposure to the internet.  \n    - Until confirmed patched/mitigated, increase monitoring on API Connect hosts (WAF/NGFW logs, unusual admin logins, config changes, spikes in 5xx/4xx).\n\n- **Automation platform and web framework RCEs (n8n & AdonisJS)**\n  - What happened: New critical vulnerabilities in n8n (automation/workflow tool) and AdonisJS (Node.js framework) allow arbitrary command execution and file writes on servers.\n  - Why it matters operationally: These tools, if used by dev/ops or for internal integrations, can provide easy server takeover and lateral movement under application context.\n  - Recommended immediate actions:  \n    - Ask DevOps/platform teams to urgently confirm any deployed n8n and AdonisJS-based apps; if found, check vendor advisories for fixed versions and schedule emergency patching.  \n    - Until patched, restrict network access (IP allowlists/VPN-only), increase logging, and monitor for suspicious child processes spawned by Node.js (bash/powershell/curl/wget).\n\n- **Endpoint exploitation risks: macOS TCC bypass + Android Dolby codec RCE**\n  - What happened: New macOS TCC bypass allows access to protected user data; Android January patch fixes critical Dolby codec remote code execution flaw.\n  - Why it matters operationally: Compromise of exec/staff mobile and macOS endpoints can lead to credential theft and sensitive data leakage used for fraud or business email compromise.\n  - Recommended immediate actions:  \n    - For managed macOS: confirm latest OS/security updates are enforced; monitor EDR for apps unexpectedly requesting/accessing contacts, calendars, and files (esp. non-corporate apps).  \n    - For Android corporate fleet: ensure January security update rollout is tracked and enforced for high-risk roles; emphasize no sideloading of media apps/codecs.\n\n- **Phishing + malware delivery campaigns (fake DocuSign, fake BSOD/DCRat, commodity loaders, Office Assistant abuse)**\n  - What happened: Multiple campaigns use fake DocuSign + identity theft forms, fake booking emails leading to BSOD pages dropping DCRat, commodity loaders in targeted emails, and Office Assistant abused to push a malicious browser plugin.\n  - Why it matters operationally: These represent current TTPs used to gain initial access and establish RAT/persistence, likely to be re-themed for financial services users (invoices, statements, HR docs).\n  - Recommended immediate actions:  \n    - Tune email security to aggressively inspect DocuSign-style, hotel/booking, and “IT support/BSOD” themed emails with links to external sites; block HTML attachments where feasible.  \n    - For today’s hunts, pivot in EDR for DCRat or generic RAT behaviors (new persistence entries, suspicious browser extensions, PowerShell spawned from Office/email clients).\n\n---\n\n### Monitoring & detection recommendations\n\n- **Network edge & suspicious source infrastructure (SOHO routers, residential proxies, botnets like Kimwolf) – T1090, T1133**\n  - Firewall/NGFW and proxy logs: flag inbound traffic and authentication attempts from consumer ISP broadband ranges and residential proxy networks, especially repeated login failures or scanning.\n\n- **API and web-tier exploitation (IBM API Connect, n8n, AdonisJS, Open WebUI bug) – T1190, T1199**\n  - WAF, reverse proxies, web server logs: look for spikes in unusual HTTP verbs, serialized object payloads, long query strings, or new error patterns (500/403) on admin/API endpoints.  \n  - Monitor for unexpected new admin accounts/API keys or configuration changes on API gateways and automation platforms.\n\n- **Email-borne loaders, DCRat, and fake BSOD campaigns – T1566.002, T1204, T1055**\n  - Email gateway + EDR: hunt for recent emails with themes “DocuSign”, “booking/Hotel”, “invoice”, “IT error/BSOD” followed shortly by execution of scripts (VBS, JS, HTA, PowerShell) from user downloads/temp folders.  \n  - Watch for browser processes spawning non-browser children (cmd, powershell, mshta, wscript).\n\n- **Office/assistant and browser plugin abuse – T1204, T1176, T1059**\n  - Application and EDR logs: alert on Office or helper tools dropping/launching installers or browser extensions, or modifying browser configuration files; monitor for new extensions on corporate browsers outside approved catalog.\n\n- **Identity attacks and AD-focused operations (AI-accelerated identity attacks, Jasper Sleet-style campaigns) – T1110, T1078, T1556**\n  - IdP/AD logs: monitor for password spray/slow bruteforce, anomalous MFA prompts, and logins from atypical geos/devices; correlate with Microsoft guidance on recent insider-access campaigns.  \n  - Focus on privileged groups (Domain Admins, service accounts) for unusual sign-in patterns and group membership changes.\n\n- **macOS TCC bypass and sensitive data access – T1518, T1056, T1552**\n  - macOS EDR/logs: detect non-standard apps accessing contacts, calendar, camera, or documents; alert on new launch agents/daemons created by those apps and on unauthorized access to password/keychain stores.\n\n- **Android ransomware/malware and mobile exploitation – T1476, T1404**\n  - MDM/endpoint telemetry: enforce app allowlisting; flag installation of apps from unknown sources or with newly added media/codec capabilities right before abnormal network connections or SMS activity.\n\n- **Brute-force tool “Brutus” against Fortinet services – T1110.003**\n  - VPN/SSL gateway and firewall logs: increase alerting on repeated failed logins to Fortinet-facing services, especially from new IPs or Tor/hosting providers; rate-limit and temporarily block aggressive sources.\n\n---\n\n### Medium-term follow-ups\n\n- **Comprehensive exposure review for edge and API components**\n  - Conduct an internal census of all API gateways, workflow automation (n8n or equivalents), Node.js frameworks (AdonisJS), and any IBM API Connect instances; align with current patch baselines and hardening standards.\n\n- **SOHO/remote access security policy**\n  - Update remote worker and third-party connectivity standards to prohibit unsupported consumer-grade routers (e.g., legacy D-Link/TOTOLINK) and require ISP router hardening or corporate-managed devices.\n\n- **Email and user awareness refresh for emerging lures**\n  - Update phishing simulations and training content to include DocuSign-style chains, fake booking/BSOD scenarios, and identity-theft “questionnaires”; brief helpdesk to recognize these patterns in user reports.\n\n- **Identity security and AD hardening**\n  - Incorporate insights from AI-driven identity attack research into AD hardening roadmap (tiered admin model, PAWs, strict service-account hygiene, conditional access, and MFA anomalies monitoring).\n\n- **Mobile and macOS endpoint baselines**\n  - Review and, if needed, tighten macOS privacy/TCC policies and mobile OS minimum-version requirements; ensure high-risk staff devices are on fast-track patch groups with clear reporting.\n\n- **CISA KEV expansion alignment**\n  - Map the newly expanded KEV catalog against our asset inventory to prioritize remediation, especially for internet-facing systems and high-value business applications.",
+  "highlights": [
+    {
+      "title": "Identity security planning for 2026 is shifting under pressure",
+      "link": "https://www.helpnetsecurity.com/2026/01/07/identity-security-outlook-2026-report/",
+      "source": "Help Net Security",
+      "published": "2026-01-07T05:00:06+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Cloud / SaaS"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Ongoing Attacks Exploiting Critical RCE Vulnerability in Legacy D-Link DSL Routers",
+      "link": "https://thehackernews.com/2026/01/active-exploitation-hits-legacy-d-link.html",
+      "source": "The Hacker News",
+      "published": "2026-01-07T04:31:00+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Cybersecurity hat kein Budget-Problem",
+      "link": "https://www.csoonline.com/article/4107963/cybersecurity-hat-kein-budget-problem.html",
+      "source": "CSO Online",
+      "published": "2026-01-07T04:00:00+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Web / API Security",
+        "Identity / Access"
+      ],
+      "curated": true
+    },
+    {
+      "title": "NordVPN Hack Claim Firmly Refuted by NordVPN",
+      "link": "https://databreaches.net/2026/01/06/nordvpn-hack-claim-firmly-refuted-by-nordvpn/?pk_campaign=feed&pk_kwd=nordvpn-hack-claim-firmly-refuted-by-nordvpn",
+      "source": "DataBreaches.net",
+      "published": "2026-01-07T00:56:14+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "HackerOne 'ghosted' me for months over $8,500 bug bounty, says researcher",
+      "link": "https://go.theregister.com/feed/www.theregister.com/2026/01/07/hackerone_ghosted_researcher/",
+      "source": "The Register - Security",
+      "published": "2026-01-07T00:17:19+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Cloud / SaaS"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Welcome to the Microsoft Security Community!",
+      "link": "https://techcommunity.microsoft.com/t5/microsoft-security-community/welcome-to-the-microsoft-security-community/ba-p/4471927",
+      "source": "Microsoft Security Blog (TechCommunity)",
+      "published": "2026-01-06T23:38:16+00:00",
+      "smart_groups": [
+        "Curated",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "Cloud / SaaS",
+        "Crypto / Web3"
+      ],
+      "curated": true
+    },
+    {
+      "title": "HIPAA Compliance and Breach Communications: Helpful Tips for SMBs",
+      "link": "https://databreaches.net/2026/01/06/hipaa-compliance-and-breach-communications-helpful-tips-for-smbs/?pk_campaign=feed&pk_kwd=hipaa-compliance-and-breach-communications-helpful-tips-for-smbs",
+      "source": "DataBreaches.net",
+      "published": "2026-01-06T22:44:43+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Flow details December exploit that led to $3.9M in losses due to counterfeit tokens",
+      "link": "https://cointelegraph.com/news/flow-details-december-exploit-3-9m-counterfeit-token-losses?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound",
+      "source": "Cointelegraph.com News",
+      "published": "2026-01-06T22:05:31+00:00",
+      "smart_groups": [
+        "Curated",
+        "Exploit / PoC"
+      ],
+      "curated": true
+    },
+    {
+      "title": "When Seeing Isn’t Believing: AI Images, Breaking News and the New Misinformation Playbook",
+      "link": "https://blog.knowbe4.com/when-seeing-isnt-believing-ai-images-breaking-news-and-the-new-misinformation-playbook",
+      "source": "KnowBe4 Blog",
+      "published": "2026-01-06T21:45:00+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "CERT/CC warns of critical, unfixed vulnerability in TOTOLINK EX200",
+      "link": "https://securityaffairs.com/186597/security/cert-cc-warns-of-critical-unfixed-vulnerability-in-totolink-ex200.html",
+      "source": "Security Affairs",
+      "published": "2026-01-06T20:28:03+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    }
+  ]
+}

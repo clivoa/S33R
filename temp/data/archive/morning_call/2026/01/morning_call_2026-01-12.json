@@ -1,0 +1,132 @@
+{
+  "generated_at": "2026-01-12T06:55:17.109633+00:00",
+  "analysis_date": "2026-01-12",
+  "model": "gpt-5.1",
+  "window_hours": 24,
+  "source_file": "data/news_recent.json",
+  "source_generated_at": "2026-01-12T05:55:14.903941+00:00",
+  "source_days_back": 30,
+  "source_total_items": 6237,
+  "total_items_in_window_all": 103,
+  "total_items_in_window_curated": 25,
+  "morning_call_markdown": "### Executive Summary\n- New Windows 11 25H2 startup technique (“EDRStartupHinder”) can block AV/EDR at boot, creating blind spots for early-stage malware and ransomware.\n- Public PoCs and detection content continue to emerge (Trend Micro Apex Central RCE, Kerberos Golden Ticket via Velociraptor, AWS Kiro IDE RCE), raising exploitation risk for unpatched or misconfigured systems.\n- Reported “Instagram 17M data leak” appears to be re-used scraped data plus an external password-reset workflow issue; still relevant for phishing and credential-stuffing against staff and customers.\n\n---\n\n### High-priority items (immediate attention)\n\n- **Windows 11 25H2 startup EDR-kill technique (“EDRStartupHinder”)**\n  - What happened: Research shows a method to block Windows Defender and other EDRs from starting properly on Windows 11 25H2, effectively disabling protections at boot.\n  - Why it matters operationally: Creates stealth windows where malware/ransomware can run without endpoint visibility or prevention, impacting our ability to detect early-stage attacks.\n  - Recommended immediate actions for the SOC today:  \n    - Add checks in hunts for endpoints where Defender/EDR services fail to start, are repeatedly stopped, or show abnormal startup delays; raise tickets to IR for any clusters.  \n    - Coordinate with endpoint team to confirm 25H2 rollout status and ensure tamper-protection / secure boot / driver signing policies are enforced; temporarily flag newly upgraded 25H2 hosts as higher risk in triage.\n\n- **Active RCE / exploitation PoCs (Trend Micro Apex Central RCE, AWS Kiro IDE RCE)**\n  - What happened: Public PoCs and discussion around RCE in Trend Micro Apex Central and AWS Kiro IDE increase the chance of opportunistic and targeted exploitation.\n  - Why it matters operationally: These are management / dev tools typically with high privilege and network reach; compromise could be a direct stepping stone to domain admin or cloud takeover.\n  - Recommended immediate actions for the SOC today:  \n    - Verify with platform owners whether Apex Central and AWS Kiro IDE (or similar AWS dev IDEs) are in use and patched; treat any internet-facing management consoles as high-risk.  \n    - Intensify monitoring of these assets: unusual logins, command execution, webshell-like behavior, or outbound connections to unfamiliar IPs; raise any anomaly as P1.\n\n- **Kerberos Golden Ticket detection content (Velociraptor)**\n  - What happened: New guidance released on detecting Kerberos Golden Ticket attacks using Velociraptor endpoint telemetry.\n  - Why it matters operationally: Golden Tickets (T1558.001) are common in ransomware and post-exploitation in AD; existing detections may be incomplete or noisy.\n  - Recommended immediate actions for the SOC today:  \n    - Ensure existing AD detection rules for suspicious Kerberos TGT/TGS activity are enabled and tuned; monitor for unusual ticket lifetimes, non-standard encryption, or service tickets from rare accounts.  \n    - If we use Velociraptor or similar tools, align or update hunts accordingly and schedule a focused AD ticket anomaly hunt for this week.\n\n- **Instagram “17M account leak” & password-reset issue**\n  - What happened: Multiple reports of a 17M Instagram leak; Meta/Instagram state no core breach, but confirm an external-party password-reset process issue that has been fixed and that exposed data is largely historical scraping.\n  - Why it matters operationally: Data (even scraped) plus “breach” headlines will drive phishing, scams, and credential-stuffing attempts against staff and customers, especially those reusing passwords.\n  - Recommended immediate actions for the SOC today:  \n    - Increase vigilance for phishing campaigns referencing Instagram or mass “account reset” lures in corporate email and customer-facing channels.  \n    - Watch for spikes in failed logins / credential stuffing against our public portals and VPNs; coordinate with fraud/online channels for joint monitoring.\n\n- **Ransomware & resilience emphasis (multiple articles)**\n  - What happened: Ongoing coverage of ransomware, resilience, and downtime emphasizes that business impact is often from availability loss rather than pure data theft.\n  - Why it matters operationally: For a critical financial institution, even short interruptions to payment, trading, or customer channels are high-impact; we must detect pre-encryption activity early.\n  - Recommended immediate actions for the SOC today:  \n    - Maintain strict triage priority for events that indicate initial access or lateral movement (new admin tools, abnormal RDP, SMB, PowerShell, scheduled tasks).  \n    - Validate that ransomware-specific detection content (shadow copy deletion, mass file rename/encrypt, abnormal backup actions) is enabled and not generating unreviewed noise.\n\n---\n\n### Monitoring & detection recommendations\n\n- **EDR/AV startup interference (EDRStartupHinder) – EDR logs, Windows Event Logs**  \n  - Hunt for repeated service control events for AV/EDR at boot (Service Control Manager 7000–7036, Defender/EDR-specific events) and protection services in “stopped” or “disabled” state unexpectedly.  \n  - Map to ATT&CK: T1562.001 (Disable or Modify Tools), T1547 (Boot or Logon Autostart).\n\n- **Trend Micro Apex Central / other security consoles – Web server, appliance, and OS logs**  \n  - Monitor for anomalous HTTP requests to admin paths, new admin accounts, unexpected config changes, or outbound connections from management servers to unknown IPs (C2 / exfil).  \n  - ATT&CK: T1190 (Exploit Public-Facing Application), T1105 (Ingress Tool Transfer).\n\n- **AWS IDE / cloud dev tools (AWS Kiro IDE RCE) – CloudTrail, VPC Flow Logs, IDE server logs**  \n  - Look for new IAM roles/policies, sudden spikes in API calls from IDE-related principals, or code execution patterns outside normal dev hours.  \n  - ATT&CK: T1078 (Valid Accounts), T1068 (Exploitation for Privilege Escalation) in cloud context.\n\n- **Kerberos Golden Ticket & AD abuse – DC security logs, SIEM, EDR on DCs**  \n  - Monitor for: TGTs with unusually long lifetimes, logons from disabled/accounts with no interactive logon pattern, spikes of 4769/4768 events from unusual hosts, and DCs making outbound SMB/RDP to atypical servers.  \n  - ATT&CK: T1558.001 (Golden Ticket), T1078 (Valid Accounts).\n\n- **Phishing and credential-stuffing around Instagram news – Email security, web auth logs, WAF**  \n  - Tighten detection for messages with Instagram/Meta “password reset” or “breach” themes; monitor customer/staff portals for increased failed logins from same IP / ASN and sudden IP diversity per account.  \n  - ATT&CK: T1566 (Phishing), T1110.001 (Password Guessing), T1110.004 (Credential Stuffing).\n\n- **Ransomware pre-encryption behavior – EDR, backup systems, file servers**  \n  - Hunt for: mass file modifications/renames from single host, vssadmin / wbadmin usage, stopping of backup/AV services, creation of scheduled tasks or run keys by non-admin users.  \n  - ATT&CK: T1486 (Data Encrypted for Impact), T1490 (Inhibit System Recovery).\n\n- **Identity / access anomalies – IdP, VPN, PAM logs**  \n  - Watch for impossible travel, new MFA enrollments from untrusted devices, service accounts used for interactive logon, and VPN sessions from unusual geos or TOR/VPN providers.  \n  - ATT&CK: T1078 (Valid Accounts), T1556 (Modify Authentication Process).\n\n- **Cloud & SaaS monitoring (general PoC and RCE activity) – CloudTrail, SaaS audit logs**  \n  - Review high-privileged admin actions (app registration, API token creation, SSO changes) and anomalous OAuth consents; correlate with any known PoC-related products we run.  \n  - ATT&CK: T1098 (Account Manipulation), T1528 (Steal Application Access Token).\n\n---\n\n### Medium-term follow-ups\n\n- **Windows 11 25H2 hardening plan**  \n  - Work with endpoint engineering to review security baselines for 25H2, including secure boot, driver signing, Defender tamper protection, and startup protection policies; document SOC playbook for “EDR missing/disabled” scenarios.\n\n- **Patch and exposure review for management and security tools**  \n  - Confirm patch levels, network exposure, and MFA/enrollment posture for Trend Micro Apex Central, cloud IDEs, and other admin consoles; aim for internal-only access via PAM/jump hosts where possible.\n\n- **Kerberos / AD security posture assessment**  \n  - Schedule a joint review (SOC + IAM) of AD: KRBTGT rotation cadence, constrained delegation, tiered admin model, and DC EDR coverage; integrate Golden Ticket detection content into standard hunts.\n\n- **Ransomware resilience and downtime playbooks**  \n  - Update and test runbooks for rapid isolation of infected segments, backup restoration, and business-continuity for payment/trading systems; ensure SOC knows “who to call” for system-level shutdown decisions.\n\n- **Phishing & awareness around “breach in the news” events**  \n  - Coordinate with communications and HR to remind staff not to reuse personal passwords for corporate accounts and to be cautious with breach-themed lures; update customer-facing fraud messaging if needed.\n\n- **Tooling enhancements (Velociraptor & detection engineering)**  \n  - Evaluate integration/expansion of Velociraptor or similar tools into the SOC stack for advanced hunts; prioritize development of detection-as-code for identity and EDR-tampering techniques.",
+  "highlights": [
+    {
+      "title": "EDRStartupHinder: Blocks Antivirus & EDR at Windows 11 25H2 Startup (Defender Included)",
+      "link": "https://gbhackers.com/edrstartuphinder-blocks-antivirus-edr-at-windows-11/",
+      "source": "GBHackers News",
+      "published": "2026-01-12T05:08:55+00:00",
+      "smart_groups": [
+        "Curated",
+        "Exploit / PoC",
+        "Windows / Microsoft"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Downtime pushes resilience planning into security operations",
+      "link": "https://www.helpnetsecurity.com/2026/01/12/absolute-ciso-resilience-planning/",
+      "source": "Help Net Security",
+      "published": "2026-01-12T05:00:37+00:00",
+      "smart_groups": [
+        "Curated",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "Crypto / Web3"
+      ],
+      "curated": true
+    },
+    {
+      "title": "India’s government denies it plans to demand smartphone source code",
+      "link": "https://go.theregister.com/feed/www.theregister.com/2026/01/12/india_mobile_security/",
+      "source": "The Register - Security",
+      "published": "2026-01-12T04:37:04+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "SBOM erklärt: Was ist eine Software Bill of Materials?",
+      "link": "https://www.csoonline.com/article/3491814/sbom-erklart-was-ist-eine-software-bill-of-materials.html",
+      "source": "CSO Online",
+      "published": "2026-01-12T03:51:00+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Cloud / SaaS",
+        "Malware / Payloads",
+        "Identity / Access",
+        "Crypto / Web3"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Client-side encrypted file sharing with Argon2id and AES-256-GCM",
+      "link": "https://www.reddit.com/r/netsec/comments/1qahx46/clientside_encrypted_file_sharing_with_argon2id/",
+      "source": "/r/netsec",
+      "published": "2026-01-12T01:49:38+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Easily decode and defang IOCs in source code",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1qagplu/easily_decode_and_defang_iocs_in_source_code/",
+      "source": "/r/cybersecurity",
+      "published": "2026-01-12T00:56:38+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Meta admits to Instagram password reset mess, denies data leak",
+      "link": "https://go.theregister.com/feed/www.theregister.com/2026/01/11/infosec_news_in_brief/",
+      "source": "The Register - Security",
+      "published": "2026-01-11T23:43:34+00:00",
+      "smart_groups": [
+        "Curated",
+        "Data Breaches / Leaks"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Sharing an open-source alternative to Burp Suite",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1qad9hj/sharing_an_opensource_alternative_to_burp_suite/",
+      "source": "/r/cybersecurity",
+      "published": "2026-01-11T22:32:19+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Instagram’s “17 Million User Data Leak” Was Just Scraped Records from 2022",
+      "link": "https://hackread.com/instagram-user-data-leak-scraped-records-2022/",
+      "source": "HackRead",
+      "published": "2026-01-11T22:24:14+00:00",
+      "smart_groups": [
+        "Curated",
+        "Data Breaches / Leaks"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Instagram denies breach amid claims of 17 million account data leak",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1qaa035/instagram_denies_breach_amid_claims_of_17_million/",
+      "source": "/r/cybersecurity",
+      "published": "2026-01-11T20:24:29+00:00",
+      "smart_groups": [
+        "Curated",
+        "Data Breaches / Leaks"
+      ],
+      "curated": true
+    }
+  ]
+}

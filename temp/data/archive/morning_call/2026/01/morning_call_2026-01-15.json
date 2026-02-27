@@ -1,0 +1,135 @@
+{
+  "generated_at": "2026-01-15T06:51:33.243679+00:00",
+  "analysis_date": "2026-01-15",
+  "model": "gpt-5.1",
+  "window_hours": 24,
+  "source_file": "data/news_recent.json",
+  "source_generated_at": "2026-01-15T05:56:48.214984+00:00",
+  "source_days_back": 30,
+  "source_total_items": 6971,
+  "total_items_in_window_all": 400,
+  "total_items_in_window_curated": 105,
+  "morning_call_markdown": "### Executive Summary\n- Critical vulnerabilities in Microsoft products (Patch Tuesday, one actively exploited Windows 0‑day) and Fortinet FortiSIEM/FortiFone now have public exploit code – priority for exposure checks and patching.\n- Ransomware operations continue to evolve (DeadLock using Polygon smart contracts, DragonForce decryptor, large Kyowon breach, sector-disrupting hospital incident), reinforcing need for early-stage intrusion detection and tested recovery.\n- Multiple campaigns abusing legitimate infrastructure and software (AsyncRAT via Cloudflare, c-ares DLL sideloading, real software download backdoors, fake PayPal + Magecart) increase difficulty of simple IOC-based blocking; behavior-based detections are key.\n\n---\n\n### High-priority items (immediate attention)\n\n- **Microsoft January 2026 Patch Tuesday – 114+ flaws, including actively exploited Windows 0‑day**  \n  - What: Microsoft released fixes for 114+ vulnerabilities, with at least one Windows bug added to CISA KEV and reported as actively exploited.  \n  - Why: Unpatched endpoints/servers in our estate could already be targeted for initial access or priv‑esc.  \n  - Recommended immediate actions:  \n    - Confirm with patch/endpoint teams the deployment status for January 2026 patches on internet-facing systems, domain controllers, and high-value servers; flag gaps.  \n    - In EDR/SIEM, hunt for recent exploit-like telemetry tied to the specific KEV CVE (see internal vuln bulletin) – abnormal crashes of core Windows services, unusual child processes from system processes (T1068).\n\n- **Fortinet FortiSIEM critical RCE (CVE-2025-64155) and related Fortinet flaws – exploit code public**  \n  - What: Critical unauthenticated command injection/RCE in FortiSIEM via specially crafted TCP packets; additional critical issues in FortiFone; exploit PoC publicly released.  \n  - Why: Compromise of FortiSIEM (or EMS/FortiFone if used) would give attackers deep visibility and pivoting into our monitoring and network environment.  \n  - Recommended immediate actions:  \n    - Verify if any FortiSIEM/FortiFone/FortiClient EMS or related Fortinet management systems exist in our environment or key vendors; confirm version and patch status today.  \n    - If exposed externally or unpatched, push for emergency mitigations (access-control lists, IP allowlisting, segmentation) and enhance monitoring of those hosts for abnormal admin logins and shell/process activity (T1190, T1059).\n\n- **Browser and client-side patching – Chrome 144, Firefox 147, Adobe, and c‑ares DLL sideloading abuse**  \n  - What: High-severity browser vulnerabilities (Chrome/Firefox), multiple Adobe RCEs, and active abuse of c‑ares DLL sideloading to deploy malware.  \n  - Why: Drive‑by and document-based attacks against staff (especially finance and customer-facing teams) can lead to credential theft and footholds, bypassing perimeter controls.  \n  - Recommended immediate actions:  \n    - Confirm with desktop engineering that current browser and Adobe patches (latest Chrome 144/Firefox 147, Adobe advisories) are in deployment; prioritize high-risk user groups.  \n    - In EDR, add or review rules for suspicious DLL loads and sideloading patterns (unexpected DLLs loaded by business apps, T1574.002) and for abnormal child processes from browsers and Adobe readers (T1203).\n\n- **Ransomware and extortion evolution – DeadLock, Kyowon breach, hospital outage, DragonForce**  \n  - What: DeadLock ransomware is hiding C2 in Polygon smart contracts; major Kyowon data theft and Belgian hospital outage show continued critical-impact incidents; DragonForce ransomware has been dissected and decryptors published for ESXi/Windows.  \n  - Why: Techniques to hide C2 in Web3 infra and attacks on critical services mirror likely tactics against financials; decryptor intel can assist recovery if hit by DragonForce.  \n  - Recommended immediate actions:  \n    - Ensure ransomware playbooks and runbooks are at hand for the shift; verify backups and EDR containment procedures are well-known to on-call staff.  \n    - In SIEM, prioritize alerts for: anomalous encryption behavior on file servers, ESXi management plane access anomalies, new outbound connections to unusual domains/IPs and crypto infrastructures (T1486, T1071); add DragonForce/DeadLock intel from threat feed if available.\n\n- **Payment and credential theft – new Magecart web skimming + fake PayPal notices with RMM deployment**  \n  - What: New Magecart campaigns skimming card data from checkout pages; separate campaign uses fake PayPal emails to steal credentials and install remote management tools.  \n  - Why: Direct threat to customer payment data (if any exposed web flows) and to staff accounts through credential theft + RMM-based remote access.  \n  - Recommended immediate actions:  \n    - Coordinate with web/app teams to confirm that payment pages are monitored for integrity (script inventory, Subresource Integrity where possible) and that any third‑party JS is tightly controlled.  \n    - Tighten monitoring on RMM tool installs/executions (e.g., AnyDesk, ScreenConnect, custom RMMs) and new outbound connections after execution (T1105); raise user awareness for current PayPal-themed phishing.\n\n---\n\n### Monitoring & detection recommendations\n\n- **Windows exploitation & priv‑esc (Patch Tuesday / KEV CVE)**  \n  - Log sources: EDR, Windows Security/Event Logs, AD logs.  \n  - Monitor for: abnormal child processes from LSASS, winlogon, svchost, and crashes followed by shell spawn; anomalous local admin group changes or new service installs (T1068, T1543).\n\n- **Fortinet and network appliances (FortiSIEM/FortiFone/EMS, PAN DoS, ASUS/Broadcom flaw)**  \n  - Log sources: appliance logs, firewall logs, NetFlow, perimeter IDS/IPS.  \n  - Monitor for: spikes in malformed traffic to Fortinet/Palo Alto/ASUS device management ports, failed logins, config changes outside change windows, or unexpected admin logins from untrusted IPs (T1190).\n\n- **Ransomware early-stage behaviors (DeadLock, DragonForce, general trend)**  \n  - Log sources: EDR, file server logs, ESXi/vSphere logs, backup system logs.  \n  - Monitor for: rapid file renames/encrypt-like I/O, shadow copy deletions (vssadmin, wmic), ESXi shell enablement, backup deletion or job tampering, and new scheduled tasks or startup items (T1486, T1490, T1053).\n\n- **Malware delivery via legitimate channels (AsyncRAT via Cloudflare, real downloads hiding backdoors, c‑ares sideloading)**  \n  - Log sources: web proxy/DNS, EDR, TLS inspection where available.  \n  - Monitor for: HTTP(S) to unusual Cloudflare-backed hostnames, newly downloaded installers spawning unusual child processes or side-loading non-standard DLLs from temp/user-writable paths (T1105, T1204, T1574.002).\n\n- **Phishing & credential theft (fake PayPal, PLUGGYAPE charity lures, VVS stealer, North Korea “interview” lures)**  \n  - Log sources: Secure email gateway, Defender for Office 365, proxy, IdP logs.  \n  - Monitor for: spikes in PayPal-, charity-, or job-interview-themed emails with links/attachments; logins from atypical geos/device fingerprints following such emails (T1566, T1110, T1078).\n\n- **Web applications and payment flows (Magecart, AI-generated insecure code, Elastic/Magecart/AI-ML libs RCE)**  \n  - Log sources: WAF, web server logs, code repo/CI logs.  \n  - Monitor for: unauthorized JS changes on checkout pages (checksum/sig changes), injection indicators (unexpected external JS domains), anomalous POSTs with card-like patterns to third‑party endpoints (T1059, T1554–style web content tampering).\n\n- **Cloud & SaaS abuse (VoidLink on Linux cloud servers, Salesforce Aura misconfig, AsyncRAT/Cloudflare)**  \n  - Log sources: Cloud provider logs (CloudTrail, Azure Activity), Linux syslogs, Salesforce audit logs.  \n  - Monitor for: new external-facing Linux workloads running unknown binaries, unexpected Salesforce Aura configuration changes/exposed endpoints, and suspicious API keys or access tokens in logs (T1059.004, T1526).\n\n- **Remote access and RMM abuse (fake PayPal RMM deployment, RedVDS context)**  \n  - Log sources: EDR, endpoint inventory, VPN/remote access logs.  \n  - Monitor for: first-time installations/executions of RMM tools, RDP/SSH from unusual sources, VPN sessions followed immediately by lateral movement or data staging (T1219, T1021).\n\n---\n\n### Medium-term follow-ups\n\n- **Comprehensive Microsoft and third-party patch posture review**  \n  - Validate that January 2026 Microsoft patches, Chrome/Firefox/Adobe updates, and Elastic/Spring CLI fixes are in patch cycles; prioritize internet-facing and high-value assets.\n\n- **Fortinet and other security infrastructure hardening**  \n  - Conduct config and exposure review for Fortinet gear, Palo Alto firewalls, and SIEM appliances; ensure admin interfaces are internal-only, MFA-protected, and monitored.\n\n- **Ransomware preparedness and tabletop**  \n  - Update ransomware playbooks to include new TTPs (Web3-based C2 like DeadLock; ESXi targeting; extortion-only models); schedule a tabletop focused on recovery of payment and core banking systems.\n\n- **Third-party and supply-chain visibility**  \n  - Based on multiple studies and new tools (SpyCloud supply-chain identity risk, AI adoption risk gaps), work with vendor risk management to ensure key providers patch Fortinet, Microsoft, and web stack issues and share incident telemetry as part of contracts.\n\n- **Identity and AD/NTLM hardening**  \n  - Follow Microsoft AD hardening guidance (disabling NTLM, ADCS offline root CA best practices, SCCM NTLM relay research) and integrate into our long-term identity security roadmap.\n\n- **Secure development and AI-assisted coding governance**  \n  - In light of studies showing insecure AI-generated code and AI/ML library RCE, refine secure coding standards, CI/CD checks, and code-review requirements for AI-assisted development, especially for customer-facing and payment-processing apps.",
+  "highlights": [
+    {
+      "title": "CISOs flag gaps in third-party risk management",
+      "link": "https://www.helpnetsecurity.com/2026/01/15/panorays-cisos-ai-vendor-risk/",
+      "source": "Help Net Security",
+      "published": "2026-01-15T05:30:09+00:00",
+      "smart_groups": [
+        "Curated",
+        "Ransomware",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Manhattan DA Urges Lawmakers to Strengthen Crypto Enforcement Tools",
+      "link": "https://decrypt.co/354689/manhattan-da-urges-lawmakers-strengthen-crypto-enforcement",
+      "source": "Decrypt",
+      "published": "2026-01-15T04:59:28+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Palo Alto Networks Firewall Vulnerability Allows Unauthenticated Attackers to Trigger Denial of Service",
+      "link": "https://cybersecuritynews.com/palo-alto-networks-firewall-dos-vulnerability/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-01-15T04:01:41+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Understanding the enterprise data lifecycle",
+      "link": "https://jisasoftech.com/understanding-the-enterprise-data-lifecycle/",
+      "source": "JISA Softech",
+      "published": "2026-01-15T03:28:56+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Microsoft SQL Server Vulnerability Allows Attackers to Elevate Privileges over a Network",
+      "link": "https://cybersecuritynews.com/microsoft-sql-server-eol-vulnerability/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-01-15T03:00:27+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Active Directory Hardening Series - Part 8 – Disabling NTLM",
+      "link": "https://techcommunity.microsoft.com/t5/core-infrastructure-and-security/active-directory-hardening-series-part-8-disabling-ntlm/ba-p/4485782",
+      "source": "Core Infrastructure and Security Blog",
+      "published": "2026-01-15T01:45:23+00:00",
+      "smart_groups": [
+        "Curated",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Windows / Microsoft",
+        "Cloud / SaaS",
+        "Network / OT / ICS",
+        "Crypto / Web3"
+      ],
+      "curated": true
+    },
+    {
+      "title": "U.S. Weighs Expanding Private Companies’ Role in Cyberwarfare",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1qd5gza/us_weighs_expanding_private_companies_role_in/",
+      "source": "/r/cybersecurity",
+      "published": "2026-01-15T01:08:59+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Over 9M estimated to be impacted by Kyowon Group hack",
+      "link": "https://www.scworld.com/brief/over-9m-estimated-to-be-impacted-by-kyowon-group-hack",
+      "source": "SCM feed for Latest",
+      "published": "2026-01-15T00:49:19+00:00",
+      "smart_groups": [
+        "Curated",
+        "Ransomware"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Exposed Target source code legitimate, employees say",
+      "link": "https://www.scworld.com/brief/exposed-target-source-code-legitimate-employees-say",
+      "source": "SCM feed for Latest",
+      "published": "2026-01-15T00:46:51+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "AsyncRAT campaign exploits Cloudflare services to hide attacks",
+      "link": "https://www.scworld.com/brief/asyncrat-campaign-exploits-cloudflare-services-to-hide-attacks",
+      "source": "SCM feed for Latest",
+      "published": "2026-01-15T00:38:47+00:00",
+      "smart_groups": [
+        "Curated",
+        "Exploit / PoC",
+        "Cloud / SaaS",
+        "Malware / Payloads"
+      ],
+      "curated": true
+    }
+  ]
+}

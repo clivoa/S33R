@@ -1,0 +1,141 @@
+{
+  "generated_at": "2026-01-10T06:46:38.222200+00:00",
+  "analysis_date": "2026-01-10",
+  "model": "gpt-5.1",
+  "window_hours": 24,
+  "source_file": "data/news_recent.json",
+  "source_generated_at": "2026-01-10T05:47:12.047925+00:00",
+  "source_days_back": 30,
+  "source_total_items": 6641,
+  "total_items_in_window_all": 256,
+  "total_items_in_window_curated": 75,
+  "morning_call_markdown": "### Executive Summary\n- Critical RCEs in Trend Micro Apex Central, VMware ESXi/VM escape chains, HPE OneView, SmarterMail, Cisco ISE and Undertow HTTP are being actively exploited or have PoCs available – prioritize identification and patch/mitigation.\n- Ransomware operators (incl. Fog ransomware) and state-linked actors are chaining large exploit sets and buying initial access (esp. VPN / edge and virtualization) before payload deployment; expect more intrusion attempts via perimeter and remote access.\n- Financially-motivated campaigns abusing messaging platforms (WhatsApp worm, banking trojans, Android “ghost tapped” fraud, news-themed lures) continue to target online-banking users; tighten monitoring for account takeover and anomalous transactions.\n\n---\n\n### High-priority items (immediate attention)\n\n- **Trend Micro Apex Central critical RCE (CVSS 9.8, on‑prem Windows)**\n  - What happened: Multiple advisories highlight a critical RCE in Trend Micro Apex Central on-prem with patches released.\n  - Why it matters: Central security console compromise = domain-wide code execution and tooling tampering; highly attractive to ransomware and APTs.\n  - Recommended immediate actions:  \n    - Identify any Apex Central instances (on-prem, Windows) and confirm patch level; if unpatched, raise to critical and track.  \n    - Increase monitoring on Apex servers: unusual service restarts, new admin users, web access from untrusted IPs, suspicious child processes from Apex services.\n\n- **VMware ESXi / VM escape zero-day exploitation (China-linked, MAESTRO toolkit)**\n  - What happened: Multiple reports show China-linked actors used ESXi zero-days and MAESTRO toolkit for VM escapes up to a year pre-disclosure.\n  - Why it matters: Hypervisor compromise bypasses host EDR and exposes all VMs, including critical banking workloads and VDI.\n  - Recommended immediate actions:  \n    - Inventory ESXi/vSphere/Workstation/related VMware stacks; verify against latest VMware security advisories and emergency patches.  \n    - Hunt for signs of hypervisor abuse: unexpected ESXi management login sources, creation of unknown VMs/snapshots, tools.exe-equivalent processes, abnormal east‑west traffic between VMs and ESXi management IPs.\n\n- **HPE OneView max‑severity bug under active exploitation**\n  - What happened: CISA flagged a maximum‑severity HPE OneView vulnerability being actively exploited.\n  - Why it matters: OneView manages servers and infrastructure; compromise gives deep access to hardware and potentially management networks.\n  - Recommended immediate actions:  \n    - Confirm whether HPE OneView is in use; if so, check version vs CISA KEV / HPE advisories and ensure patches or compensating controls.  \n    - Restrict management plane exposure (VPN-only, IP allowlists); enable detailed logging and alert on logins from unusual IPs and any config/template changes.\n\n- **Ransomware campaigns leveraging 240+ exploits & Fog ransomware via compromised VPNs**\n  - What happened: Reports show actors using large exploit sets across internet-facing apps before ransomware deployment; Fog ransomware specifically abuses compromised VPN credentials.\n  - Why it matters: Increases chance of opportunistic compromise across perimeter (VPN, mail, WAF, web apps), especially if patches lag or MFA is weak.\n  - Recommended immediate actions:  \n    - Review VPN logs for anomalous logins (impossible travel, new devices, legacy protocols) and enforce/verify MFA on all remote access accounts.  \n    - Align external-facing services against current KEV / top exploited CVEs; prioritize emergency patching/mitigation on any unpatched remote‑RCE edge services.\n\n- **Mail / web stack and HTTP-layer vulnerabilities with PoC (SmarterMail, Undertow HTTP, OWASP CRS bypass)**\n  - What happened: PoCs released for SmarterMail RCE; Undertow HTTP session hijack vuln reported; OWASP CRS charset validation bypass disclosed.\n  - Why it matters: These sit in or in front of web/mail apps; exploitation can lead to initial access, session hijack, WAF bypass and data theft.\n  - Recommended immediate actions:  \n    - Identify any SmarterMail, Undertow-based Java apps, or ModSecurity/OWASP CRS-driven WAFs; confirm patch level and/or deploy vendor rules/workarounds.  \n    - Add temporary rules to WAF/IDS for known exploit patterns (if vendor rules available) and increase scrutiny of anomalous web errors, auth anomalies, and spikes in 5xx/4xx on critical apps.\n\n---\n\n### Monitoring & detection recommendations\n\n- **Ransomware pre-deployment exploitation (240+ exploits, Fog ransomware, VMware & edge devices)**  \n  - Log sources: Perimeter firewalls, WAF, VPN, IDS/IPS, ESXi/vCenter logs, EDR.  \n  - Focus: Repeated 404/500s followed by success on same URL, webshell-like process creation (cmd.exe/powershell.exe from web servers), anomalous VPN logins (T1078, T1133, T1190).\n\n- **Apex Central and other security/management consoles (Trend Micro, HPE OneView, Cisco ISE)**  \n  - Log sources: Application logs for consoles, Windows event logs, syslog, network flows around management subnets.  \n  - Focus: New/changed admin accounts, configuration exports, unexpected outbound connections from consoles, service binaries modified or spawning shells (T1059, T1105).\n\n- **Virtualization stack compromise (VMware ESXi / VM escape)**  \n  - Log sources: ESXi/vCenter, hypervisor audit logs, storage logs, east‑west network telemetry.  \n  - Focus: Unplanned snapshots, cloning, tools configuration changes, direct connections from ESXi to unusual external IPs, anomalous management login times (T1068, T1078).\n\n- **Messaging / social malware and banking trojans (WhatsApp worm/Astaroth, xRAT, fake WinRAR site)**  \n  - Log sources: EDR, DNS/proxy, secure web gateway, email gateways.  \n  - Focus: New binaries spawned by browsers, archive installers or WhatsApp desktop; unusual DNS to newly registered domains; process trees where messaging clients spawn script interpreters or LOLBins (T1204, T1566, T1105).\n\n- **Account takeover / mobile-banking fraud (Android “ghost tapped” attack, pig-butchering, banking trojans)**  \n  - Log sources: Online banking transaction logs, authentication telemetry, fraud systems, mobile app server logs.  \n  - Focus: New devices + high‑value transactions, device fingerprint changes mid‑session, repeated failed 2FA followed by success from different IP, multiple accounts from same device (T1110, T1078).\n\n- **AI / agent abuse and AI‑integrated apps (ZombieAgent, attacks on AI deployments)**  \n  - Log sources: API gateways, AI application logs, web server logs, IdP.  \n  - Focus: Unusually long or complex prompts, mass data extraction behavior (large sequential queries), access to sensitive internal connectors from non-privileged users (T1114, T1552, T1555 where applicable).\n\n- **WAF / OWASP CRS bypass & Undertow session hijack**  \n  - Log sources: WAF logs, web server logs, application logs.  \n  - Focus: Requests with odd charset/encoding headers, repeated failed then successful logins without proper MFA, session tokens reused from multiple IPs/geos (T1185, T1550).\n\n- **General initial access market activity (esp. AU/NZ-focused but globally relevant)**  \n  - Log sources: AD/IdP, VPN, RDP gateways, endpoint auth logs.  \n  - Focus: Dormant accounts suddenly active, logins from known proxy/VPN ASNs, lateral RDP/SMB shortly after first login from external IP (T1078, T1133, T1021).\n\n---\n\n### Medium-term follow-ups\n\n- **Comprehensive exposure review of edge and management systems**  \n  - Build/refresh inventory of internet-facing and management-plane systems (VPNs, mail gateways, WAFs, ESXi, OneView, ISE, security consoles); compare against KEV and recent VMware/Trend Micro/HPE/Cisco advisories.\n\n- **Harden remote access and identity for ransomware resistance**  \n  - Ensure phishing-resistant MFA on all privileged and VPN accounts; review split-tunnel policies; tighten conditional access for admin roles; align with identity-focused ransomware TTPs.\n\n- **Virtualization and backup hardening**  \n  - Implement least-privilege on vCenter/ESXi, segregate management networks, enforce secure logging; validate offline/immutable backups and hypervisor-compromise scenarios in IR playbooks.\n\n- **WAF / API security and AI/agent governance**  \n  - Update WAF/CRS baselines; add specific rules for charset and encoding anomalies; review security of AI integrations (prompt injection protections, data access controls, logging requirements).\n\n- **User and customer awareness (financial fraud and social engineering)**  \n  - Coordinate with fraud/communications to remind customers and staff about WhatsApp/Telegram investment scams, pig‑butchering, Android overlay attacks, and fake software download sites.\n\n- **Detection engineering refresh based on “week in vulns / 100+ PoCs”**  \n  - Use current PoC lists (Cyble, etc.) to tune IDS/EDR rules and blocklists for top exploited CVEs relevant to our stack; prioritize detections for remote‑RCE paths before full patch rollout.",
+  "highlights": [
+    {
+      "title": "Cybercriminals Exploit Maduro Arrest News to Spread Backdoor Malware",
+      "link": "https://gbhackers.com/cybercriminals-exploit-maduro-news-spread-malware/",
+      "source": "GBHackers News",
+      "published": "2026-01-10T05:07:19+00:00",
+      "smart_groups": [
+        "Curated",
+        "Exploit / PoC",
+        "Malware / Payloads",
+        "Phishing / Social Engineering"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Trend Micro patches critical flaws in its Apex Central software",
+      "link": "https://www.csoonline.com/article/4115151/trend-micro-patches-critical-flaws-in-its-apex-central-software.html",
+      "source": "CSO Online",
+      "published": "2026-01-10T00:46:18+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Windows / Microsoft",
+        "Cloud / SaaS"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Identity & Beyond: 2026 Incident Response Predictions",
+      "link": "https://www.cybereason.com/blog/identity-beyond-2026-incident-response-predictions",
+      "source": "Blog",
+      "published": "2026-01-09T22:54:46+00:00",
+      "smart_groups": [
+        "Curated",
+        "Ransomware",
+        "Exploit / PoC",
+        "Malware / Payloads"
+      ],
+      "curated": true
+    },
+    {
+      "title": "2nd set of eyes on CivicPlus platform Vulns",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1q8mu6d/2nd_set_of_eyes_on_civicplus_platform_vulns/",
+      "source": "/r/cybersecurity",
+      "published": "2026-01-09T22:44:20+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Network / OT / ICS"
+      ],
+      "curated": true
+    },
+    {
+      "title": "ZombieAgent ChatGPT attack shows persistent data leak risks of AI agents",
+      "link": "https://www.csoonline.com/article/4115110/zombieagent-chatgpt-attack-shows-persistent-data-leak-risks-of-ai-agents.html",
+      "source": "CSO Online",
+      "published": "2026-01-09T22:40:20+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Malware / Payloads",
+        "Data Breaches / Leaks"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Welcome to the Microsoft Security Community!",
+      "link": "https://techcommunity.microsoft.com/t5/microsoft-security-community/welcome-to-the-microsoft-security-community/ba-p/4471927",
+      "source": "Microsoft Security Blog (TechCommunity)",
+      "published": "2026-01-09T22:08:37+00:00",
+      "smart_groups": [
+        "Curated",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "Cloud / SaaS",
+        "Crypto / Web3"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Nasdaq, CME Group join forces to launch Nasdaq-CME Crypto Index",
+      "link": "https://cointelegraph.com/news/nasdaq-cme-group-nasdaq-cme-crypto-index?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound",
+      "source": "Cointelegraph.com News",
+      "published": "2026-01-09T21:40:40+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Crypto / Web3"
+      ],
+      "curated": true
+    },
+    {
+      "title": "CVE-2026-0830 - Command Injection in Kiro GitLab Merge Request Helper",
+      "link": "https://aws.amazon.com/security/security-bulletins/rss/2026-001-aws/",
+      "source": "Latest Bulletins",
+      "published": "2026-01-09T21:25:49+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Cloud / SaaS"
+      ],
+      "curated": true
+    },
+    {
+      "title": "How hackers are fighting back against ICE surveillance tech",
+      "link": "https://go.theregister.com/feed/www.theregister.com/2026/01/09/hackers_fight_back_against_ice/",
+      "source": "The Register - Security",
+      "published": "2026-01-09T21:03:42+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Show: Anchor – local cryptographic proof of file integrity (offline)",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1q8jcid/show_anchor_local_cryptographic_proof_of_file/",
+      "source": "/r/cybersecurity",
+      "published": "2026-01-09T20:29:06+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Windows / Microsoft"
+      ],
+      "curated": true
+    }
+  ]
+}

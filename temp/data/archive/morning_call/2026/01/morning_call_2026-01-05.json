@@ -1,0 +1,133 @@
+{
+  "generated_at": "2026-01-05T06:56:02.125130+00:00",
+  "analysis_date": "2026-01-05",
+  "model": "gpt-5.1",
+  "window_hours": 24,
+  "source_file": "data/news_recent.json",
+  "source_generated_at": "2026-01-05T06:00:28.881015+00:00",
+  "source_days_back": 30,
+  "source_total_items": 6169,
+  "total_items_in_window_all": 102,
+  "total_items_in_window_curated": 16,
+  "morning_call_markdown": "### Executive Summary\n- No single new must-patch CVE or global campaign surfaced in the last 24h, but several items reinforce common weak points: cloud config, identity, and data protection.\n- Discussions and tooling around AI, OSINT (automated dorking), and exploit/0‑day ecosystems highlight increasing offensive automation and data exposure risk.\n- A recent government data‑exposure incident and renewed focus on attack datasets and forensics are a reminder to tighten our own data mapping, monitoring and IR readiness.\n\n---\n\n### High-priority items (immediate attention)\n\n- **Cloud misconfiguration and identity abuse (Items [1], [2], [15])**  \n  - What: Articles on cloud misconfig and federated identity management underscore frequent real-world abuse paths via IdP and role mis‑assignment.  \n  - Why it matters: Our sector relies heavily on SaaS and cloud; misconfigured trust, tokens, or roles are a primary route to business email compromise and data theft (T1078, T1550).  \n  - Recommended immediate actions:  \n    - Today: Review last 48h of cloud IdP logs for anomalous SSO sign-ins, consent grants, and privilege escalations; ensure alerts are firing on new global admin / privileged role grants and risky sign-ins.  \n\n- **Automated Google dorking / OSINT tooling (Item [3])**  \n  - What: Release of “DorkSearch PRO” to automate Google dorks and OSINT discovery of exposed assets.  \n  - Why it matters: Increases attacker ability to quickly find misconfigured cloud buckets, debug portals, test systems, and leaked documents tied to our brand/domains.  \n  - Recommended immediate actions:  \n    - Today: Run a quick asset exposure check (security team, not L1) for our primary domains (open indexes, misconfigured storage, test portals); flag any discovered external assets to engineering for takedown / hardening.  \n\n- **Growing use of AI and automation in security tooling and recon (Items [13], [14])**  \n  - What: Discussions and tools around AI for vuln detection / scanning (including Nmap integration) show maturing offensive and defensive automation.  \n  - Why it matters: Adversaries can scale recon and vulnerability discovery faster; noisy but broad scans against our perimeter and internal ranges may increase.  \n  - Recommended immediate actions:  \n    - Today: Check perimeter WAF/IDS and firewall logs for spikes in generic scanning (Nmap-like signatures, unusual user agents) and new 4xx/5xx patterns; validate rate-limiting and blocking actions are correctly triggered on excessive probing.  \n\n- **Data exposure incident at public agency (Item [10])**  \n  - What: Illinois Department of Human Services tightened map security after a data incident involving exposed sensitive information.  \n  - Why it matters: Similar misconfig of internal/external dashboards, mapping tools, or analytics portals in our environment could leak client or transaction data without “classic” intrusion.  \n  - Recommended immediate actions:  \n    - Today: Identify any internet-exposed dashboards/maps/BI tools; verify access control (auth required, no open directories, no PII in public tiles); raise a quick ticket if you see unauthenticated or weakly protected endpoints in scans.  \n\n- **Threat actor tradecraft and breach TTPs (ShinyHunters honeypot, general newsletter / 4n6 roundup) (Items [5], [11], [15])**  \n  - What: Reporting on ShinyHunters being trapped in a honeypot and broader weekly threat/TTP roundups.  \n  - Why it matters: ShinyHunters and similar data-theft groups rely on reused initial access methods (phishing, SSO abuse, credential stuffing) and bulk data exfiltration that map well to our monitoring stack.  \n  - Recommended immediate actions:  \n    - Today: Re-validate that DLP / outbound proxies are alerting on abnormal large data transfers to cloud storage and anonymizers; ensure high-sensitivity alerts for mass download / export from file shares and DBs are not suppressed.\n\n---\n\n### Monitoring & detection recommendations\n\n- **Federated identity and SSO abuse (Items [1], [15])**  \n  - Log sources: IdP (Azure AD/Entra, Okta, etc.), VPN, cloud apps, on-prem AD.  \n  - Hunt:  \n    - Unusual consent grants / OAuth app registrations (T1550.001, T1528).  \n    - New MFA methods added or disabled and sign-ins from new locations immediately following role elevation.\n\n- **Cloud misconfig and exposed services (Items [2], [3], [10])**  \n  - Log sources: WAF, external vulnerability scans, cloud storage access logs, web server logs.  \n  - Hunt:  \n    - Anonymous/unauthenticated GETs on objects typically accessed only by authenticated users.  \n    - Repeated enumeration of directory-like paths (/backup, /test, /old, /logs) from the same IP.\n\n- **Automated recon / dork-assisted scanning (Item [3], [14])**  \n  - Log sources: Perimeter firewalls, IDS/IPS, WAF, honeypots.  \n  - Hunt:  \n    - High-rate requests with varied paths and parameters from a single IP (T1595, T1596).  \n    - Nmap and generic scanner finger­prints (e.g., specific TCP options, timing) or odd user-agents.\n\n- **Credential abuse and account takeover (multiple items, identity focus)**  \n  - Log sources: IdP, VPN, EDR, e-mail security.  \n  - Hunt:  \n    - Multiple failed logins followed by success from new IPs / ASN, then immediate mailbox rules creation or OAuth grants (T1078, T1114.003).  \n\n- **Data exfiltration patterns similar to breach actors (Items [5], [10], [11])**  \n  - Log sources: DLP tooling, secure web gateway, proxy, DB audit, SaaS audit logs.  \n  - Hunt:  \n    - Large exports / downloads outside business hours, especially to personal webmail, file-sharing sites, or unknown S3/Blob endpoints (T1567, T1041).  \n\n- **Windows attack-campaign datasets relevance (Item [8])**  \n  - Log sources: EDR, Windows Event Logs (Security, Sysmon).  \n  - Hunt:  \n    - Lateral movement indicators (SMB, WMI, PSRemoting – T1021), suspicious service and scheduled task creation (T1543, T1053).  \n    - Correlate with any known TTP patterns from public datasets if/when integrated into our hunting playbooks.\n\n- **AI-assisted vuln scanning side-effects (Items [13], [14])**  \n  - Log sources: Internal network telemetry, scanners, Dev/QA logs.  \n  - Hunt:  \n    - Unscheduled/internal port scans or vuln scans originating from atypical hosts; validate they’re owned by security teams to avoid confusion with real intrusions.\n\n---\n\n### Medium-term follow-ups\n\n- **Cloud and IdP hardening program**  \n  - Ensure formal review of all external IdP trusts, conditional access policies, and privileged roles; reduce standing global admin accounts and enforce strong MFA.\n\n- **External exposure management**  \n  - Establish or refine a recurring process (e.g., monthly) to check for exposed assets via OSINT/dorking, not just traditional scanning; integrate findings into asset inventory.\n\n- **Data mapping and “public dashboard” review**  \n  - Inventory mapping/BI/analytics tools, classify data shown, and confirm least-privilege sharing; consider mandatory reviews for any internet-exposed visualizations.\n\n- **Threat hunting content update using public attack datasets (Item [8], [11], [15])**  \n  - Incorporate relevant ATT&CK-aligned patterns from public Windows attack datasets and forensics roundups into our internal hunt queries and Sigma/KQL content.\n\n- **AI use policy and monitoring**  \n  - Work with architecture/GRC to define where AI-powered tools can run in the network, required logging, and guardrails to prevent accidental data exfiltration or noisy scanning.\n\n- **Vendor / supply-chain risk awareness (spyware, 0-day ecosystem) (Items [4], [16])**  \n  - Reassess due diligence for surveillance/monitoring tech and bug-bounty/0‑day brokers used by vendors; ensure contracts and risk assessments reflect potential dual-use or exploit-hoarding concerns.",
+  "highlights": [
+    {
+      "title": "Was ist Federated Identity Management?",
+      "link": "https://www.csoonline.com/article/3494300/was-ist-federated-identity-management.html",
+      "source": "CSO Online",
+      "published": "2026-01-05T04:14:00+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Windows / Microsoft",
+        "Cloud / SaaS",
+        "Identity / Access",
+        "Crypto / Web3"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Was bei der Cloud-Konfiguration schiefläuft – und wie es besser geht",
+      "link": "https://www.csoonline.com/article/4107149/was-bei-der-cloud-konfiguration-schieflauft-und-wie-es-besser-geht.html",
+      "source": "CSO Online",
+      "published": "2026-01-05T04:00:00+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Cloud / SaaS",
+        "Identity / Access"
+      ],
+      "curated": true
+    },
+    {
+      "title": "DorkSearch PRO – Open Source Tool to Automate Google Dorks (OSINT)",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1q3ymdy/dorksearch_pro_open_source_tool_to_automate/",
+      "source": "/r/cybersecurity",
+      "published": "2026-01-04T19:12:19+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Crypto / Web3"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Trump admin sends heart emoji to commercial spyware makers with lifted Predator sanctions",
+      "link": "https://go.theregister.com/feed/www.theregister.com/2026/01/04/trump_admin_lifts_sanctions_predator_spyware_execs/",
+      "source": "The Register - Security",
+      "published": "2026-01-04T19:02:14+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Resecurity Caught ShinyHunters in Honeypot",
+      "link": "https://securityaffairs.com/186528/security/resecurity-caught-shinyhunters-in-honeypot.html",
+      "source": "Security Affairs",
+      "published": "2026-01-04T18:06:43+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Lone security engineer with less than basic understanding job responsibilities",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1q3wnsi/lone_security_engineer_with_less_than_basic/",
+      "source": "/r/cybersecurity",
+      "published": "2026-01-04T17:59:18+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "CLI to download websites' actual JS/CSS/assets (not flattened HTML)",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1q3vrxs/cli_to_download_websites_actual_jscssassets_not/",
+      "source": "/r/cybersecurity",
+      "published": "2026-01-04T17:26:46+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Public enterprise-scale Windows attack-campaign dataset + BigQuery table (SQL-only)",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1q3vhy2/public_enterprisescale_windows_attackcampaign/",
+      "source": "/r/cybersecurity",
+      "published": "2026-01-04T17:16:18+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Windows / Microsoft"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Reminder: Survey on threats experienced by journalists and security researchers",
+      "link": "https://databreaches.net/2026/01/04/reminder-survey-on-threats-experienced-by-journalists-and-security-researchers/?pk_campaign=feed&pk_kwd=reminder-survey-on-threats-experienced-by-journalists-and-security-researchers",
+      "source": "DataBreaches.net",
+      "published": "2026-01-04T16:25:18+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Illinois Department of Human Services tightens map security after data incident",
+      "link": "https://databreaches.net/2026/01/04/illinois-department-of-human-services-tightens-map-security-after-data-incident/?pk_campaign=feed&pk_kwd=illinois-department-of-human-services-tightens-map-security-after-data-incident",
+      "source": "DataBreaches.net",
+      "published": "2026-01-04T16:24:50+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    }
+  ]
+}

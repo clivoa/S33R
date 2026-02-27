@@ -1,0 +1,133 @@
+{
+  "generated_at": "2026-01-13T06:51:33.187152+00:00",
+  "analysis_date": "2026-01-13",
+  "model": "gpt-5.1",
+  "window_hours": 24,
+  "source_file": "data/news_recent.json",
+  "source_generated_at": "2026-01-13T05:51:43.034438+00:00",
+  "source_days_back": 30,
+  "source_total_items": 6512,
+  "total_items_in_window_all": 324,
+  "total_items_in_window_curated": 83,
+  "morning_call_markdown": "### Executive Summary\n- Active exploitation of a Gogs Git service vulnerability flagged by CISA plus a live n8n supply‑chain attack increase risk to our dev / automation ecosystems and source code management.\n- Multiple critical web framework flaws (Apache Struts 2, React Router, Angular) create high-impact RCE/data exposure risk for internet‑facing apps if we use these stacks.\n- New financially focused and enterprise‑targeting malware (ValleyRAT_S2, GoBruteforcer, new MuddyWater Rust implant, GuLoader lures) underline the need for stronger email, Linux, and APT monitoring.\n\n---\n\n### High-priority items (immediate attention)\n\n- **CISA KEV: Gogs path traversal / RCE actively exploited (items 2, 19, 23, 62)**\n  - What happened: CISA added an actively exploited Gogs flaw to KEV and ordered US federal agencies to patch immediately.\n  - Why it matters operationally: Compromise of any Gogs instance (on-prem or cloud) can expose source code, secrets, deployment keys and enable lateral movement into CI/CD.\n  - Recommended immediate actions for the SOC today:  \n    - Confirm with platform/dev teams whether Gogs is used; if yes, verify version, exposure (internet vs internal), and patch/mitigate status.  \n    - Hunt last 60 days for unusual access to Gogs paths, new admin users/tokens, anomalous Git operations from unfamiliar IPs; enable heightened monitoring of Git servers.\n\n- **n8n automation platform supply-chain attack via malicious npm packages (items 29, 34, 35, 63)**\n  - What happened: Malicious community-node npm packages for n8n were used to steal OAuth tokens and abuse workflows; multiple CVEs published.\n  - Why it matters operationally: If we run n8n or similar low-code automation (or consume community nodes), attackers could hijack integrations to exfiltrate data from SaaS (O365, Google, CRM, etc.).\n  - Recommended immediate actions for the SOC today:  \n    - Identify any n8n instances (self-hosted or SaaS) and whether community nodes are enabled; if yes, request inventory of installed nodes and confirm they match trusted sources.  \n    - Monitor for anomalous OAuth token issuance/use in major SaaS platforms and spikes in API calls initiated by automation accounts; consider temporary restriction of unvetted community nodes.\n\n- **Critical web framework vulnerabilities: Apache Struts 2, React Router, Angular (items 1, 58, 70, 75, 78)**\n  - What happened: New/critical vulnerabilities disclosed in Struts 2, React Router, and Angular that can enable RCE, path traversal, and data theft.\n  - Why it matters operationally: These frameworks are widely used in financial web portals/APIs; exploitation could lead to direct data exfiltration or initial footholds from internet‑facing assets.\n  - Recommended immediate actions for the SOC today:  \n    - Request from app/platform teams a quick confirm whether any external-facing apps use Struts 2, React Router (server-side usage), or vulnerable Angular versions; check emergency patch plans.  \n    - Intensify WAF and web log monitoring for anomalies: unusual URLs (e.g., `..%2f`, template injection strings, unexpected JS module loads), spikes in 500 errors and suspicious POSTs to app endpoints.\n\n- **Financial and APT malware activity: ValleyRAT_S2, MuddyWater Rust implant, GoBruteforcer (items 38, 66, 72, 77, 80)**\n  - What happened: ValleyRAT_S2 is actively targeting financial data; MuddyWater is deploying a new Rust-based implant; GoBruteforcer botnet is brute forcing weak creds on Linux/crypto infra.\n  - Why it matters operationally: These families align with data exfiltration and persistent access to both endpoints and Linux servers, with emphasis on financial information and internet‑facing services.\n  - Recommended immediate actions for the SOC today:  \n    - Tighten monitoring on Linux servers and DMZ services for brute-force patterns, new unknown binaries, cron jobs, or odd outbound traffic; enforce lockout/alerting on repeated auth failures.  \n    - For endpoints, prioritize alerts on new unsigned executables, LOLBins used for staging (e.g., `powershell`, `curl`, `certutil`), and unusual C2-like traffic; tag any Iran/MuddyWater-related IOCs in TI feeds.\n\n- **Malware/phishing lures: GuLoader in “performance report” emails & geopolitical malware lures (items 10, 82)**\n  - What happened: Campaigns are weaponizing “employee performance reports” and breaking news (e.g., Maduro arrest) to deliver GuLoader and other payloads.\n  - Why it matters operationally: Likely to bypass basic user scrutiny; GuLoader is commonly used to pull commodity stealers/ransomware, which can impact endpoints and file shares rapidly.\n  - Recommended immediate actions for the SOC today:  \n    - Raise sensitivity for email alerts with keywords around performance reviews, HR documents, and breaking political news containing Office/ZIP attachments or links; coordinate a quick advisory to staff.  \n    - Hunt for GuLoader-like behavior: Office spawning `wscript/powershell`, suspicious archive unpacking, and short-lived outbound connections to newly seen domains after document open.\n\n---\n\n### Monitoring & detection recommendations\n\n- **Git / CI/CD compromise (Gogs, supply-chain)**\n  - Log sources: Git servers (Gogs/audit logs), reverse proxies/WAF, CI/CD logs, IAM/SSO logs.  \n  - Hunt for: New SSH keys/API tokens, logins from unusual geo/ASN, sudden repo cloning or mass `git archive` actions.  \n  - MITRE: T1199 (trusted relationship), T1552 (credentials in repos).\n\n- **Web app exploitation (Struts 2, Angular, React Router, InvisibleJS)**\n  - Log sources: WAF, web server logs, container logs, JS error monitoring.  \n  - Hunt for: Path traversal (`../` encoded patterns), OGNL or template injection patterns in parameters, abnormal HTTP methods, unknown JS modules being loaded from non-standard paths.  \n  - MITRE: T1190 (exploit public-facing app).\n\n- **Linux servers & crypto/DB targeting (GoBruteforcer)**\n  - Log sources: Linux auth logs, SSH/DB access logs, firewall/IPS, container orchestrator logs.  \n  - Hunt for: High-rate auth failures from single IP, successful logins from new IPs after many failures, unexpected processes binding to high ports, outbound scans to other infra.  \n  - MITRE: T1110 (brute force), T1021 (remote services).\n\n- **Financial-data stealing malware (ValleyRAT_S2, generic RATs)**\n  - Log sources: EDR, DNS, proxy, DLP.  \n  - Hunt for: New or rare processes making outbound connections over uncommon ports, DNS tunneling-like patterns, access to financial databases or file shares from endpoints that usually don’t.  \n  - MITRE: T1041 (exfil over C2), T1071 (web protocols).\n\n- **APT MuddyWater Rust implant**\n  - Log sources: EDR, Windows event logs (service/registry), DNS/proxy.  \n  - Hunt for: New services or scheduled tasks referencing unknown Rust binaries, processes with rare user-agent strings, and outbound traffic to low-reputation VPS providers.  \n  - MITRE: T1547 (persistence), T1059 (execution), T1105 (C2 channel).\n\n- **OAuth/token theft from automation and SaaS integrations (n8n attack, Salesforce/AuraInspector context)**\n  - Log sources: SaaS admin logs (O365, Google, Salesforce, others), IdP logs, API gateway logs.  \n  - Hunt for: New consent grants to third-party apps, tokens used from unusual locations or IPs, spikes in API reads/exports by automation accounts.  \n  - MITRE: T1528 (steal application access token), T1078 (valid accounts).\n\n- **Phishing & GuLoader / attachment-based campaigns**\n  - Log sources: Secure email gateway, O365 audit logs, EDR, proxy/DNS.  \n  - Hunt for: Office/ZIP attachments leading to script execution, URL clicks from emails to recently registered domains, and `Office → script interpreter → network` process chains.  \n  - MITRE: T1566 (phishing), T1204 (user execution), T1105 (payload download).\n\n- **Account takeover & password reset abuse (Instagram case, homograph ATO reports)**\n  - Log sources: IdP, MFA provider, web access logs, helpdesk tickets.  \n  - Hunt for: Multiple password reset attempts, new device logins with no MFA challenge, changes to recovery email/phone soon after login from new geo/ASN, look for homoglyph domains in referrers.  \n  - MITRE: T1078 (valid accounts), T1556 (authentication mechanisms).\n\n---\n\n### Medium-term follow-ups\n\n- **Comprehensive inventory & patch strategy for web frameworks**\n  - Work with app owners to catalog all external and critical internal apps using Struts 2, Angular, React Router; align on patch SLAs and emergency change process.\n\n- **Review and harden automation/low-code platforms**\n  - For n8n and similar tools (e.g., Power Automate, Zapier-like systems), enforce strict governance: restrict community/third-party nodes, require code review, and centralize logging.\n\n- **Strengthen Linux and container security posture**\n  - Implement or tune host-based monitoring (eBPF/EDR on Linux), enforce strong auth on SSH/DB (MFA where possible), and standardize baseline hardening to resist botnet brute force.\n\n- **Enhance SaaS and OAuth security controls**\n  - Implement periodic access reviews for high-privilege/OAuth-connected apps (link to M365 access review guidance), restrict who can consent to enterprise applications, and enable anomaly detection for token use.\n\n- **Targeted awareness campaigns**\n  - Run focused training around performance-review and breaking-news phishing lures, emphasizing validation of HR emails and safe handling of attachments/links.\n\n- **Review TI & UEBA capabilities**\n  - Leverage new UEBA and XDR capabilities (Microsoft announcements) to better surface anomalous behavior in developer, admin, and service accounts; ensure SOC playbooks are updated to use these features.",
+  "highlights": [
+    {
+      "title": "New Angular Vulnerability Allows Attackers to Execute Malicious Payloads",
+      "link": "https://gbhackers.com/new-angular-vulnerability/",
+      "source": "GBHackers News",
+      "published": "2026-01-13T05:27:14+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Web / API Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "CISA Alerts on Actively Exploited Gogs Path Traversal Flaw",
+      "link": "https://gbhackers.com/cisa-alerts-gogs-path-traversal-flaw/",
+      "source": "GBHackers News",
+      "published": "2026-01-13T05:08:50+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Last Week in Security (LWiS) - 2026-01-12",
+      "link": "https://blog.badsectorlabs.com/last-week-in-security-lwis-2026-01-12.html",
+      "source": "https://blog.badsectorlabs.com/feeds/all.atom.xml",
+      "published": "2026-01-13T04:59:00+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "InvisibleJS: Executable ES Modules Hidden in Plain Sight with Zero-Width Characters",
+      "link": "https://gbhackers.com/invisiblejs-executable-es-modules-hidden-in-plain-sight/",
+      "source": "GBHackers News",
+      "published": "2026-01-13T04:47:25+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": true
+    },
+    {
+      "title": "This Bose speaker will reach EOL in 2026 - but open source is here to save the day",
+      "link": "https://www.zdnet.com/article/bose-soundtouch-speaker-eol-open-source/",
+      "source": "ZDNet – Security",
+      "published": "2026-01-13T04:00:00+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Bipartisan Senate Bill Seeks Clarity on Crypto Developer Liability Under Federal Law",
+      "link": "https://decrypt.co/354371/senate-bill-clarity-crypto-developer-liability-federal-law",
+      "source": "Decrypt",
+      "published": "2026-01-13T03:28:32+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Crypto / Web3"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Deferred University of Hawaii Cancer Center breach disclosure sparks concern",
+      "link": "https://www.scworld.com/brief/deferred-university-of-hawaii-cancer-center-breach-disclosure-sparks-concern",
+      "source": "SCM feed for Latest",
+      "published": "2026-01-13T00:05:29+00:00",
+      "smart_groups": [
+        "Curated",
+        "Ransomware",
+        "Identity / Access"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Instagram refutes widespread data leak claims",
+      "link": "https://www.scworld.com/brief/instagram-quashes-widespread-data-leak-claims",
+      "source": "SCM feed for Latest",
+      "published": "2026-01-13T00:03:51+00:00",
+      "smart_groups": [
+        "Curated",
+        "Exploit / PoC",
+        "Data Breaches / Leaks"
+      ],
+      "curated": true
+    },
+    {
+      "title": "AI leveraged for Truman Show-esque investment fraud",
+      "link": "https://www.scworld.com/brief/ai-leveraged-for-truman-show-esque-investment-fraud",
+      "source": "SCM feed for Latest",
+      "published": "2026-01-12T23:58:08+00:00",
+      "smart_groups": [
+        "Curated",
+        "Exploit / PoC"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Maduro arrest news weaponized for malware delivery",
+      "link": "https://www.scworld.com/brief/maduro-arrest-news-weaponized-for-malware-delivery",
+      "source": "SCM feed for Latest",
+      "published": "2026-01-12T23:56:27+00:00",
+      "smart_groups": [
+        "Curated",
+        "Exploit / PoC",
+        "Malware / Payloads",
+        "Phishing / Social Engineering"
+      ],
+      "curated": true
+    }
+  ]
+}

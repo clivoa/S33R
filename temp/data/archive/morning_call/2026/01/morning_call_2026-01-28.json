@@ -1,0 +1,137 @@
+{
+  "generated_at": "2026-01-28T06:54:37.895148+00:00",
+  "analysis_date": "2026-01-28",
+  "model": "gpt-5.1",
+  "window_hours": 24,
+  "source_file": "data/news_recent.json",
+  "source_generated_at": "2026-01-28T06:01:30.215681+00:00",
+  "source_days_back": 30,
+  "source_total_items": 7770,
+  "total_items_in_window_all": 398,
+  "total_items_in_window_curated": 118,
+  "morning_call_markdown": "### Executive Summary\n- Actively exploited Microsoft Office zero‑day (CVE-2026-21509) and Fortinet FortiCloud SSO zero‑day (CVE-2026-24858) both received emergency mitigations/patches; exploitation is ongoing in the wild.\n- Multiple internet‑facing and user‑facing apps (SmarterMail, WinRAR, Node.js vm2, Vite, React2Shell, Grist-Core, GNU InetUtils telnetd) are under active or likely exploitation, some now in CISA KEV.\n- Ransomware/infostealer actors continue abusing supply chain vectors (npm package, GitHub Desktop repo hijack) and old vulnerabilities; focus on hardening email, developer tooling, and file‑handling paths.\n\n---\n\n### High-priority items (immediate attention)\n\n- **Microsoft Office zero‑day CVE-2026-21509 – emergency patch & active exploitation**\n  - What: MS released an out‑of‑band patch for a security feature bypass in Office that’s being exploited via malicious documents.\n  - Why: Directly impacts our users; likely to be rapidly adopted in phishing, enabling macro/template abuse and initial access.\n  - Recommended actions: Ensure WSUS/Intune/SCCM are pushing the OOB Office update today; tighten email sandboxing of Office docs; increase monitoring of Office spawning scripts or LOLBins on endpoints.\n\n- **Fortinet FortiCloud / FortiOS SSO zero‑day CVE-2026-24858 – exploited**\n  - What: Fortinet reports active exploitation of a FortiCloud / FortiOS SSO auth‑related zero‑day; temporary blocks rolled out while patches land.\n  - Why: Could allow takeover of admin sessions/tenants or identity pivoting on perimeter/security infra.\n  - Recommended actions: Identify any Fortinet cloud/SSO integrations and confirm vendor‑recommended mitigations are applied; review recent Fortinet admin logins and configuration changes for anomalies; ensure admin access is behind VPN and strong MFA.\n\n- **Actively exploited WinRAR path traversal (CVE-2025-8088) and Office/archiver attack chain**\n  - What: Google TI and others report diverse threat actors (incl. ransomware) still exploiting WinRAR path traversal alongside document‑based lures.\n  - Why: Common user tool; exploitation can drop payloads to arbitrary locations and bypass user expectation, chaining with Office/phishing.\n  - Recommended actions: Confirm WinRAR is patched or removed across endpoints; add detections for WinRAR spawning scripts/binaries; reinforce user awareness on archives from unknown sources.\n\n- **SmarterMail RCE (CVE-2026-23760) – mass exploitation risk (6k+ exposed)**\n  - What: Critical RCE in SmarterMail under active exploitation; Shadowserver sees thousands of vulnerable internet‑facing servers.\n  - Why: Email infrastructure compromise gives credential access, internal pivoting and business email compromise opportunities.\n  - Recommended actions: Verify we (or vendors) do NOT run SmarterMail internet‑facing; if any instance exists, demand immediate patching and full compromise assessment (web logs, mailboxes, admin accounts).\n\n- **CISA KEV update – Office, GNU InetUtils telnetd, SmarterMail, Linux vulns**\n  - What: CISA added the Office zero‑day plus GNU InetUtils telnetd, SmarterMail, and Linux issues to KEV, signaling confirmed exploitation.\n  - Why: KEV items are mandatory‑patch in regulated environments; attackers are scanning broadly for these.\n  - Recommended actions: Cross‑check KEV entries against our asset inventory (Linux servers, any InetUtils or telnetd, SmarterMail); prioritize patching/mitigation within KEV timelines; add focused hunts on exposed services and suspicious telnetd use.\n\n---\n\n### Monitoring & detection recommendations\n\n- **Office zero‑day & phishing docs**\n  - Log sources: EDR, email security, O365/M365 audit logs.\n  - Hunt for Office (WINWORD/EXCEL/POWERPNT) spawning cmd.exe, powershell.exe, wscript/cscript, mshta, regsvr32, rundll32 (ATT&CK T1204, T1059).\n  - Flag first‑time external senders delivering Office attachments with macros, templates, or embedded OLE.\n\n- **Fortinet / SSO abuse**\n  - Log sources: Fortinet logs, IdP/SSO logs (Entra ID, Okta, etc.), VPN/firewall.\n  - Monitor for atypical admin logins (geo‑impossible, new IPs, new user‑agents), failed SSO attempts followed by success, and API token creation (T1078, T1550).\n  - Alert on config changes (new admin accounts, policy edits, new SAML/OIDC trust relationships).\n\n- **WinRAR, archives, and file‑based initial access**\n  - Log sources: EDR, file integrity monitoring, secure web/email gateway.\n  - Hunt for rar.exe/WinRAR.exe extracting directly to sensitive paths (e.g., startup folders, ProgramData, temp+immediate execution) and rare child processes following extraction (T1204, T1105).\n\n- **Linux & GNU InetUtils / telnetd exploitation**\n  - Log sources: Syslog, auth logs, network IDS/IPS, firewall.\n  - Monitor for unexpected inbound telnet traffic, new telnetd processes, or spikes in failed logins (T1021.001).\n  - Hunt for new users, sudoers changes, or unusual cron/systemd additions on internet‑facing Linux servers (T1053, T1078).\n\n- **SmarterMail / email infrastructure attacks**\n  - Log sources: Mail server logs, web server/proxy logs, WAF, EDR on mail hosts.\n  - Watch for anomalous web requests to SmarterMail endpoints, unexpected process spawns from the SmarterMail service, and new/modified mail forwarding rules or admin accounts (T1114, T1098).\n\n- **Node.js / vm2, Vite, React2Shell, Grist-Core – supply chain & sandbox escapes**\n  - Log sources: App logs, web server logs, container/orchestration logs, CI/CD logs.\n  - Monitor for unexpected outbound connections or shell launches from Node.js / application containers (T1204, T1190, T1059).\n  - Pay attention to sudden changes in npm packages or build scripts in repos hosting critical fintech applications.\n\n- **GitHub Desktop repo hijack & npm malware (G_Wagon)**\n  - Log sources: EDR, web proxy, developer workstation logs, code repository logs.\n  - Detect installs/updates of GitHub Desktop from non‑official URLs; alert on execution of installers downloaded from GitHub releases that don’t match vendor domains.\n  - For npm, flag use of suspicious or newly introduced packages like “g_wagon” and subsequent credential‑stealing activity (browser data access, unusual exfil) (T1555, T1041).\n\n- **APT / infostealer campaigns (Mustang Panda, RMM abuse)**\n  - Log sources: EDR, proxy/DNS logs, email security, RMM logs.\n  - Focus detection on infostealer behavior: credential dumping, browser data reads, exfil to uncommon domains, and unusual RMM sessions outside maintenance windows (T1555, T1567, T1219).\n\n---\n\n### Medium-term follow-ups\n\n- **Comprehensive KEV alignment**\n  - Run a KEV vs. CMDB review to ensure all CISA‑listed vulns (Office, Linux, InetUtils, SmarterMail, etc.) are in a tracked remediation plan with clear owners and deadlines.\n\n- **Office hardening & macro policy**\n  - Revisit macro and Protected View policies, attachment handling, and application guard for Office; reduce reliance on user decisions for high‑risk document types.\n\n- **Perimeter & SSO security review**\n  - Perform a security review of all VPN/SSO/Forti* deployments: verify MFA, IP restrictions, logging to SIEM, and break‑glass accounts; update runbooks for SSO compromise scenarios.\n\n- **Developer and CI/CD security posture**\n  - Tighten controls on developer machines and build systems: enforce trusted installer sources, lock npm/Node.js dependencies (lockfiles, allowlists), and implement SCA/SAST focused on vm2/Vite/Grist and npm malware.\n\n- **Archiving & “legacy tool” hygiene**\n  - Identify and phase out risky user tools like WinRAR where possible; standardize on patched, centrally managed archiving software with application control policies.\n\n- **Supply chain / third‑party SaaS risk**\n  - Use recent SmarterMail, Salesfloor, Dunzo, Nike, and Booz Allen incidents as drivers to re‑evaluate third‑party/vendor security questionnaires, contract clauses, and monitoring for vendor account abuse or abnormal data movement.",
+  "highlights": [
+    {
+      "title": "Fortinet starts patching exploited FortiCloud SSO zero-day (CVE-2026-24858)",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1qp2qa7/fortinet_starts_patching_exploited_forticloud_sso/",
+      "source": "/r/cybersecurity",
+      "published": "2026-01-28T05:35:07+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Identity / Access"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Passed HTB CDSA, thinking on what to take for next Blue Team cert (CCD vs BTL1)",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1qp2jzo/passed_htb_cdsa_thinking_on_what_to_take_for_next/",
+      "source": "/r/cybersecurity",
+      "published": "2026-01-28T05:26:04+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Conditional Access for Agent Identities in Microsoft Entra",
+      "link": "https://techcommunity.microsoft.com/t5/core-infrastructure-and-security/conditional-access-for-agent-identities-in-microsoft-entra/ba-p/4489915",
+      "source": "Core Infrastructure and Security Blog",
+      "published": "2026-01-28T05:20:04+00:00",
+      "smart_groups": [
+        "Curated",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "Identity / Access",
+        "Network / OT / ICS"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Fortinet Patches CVE-2026-24858 After Active FortiOS SSO Exploitation Detected",
+      "link": "https://thehackernews.com/2026/01/fortinet-patches-cve-2026-24858-after.html",
+      "source": "The Hacker News",
+      "published": "2026-01-28T04:49:00+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Identity / Access"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Bitwise Registers Uniswap ETF Trust in Early Step Toward Potential Filing",
+      "link": "https://decrypt.co/356125/bitwise-uniswap-etf-trust-early-step-potential-filing",
+      "source": "Decrypt",
+      "published": "2026-01-28T04:33:41+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Dunzo Suffers Alleged Data Leak According to Dark Web Reports | UpGuard",
+      "link": "https://www.upguard.com/news/dunzo-data-breach-2026-01-25",
+      "source": "UpGuard – News",
+      "published": "2026-01-28T04:28:26+00:00",
+      "smart_groups": [
+        "Curated",
+        "Data Breaches / Leaks"
+      ],
+      "curated": true
+    },
+    {
+      "title": "AI-Generated Malware - Ireland Legalizes Spyware",
+      "link": "https://www.youtube.com/watch?v=pMqNZmD1AFQ",
+      "source": "Security Now (YouTube Playlist)",
+      "published": "2026-01-28T03:59:45+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Windows / Microsoft",
+        "Malware / Payloads"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Actively Exploited Vite Vitejs Vulnerability (CVE-2025-31125) | UpGuard",
+      "link": "https://www.upguard.com/news/vitejs-data-breach-2026-01-23",
+      "source": "UpGuard – News",
+      "published": "2026-01-28T03:02:51+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Overview of Critical VMware vCenter Server Vulnerability (CVE-2024-37079) | UpGuard",
+      "link": "https://www.upguard.com/news/broadcom-data-breach-2026-01-23",
+      "source": "UpGuard – News",
+      "published": "2026-01-28T02:45:29+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Overview of Critical SmarterMail Vulnerability (CVE-2026-23760) | UpGuard",
+      "link": "https://www.upguard.com/news/smartertools-data-breach-2026-01-22",
+      "source": "UpGuard – News",
+      "published": "2026-01-28T02:34:50+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": true
+    }
+  ]
+}

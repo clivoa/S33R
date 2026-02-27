@@ -1,0 +1,145 @@
+{
+  "generated_at": "2026-01-30T07:06:50.321097+00:00",
+  "analysis_date": "2026-01-30",
+  "model": "gpt-5.1",
+  "window_hours": 24,
+  "source_file": "data/news_recent.json",
+  "source_generated_at": "2026-01-30T06:15:17.080921+00:00",
+  "source_days_back": 30,
+  "source_total_items": 8142,
+  "total_items_in_window_all": 389,
+  "total_items_in_window_curated": 93,
+  "morning_call_markdown": "### Executive Summary\n- Active exploitation of new Ivanti EPMM zero‑days and a FortiCloud SSO auth bypass highlight ongoing attacks against remote access / device‑management infrastructure.\n- Multiple critical RCEs (SolarWinds Web Help Desk, OpenSSL, n8n) and an exploited FreePBX bug raise supply‑chain and lateral‑movement risk in core IT and SaaS tooling.\n- Malicious updates from a compromised eScan AV server and new multi‑platform RATs (PyRAT, others) show increased use of defensive‑tool abuse and cross‑platform post‑exploitation.\n\n---\n\n### High-priority items (immediate attention)\n\n- **Ivanti EPMM zero‑days actively exploited (CVE‑2026‑1281 & CVE‑2026‑1340)**  \n  • What: New Ivanti EPMM RCE/auth issues are being exploited in the wild; Ivanti has only temporary fixes in some cases.  \n  • Why: High‑value MDM gateway; compromise = device control, credential theft, and network foothold (T1190, T1556).  \n  • Actions: Immediately identify any Ivanti EPMM in our environment/third parties; if present, enforce emergency patching / vendor workarounds, restrict to VPN / admin IPs only, pull logs (web, system, auth) from 1 Jan onward and hunt for anomalous admin logins, webshell patterns, or new accounts.\n\n- **SolarWinds Web Help Desk critical unauthenticated RCE / auth bypass**  \n  • What: Four critical Web Help Desk flaws allow unauthenticated RCE and bypass of existing controls; patches released.  \n  • Why: Helpdesk is often internet‑exposed and integrated with AD/LDAP; compromise provides privileged IT foothold (T1190, T1136, T1078).  \n  • Actions: Confirm whether any SolarWinds Web Help Desk instances exist (on‑prem or hosted); if yes, verify version against latest advisory, patch/upgrade ASAP, restrict network access to internal admin segments, and review recent process creation on those hosts (PowerShell, cmd, scripting engines).\n\n- **Known exploited infrastructure vulns: FortiCloud SSO, FreePBX, WinRAR**  \n  • What: CISA warns FortiCloud SSO auth bypass is exploited; attackers also actively exploit a FreePBX bug for webshells and a long‑running WinRAR flaw for code execution via archives.  \n  • Why: These are common at the perimeter and on user workstations; exploitation leads to stealthy credential theft and initial access (T1558, T1203).  \n  • Actions: Validate we’re on fixed versions / mitigations for FortiCloud / Fortinet stack and FreePBX (or confirm we don’t use them); push urgent comms to patch WinRAR to latest across desktops/VDI; hunt for unusual VPN/SSO logins, unknown PHP/ASP files on VoIP servers, and execution of rar/unrar followed by script/LOLBIN activity.\n\n- **Supply‑chain: eScan AV update server compromise**  \n  • What: eScan antivirus update servers were hacked to push malicious updates to clients.  \n  • Why: Defensive tools run with high privileges; malicious updates can disable defenses and drop payloads (T1195.002, T1105).  \n  • Actions: Confirm whether any endpoints/servers run eScan (including 3rd‑party service providers); if present, isolate a representative host for forensic review, block update endpoints at perimeter until vendor clears, and look for recently dropped binaries and unusual eScan child processes.\n\n- **Office & Outlook add‑in abuse + new cross‑platform RATs (PyRAT, Matanbuchus, registry‑abusing tools)**  \n  • What: Recently patched Office zero‑day enabling malicious docs to bypass checks; Outlook add‑ins used for stealth email exfil; new cross‑platform RATs and downloaders (PyRAT, Matanbuchus variants, “Swarmer” registry abuse) are in active use.  \n  • Why: Directly impacts our phishing and BEC exposure, and provides durable footholds for ransomware operators (T1566, T1114, T1053, T1060).  \n  • Actions: Confirm emergency Office patch deployment status and coverage; tighten Outlook add‑in policies (block unapproved add‑ins); raise phishing scrutiny on “invoice,” “payment,” and internal HR themes; prioritize EDR hunting for suspicious Outlook child processes, long‑running Python, and persistence via Run/RunOnce and scheduled tasks.\n\n---\n\n### Monitoring & detection recommendations\n\n- **Device‑management / VPN / SSO compromise (Ivanti EPMM, FortiCloud SSO)**  \n  • Log sources: Reverse proxy/WAF, VPN gateway logs, Ivanti/Fortinet appliance logs, IdP/SSO logs.  \n  • Hunt: New admin accounts, logins from unusual geos/ASNs, auth from TOR/VPN exit IPs, configuration changes outside change windows (T1078, T1098).\n\n- **Helpdesk / IT management RCE (SolarWinds Web Help Desk, n8n RCE)**  \n  • Log sources: App server logs, system/event logs, EDR on app servers, web server logs.  \n  • Hunt: Web process spawning cmd.exe, powershell.exe, bash, curl/wget; outbound connections from these servers to unfamiliar IPs; new scheduled tasks or services (T1190, T1059, T1053).\n\n- **Email & Office exploitation (Office zero‑day, Outlook add‑ins)**  \n  • Log sources: Secure email gateway, M365 / Exchange Online logs, EDR on endpoints.  \n  • Hunt: Office spawning child processes (script interpreters, LOLBINs), anomalous COM add‑in loads, large or automated mailbox export operations, OAuth consent to unknown apps (T1566, T1204, T1114).\n\n- **RATs and malware loaders (PyRAT, Matanbuchus, registry‑abusing tools, PyRAT/BYOB exposure)**  \n  • Log sources: EDR, DNS/firewall logs, proxy, Windows registry auditing.  \n  • Hunt: New scheduled tasks or services pointing to temp/user directories, Python or powershell with encoded commands, persistent outbound C2‑like connections, registry modifications under Run/RunOnce and unusual CLSID keys (T1053, T1060, T1105).\n\n- **Voice and social‑engineering campaigns (ShinyHunters vishing, fake “Mac Cleaner”, Android trojans via ads)**  \n  • Log sources: Email security, endpoint web telemetry, MDM logs, user‑reported tickets.  \n  • Hunt: Repeated user reports of calls referencing MFA or payroll changes, users installing “cleaner” or “security” tools from ads, new mobile apps sideloaded outside official stores (T1566, T1204, T1647).\n\n- **Supply‑chain & update abuse (eScan malicious updates, general open‑source malware surge)**  \n  • Log sources: EDR, software distribution logs (SCCM/Intune/etc.), outbound firewall.  \n  • Hunt: Security tools spawning unsigned binaries, update processes writing executables to user‑writable paths, sudden version changes outside maintenance windows (T1195, T1072).\n\n- **Telephony/VoIP & contact‑center surface (FreePBX exploitation)**  \n  • Log sources: FreePBX / SIP server logs, web server logs, firewall.  \n  • Hunt: POST requests to admin or module upload endpoints from Internet IPs, creation of new PHP files in webroots, interactive shells or reverse connections from VoIP servers (T1190, T1505).\n\n- **Crypto / TLS stack (OpenSSL RCE/DoS)**  \n  • Log sources: TLS‑terminating reverse proxies, load balancers, server syslogs.  \n  • Hunt: Spikes in malformed TLS handshakes, repeated crashes/restarts of daemons using OpenSSL, anomalous CPU spikes on front‑end servers (T1499).\n\n---\n\n### Medium-term follow-ups\n\n- **Comprehensive vuln & asset review for internet‑facing apps**  \n  • Update CMDB and internet‑exposed asset inventory; validate patch status for Ivanti, SolarWinds, FreePBX, Fortinet, WinRAR, and n8n; align scan cadence with CISA KEV additions.\n\n- **SSO / IdP and Conditional Access hardening**  \n  • Incorporate the Microsoft Entra Conditional Access enforcement changes; review and tighten conditional access, MFA, device‑trust and risk‑based policies for all admin and remote‑access accounts.\n\n- **Supply‑chain and third‑party security posture**  \n  • Require vendors (especially AV, remote‑management, and cloud‑SaaS providers) to disclose impact and mitigations related to recent supply‑chain compromises; ensure we can quickly disable or isolate any vendor agent.\n\n- **Email and collaboration security policy refinement**  \n  • Revisit Outlook add‑in and Office macro policies; move toward block‑by‑default for untrusted add‑ins, stricter attachment sandboxing, and enhanced DMARC/DKIM alignment checks.\n\n- **AI / LLM and exposed service governance**  \n  • Based on exposed Ollama/LLM endpoints and AI‑agent attack research, inventory any internal or cloud‑hosted LLM services; ensure they are not internet‑exposed, and define minimal data‑handling/egress controls.\n\n- **Detection engineering & tabletop for ransomware and RAT intrusions**  \n  • Use new RAT/ransomware tradecraft (PyRAT, Matanbuchus, Swarmer, SonicWall‑related breaches) to refine detection rules, and run a tabletop simulating compromise of a management or AV platform leading to ransomware deployment.",
+  "highlights": [
+    {
+      "title": "ShadowHS: A Fileless Linux Post‑Exploitation Framework Built on a Weaponized hackshell",
+      "link": "https://cyble.com/blog/shadowhs-fileless-linux-post-exploitation-framework/",
+      "source": "Cyble",
+      "published": "2026-01-30T05:05:00+00:00",
+      "smart_groups": [
+        "Curated",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Linux / Unix",
+        "Cloud / SaaS",
+        "Malware / Payloads",
+        "Identity / Access",
+        "Network / OT / ICS",
+        "Phishing / Social Engineering",
+        "Crypto / Web3"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Two Ivanti EPMM Zero-Day RCE Flaws Actively Exploited, Security Updates Released",
+      "link": "https://thehackernews.com/2026/01/two-ivanti-epmm-zero-day-rce-flaws.html",
+      "source": "The Hacker News",
+      "published": "2026-01-30T04:43:00+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Cloud / SaaS"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Trump sues IRS and the Treasury for $10 Billion Because His Tax Returns Were Leaked",
+      "link": "https://databreaches.net/2026/01/29/trump-sues-irs-and-the-treasury-for-10-billion-because-his-tax-returns-were-leaked/?pk_campaign=feed&pk_kwd=trump-sues-irs-and-the-treasury-for-10-billion-because-his-tax-returns-were-leaked",
+      "source": "DataBreaches.net",
+      "published": "2026-01-30T04:20:24+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Ivanti provides temporary patches for actively exploited EPMM zero-day (CVE-2026-1281)",
+      "link": "https://www.helpnetsecurity.com/2026/01/30/ivanti-epmm-cve-2026-1281-cve-2026-1340/",
+      "source": "Help Net Security",
+      "published": "2026-01-30T02:52:22+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Cloud / SaaS"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Microsoft's latest zero-day patch blocks a viral Office document hack - how to protect your PC ASAP",
+      "link": "https://www.zdnet.com/article/microsoft-office-emergency-patch-fixes-zero-day-flaw/",
+      "source": "ZDNet – Security",
+      "published": "2026-01-30T02:02:00+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Microsoft may give your encryption key to law enforcement upon valid request - here's how to keep it safe",
+      "link": "https://www.zdnet.com/article/how-to-keep-pc-bitlocker-encryption-key-safe-from-fbi-microsoft/",
+      "source": "ZDNet – Security",
+      "published": "2026-01-30T02:00:00+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Open source malware surges in 2025",
+      "link": "https://www.scworld.com/brief/open-source-malware-surges-in-2025",
+      "source": "SCM feed for Latest",
+      "published": "2026-01-30T00:30:31+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Malware / Payloads"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Cybercom 2.0 to better combat Chinese threats, officials say",
+      "link": "https://www.scworld.com/brief/cybercom-2-0-to-better-combat-chinese-threats-officials-say",
+      "source": "SCM feed for Latest",
+      "published": "2026-01-30T00:26:20+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Java developers want container security, just not the job that comes with it",
+      "link": "https://go.theregister.com/feed/www.theregister.com/2026/01/30/java_developers_container_security/",
+      "source": "The Register - Security",
+      "published": "2026-01-30T00:12:02+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "ShinyHunters ramp up new vishing campaign with 100s in crosshairs",
+      "link": "https://www.csoonline.com/article/4124684/shinyhunters-ramp-up-new-vishing-campaign-with-100s-in-crosshairs.html",
+      "source": "CSO Online",
+      "published": "2026-01-29T23:45:01+00:00",
+      "smart_groups": [
+        "Curated",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "Cloud / SaaS",
+        "Identity / Access",
+        "Network / OT / ICS",
+        "Data Breaches / Leaks",
+        "Phishing / Social Engineering"
+      ],
+      "curated": true
+    }
+  ]
+}

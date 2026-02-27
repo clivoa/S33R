@@ -1,0 +1,135 @@
+{
+  "generated_at": "2026-01-24T06:48:20.344706+00:00",
+  "analysis_date": "2026-01-24",
+  "model": "gpt-5.1",
+  "window_hours": 24,
+  "source_file": "data/news_recent.json",
+  "source_generated_at": "2026-01-24T05:51:11.098099+00:00",
+  "source_days_back": 30,
+  "source_total_items": 7191,
+  "total_items_in_window_all": 332,
+  "total_items_in_window_curated": 105,
+  "morning_call_markdown": "### Executive Summary\n\n- Active exploitation of multiple enterprise edge services: Fortinet FortiCloud/SSO, Cisco Unified Communications, SmarterMail, Zimbra, and telnetd are all under attack; CISA/KEV updated accordingly.\n- Identity & access and social engineering risk is elevated: Okta-centric vishing with custom phishing kits and ShinyHunters involvement, plus widespread abuse of trusted RMM tools and LNK-based malware.\n- Ransomware ecosystem continues to evolve (LockBit 5.0, Osiris, INC opsec fail), with public-sector and transport victims; initial access remains email, exposed services, and cloud identity.\n\n---\n\n### High-priority items (immediate attention)\n\n- **Fortinet FortiCloud / FortiGate SSO auth bypass under active exploitation (patched devices still vulnerable)**\n  - What happened: Fortinet confirmed active exploitation of a FortiCloud SSO/SSO-bypass flaw impacting fully patched FortiGate/FortiCloud environments.\n  - Why it matters: High-value perimeter and VPN devices used heavily in financials; compromise = full network ingress and identity pivot.\n  - Recommended immediate actions:  \n    - Verify whether we operate FortiGate/FortiCloud/SSO; if yes, confirm exact versions and applied mitigations from latest Fortinet advisories.  \n    - Intensify monitoring of management logins, config changes, and new admin accounts from unusual IPs/geo; review last 30 days for anomalies.\n\n- **Cisco Unified Communications zero‑day (now patched) but already exploited**\n  - What happened: A previously zero‑day Cisco UC/VoIP vulnerability (RCE) has been patched; reports confirm in‑the‑wild exploitation.\n  - Why it matters: Many enterprises expose UC/VoIP to the internet; exploitation can provide internal footholds bypassing traditional perimeter controls.\n  - Recommended immediate actions:  \n    - Inventory any Cisco UC components, verify patch levels against latest Cisco advisory, and flag any unpatched instances for emergency change.  \n    - Hunt for suspicious processes, webshell-like artifacts, or unusual outbound connections from UC servers since the CVE disclosure window.\n\n- **CISA KEV additions & active exploitation: Zimbra, SmarterMail, web tooling and SD-WAN**\n  - What happened: CISA added multiple actively exploited vulns (Zimbra Collaboration, Versa Concerto SD‑WAN, and JS build tools like Prettier/Vite) while SmarterMail has a fresh flaw leveraged for admin access.\n  - Why it matters: Mail and SD‑WAN platforms are common in third parties and some internal segments; JS toolchain vulns increase supply-chain risk for web apps.\n  - Recommended immediate actions:  \n    - Confirm if we or critical vendors use Zimbra, SmarterMail, Versa Concerto, or affected JS components; if yes, enforce expedited patching / compensating controls.  \n    - Increase monitoring on these systems for abnormal admin logins, new forwarding rules, or configuration/API changes indicative of takeover.\n\n- **Okta-targeted vishing + custom phishing kits, ShinyHunters involvement**\n  - What happened: Okta reported multiple vishing campaigns using tailored phishing kits to bypass MFA; ShinyHunters claimed responsibility and launched a new leak site.\n  - Why it matters: Our cloud IdP and SSO tokens are prime targets; successful vishing can yield persistent access without endpoint compromise.\n  - Recommended immediate actions:  \n    - Tighten monitoring of Okta (or equivalent IdP) for: MFA push exhaustion patterns, new device registrations, new high-privilege admin roles, unusual geo/IP login combinations.  \n    - Push an urgent advisory to helpdesk and high‑privilege users: never approve unexpected prompts or divulge OTPs over phone/voice; route suspicious calls to security.\n\n- **telnetd (GNU InetUtils, CVE‑2026‑24061) root‑level auth bypass with public PoC**\n  - What happened: An 11‑year‑old critical flaw in telnetd (GNU InetUtils) allows remote, unauthenticated root access; exploitation observed in the wild.\n  - Why it matters: Legacy Linux/Unix, OT, and embedded systems may still expose telnet; an easy path to full device takeover and lateral movement.\n  - Recommended immediate actions:  \n    - Run quick discovery scans for open telnet (TCP/23) across all environments, especially DMZ, branch networks, and OT/IoT segments; immediately block externally exposed instances.  \n    - For any required internal telnet services, restrict via ACL/VPN, and schedule urgent replacement with SSH; monitor for telnet logins and anomalous commands.\n\n---\n\n### Monitoring & detection recommendations\n\n- **Identity & Okta / IdP (Okta vishing, FortiCloud SSO, ShinyHunters) – ATT&CK T1078, T1566**\n  - Log sources: IdP (Okta/Azure AD), VPN/SSO, Fortinet logs.  \n  - Hunt for: multiple failed then successful MFA from new IP; rapid sequence of device enrollments; new admin or API tokens created outside change windows; logins from call center / VOIP exit nodes or unusual ASN.\n\n- **Perimeter & UC / SD‑WAN / firewall devices (Cisco UC, Fortinet, Versa Concerto) – T1190, T1133**\n  - Log sources: Firewall/IPS, device syslogs, NetFlow.  \n  - Hunt for: unknown external IPs sending high volumes of HTTP(S)/SIP to management interfaces; sudden config changes, firmware updates, or restarts; new admin accounts on these appliances.\n\n- **Mail & collaboration (Zimbra, SmarterMail, SmarterMail admin RCE) – T1114, T1071**\n  - Log sources: Mail server logs, web server logs, EDR on mail hosts.  \n  - Hunt for: creation/changes of mailbox forwarding rules to external domains; suspicious admin logins; webshell-like processes spawned by web server user.\n\n- **Endpoint malware & LNK / Trojanized tools / RMM abuse – T1204, T1059, T1105, T1219**\n  - Themes: LNK-based MoonPeak malware, malicious Python “spellchecker”, MacSync macOS infostealer, attackers weaponizing legitimate RMM tools.  \n  - Log sources: EDR, application control, RMM logs, web proxy.  \n  - Hunt for:  \n    - LNK execution from Downloads/Temp/email cache; wscript/powershell/cmd children of explorer or Outlook.  \n    - Unsanctioned RMM agents installed or beaconing; remote sessions initiated out-of-hours.  \n    - Python or Terminal invoked by office documents or untrusted editor tools.\n\n- **Windows security disablement & BitLocker implications – T1562, T1486**\n  - Themes: New malware disabling Windows Security; BitLocker keys and law-enforcement access story.  \n  - Log sources: EDR, Windows event logs (Security, System), BitLocker logs.  \n  - Hunt for: tampering with AV/EDR services, registry keys, or Defender exclusions; unexpected BitLocker suspend events or key exports, especially on servers.\n\n- **Web & API / supply-chain (Prettier, Vite, WordPress backdoor, Fake Captcha, JS toolchain) – T1190, T1505**\n  - Log sources: WAF, web server logs, CI/CD logs, CMS logs.  \n  - Hunt for: new admin users on CMS (WordPress, etc.), unplanned plugin/theme uploads, external redirects to “captcha”/download pages, and builds pulling packages from unexpected registries.\n\n- **Storage & infra (HPE Alletra/Nimble, VMware vCenter old bug now exploited) – T1078, T1068**\n  - Log sources: Storage arrays logs, vCenter logs, hypervisor logs, EDR on management jump hosts.  \n  - Hunt for: new or modified admin accounts, snapshots/volume copies created unexpectedly, vCenter logins from non-admin workstations, or new services listening on management networks.\n\n- **Ransomware ecosystem (LockBit 5.0, Osiris, INC opsec fail) – T1486, T1489**\n  - Log sources: EDR, file servers, backups, network telemetry.  \n  - Hunt for: mass file renames, sudden spike in 7z/rar usage, shadow copy deletion, disabling of backup agents, and large outbound data transfers pre‑encryption.\n\n---\n\n### Medium-term follow-ups\n\n- **Asset & exposure review for legacy services (telnet, outdated UC, SmarterMail/Zimbra)**\n  - Conduct a structured inventory of legacy/protocol exposures; build a decommission or isolation plan for telnet and EoL collaboration/UC products.\n\n- **Strengthen identity & anti‑vishing controls**\n  - Evaluate and enable phishing-resistant MFA (FIDO2/WebAuthn) for admins and high‑risk users; refine helpdesk scripts and training to handle social-engineering calls, referencing Okta vishing patterns.\n\n- **Vendor and third‑party risk checks**\n  - Require key SaaS and MSP/RMM providers to attest to their exposure to Fortinet, Zimbra, Versa Concerto, and SmarterMail issues; confirm patch status and monitoring on their side.\n\n- **Harden RMM and remote admin tooling**\n  - Implement strict allowlisting for remote management tools, enforce SSO + MFA for RMM access, and ensure logging is integrated into SIEM with clear baselines.\n\n- **Patching and configuration governance for edge and infra**\n  - Prioritize a review of patching SLAs and emergency-change procedures for internet-facing systems (firewalls, VPNs, UC, hypervisors, storage), ensuring we can deploy vendor “out-of-band” fixes within days, not weeks.\n\n- **Security awareness and developer/SaaS supply chain**\n  - Update developer and web teams on JS/toolchain (Prettier/Vite) and WordPress backdoor risks; enforce package signing, dependency scanning, and principle of least privilege on CI/CD and CMS admin roles.",
+  "highlights": [
+    {
+      "title": "Microsoft Shares BitLocker Keys with FBI to Unlock Encrypted Laptops in Guam Fraud Investigation",
+      "link": "https://cybersecuritynews.com/microsoft-shares-bitlocker-keys/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-01-24T04:31:39+00:00",
+      "smart_groups": [
+        "Curated",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "Malware / Payloads"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Hackers Exploiting telnetd Vulnerability for Root Access – Public PoC Released",
+      "link": "https://cybersecuritynews.com/telnetd-vulnerability-exploited/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-01-24T04:14:21+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Linux / Unix"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Trojan Detection in COTS Hardware via Statistical Activation of Microarchitectural Events",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1ql8r2v/trojan_detection_in_cots_hardware_via_statistical/",
+      "source": "/r/cybersecurity",
+      "published": "2026-01-24T01:00:31+00:00",
+      "smart_groups": [
+        "Curated",
+        "Malware / Payloads"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Winona County, Minnesota, investigates ransomware incident on network",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1ql8p2o/winona_county_minnesota_investigates_ransomware/",
+      "source": "/r/cybersecurity",
+      "published": "2026-01-24T00:58:02+00:00",
+      "smart_groups": [
+        "Curated",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "Network / OT / ICS"
+      ],
+      "curated": true
+    },
+    {
+      "title": "11-Year-Old critical telnetd flaw found in GNU InetUtils (CVE-2026-24061)",
+      "link": "https://securityaffairs.com/187255/security/11-year-old-critical-telnetd-flaw-found-in-gnu-inetutils-cve-2026-24061.html",
+      "source": "Security Affairs",
+      "published": "2026-01-24T00:27:25+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": true
+    },
+    {
+      "title": "How can I help out my friend studying Cyber Security?",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1ql6o17/how_can_i_help_out_my_friend_studying_cyber/",
+      "source": "/r/cybersecurity",
+      "published": "2026-01-23T23:33:20+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Network / OT / ICS"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Millions of stolen Under Armour customer emails added to Have I Been Pwned",
+      "link": "https://www.scworld.com/brief/millions-of-stolen-under-armour-customer-emails-added-to-have-i-been-pwned",
+      "source": "SCM feed for Latest",
+      "published": "2026-01-23T23:17:33+00:00",
+      "smart_groups": [
+        "Curated",
+        "Ransomware"
+      ],
+      "curated": true
+    },
+    {
+      "title": "US intervention sought in Coupang breach probe",
+      "link": "https://www.scworld.com/brief/us-intervention-sought-in-coupang-breach-probe",
+      "source": "SCM feed for Latest",
+      "published": "2026-01-23T23:15:07+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Multi-million dollar exploit halts SagaEVM blockchain",
+      "link": "https://www.scworld.com/brief/multi-million-dollar-exploit-halts-sagaevm-blockchain",
+      "source": "SCM feed for Latest",
+      "published": "2026-01-23T23:05:43+00:00",
+      "smart_groups": [
+        "Curated",
+        "Exploit / PoC",
+        "Crypto / Web3"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Actively exploited Cisco Unified Communications zero-day resolved",
+      "link": "https://www.scworld.com/brief/actively-exploited-cisco-unified-communications-zero-day-resolved",
+      "source": "SCM feed for Latest",
+      "published": "2026-01-23T22:46:15+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": true
+    }
+  ]
+}

@@ -1,0 +1,137 @@
+{
+  "generated_at": "2026-01-03T06:46:54.725714+00:00",
+  "analysis_date": "2026-01-03",
+  "model": "gpt-5.1",
+  "window_hours": 24,
+  "source_file": "data/news_recent.json",
+  "source_generated_at": "2026-01-03T05:47:03.754844+00:00",
+  "source_days_back": 30,
+  "source_total_items": 6586,
+  "total_items_in_window_all": 161,
+  "total_items_in_window_curated": 41,
+  "morning_call_markdown": "### Executive Summary\n- Active exploitation of legacy Fortinet MFA bypass and MongoDB “MongoBleed” plus a new React2Shell‑driven botnet (RondoDox) all pose direct perimeter/database risks if we run affected tech.\n- Multiple healthcare breaches and evolving ransomware (including HardBit 4.0, Shai Hulud variant) reinforce the need for tight RDP/VPN controls, EDR coverage, and backup integrity checks.\n- New phishing tradecraft using Google Tasks notifications and trojanized crypto wallets shows attackers leaning into trusted cloud and financial tooling to reach users.\n\n---\n\n### High-priority items (immediate attention)\n\n- **Fortinet MFA bypass – >10k devices still exposed**\n  - What happened: Old but still‑exploited Fortinet firewall 2FA bypass vulnerability is being actively abused on Internet‑facing devices.\n  - Why it matters operationally: Any unpatched or misconfigured Fortinet appliance could allow login bypass and full network foothold, especially high‑value in financial sector.\n  - Recommended immediate actions for the SOC today: 1) Confirm with network team whether we run impacted Fortinet models/versions; if yes, urgently verify patch status and geo‑restricted access. 2) Hunt in VPN/firewall logs for anomalous admin logins (new geo, no prior MFA challenge, off‑hours) and failed‑then‑successful bursts from same IP.\n\n- **MongoBleed (CVE‑2025‑14847) – actively exploited MongoDB memory corruption**\n  - What happened: Technical analysis confirms in‑the‑wild exploitation of MongoDB memory corruption (MongoBleed) affecting on‑prem/cloud deployments.\n  - Why it matters operationally: Could lead to data theft, corruption, or RCE on back‑end databases supporting critical apps, including financial and customer‑facing services.\n  - Recommended immediate actions for the SOC today: 1) Identify any MongoDB instances (on‑prem, containers, cloud DBaaS) and verify exposure (Internet‑facing, mgmt ports). 2) Monitor DB logs and host EDR for crashes, unexpected restarts, abnormal queries from new app hosts/IPs; escalate any unexplained MongoDB instability.\n\n- **RondoDox botnet abusing React2Shell to access web/IoT servers**\n  - What happened: New RondoDox botnet is exploiting a “React2Shell” vulnerability to compromise IoT devices and web servers for malware deployment.\n  - Why it matters operationally: Any exposed web app or embedded device using vulnerable components could be conscripted into a botnet or used as a pivot into core networks.\n  - Recommended immediate actions for the SOC today: 1) Ask infra/app teams for quick check if we run affected frameworks/components externally; if yes, ensure latest patches/WAF rules applied. 2) Hunt firewall/WAF logs for repeated exploit‑like requests to the same endpoint and unusual outbound connections from web/IoT segments.\n\n- **Phishing abusing Google Tasks notifications**\n  - What happened: Attackers are abusing Google Tasks notifications to deliver sophisticated phishing, leveraging legitimate Google UX to bypass suspicion.\n  - Why it matters operationally: High likelihood of bypassing basic email filters and user skepticism; could be used to steal credentials to corporate Google/IdP or financial apps.\n  - Recommended immediate actions for the SOC today: 1) Tune mail/cloud security to flag external Google Tasks/Calendar notifications containing links to non‑Google domains. 2) Monitor IdP and email logs for unusual OAuth grants, new app consents, and spikes in login failures following such messages.\n\n- **Ransomware ecosystem – insider operators, HardBit 4.0, major healthcare breaches**\n  - What happened: Two US security pros pled guilty to running BlackCat/ALPHV activity; new HardBit 4.0 and highly obfuscated Shai Hulud variants analyzed; large healthcare ransomware breaches reported.\n  - Why it matters operationally: Shows continued sophistication, insider knowledge of defenses, and focus on data exfiltration and double extortion; financial orgs remain high‑value targets.\n  - Recommended immediate actions for the SOC today: 1) Re‑check high‑risk access (admins, backup operators, third parties) for anomalous use, new tools, or data staging (large archive creation, unusual uploads). 2) Verify backup systems are reachable only from restricted segments and confirm recent restore tests; ensure EDR is present and enforced on all servers, especially domain controllers and file servers.\n\n---\n\n### Monitoring & detection recommendations\n\n- **Perimeter/VPN & firewalls (Fortinet, others) – MFA bypass & footholds**\n  - Log sources: VPN/firewall logs, IdP, syslog from appliances.\n  - Hunt for: Successful logins without prior MFA events, admin logins from rare countries, repeated failed logins followed by success from same IP. (ATT&CK T1078, T1110)\n\n- **Databases – MongoBleed & data theft**\n  - Log sources: MongoDB logs, OS logs on DB hosts, EDR, cloud DB audit (if managed).\n  - Hunt for: Sudden DB restarts/crashes, connections from unfamiliar app servers or external IPs, unusual bulk read/export operations, especially outside batch windows. (T1005, T1041)\n\n- **Web apps / IoT – React2Shell & RondoDox**\n  - Log sources: WAF, web server logs, IoT gateway logs, netflow/firewall egress.\n  - Hunt for: Repeated 400/500 responses with unusual headers/payloads to same URL, command‑like strings in parameters, web servers/IoT devices initiating new outbound C2‑like traffic (random domains, uncommon ports). (T1190, T1105)\n\n- **Email / collaboration – Google Tasks phishing & social engineering**\n  - Log sources: Secure email gateway, cloud email (O365/Gmail) audit, browser/IdP logs.\n  - Hunt for: Clusters of emails/notifications referencing tasks/events with embedded external links; subsequent spike in password resets, OAuth consents, and unusual MFA prompts. (T1566.002, T1078.004)\n\n- **Endpoint – ransomware & RAT payloads (HardBit 4.0, Shai Hulud, Transparent Tribe RAT)**\n  - Log sources: EDR, AV, Sysmon, Windows event logs.\n  - Hunt for: New unsigned binaries in temp/user profile paths, LOLBins (rundll32, regsvr32, mshta, PowerShell) spawning from email clients or browsers, mass file renames/encryption patterns, shadow copy deletion (vssadmin, wmic). (T1059, T1486, T1105)\n\n- **Network – botnets (Kimwolf, RondoDox), C2, lateral movement**\n  - Log sources: Netflow, DNS logs, proxy, firewall.\n  - Hunt for: Devices with sudden increase in outbound connections to low‑reputation or DGA‑like domains, repetitive beacons with consistent intervals, lateral SMB/RDP scanning across segments. (T1021, T1046, T1071)\n\n- **Identity / access – abuse of privileged accounts and third parties**\n  - Log sources: IdP, AD, PAM, VPN.\n  - Hunt for: New global admins, privilege escalations without change tickets, new MFA enrollments for existing users, logins from new devices/locations just before large data transfers. (T1078, T1098)\n\n- **Software supply chain – npm attack detection (Muad‑Dib tool reference)**\n  - Log sources: CI/CD logs, artifact registry, EDR on build servers.\n  - Hunt for: New or updated third‑party packages not previously used, build scripts downloading binaries from non‑standard domains, signing changes for internally built components. (T1195, T1553)\n\n---\n\n### Medium-term follow-ups\n\n- **Confirm technology exposure inventory**\n  - With architecture/engineering, validate whether we run: Fortinet firewalls, MongoDB (version, exposure), React/React2Shell‑impacted frameworks, Apache NuttX, and potentially affected IoT platforms; plan patch/hardening accordingly.\n\n- **Ransomware preparedness review**\n  - Refresh tabletop exercises against modern strains (HardBit 4.0, obfuscated variants); validate runbooks for containment, negotiation policy, legal/comms, and backup restore sequencing.\n\n- **Identity & MFA hardening**\n  - Review MFA coverage and enforcement, especially for admins, remote access, and critical financial applications; consider conditional access and impossible‑travel policies tuned from lessons in MFA bypass campaigns.\n\n- **Email and user awareness updates**\n  - Update phishing training content to include Google Tasks/Calendar‑style lures and cloud notification abuse; ensure users know how to report suspicious notifications, not just traditional emails.\n\n- **Cloud & SaaS security posture**\n  - Using insights from “boundaryless cloud” discussions, reassess logging and detection coverage across major SaaS platforms (email, collaboration, CRM, cloud storage) with emphasis on API access and OAuth app governance.\n\n- **AI / automation & KEV‑driven patching**\n  - Incorporate CISA KEV trends into vulnerability management prioritization; explore automated ticketing or enforcement for KEV‑listed vulns and SIEM‑driven enrichment to highlight exploited CVEs in alerts.",
+  "highlights": [
+    {
+      "title": "Two U.S. cybersecurity professionals plead guilty in BlackCat/Alphv ransomware case",
+      "link": "https://securityaffairs.com/186446/cyber-crime/two-u-s-cybersecurity-professionals-plead-guilty-in-blackcat-alphv-ransomware-case.html",
+      "source": "Security Affairs",
+      "published": "2026-01-02T22:33:20+00:00",
+      "smart_groups": [
+        "Curated",
+        "Ransomware"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Binance delists FLOW/BTC pair, flags token after exploit",
+      "link": "https://cointelegraph.com/news/binance-spot-trading-pair-flow-monitoring-exploit?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound",
+      "source": "Cointelegraph.com News",
+      "published": "2026-01-02T22:03:27+00:00",
+      "smart_groups": [
+        "Curated",
+        "Exploit / PoC",
+        "Crypto / Web3"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Defending the Boundaryless Cloud: Understanding Threats That Matter  - SWN #543",
+      "link": "https://www.youtube.com/watch?v=yuHstWaq4Rc",
+      "source": "Security Weekly News (YouTube)",
+      "published": "2026-01-02T22:01:06+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Cloud / SaaS"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Defending the Boundaryless Cloud: Understanding Threats That Matter - Cameron Sipes, Steve Stone - SWN #543",
+      "link": "https://podcast.securityweekly.com/defending-the-boundaryless-cloud-understanding-threats-that-matter-cameron-sipes-steve-stone-swn-543",
+      "source": "Security Weekly Podcast Network (Audio)",
+      "published": "2026-01-02T22:00:00+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Cloud / SaaS"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Battle between Bitcoin bulls and bears spills over into 2026: Here’s the price levels to watch",
+      "link": "https://cointelegraph.com/news/battle-between-bitcoin-bulls-and-bears-continues-in-2026-here-s-the-levels-to-watch?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound",
+      "source": "Cointelegraph.com News",
+      "published": "2026-01-02T20:00:00+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "NZ: ManageMyHealth data breach: More than 108k users potentially affected",
+      "link": "https://databreaches.net/2026/01/02/nz-managemyhealth-data-breach-more-than-108k-users-potentially-affected/?pk_campaign=feed&pk_kwd=nz-managemyhealth-data-breach-more-than-108k-users-potentially-affected",
+      "source": "DataBreaches.net",
+      "published": "2026-01-02T18:47:15+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Data Breaches / Leaks"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Healthcare Firm Handing $2,000,000+ To Customers After Data Breach Exposes ‘Highly Confidential’ Information of 512,000 People",
+      "link": "https://databreaches.net/2026/01/02/healthcare-firm-handing-2000000-to-customers-after-data-breach-exposes-highly-confidential-information-of-512000-people/?pk_campaign=feed&pk_kwd=healthcare-firm-handing-2000000-to-customers-after-data-breach-exposes-highly-confidential-information-of-512000-people",
+      "source": "DataBreaches.net",
+      "published": "2026-01-02T18:47:05+00:00",
+      "smart_groups": [
+        "Curated",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "Cloud / SaaS",
+        "Threat Actors / APT",
+        "Data Breaches / Leaks"
+      ],
+      "curated": true
+    },
+    {
+      "title": "NIST Publishes Preliminary Draft of Cybersecurity Framework Profile for Artificial Intelligence for Public Comment",
+      "link": "https://databreaches.net/2026/01/02/nist-publishes-preliminary-draft-of-cybersecurity-framework-profile-for-artificial-intelligence-for-public-comment/?pk_campaign=feed&pk_kwd=nist-publishes-preliminary-draft-of-cybersecurity-framework-profile-for-artificial-intelligence-for-public-comment",
+      "source": "DataBreaches.net",
+      "published": "2026-01-02T18:46:36+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "European Space Agency confirms breach of “external servers”",
+      "link": "https://databreaches.net/2026/01/02/european-space-agency-confirms-breach-of-external-servers/?pk_campaign=feed&pk_kwd=european-space-agency-confirms-breach-of-external-servers",
+      "source": "DataBreaches.net",
+      "published": "2026-01-02T18:46:17+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Technical Analysis - MongoBleed (CVE-2025-14847): Memory Corruption in MongoDB",
+      "link": "https://www.reddit.com/r/netsec/comments/1q23y3l/technical_analysis_mongobleed_cve202514847_memory/",
+      "source": "/r/netsec",
+      "published": "2026-01-02T16:59:59+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Cloud / SaaS",
+        "Web / API Security",
+        "Identity / Access"
+      ],
+      "curated": true
+    }
+  ]
+}

@@ -1,0 +1,141 @@
+{
+  "generated_at": "2025-12-19T06:48:25.261892+00:00",
+  "analysis_date": "2025-12-19",
+  "model": "gpt-5.1",
+  "window_hours": 24,
+  "source_file": "data/news_recent.json",
+  "source_generated_at": "2025-12-19T05:34:21.861935+00:00",
+  "source_days_back": 30,
+  "source_total_items": 6071,
+  "total_items_in_window_all": 416,
+  "total_items_in_window_curated": 92,
+  "morning_call_markdown": "### Executive Summary\n- Multiple actively exploited zero‑days in Cisco AsyncOS Secure Email and SonicWall SMA 1000, plus a CVSS 10.0 HPE OneView RCE, require urgent exposure checks and monitoring.\n- CISA added exploited Cisco, SonicWall and ASUS update-tool vulnerabilities to KEV; exploitation is linked to China‑aligned APTs and infrastructure access.\n- Ongoing campaigns: OAuth device-code phishing against Microsoft 365, WhatsApp “GhostPairing” account hijacks, and malvertising delivering StealC info‑stealer and Qilin ransomware.\n\n---\n\n### High-priority items (immediate attention)\n\n- **Cisco AsyncOS Secure Email zero‑day (CVE-2025-20393) – active exploitation, China‑linked APT**\n  - What happened: Critical RCE in Cisco Secure Email/AsyncOS is being exploited in the wild by a China‑backed group (UAT‑9686); now in KEV.\n  - Why it matters: High‑value email perimeter gear used to route/filter corporate mail; compromise enables email espionage, credential theft, and pivoting into internal networks.\n  - Recommended immediate actions:  \n    - Identify any Cisco Secure Email / AsyncOS in inventory; confirm version/patch status; escalate any exposed / unpatched instances.  \n    - Intensify monitoring of those devices: admin logins from unusual IPs, config changes, unexpected process restarts, and anomalous outbound connections from the appliances.\n\n- **SonicWall SMA 1000 zero‑day – privilege escalation under active attack**\n  - What happened: SonicWall released fixes for an SMA 1000 0‑day being actively exploited for privilege escalation on remote access appliances.\n  - Why it matters: These devices often front critical remote access for staff/third parties; compromise can grant adversaries high‑privilege VPN access resembling legitimate sessions.\n  - Recommended immediate actions:  \n    - Confirm whether any SonicWall SMA 1000 are in use; if so, verify patch status and restrict management interfaces to trusted admin networks only.  \n    - Review VPN logs for new/abnormal admin accounts, unusual geolocation/device fingerprints, and spikes in concurrent sessions from the same IP / user.\n\n- **HPE OneView CVSS 10.0 unauthenticated RCE**\n  - What happened: HPE patched an unauthenticated RCE in OneView (CVSS 10.0), with public details and PoC‑like analysis now circulating.\n  - Why it matters: OneView manages servers, storage and networking; compromise provides direct access to core infrastructure, out‑of‑band management, and potentially hypervisors.\n  - Recommended immediate actions:  \n    - Work with infra teams to rapidly identify OneView instances; confirm whether any are Internet‑accessible; flag unpatched instances as critical risk.  \n    - Monitor for login attempts from unknown IPs, unexpected API calls, or new admin users; increase EDR scrutiny on hosts adjacent to OneView‑managed hardware.\n\n- **CISA KEV additions: ASUS update-tool supply‑chain style flaw + other network gear vulns**\n  - What happened: CISA added an ASUS embedded malicious‑code/update‑tool vulnerability, plus Cisco/SonicWall issues, to the Known Exploited Vulnerabilities catalog.\n  - Why it matters: Active exploitation of update mechanisms is a supply‑chain style route into endpoints and servers, often bypassing normal controls and user suspicion.\n  - Recommended immediate actions:  \n    - Confirm whether ASUS update tools or affected models are present in the environment (especially IT laptops, admin endpoints, lab systems); raise to engineering if yes.  \n    - Increase EDR hunts for unsigned binaries spawned from vendor updaters and unusual outbound DNS/HTTP from update processes.\n\n- **Account & access threats: OAuth device-code phishing (M365), WhatsApp GhostPairing, malvertising campaigns**\n  - What happened: Surge in OAuth device‑code phishing against Microsoft 365; WhatsApp “GhostPairing” device-link hijacking; malvertising chain (ClickFix) delivering StealC info‑stealer and Qilin ransomware.\n  - Why it matters: These techniques bypass passwords/MFA by abusing OAuth grants, device linking, and users’ browsers; they are relevant to both staff and customers, especially high‑risk roles.\n  - Recommended immediate actions:  \n    - For corporate identities: tighten conditional access for OAuth app consent, monitor high‑risk sign‑ins and new OAuth consent grants; push advisory to VIPs and admins on device‑code phishing.  \n    - Watch web proxy/EDR for drive‑by downloads, browser‑launched installers, and infostealer behaviors (credential harvesting, clipboard scraping, exfil to unfamiliar domains).\n\n---\n\n### Monitoring & detection recommendations\n\n- **Cisco/SonicWall appliances (Zero‑days, KEV)**  \n  - Log sources: Appliance logs, syslog to SIEM, VPN logs, network telemetry.  \n  - Hunt for: New/unknown admin logins, changes in config or firmware, command‑line or debug interfaces enabled, unusual outbound connections from appliances. (ATT&CK T1190, T1133)\n\n- **HPE OneView and other infrastructure managers**  \n  - Log sources: OneView audit logs, management VLAN firewall logs, hypervisor/ILO logs.  \n  - Hunt for: Access from non‑admin subnets, failed then successful logins from same IP, creation of new hardware profiles, changes to power/boot settings. (T1078, T1021)\n\n- **OAuth device-code phishing & suspicious app registrations (Microsoft 365)**  \n  - Log sources: Entra ID / Azure AD sign‑in logs, audit logs, M365 unified audit, CASB.  \n  - Hunt for: New OAuth consent to unfamiliar apps, device‑code flow from odd locations, consent to apps with high privileges (“offline_access”, mail.read, files.readwrite). (T1078, T1550.001)\n\n- **Endpoint infostealers (StealC) and ransomware (Qilin, RansomHouse)**  \n  - Log sources: EDR, DNS/proxy, email security, web gateways.  \n  - Hunt for: Browsers or office apps spawning installers/scripting engines, LSASS access, mass file access + archive creation, connections to recently registered or low‑reputation domains. (T1059, T1003, T1041, T1486)\n\n- **Update-tool / supply‑chain abuse (ASUS & similar updaters)**  \n  - Log sources: EDR, Windows event logs, software inventory, application control.  \n  - Hunt for: Vendor update processes writing/launching unsigned executables, child processes running PowerShell/cmd, update processes connecting to non‑vendor domains. (T1195, T1204, T1105)\n\n- **Remote access & OT/VNC hijacking**  \n  - Log sources: VPN logs, VNC/RDP logs, firewall, OT network sensors.  \n  - Hunt for: New VNC/RDP servers exposed, VNC sessions from Internet or unusual IPs, lateral movement into OT segments from IT subnets. (T1021.001/002, T1046)\n\n- **WhatsApp / messaging account abuse (GhostPairing) impacting staff/comms**  \n  - Log sources: Mobile device management (if in scope), security awareness reports, DLP.  \n  - Hunt for: Reports of account takeover/social‑engineering using compromised messaging accounts targeting internal staff or customers; correlate with risky sign‑ins. (T1566, T1649 – social)\n\n- **JumpCloud Agent LPE and Node.js / React2Shell‑style web RCE**  \n  - Log sources: EDR, application logs, web server logs, WAF.  \n  - Hunt for: Local privilege escalation attempts (service binary replacement, new local admins), suspicious POSTs to uncommon endpoints, or exploitation patterns flagged by WAF rules. (T1068, T1190)\n\n---\n\n### Medium-term follow-ups\n\n- **Patch & hardening program for network/security appliances**  \n  - Ensure rapid‑patch SLAs and dedicated monitoring for Cisco email security, SonicWall SMA, HPE OneView, contact center solutions, and other edge/infrastructure devices.\n\n- **Inventory and risk review of management planes**  \n  - Validate that tools like OneView, ILO/DRAC, vCenter, JumpCloud, and remote‑access controllers are not Internet‑exposed and are restricted via admin networks and strong MFA.\n\n- **Strengthen OAuth and third‑party app governance**  \n  - Implement or tighten admin consent workflows, baseline risky permission scopes, and enforce conditional access for non‑compliant apps in M365/Entra.\n\n- **User awareness refresh: device‑code phishing, GhostPairing, malvertising**  \n  - Add short training snippets for helpdesk, traders, senior execs, and customer‑facing teams on current social‑engineering patterns and safe handling of unexpected login prompts/links.\n\n- **Review supply‑chain and updater trust model**  \n  - With engineering, catalogue auto‑updaters (ASUS, OEM, vendor tools) and evaluate code‑signing enforcement, allow‑listing, and proxy egress controls for those processes.\n\n- **Ransomware tabletop and backup validation**  \n  - Given active RansomHouse/Qilin developments and continuing double‑extortion trends, re‑validate backup immutability, recovery times for critical banking systems, and incident playbooks.",
+  "highlights": [
+    {
+      "title": "Positiv denken für Sicherheitsentscheider: 6 Mindsets, die Sie sofort ablegen sollten",
+      "link": "https://www.csoonline.com/article/3493061/positiv-denken-fur-sicherheitsentscheider-6-mindsets-die-sie-sofort-ablegen-sollten.html",
+      "source": "CSO Online",
+      "published": "2025-12-19T04:17:00+00:00",
+      "smart_groups": [
+        "Curated",
+        "Ransomware",
+        "Malware / Payloads",
+        "Identity / Access"
+      ],
+      "curated": true
+    },
+    {
+      "title": "React2Shell is the Log4j moment for front end development",
+      "link": "https://www.csoonline.com/article/4109221/react2shell-is-the-log4j-moment-for-front-end-development-2.html",
+      "source": "CSO Online",
+      "published": "2025-12-19T02:43:22+00:00",
+      "smart_groups": [
+        "Curated",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Windows / Microsoft",
+        "Malware / Payloads",
+        "Web / API Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "I built a self hosted ssh ca with just in time sudo approval and shamir based disaster recovery",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1pq9r1h/i_built_a_self_hosted_ssh_ca_with_just_in_time/",
+      "source": "/r/cybersecurity",
+      "published": "2025-12-19T02:39:46+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Windows / Microsoft"
+      ],
+      "curated": true
+    },
+    {
+      "title": "HPE OneView vulnerable to remote code execution attack",
+      "link": "https://www.csoonline.com/article/4109162/hpe-oneview-vulnerable-to-remote-code-execution-attack.html",
+      "source": "CSO Online",
+      "published": "2025-12-19T01:49:15+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Crypto / Web3"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Cybersecurity Predictions for 2026: Human Risk, AI Data Leaks, and the Next Big Breach | UpGuard",
+      "link": "https://upguard-staging.webflow.io/blog/cybersecurity-predictions-2026-human-risk-ai-data-leaks",
+      "source": "UpGuard Blog",
+      "published": "2025-12-19T00:22:41+00:00",
+      "smart_groups": [
+        "Curated",
+        "Data Breaches / Leaks"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Welcome to the Microsoft Security Community!",
+      "link": "https://techcommunity.microsoft.com/t5/microsoft-security-community/welcome-to-the-microsoft-security-community/ba-p/4471927",
+      "source": "Microsoft Security Blog (TechCommunity)",
+      "published": "2025-12-18T23:10:52+00:00",
+      "smart_groups": [
+        "Curated",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "Cloud / SaaS",
+        "Crypto / Web3"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Year in Review: The Vulnerabilities That Defined 2025",
+      "link": "https://projectdiscovery.io/blog/year-in-review-the-vulnerabilities-that-defined-2025",
+      "source": "https://blog.projectdiscovery.io/rss/",
+      "published": "2025-12-18T21:29:01+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Crypto / Web3"
+      ],
+      "curated": true
+    },
+    {
+      "title": "I’m building a local-first, open-source password manager — what features matter most to you?",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1pq2qkn/im_building_a_localfirst_opensource_password/",
+      "source": "/r/cybersecurity",
+      "published": "2025-12-18T21:26:47+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Hewlett Packard Enterprise (HPE) fixed maximum severity OneView flaw",
+      "link": "https://securityaffairs.com/185853/security/hewlett-packard-enterprise-hpe-fixed-maximum-severity-oneview-flaw.html",
+      "source": "Security Affairs",
+      "published": "2025-12-18T21:11:46+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Exposing DoNex Ransomware Secrets with Malcore!",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1pq2alt/exposing_donex_ransomware_secrets_with_malcore/",
+      "source": "/r/cybersecurity",
+      "published": "2025-12-18T21:09:16+00:00",
+      "smart_groups": [
+        "Curated",
+        "Ransomware"
+      ],
+      "curated": true
+    }
+  ]
+}

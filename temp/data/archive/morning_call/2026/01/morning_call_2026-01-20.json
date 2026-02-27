@@ -1,0 +1,140 @@
+{
+  "generated_at": "2026-01-20T06:55:31.029393+00:00",
+  "analysis_date": "2026-01-20",
+  "model": "gpt-5.1",
+  "window_hours": 24,
+  "source_file": "data/news_recent.json",
+  "source_generated_at": "2026-01-20T05:57:28.933103+00:00",
+  "source_days_back": 30,
+  "source_total_items": 6395,
+  "total_items_in_window_all": 255,
+  "total_items_in_window_curated": 72,
+  "morning_call_markdown": "### Executive Summary\n- Active exploitation and PoCs around Cloudflare access-bypass, Windows SMB/AD compromise, and Kerberos relay techniques significantly increase risk to identity and network perimeters.\n- Multiple malware delivery vectors abusing Google Ads, PDF apps, and browser extensions are being used to deploy RATs/backdoors that evade EDR and target enterprise systems.\n- Ransomware operations (including infrastructure leaks and Black Basta law-enforcement activity) highlight continued focus on credential theft, AD abuse, and third-party service providers (e.g., Ingram Micro).\n\n---\n\n### High-priority items (immediate attention)\n\n- **Cloudflare zero-day: access control bypass to “any host globally”**  \n  - What happened: Researchers disclosed and detailed a Cloudflare zero‑day that can bypass protections and reach arbitrary internal hosts behind Cloudflare.  \n  - Why it matters: Any of our internet-facing sites, APIs, or vendor services relying on Cloudflare for access control/WAF could be reachable by attackers despite rules.  \n  - Actions (today):  \n    - Confirm with Infra/Cloud which properties use Cloudflare; request status on mitigations/temporary rules from the write‑up and from Cloudflare advisories.  \n    - Increase WAF/reverse-proxy and web server log scrutiny for unusual origin host access, new paths, or requests bypassing normal headers/IP ranges.\n\n- **Windows SMB client vulnerability enabling full Active Directory compromise (with PoC)**  \n  - What happened: A Windows SMB client bug was detailed that allows attackers to “own AD” from a client compromise, with PoC and exploitation guidance published.  \n  - Why it matters: Fits typical ransomware playbooks—lateral movement and domain dominance from a single compromised workstation/server.  \n  - Actions (today):  \n    - Prioritize hunting for suspicious SMB traffic (non-standard ports, outbound SMB to unusual subnets/hosts, SMB over internet) and anomalous use of `NTLM` over SMB.  \n    - Validate EDR coverage and detections for `lsass` access, AD tools (BloodHound, Mimikatz-like behavior), and mass authentication attempts from a single host.\n\n- **New Kerberos relay attack using DNS CNAME to bypass existing mitigations (PoC released)**  \n  - What happened: Researchers published a new Kerberos relay technique that abuses DNS CNAME records to bypass standard anti‑relay mitigations.  \n  - Why it matters: Direct threat to Windows/AD environments; could be used to escalate privileges or gain service tickets despite protections, again aligned with ransomware TTPs.  \n  - Actions (today):  \n    - Monitor DC logs for anomalous Kerberos service ticket requests (unusual SPNs, volume spikes from single clients).  \n    - Coordinate with AD team to validate enforcement of SMB signing, Extended Protection for Authentication (EPA), and to review high-value SPNs/CNAME usage.\n\n- **Malware via Google Ads & trojanized installers (EndRAT, Remcos, PDFSIDER)**  \n  - What happened: Ongoing campaigns abuse Google Ads and fake tools (PDF editors, converter apps, VeraCrypt installers, PDF24) to deliver RATs/backdoors (EndRAT, Remcos, PDFSIDER) that evade AV/EDR.  \n  - Why it matters: High chance of user-driven compromise in corporate environment, especially developers, finance staff, or admins downloading “utilities” on Windows.  \n  - Actions (today):  \n    - Tighten and monitor web proxy/EDR for downloads of unsigned installers, PDF utilities, and archives from ad‑referrer or newly registered domains; flag and review installs of new PDF/converter tools.  \n    - Run short-term hunts for new or unusual RAT-like processes, scheduled tasks, and outbound C2 from recently provisioned or high-risk endpoints.\n\n- **Malicious browser extensions targeting enterprise (CrashFix / ModeloRAT, HR/ERP extension abuse, sleeper extensions)**  \n  - What happened: Multiple reports of malicious Chrome/Edge/Firefox extensions—fake crash-fix extensions, HR/ERP-targeting extensions, and sleeper spyware extensions—used as enterprise backdoors.  \n  - Why it matters: Bypasses many controls, gives access to corporate web apps (HR, ERP, banking portals, email), and is hard for users to notice.  \n  - Actions (today):  \n    - Pull inventory of corporate-managed browser extensions from endpoint/browse management; alert on non-whitelisted or newly installed extensions, especially with broad permissions.  \n    - Enhance monitoring of unusual login locations or headless-like browser activity against HR/ERP/Banking apps (suspicious user-agents, odd times, rapid data access).\n\n---\n\n### Monitoring & detection recommendations\n\n- **Identity & AD abuse (SMB vuln, Kerberos relay, NTLM cracking, BloodHound discussions)**  \n  - Log sources: Windows Security logs on DCs, AD FS, EDR on domain-joined hosts, DNS logs.  \n  - Focus: T1550/T1557/T1003 – abnormal Kerberos ticket activity, unusual DC authentication spikes, LSASS access, BloodHound/PowerShell AD enumeration, anomalous DNS CNAME queries tied to auth events.\n\n- **Cloudfront/Cloudflare and web perimeter (Cloudflare zero‑day, Azure WAF React RSC CVE)**  \n  - Log sources: Cloudflare/other CDN logs, WAF, origin web server/app logs, API gateway.  \n  - Focus: T1190/T1133 – requests that bypass normal IP ranges, missing customary headers, unusual host headers, surges in 4xx/5xx followed by success, anomalous access to admin/debug endpoints.\n\n- **Malvertising & trojanized installers (Google Ads, converter/PDF tools, VeraCrypt)**  \n  - Log sources: Secure web gateway/proxy, DNS, EDR, email gateway (for link delivery), application whitelisting.  \n  - Focus: T1189/T1204/T1059 – executable/installer downloads from ad-referral chains, newly registered domains, unusual file types (EXE, MSI, ISO) from non-approved repositories, child processes of installers spawning PowerShell/cmd.\n\n- **PDFSIDER / RATs / backdoors on Windows endpoints**  \n  - Log sources: EDR, Windows Sysmon, firewall egress logs.  \n  - Focus: T1105/T1055/T1547 – suspicious DLL/EXE in PDF app directories, processes spawned by `pdf24.exe`/similar, memory-only execution patterns, persistence via Run keys or scheduled tasks, outbound C2 to rare destinations from office endpoints.\n\n- **Malicious browser extensions & credential theft to web apps**  \n  - Log sources: Browser management/MDM, IdP (SSO), SaaS audit logs (HR, ERP, email, CRM).  \n  - Focus: T1185/T1552/T1539 – new extensions with broad permissions, spikes in API calls from browser-based sessions, unusual IPs/ASNs for normal users, impossible travel, multiple parallel sessions using identical user-agent but different IPs.\n\n- **Ransomware ecosystem & third-party risk (Ingram Micro breach, Black Basta raids, leaked infra)**  \n  - Log sources: EDR, VPN, RDP, file servers, backup systems, vendor access gateways.  \n  - Focus: T1486/T1078/T1021 – vendor accounts used at odd hours, lateral RDP/SMB from service accounts, rapid file renames/encryptor-like patterns, unusual access to backup repositories.\n\n- **ServiceNow / AI-integrated SaaS and Gemini calendar data exposure**  \n  - Log sources: SaaS audit logs (ServiceNow, Google Workspace), IdP logs, CASB.  \n  - Focus: T1526/T1087 – abnormal API token usage, large exports of tickets/meeting data, new AI-related integrations or apps created, service accounts accessing data outside normal patterns.\n\n- **Crypto / Web3-related threats (Ethereum dusting/address poisoning)**  \n  - Log sources: Web proxy, DNS, EDR on trading/workstation endpoints.  \n  - Focus: T1565/T1195 – user visits to phishing/“airdrop” sites, clipboard manipulation attempts, suspicious browser extensions on trading desks.\n\n---\n\n### Medium-term follow-ups\n\n- **Coordinate with Infra/Cloud on Cloudflare and WAF posture**  \n  - Verify our use of Cloudflare; ensure vendor guidance is applied and that origin hardening (mTLS, allowlisting) is in roadmap.  \n  - Review WAF rules for React RSC and similar app-layer vulnerabilities.\n\n- **Accelerate AD/Windows hardening roadmap**  \n  - Enforce SMB signing and disable NTLMv1; evaluate NTLM overall reduction per Mandiant guidance.  \n  - Tighten privileged group membership, service account hygiene, and Kerberos constrained delegation; review BloodHound findings conservatively.\n\n- **Browser & extension governance**  \n  - Implement/strengthen allowlist-based extension policies for managed browsers.  \n  - Add user awareness on fake “CrashFix”, PDF editors, and ad-driven download risks; integrate into phishing/safe browsing training.\n\n- **Third-party and supply-chain risk management**  \n  - Review exposure to impacted providers (e.g., Ingram Micro-type distributors, PR/marketing, SaaS vendors with AI integrations).  \n  - Ensure vendor contracts and DDQs include requirements for timely breach notification, EDR on remote access, and MFA.\n\n- **Ransomware playbook refinement using recent leaks/Black Basta intel**  \n  - Update internal threat models and detection content with current TTPs for initial access, lateral movement, and data exfiltrations used by top-tier gangs.  \n  - Validate incident response runbooks (isolation, backups, negotiation policy) against these scenarios.\n\n- **AI and privacy risk posture**  \n  - Work with privacy/compliance to define boundaries for generative AI integrations (ServiceNow, Gemini, others).  \n  - Plan for additional monitoring and DLP controls around AI-related data flows and logs.",
+  "highlights": [
+    {
+      "title": "Privacy teams feel the strain as AI, breaches, and budgets collide",
+      "link": "https://www.helpnetsecurity.com/2026/01/20/isaca-privacy-program-pressures/",
+      "source": "Help Net Security",
+      "published": "2026-01-20T05:30:11+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "I just completed Moniker Link (CVE-2024-21413) room on TryHackMe! Leak user's credentials using CVE-2024-21413 to bypass Outlook's Protected View.",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1qhsgxt/i_just_completed_moniker_link_cve202421413_room/",
+      "source": "/r/cybersecurity",
+      "published": "2026-01-20T05:28:13+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Critical AVEVA Software Flaws Allow Remote Code Execution With SYSTEM Privileges",
+      "link": "https://gbhackers.com/critical-aveva-software-flaws-allow-remote-code-execution/",
+      "source": "GBHackers News",
+      "published": "2026-01-20T05:15:32+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Cloud / SaaS",
+        "Network / OT / ICS"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Google Gemini Flaw Allows Access to Private Meeting Details Through Calendar Events",
+      "link": "https://gbhackers.com/google-gemini-flaw-allows-access-to-private-meeting/",
+      "source": "GBHackers News",
+      "published": "2026-01-20T05:13:53+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Google Ads Exploited to Deliver TamperedChef Through Malicious PDF Editor",
+      "link": "https://gbhackers.com/google-ads-exploited/",
+      "source": "GBHackers News",
+      "published": "2026-01-20T05:06:52+00:00",
+      "smart_groups": [
+        "Curated",
+        "Exploit / PoC",
+        "Windows / Microsoft",
+        "Malware / Payloads"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Ethereum activity surge could be linked to dusting attacks: Researcher",
+      "link": "https://cointelegraph.com/news/address-poisoning-attack-adding-record-ethereum-network-activity-says-researcher?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound",
+      "source": "Cointelegraph.com News",
+      "published": "2026-01-20T04:59:14+00:00",
+      "smart_groups": [
+        "Curated",
+        "Exploit / PoC"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Cloudflare Zero-Day Flaw Allows Attackers to Bypass Security and Access Any Host",
+      "link": "https://gbhackers.com/cloudflare-zero-day-flaw-bypass-security/",
+      "source": "GBHackers News",
+      "published": "2026-01-20T04:50:21+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Cloud / SaaS",
+        "Malware / Payloads",
+        "Web / API Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "This Intune update isn’t optional — it’s a kill switch for outdated apps",
+      "link": "https://www.csoonline.com/article/4118902/this-intune-update-isnt-optional-its-a-kill-switch-for-outdated-apps-2.html",
+      "source": "CSO Online",
+      "published": "2026-01-20T03:57:30+00:00",
+      "smart_groups": [
+        "Curated",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "Windows / Microsoft",
+        "Malware / Payloads",
+        "Data Breaches / Leaks"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Google Gemini Privacy Controls Bypassed to Access Private Meeting Data Using Calendar Invite",
+      "link": "https://cybersecuritynews.com/gemini-privacy-controls-bypassed/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-01-20T02:40:32+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": true
+    },
+    {
+      "title": "One API to query them all!",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1qhij39/one_api_to_query_them_all/",
+      "source": "/r/cybersecurity",
+      "published": "2026-01-19T22:13:03+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Malware / Payloads",
+        "Supply Chain / Software"
+      ],
+      "curated": true
+    }
+  ]
+}

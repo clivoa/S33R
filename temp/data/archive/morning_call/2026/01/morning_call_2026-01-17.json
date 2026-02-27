@@ -1,0 +1,143 @@
+{
+  "generated_at": "2026-01-17T06:47:03.812171+00:00",
+  "analysis_date": "2026-01-17",
+  "model": "gpt-5.1",
+  "window_hours": 24,
+  "source_file": "data/news_recent.json",
+  "source_generated_at": "2026-01-17T05:54:19.547545+00:00",
+  "source_days_back": 30,
+  "source_total_items": 6855,
+  "total_items_in_window_all": 275,
+  "total_items_in_window_curated": 73,
+  "morning_call_markdown": "### Executive Summary\n\n- Active exploitation of multiple perimeter/security tools (Cisco Secure Email/AsyncOS, Fortinet FortiSIEM, HPE OneView, Sitecore) by APTs and botnets; these are high-value paths to our network and mail flows.\n- Critical SaaS / cloud and identity issues (ServiceNow auth bypass, Azure identity token flaw, Salesforce exposure tool, malicious “Workday/NetSuite” extensions) increase risk of tenant-wide compromise and data exfiltration.\n- Ransomware and supply-chain activity remain high, with financial and critical infra targeting; phishing/malvertising and browser extensions are key initial-access vectors.\n\n---\n\n### High-priority items (immediate attention)\n\n- **Cisco Secure Email / AsyncOS zero‑day RCE actively exploited (CVE‑2025‑20393, etc.)**\n  - What happened: Cisco has patched a max‑severity AsyncOS/Secure Email Gateway RCE that was exploited since November by a China‑linked APT (UAT‑9686) and others.\n  - Why it matters: Direct internet‑facing RCE on our email gateway = potential full compromise, mail tampering, credential theft, and stealthy persistent access.\n  - Recommended immediate actions:  \n    - Confirm all Cisco Secure Email / AsyncOS appliances are patched to latest fixed releases today; if not possible, restrict exposure (ACLs/VPN, WAF).  \n    - Hunt for compromise since Nov: unusual admin logins, config changes, outbound connections from the appliance, unexpected relaying/routing rules; escalate any anomaly for IR.\n\n- **Fortinet FortiSIEM critical flaw under active exploitation**\n  - What happened: Attackers are now exploiting a critical FortiSIEM vulnerability in the wild for remote compromise.\n  - Why it matters: FortiSIEM has visibility across our estate; compromise = one‑stop shop for attacker reconnaissance and lateral movement.\n  - Recommended immediate actions:  \n    - Validate installed FortiSIEM version vs. Fortinet advisory; patch or isolate urgently.  \n    - Monitor FortiSIEM system for new admin users, suspicious API calls, unexpected outbound traffic, and tampered log collection/forwarding rules.\n\n- **HPE OneView vulnerability exploited by RondoDox botnet**\n  - What happened: Large‑scale exploitation wave of an HPE OneView bug by the RondoDox botnet to conscript devices.\n  - Why it matters: OneView often manages server infrastructure; compromise could give attackers control over physical/virtual servers or foothold into management networks.\n  - Recommended immediate actions:  \n    - Inventory any HPE OneView deployments; ensure patched and access is restricted to management networks/VPN only.  \n    - Review logs for failed/odd auth attempts, unknown IPs interacting with OneView, and unusual CLI/API actions; block suspicious IPs at perimeter.\n\n- **ServiceNow Virtual Agent auth bypass → AI agent privilege escalation**\n  - What happened: Researchers disclosed an auth bypass in ServiceNow’s Virtual Agent that can lead to AI agent privilege escalation, reportedly affecting a large share of Fortune 500.\n  - Why it matters: For us, this is a high‑impact SaaS admin takeover route, potentially exposing tickets, PII, credentials, and workflow integrators used to move laterally.\n  - Recommended immediate actions:  \n    - Confirm with ServiceNow owners if our instance uses Virtual Agent and whether patches/mitigations from ServiceNow are already applied.  \n    - Monitor IdP and ServiceNow logs for unusual logins, surges in API calls, sudden role changes, and new OAuth/integration configs; tighten admin MFA and conditional access.\n\n- **Cloud / identity risks: Azure Identity token flaw + malicious Chrome extensions (Workday/NetSuite), AWS console/GitHub supply chain**\n  - What happened:  \n    - Flaw in Azure Identity tokens can expose Windows Admin Center to tenant‑wide breaches.  \n    - Malicious Chrome extensions impersonating Workday/NetSuite to hijack sessions.  \n    - AWS console supply‑chain issue enabling GitHub repo hijacking.\n  - Why it matters: Direct risk to cloud control planes, HR/finance SaaS, and CI/CD, all of which can be leveraged for financial fraud or large‑scale data theft.\n  - Recommended immediate actions:  \n    - Confirm Azure/WAC guidance applied (token validation/hardening, latest patches); review privileged Azure AD sign‑ins and access tokens.  \n    - Push a quick advisory to staff: do not install unapproved “Workday”/“NetSuite” extensions; verify via our extension allowlist; hunt for such extensions on managed endpoints.  \n    - Coordinate with DevOps to validate AWS IAM, access keys, and GitHub org protections (branch protection, token rotation, SSO only); watch for new unknown OAuth apps in GitHub.\n\n---\n\n### Monitoring & detection recommendations\n\n- **Perimeter email appliances (Cisco AsyncOS / Secure Email, SEG) – APT & RCE abuse**  \n  - Log sources: Email gateway logs, appliance OS logs, firewall logs around SEG.  \n  - Hunt for: New/unknown admin accounts, configuration changes, unusual outbound connections, spikes in SMTP relay to foreign IPs. (ATT&CK T1190, T1078, T1071.004)\n\n- **SIEM and management-plane systems (FortiSIEM, HPE OneView, Sitecore) – initial access and C2**  \n  - Log sources: Product audit logs, syslog, network sensors around management VLANs.  \n  - Hunt for: Logins from non‑admin subnets, new API tokens/integrations, scriptable bulk actions (e.g., adding syslog targets, changing alert rules). (T1021, T1098, T1562)\n\n- **Cloud & SaaS (Azure AD, ServiceNow, Salesforce, AWS, GitHub) – identity and token abuse**  \n  - Log sources: IdP (Azure AD), SaaS audit logs, CloudTrail, GitHub audit.  \n  - Hunt for:  \n    - Consent to new OAuth apps, new SAML/OIDC configs, anomalous sign‑in locations/devices.  \n    - ServiceNow: sudden role elevation, new admin accounts, mass export/download events. (T1078, T1098, T1550)\n\n- **Browser & endpoint (malicious Chrome extensions, LOTUSLITE phishing, TamperedChef malvertising)**  \n  - Log sources: EDR, browser extension inventory, secure web gateway/DNS.  \n  - Hunt for: New extensions installed outside corporate catalog; processes spawned from browsers fetching DLL/EXE from unfamiliar domains; PDF/JS leading to second‑stage downloads. (T1189, T1204, T1105)\n\n- **Web and CMS (Sitecore zero‑day, Modular DS WordPress plugin exploit)**  \n  - Log sources: Web server and WAF logs, CMS admin logs.  \n  - Hunt for: POSTs to uncommon Sitecore/WordPress paths, spikes in HTTP 500/404, creation of new admin users, file uploads leading to PHP/ASPX shells. (T1190, T1505.003)\n\n- **Ransomware and crypto‑mining (Black Basta ecosystem, WannaMine, general 2025 surge)**  \n  - Log sources: EDR, AD, SMB, backup systems.  \n  - Hunt for:  \n    - Mass file renames/encryptor patterns; stopping AV/backup services; shadow copy deletion.  \n    - PowerShell/WMI spawning from non‑IT users; long‑running high‑CPU processes on servers. (T1486, T1489, T1047, T1059)\n\n- **Insider/compromised accounts (Vertex AI permissions, general insider risk)**  \n  - Log sources: DLP, IdP, data platform logs (e.g., GCP, big‑data services).  \n  - Hunt for: Large exports from AI/data platforms by atypical users, off‑hours bulk downloads, and policy overrides. (T1530, T1567)\n\n- **Network perimeter – botnet / C2**  \n  - Log sources: Firewall, proxy, DNS.  \n  - Hunt for: Outbound connections from management appliances to known bad or newly registered domains, unusual ports, or Tor/proxy services tied to botnet/C2 infrastructure. (T1071, T1090)\n\n---\n\n### Medium-term follow-ups\n\n- **Patching & hardening of management and infra tools**  \n  - Ensure HPE OneView, Sitecore, Forti* products, Palo Alto GlobalProtect (CVE‑2026‑0227), and any Apache Struts usage are inventoried and on an accelerated patch cycle.\n\n- **Cloud and identity posture review**  \n  - Review Azure Identity / Windows Admin Center architecture, SAIF / zero‑trust guidance from NSA and Google; validate least privilege, token lifetimes, and conditional access for admins.\n\n- **SaaS governance and monitoring**  \n  - Formalize ownership and security baselines for ServiceNow, Salesforce, Workday/NetSuite, and other mission‑critical SaaS; enable full audit logging, and integrate logs into SIEM.\n\n- **Endpoint & browser control**  \n  - Tighten browser extension policies (allowlist only), ensure EDR coverage of all admin workstations and jump hosts, and update detection content for malvertising and malicious docs.\n\n- **Ransomware & supply‑chain resilience**  \n  - Re‑validate offline/immutable backups, restoration procedures, and segmentation of build/CI systems (GitHub/AWS) in light of the 2025 surge in ransomware and supply‑chain attacks.\n\n- **Security awareness and phishing defenses**  \n  - Incorporate LOTUSLITE/Venezuela‑themed lures, malvertising chains, and fake SaaS extensions into awareness content and phishing simulations, especially for finance, HR, and exec staff.",
+  "highlights": [
+    {
+      "title": "Researchers Breach StealC Infrastructure, Access Malware Control Panels",
+      "link": "https://gbhackers.com/researchers-breach-stealc-infrastructure/",
+      "source": "GBHackers News",
+      "published": "2026-01-17T05:30:48+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Malware / Payloads"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Best Security Awareness Training Platforms For 2026",
+      "link": "https://gbhackers.com/best-security-awareness-training-platforms/",
+      "source": "GBHackers News",
+      "published": "2026-01-17T04:29:23+00:00",
+      "smart_groups": [
+        "Curated",
+        "Ransomware",
+        "Phishing / Social Engineering"
+      ],
+      "curated": true
+    },
+    {
+      "title": "AppGuard Critiques AI Hyped Defenses; Expands its Insider Release for its Next-Generation Platform",
+      "link": "https://www.csoonline.com/article/4118270/appguard-critiques-ai-hyped-defenses-expands-its-insider-release-for-its-next-generation-platform.html",
+      "source": "CSO Online",
+      "published": "2026-01-17T03:18:35+00:00",
+      "smart_groups": [
+        "Curated",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "Cloud / SaaS",
+        "Malware / Payloads"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Miss Cleo, Whisperpair, Fortisiem, REDVDS, Google, Spying, Rob Allen and More... - Rob... - SWN #547",
+      "link": "https://www.youtube.com/watch?v=yfvxMOEOgkQ",
+      "source": "Security Weekly News (YouTube)",
+      "published": "2026-01-16T22:01:13+00:00",
+      "smart_groups": [
+        "Curated",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "Malware / Payloads"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Miss Cleo, Whisperpair, Fortisiem, REDVDS, Google, Spying, Rob Allen and More... - Rob Allen - SWN #547",
+      "link": "https://podcast.securityweekly.com/miss-cleo-whisperpair-fortisiem-redvds-google-spying-rob-allen-and-more-rob-allen-swn-547",
+      "source": "Security Weekly Podcast Network (Audio)",
+      "published": "2026-01-16T22:00:00+00:00",
+      "smart_groups": [
+        "Curated",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "Malware / Payloads"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Cyber intrusions against industrial environments escalate",
+      "link": "https://www.scworld.com/brief/cyber-intrusions-against-industrial-environments-escalate",
+      "source": "SCM feed for Latest",
+      "published": "2026-01-16T21:44:48+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": true
+    },
+    {
+      "title": "More Problems for Fortinet: Critical FortiSIEM Flaw Exploited",
+      "link": "https://www.darkreading.com/vulnerabilities-threats/fortinet-critical-fortisiem-flaw-exploited",
+      "source": "darkreading",
+      "published": "2026-01-16T21:03:37+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Cybersecurity statistics of the week (January 5th - January 11th)",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1qes2ff/cybersecurity_statistics_of_the_week_january_5th/",
+      "source": "/r/cybersecurity",
+      "published": "2026-01-16T21:00:45+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Cloud / SaaS",
+        "Identity / Access",
+        "Network / OT / ICS",
+        "Phishing / Social Engineering"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Ultimate Security+ SY0-701 Free Study Pack (1400+ Flashcards + Notebook LM Setup)",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1qercck/ultimate_security_sy0701_free_study_pack_1400/",
+      "source": "/r/cybersecurity",
+      "published": "2026-01-16T20:33:02+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Network / OT / ICS"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Security Review for Microsoft Edge version 144",
+      "link": "https://techcommunity.microsoft.com/t5/microsoft-security-baselines/security-review-for-microsoft-edge-version-144/ba-p/4486065",
+      "source": "Microsoft Security Baselines",
+      "published": "2026-01-16T20:14:01+00:00",
+      "smart_groups": [
+        "Curated",
+        "Ransomware",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    }
+  ]
+}

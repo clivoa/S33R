@@ -1,0 +1,139 @@
+{
+  "generated_at": "2026-01-14T06:51:27.635600+00:00",
+  "analysis_date": "2026-01-14",
+  "model": "gpt-5.1",
+  "window_hours": 24,
+  "source_file": "data/news_recent.json",
+  "source_generated_at": "2026-01-14T05:52:43.124512+00:00",
+  "source_days_back": 30,
+  "source_total_items": 6884,
+  "total_items_in_window_all": 430,
+  "total_items_in_window_curated": 128,
+  "morning_call_markdown": "### Executive Summary\n- Microsoft Patch Tuesday released 100+ fixes including at least one actively exploited Windows Desktop Window Manager 0‑day; urgent for all endpoints and servers.\n- Multiple critical vulns in Fortinet products, Apache Struts 2, SmarterMail, MongoDB, Node.js, Gogs, and SAP increase exposure of internet‑facing and developer / email infrastructure.\n- Active campaigns continue against financial targets: Magecart card skimming, Android banking malware with ransomware capabilities, RAT delivery via phishing and RMM tools, and OAuth/token theft via supply-chain attacks.\n\n---\n\n### High-priority items (immediate attention)\n\n- **Actively exploited Windows 0‑day + January 2026 Patch Tuesday**\n  - What happened: Microsoft patched 113–114 CVEs including an in‑the‑wild Desktop Window Manager 0‑day and two more zero‑days; CISA also added a Windows vuln to KEV.\n  - Why it matters operationally: Unpatched Windows clients/servers are high‑value targets for initial access and local privilege escalation in ransomware and intrusions.\n  - Recommended immediate actions for the SOC today:  \n    • Verify via patch/ESU dashboards which Windows builds are still missing Jan‑2026 patches (incl. KB5073724 for Win10 ESU) and escalate non‑compliant critical systems.  \n    • Prioritize hunting for exploit/POC activity: abnormal DWM crashes, new unsigned binaries spawning from `dwm.exe`, unusual LSASS access or token theft post‑patch (T1068, T1055).\n\n- **Fortinet critical vulnerabilities (FortiOS, FortiSwitchManager, FortiSandbox, FortiSIEM)**\n  - What happened: Multiple advisories and research note RCE/SSRF and long‑standing remote root issues across Fortinet products (FortiOS, FortiSwitchManager, FortiSandbox SSRF, FortiSIEM RCE).\n  - Why it matters operationally: These devices are often perimeter or monitoring infrastructure; compromise provides network‑wide foothold and visibility into our logs.\n  - Recommended immediate actions for the SOC today:  \n    • Confirm with network/security engineering which Fortinet products/versions we run; check against latest Fortinet & CIS advisories and ensure emergency patch plan is in flight.  \n    • Increase monitoring on Fortinet management interfaces: failed logins, config changes, suspicious admin sessions from unfamiliar IPs, unusual outbound connections from these appliances.\n\n- **Critical web/email stack vulns: Apache Struts 2, SmarterMail RCE, MongoDB “Mongobleed”, Node.js**\n  - What happened:  \n    • Critical Apache Struts 2 bug enabling data theft/SSRF.  \n    • SmarterMail RCE with public PoC impacting 8k+ hosts.  \n    • MongoDB CVE‑2025‑14847 (“Mongobleed”) and Node.js security releases across all branches.\n  - Why it matters operationally: These are common in portals, line‑of‑business apps and email systems; exploitation can lead to direct data theft, mailbox takeover, or pivot to internal networks.\n  - Recommended immediate actions for the SOC today:  \n    • Identify any externally exposed Struts, SmarterMail, MongoDB, and Node.js‑based services (ask app and infra owners; check ASM/CMDB) and verify patch/mitigation status.  \n    • Hunt in WAF/web/mail logs for anomalies since Dec: unexpected `/debug`, `/admin`, or SSRF‑style outbound requests from app servers; unusual child processes spawned by mail/web services (T1190, T1505).\n\n- **Gogs zero‑day added to CISA KEV + Target source code leak**\n  - What happened: CISA flagged an exploited Gogs vuln with no patch yet; concurrently, a major retailer confirmed leaked source code and accelerated Git lockdown.\n  - Why it matters operationally: Git services and source code repos are high‑value for supply‑chain attacks, credential harvesting, and implanting backdoors.\n  - Recommended immediate actions for the SOC today:  \n    • Confirm if any self‑hosted Gogs or similar lightweight Git instances exist (including in dev/test); if yes, restrict external access immediately, enforce SSO/MFA, and monitor closely.  \n    • Review last 7–14 days of Git / CI logs for anomalous clone/push from unusual IPs, access to sensitive repos, new SSH keys/tokens, or unexpected branch/CI config changes (T1552, T1195).\n\n- **Active fraud/malware campaigns: Magecart card skimming, AsyncRAT via Python/Cloudflare, Android banking malware deVixor, OAuth theft via n8n supply chain**\n  - What happened:  \n    • New Magecart campaign stealing card data at checkout; broader campaign hitting Amex/Diners/MasterCard since 2022.  \n    • AsyncRAT delivered via Python + Cloudflare, performance‑review phishing, and RMM‑abusing malware.  \n    • Banking malware deVixor with ransomware features targeting Android; supply‑chain compromise of n8n aiming at OAuth credential theft.\n  - Why it matters operationally: Direct risk to card data, customer endpoints, staff workstations, and SaaS integrations (OAuth tokens) used across financial workflows.\n  - Recommended immediate actions for the SOC today:  \n    • Intensify web/app monitoring on payment pages: unexpected JS changes, calls to unfamiliar domains, or inline scripts injected post‑deployment; coordinate with web teams on file integrity checks.  \n    • Tighten email/web gateway rules and EDR hunts for: RMM tool misuse (AnyDesk, ScreenConnect, etc.), Python‑spawned network beacons, new persistence for AsyncRAT families, suspicious OAuth app approvals in IdP/SSO (T1059, T1219, T1071, T1556).\n\n---\n\n### Monitoring & detection recommendations\n\n- **Patch Tuesday & Windows 0‑day**\n  - EDR + Windows logs (Sysmon, Security): monitor for unusual child processes from `dwm.exe`, `explorer.exe` escalating to admin tools; spikes in exploit‑like crashes or process injection (T1055, T1068).\n- **Perimeter / Fortinet exposure**\n  - Firewall/VPN/Device logs: watch for login attempts from new geos, brute‑force patterns, config changes outside change windows, new admin accounts on Fortinet gear (T1078, T1098, T1562).\n- **Web app / Struts / SmarterMail / SAP / Node.js**\n  - WAF, reverse proxy, web/app server logs: hunt for abnormal HTTP methods, SSRF patterns (internal IPs in URLs), serialized payloads, or requests to JMX/admin paths; alert on mail service spawning shells (T1190, T1505, T1210).\n- **Git / Gogs / CI‑CD**\n  - Git server and CI logs: flag mass clones, access from atypical IP ranges, unexpected PAT/SSH key creation, and pipeline file changes (GitHub Actions, GitLab CI, etc.) (T1552, T1608).\n- **Magecart & card data skimming**\n  - Web server + CDN logs and content integrity tools: monitor for new or modified JS on payment pages, outbound calls from checkout pages to non‑approved domains, and changes not tied to deployments (T1059.007, T1530).\n- **Phishing, BitB, “performance review” lures, QR/“quishing”**\n  - Email, secure web gateway, EDR: detect HTML attachments, lookalike domains, Browser‑in‑the‑Browser windows (multiple nested frames), and user clicks leading to credential prompts; correlate with new sign‑ins from new devices (T1566, T1110).\n- **RMM abuse and AsyncRAT activity**\n  - EDR and network sensors: alert on new RMM installs, RMM processes executing PowerShell/cmd, long‑lived outbound connections to cloud/CF fronted domains, and typical RAT persistence (registry Run keys, scheduled tasks) (T1105, T1219, T1053).\n- **Android banking malware & mobile fraud**\n  - MDM/MAM and fraud analytics: watch for new high‑risk apps, unusual device changes followed by high‑value transactions, and repeated failed 2FA from mobile; coordinate with fraud team on abnormal patterns (T1476, T1647 – Mobile).\n\n---\n\n### Medium-term follow-ups\n\n- **Coordinate full rollout of Jan‑2026 Microsoft patches**\n  - Ensure risk‑based prioritization for internet‑facing servers, domain controllers, VDI, and high‑privileged admin workstations; validate with compliance dashboards.\n- **Comprehensive review of Fortinet and other perimeter appliances**\n  - Confirm inventory, firmware standards, management plane exposure (no direct internet where avoidable), and ensure logging to SIEM with proper parsing/enrichment.\n- **Web application and email security hardening**\n  - Assess all Struts‑based and legacy Java stacks, SmarterMail or other third‑party mail/webmail, and apply WAF rules, version upgrades, and code scanning for injection/SSRF patterns.\n- **Source code and CI/CD security posture**\n  - Review policies for Git access (MFA, least privilege, network controls), secret scanning in repos, backup/restore testing, and incident playbooks for source‑code leaks/backdoor discovery.\n- **OAuth/SaaS and automation platform risk management**\n  - Work with cloud and app teams to inventory n8n and similar workflow tools, reduce token scopes, implement conditional access on critical SaaS, and enable anomaly detection for OAuth app grants.\n- **Ransomware and extortion readiness**\n  - Re‑validate backups, EDR coverage, DC and hypervisor hardening, and user awareness around phishing and RMM misuse; refresh playbooks for double‑extortion and regulatory/compliance impact.",
+  "highlights": [
+    {
+      "title": "Product showcase: Orbot – Tor VPN for iOS",
+      "link": "https://www.helpnetsecurity.com/2026/01/14/product-showcase-orbot-tor-ios/",
+      "source": "Help Net Security",
+      "published": "2026-01-14T05:30:59+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "FortiOS and FortiSwitchManager Flaw Allows Remote Code Execution",
+      "link": "https://gbhackers.com/fortios-and-fortiswitchmanager-flaw/",
+      "source": "GBHackers News",
+      "published": "2026-01-14T05:16:09+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "New Magecart Campaign Steals Credit Card Details During Online Checkouts",
+      "link": "https://gbhackers.com/magecart-campaign-2/",
+      "source": "GBHackers News",
+      "published": "2026-01-14T04:58:49+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Microsoft January 2026 Patch Tuesday Fixes 114 Flaws, Including 3 Zero-Days",
+      "link": "https://gbhackers.com/microsoft-january-2026-patch-tuesday/",
+      "source": "GBHackers News",
+      "published": "2026-01-14T04:53:35+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Windows / Microsoft",
+        "Cloud / SaaS"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Security-KPIs und -KRIs: So messen Sie Cybersicherheit",
+      "link": "https://www.csoonline.com/article/3495619/security-kpis-und-kris-so-messen-sie-cybersicherheit.html",
+      "source": "CSO Online",
+      "published": "2026-01-14T04:00:00+00:00",
+      "smart_groups": [
+        "Curated",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "Identity / Access",
+        "Crypto / Web3"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Microsoft Desktop Window Manager 0-Day Vulnerability Exploited in the wild",
+      "link": "https://cybersecuritynews.com/desktop-window-manager-0-day-vulnerability/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-01-14T03:04:38+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Stop trusting PRNGs: I built a Hardware-Based Password Vault using physical entropy (micro:bit + Python)",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1qcawm1/stop_trusting_prngs_i_built_a_hardwarebased/",
+      "source": "/r/cybersecurity",
+      "published": "2026-01-14T02:14:57+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "January 2026 Microsoft Patch Tuesday: Actively exploited zero day needs attention",
+      "link": "https://www.csoonline.com/article/4116437/january-2026-microsoft-patch-tuesday-actively-exploited-zero-day-needs-attention.html",
+      "source": "CSO Online",
+      "published": "2026-01-14T01:50:49+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Windows / Microsoft",
+        "Cloud / SaaS",
+        "Web / API Security",
+        "Identity / Access",
+        "Network / OT / ICS"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Personal Details of Thousands of Border Patrol and ICE Agents Allegedly Leaked in Huge Data Breach",
+      "link": "https://databreaches.net/2026/01/13/personal-details-of-thousands-of-border-patrol-and-ice-agents-allegedly-leaked-in-huge-data-breach/?pk_campaign=feed&pk_kwd=personal-details-of-thousands-of-border-patrol-and-ice-agents-allegedly-leaked-in-huge-data-breach",
+      "source": "DataBreaches.net",
+      "published": "2026-01-14T00:32:40+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Data Breaches / Leaks"
+      ],
+      "curated": true
+    },
+    {
+      "title": "AZ Monica hospital in Belgium shuts down servers after cyberattack",
+      "link": "https://securityaffairs.com/186882/cyber-crime/az-monica-hospital-in-belgium-shuts-down-servers-after-cyberattack.html",
+      "source": "Security Affairs",
+      "published": "2026-01-13T23:47:24+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    }
+  ]
+}

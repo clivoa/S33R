@@ -1,0 +1,136 @@
+{
+  "generated_at": "2026-01-09T06:51:23.746440+00:00",
+  "analysis_date": "2026-01-09",
+  "model": "gpt-5.1",
+  "window_hours": 24,
+  "source_file": "data/news_recent.json",
+  "source_generated_at": "2026-01-09T05:52:08.782697+00:00",
+  "source_days_back": 30,
+  "source_total_items": 6730,
+  "total_items_in_window_all": 330,
+  "total_items_in_window_curated": 105,
+  "morning_call_markdown": "### Executive Summary\n- Active exploitation of critical infrastructure tooling: HPE OneView (CVE‑2025‑37164) and legacy Microsoft PowerPoint code injection are now on CISA KEV and observed in attacks.\n- Network edge and control-plane exposures: Cisco ISE vulnerability with public PoC and “React2Shell” mass exploitation highlight ongoing targeting of edge and web components.\n- Identity and Microsoft 365 risk: new OAuth/ROPC-based MFA bypass techniques plus misconfigured email routing are being abused to phish and hijack Microsoft 365 accounts; Microsoft is enforcing MFA for 365 admin center.\n\n---\n\n### High-priority items (immediate attention)\n\n- **HPE OneView critical RCE – actively exploited (CVE‑2025‑37164)**\n  - What happened: CISA and multiple vendors report in-the-wild exploitation of a max‑severity code injection bug in HPE OneView management appliances.\n  - Why it matters operationally: OneView often manages servers and storage; compromise gives attackers high-privilege access to data center infrastructure (ideal for ransomware and persistence).\n  - Recommended immediate actions for the SOC today:  \n    - Identify any HPE OneView in asset inventory; confirm patch level with infra teams (CISA KEV-listed CVE).  \n    - Increase monitoring of management VLANs: look for unusual logins, config changes, or new admin users from unknown IPs; alert on any external access to OneView interfaces.\n\n- **Cisco Identity Services Engine (ISE) flaw with public PoC**\n  - What happened: Cisco disclosed an ISE vulnerability that allows remote access to sensitive data; multiple sources confirm public PoC code.\n  - Why it matters operationally: ISE is core to network access control; exploitation could expose credentials, network policies, and support lateral movement or bypass of network segmentation.\n  - Recommended immediate actions for the SOC today:  \n    - Work with network team to confirm ISE version/patch status; if unpatched and internet-exposed or partner-exposed, treat as at-risk and raise priority.  \n    - Monitor ISE logs and network telemetry for abnormal API calls, failed / unusual admin logins, and configuration exports; add temporary firewall rules to restrict ISE management interfaces to known admin ranges only.\n\n- **Legacy Microsoft PowerPoint code injection – active exploitation**\n  - What happened: CISA added a legacy Microsoft PowerPoint code injection vulnerability to KEV based on ongoing exploitation in the wild.\n  - Why it matters operationally: Malicious Office documents remain a common initial access vector; this bug allows arbitrary code via weaponized PPT files, bypassing some legacy controls.\n  - Recommended immediate actions for the SOC today:  \n    - Ensure EDR rules and email security are tuned to flag Office macros, OLE/embedded objects, and PowerPoint spawning scripting engines (wscript, powershell, cmd); block or sandbox unsolicited PPT attachments.  \n    - Hunt for recent PowerPoint executions followed by process chains to scripting tools or LOLBins on high-value endpoints (finance, executives, admins).\n\n- **React2Shell vulnerability – mass exploitation attempts**\n  - What happened: Reports show ~8.1 million attack sessions targeting the React2Shell vulnerability in web applications.\n  - Why it matters operationally: Shows broad automated scanning for a modern web stack flaw; if any internet-facing apps use vulnerable components, they may already be probed or compromised.\n  - Recommended immediate actions for the SOC today:  \n    - Confirm with app/dev teams whether React2Shell-affected components are in use; if yes, verify patching or compensating controls (WAF rules).  \n    - On web logs and WAF, look for abnormal POST/GET patterns matching public exploit signatures for React2Shell and follow up on any 200/500 responses to suspicious payloads.\n\n- **Microsoft 365 identity abuses: OAuth-based MFA bypass & misconfigured routing**\n  - What happened: New research shows OAuth/ROPC abuses to bypass MFA in Entra ID and phishing campaigns exploiting misconfigured email routing to target Microsoft 365.\n  - Why it matters operationally: Direct impact on our cloud email and collaboration; can lead to account takeover, BEC, and data theft even where MFA is in place.\n  - Recommended immediate actions for the SOC today:  \n    - In Entra/M365 logs, hunt for high volumes of OAuth consent grants, legacy/ROPC flows, and sign-ins from new locations/devices for privileged or finance-related accounts; escalate any anomalous consents.  \n    - Confirm with email admins that external MX/relay/routing configs match policy; tighten rules that allow unauthenticated relaying or alternate routes around our main secure gateway.\n\n---\n\n### Monitoring & detection recommendations\n\n- **HPE OneView & other management plane RCEs (OneView, Trend Micro Apex Central, n8n, Coolify, GitLab, jsPDF/node)**  \n  - Logs: Management appliance logs, hypervisor logs, syslog, web server logs, and EDR on jump hosts.  \n  - Hunt for: New admin accounts, config exports, unexpected outbound connections from management systems, web requests with suspicious payloads to admin APIs. (MITRE T1190, T1068, T1078)\n\n- **Cisco ISE & other edge/network devices (Snort 3, Fortinet edge write-up, Hitachi Energy advisory)**  \n  - Logs: Network device logs, TACACS/RADIUS, firewall logs around management IPs.  \n  - Hunt for: Failed and successful admin logins from unusual IPs, sudden policy changes, firmware/config downloads, or CLI/API actions outside change windows. (T1133, T1078, T1600)\n\n- **Microsoft Office / PowerPoint exploitation & malicious document delivery**  \n  - Logs: EDR, email gateway, M365 Defender logs.  \n  - Hunt for: Office processes spawning cmd/powershell/wscript/mshta, suspicious child processes from POWERPNT.EXE, attachments with double extensions or from new external senders. (T1203, T1566.001, T1204)\n\n- **React2Shell, ModSecurity CRS bypass (CVE‑2026‑21876) and general web exploitation**  \n  - Logs: WAF, web server access/error logs, reverse proxy logs.  \n  - Hunt for: Repeated requests to unusual endpoints, evidence of WAF rule bypasses, long/encoded parameters, and 5xx/4xx spikes followed by 200s from same IPs. (T1190, T1195)\n\n- **Microsoft 365 identity abuse: OAuth/ROPC, MFA bypass, misconfigured routing abuse**  \n  - Logs: Entra ID sign-in logs, audit logs, OAuth consent logs, email trace.  \n  - Hunt for: ROPC/legacy auth usage on accounts that shouldn’t use it, unusual app registrations, mass consent prompts, inbox rule changes, forwarding to external domains, anomalous SMTP or routing paths. (T1078, T1556, T1114, T1531)\n\n- **Linux server malware/botnets and ESXi/edge exploitation trends (GoBruteforcer botnet, ESXi zero-days, China-linked telco targeting)**  \n  - Logs: Linux auth logs, SSH logs, IDS/IPS, firewall, hypervisor logs.  \n  - Hunt for: High-rate SSH login attempts, web-to-shell patterns, new cron jobs/systemd services, unexpected outbound connections from ESXi or network appliances. (T1110, T1059, T1105, T1489)\n\n- **Endpoint stealth techniques (kernel patch protection abuse, fake installers like WinRAR)**  \n  - Logs: EDR, Windows event logs (Sysmon if available), web proxy.  \n  - Hunt for: Unsigned drivers, changes to kernel protections or AV/EDR services, user downloads of installers from non-vendor sites followed by unusual process trees. (T1068, T1562, T1204, T1105)\n\n- **Banking trojans (Astaroth via WhatsApp) and general phishing**  \n  - Logs: Email/SMS/WhatsApp gateway (if logged), DNS, proxy, EDR.  \n  - Hunt for: Links/attachments received via consumer channels on corporate devices, unusual DLL side-loading, credential stealing modules or keylogging behavior post-message click. (T1566, T1059, T1056)\n\n---\n\n### Medium-term follow-ups\n\n- **Confirm exposure and patch strategy for management and automation platforms**  \n  - Inventory and risk-rate HPE OneView, Trend Micro Apex Central, n8n, Coolify, GitLab, jsPDF-based apps; ensure patching timelines and compensating WAF/network controls are formalized.\n\n- **Network access control and edge hardening**  \n  - Review Cisco ISE, Snort 3, Fortinet, and other edge device configurations for least privilege, strong MFA on admin interfaces, and strict IP-based access; plan for regular config backup and integrity monitoring.\n\n- **Identity & MFA policies for Microsoft 365 and Entra ID**  \n  - Reassess use of legacy/ROPC flows; phase them out where possible; restrict OAuth app registrations and consent to admins; ensure upcoming Microsoft-enforced MFA for 365 admin center aligns with our policies.\n\n- **Email and collaboration security posture**  \n  - Validate that email routing/MX/DKIM/DMARC are correctly configured and not allowing bypass of our secure gateway; strengthen rules for Office attachments (especially legacy formats like PPT).\n\n- **Ransomware and initial access ecosystem awareness**  \n  - Review recent reporting on ransomware trends and initial access broker sales; align our playbooks and threat models with current TTPs, especially around remote management tools and exposed web apps.\n\n- **Cloud and AI/LLM security controls**  \n  - In light of ChatGPT-related data exfil and agentic AI discussions, review our policies for staff use of external AI tools, ensure no sensitive data flows to unsanctioned AI, and evaluate logging/monitoring for sanctioned AI integrations.",
+  "highlights": [
+    {
+      "title": "Wi-Fi evolution tightens focus on access control",
+      "link": "https://www.helpnetsecurity.com/2026/01/09/wba-wi-fi-access-control/",
+      "source": "Help Net Security",
+      "published": "2026-01-09T05:30:15+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Microsoft Mandates MFA for Microsoft 365 Admin Center Access",
+      "link": "https://gbhackers.com/microsoft-mandates-mfa-for-microsoft-365/",
+      "source": "GBHackers News",
+      "published": "2026-01-09T05:03:48+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Identity / Access"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Enterprises still aren’t getting IAM right",
+      "link": "https://www.csoonline.com/article/4114758/enterprises-still-arent-getting-iam-right-2.html",
+      "source": "CSO Online",
+      "published": "2026-01-09T04:22:37+00:00",
+      "smart_groups": [
+        "Curated",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "Cloud / SaaS",
+        "Identity / Access",
+        "Network / OT / ICS"
+      ],
+      "curated": true
+    },
+    {
+      "title": "5 Top Cybersecurity-Zertifizierungen: So pushen Sie Ihre CISO-Karriere",
+      "link": "https://www.csoonline.com/article/3493104/5-top-cybersecurity-zertifizierungen-so-pushen-sie-ihre-ciso-karriere.html",
+      "source": "CSO Online",
+      "published": "2026-01-09T03:33:00+00:00",
+      "smart_groups": [
+        "Curated",
+        "Ransomware",
+        "Identity / Access"
+      ],
+      "curated": true
+    },
+    {
+      "title": "ICE Agent Who Reportedly Shot Renee Good Was a Firearms Trainer, Per Testimony",
+      "link": "https://www.wired.com/story/ice-agent-jonathan-ross-renee-good-shooting-firearms-trainer-testimony/",
+      "source": "Security News: Cybersecurity, Hacks, Privacy, National Security",
+      "published": "2026-01-09T03:19:26+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Cisco identifies vulnerability in ISE network access control devices",
+      "link": "https://www.csoonline.com/article/4114715/cisco-identifies-vulnerability-in-ise-network-access-control-devices-2.html",
+      "source": "CSO Online",
+      "published": "2026-01-09T02:11:55+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Datadog Security Suite Opinions",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1q7u6z5/datadog_security_suite_opinions/",
+      "source": "/r/cybersecurity",
+      "published": "2026-01-09T01:10:08+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Chinese-speaking hackers exploited ESXi zero-days long before disclosure",
+      "link": "https://securityaffairs.com/186709/hacking/chinese-speaking-hackers-exploited-esxi-zero-days-long-before-disclosure.html",
+      "source": "Security Affairs",
+      "published": "2026-01-09T00:06:15+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": true
+    },
+    {
+      "title": "New China-linked hackers breach telcos using edge device exploits",
+      "link": "https://www.bleepingcomputer.com/news/security/new-china-linked-hackers-breach-telcos-using-edge-device-exploits/",
+      "source": "BleepingComputer",
+      "published": "2026-01-08T23:39:12+00:00",
+      "smart_groups": [
+        "Curated",
+        "Exploit / PoC",
+        "Linux / Unix",
+        "Malware / Payloads"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Wall Street, Crypto Leaders Make 'Progress' on Crypto Bill in Private Meeting: Sources",
+      "link": "https://decrypt.co/354064/wall-street-crypto-market-structure-bill-private-meeting",
+      "source": "Decrypt",
+      "published": "2026-01-08T23:37:54+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Crypto / Web3"
+      ],
+      "curated": true
+    }
+  ]
+}

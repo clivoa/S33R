@@ -1,0 +1,143 @@
+{
+  "generated_at": "2025-12-14T06:45:15.958955+00:00",
+  "analysis_date": "2025-12-14",
+  "model": "gpt-5.1",
+  "window_hours": 24,
+  "source_file": "data/news_recent.json",
+  "source_generated_at": "2025-12-14T05:40:59.721731+00:00",
+  "source_days_back": 30,
+  "source_total_items": 4649,
+  "total_items_in_window_all": 62,
+  "total_items_in_window_curated": 17,
+  "morning_call_markdown": "### Executive Summary\n- CISA added actively exploited Google Chromium and Sierra Wireless AirLink router flaws to KEV; both are being used in the wild for code execution.  \n- Apple confirmed an iOS zero‑day exploited in targeted attacks; mobile devices of execs and high‑risk staff are in scope.  \n- Multiple reports highlight AI‑assisted exploitation tools and a new Empire post‑exploitation release, lowering the bar for rapid exploitation of fresh CVEs.\n\n---\n\n### High-priority items (immediate attention)\n\n- **Google Chromium 0‑day – actively exploited (CISA KEV)**  \n  - What: CISA warns a Chromium 0‑day is under active exploitation; vendors have shipped or are shipping fixes.  \n  - Why it matters: User browsing is a primary initial access vector; drive‑by compromise of staff endpoints (including VDI) is realistic.  \n  - Recommended immediate actions:  \n    - Confirm enterprise Chrome/Edge/other Chromium builds are on latest stable; flag non‑compliant hosts.  \n    - Increase scrutiny of web‑originated processes spawning shells or scripting engines (EDR rules / high‑priority alerts).\n\n- **Sierra Wireless AirLink ALEOS router RCE – actively exploited (CISA KEV)**  \n  - What: CISA added a remote code execution flaw in Sierra Wireless AirLink ALEOS routers to KEV; exploitation observed in the wild.  \n  - Why it matters: These devices are often used for remote/field connectivity; compromise can provide network footholds and pivot into internal segments.  \n  - Recommended immediate actions:  \n    - Identify any Sierra Wireless/AirLink devices in our inventory, telco partners, or critical third parties; confirm patch or compensating controls (disable remote admin, restrict management IPs).  \n    - Add/verify perimeter monitoring for unusual management access (HTTP/HTTPS/SSH) to these devices and block direct Internet exposure where possible.\n\n- **Apple iOS zero‑day exploited in targeted attacks**  \n  - What: Apple confirmed a zero‑day used in targeted campaigns against iPhone users (likely via malicious content or messages).  \n  - Why it matters: High‑value staff (execs, trading, payments, security) are prime targets; compromise can bypass MFA via session theft and expose sensitive comms.  \n  - Recommended immediate actions:  \n    - Coordinate with mobility team to enforce rapid iOS/iPadOS update across corporate‑managed and BYOD enrolled devices; confirm patch coverage for VIPs.  \n    - Increase monitoring for anomalous mobile access to email/IdP (new device fingerprints, unusual IP geos) and be ready to revoke tokens/sessions rapidly.\n\n- **React2Shell exploitation campaigns (multiple groups spreading malware)**  \n  - What: Google reports several threat groups abusing a React2Shell vulnerability chain to deliver malware.  \n  - Why it matters: If any customer‑facing or internal web apps use affected components, they may be leveraged for web‑to‑host compromise and lateral movement.  \n  - Recommended immediate actions:  \n    - Work with app/security engineering to confirm whether any Internet‑facing apps/components are impacted; if unclear, prioritize those with direct data or auth exposure.  \n    - Tune web app firewall (WAF) to block suspicious React/Node‑related exploit patterns where possible; raise priority on any EDR alerts on web servers showing new shells or reverse connections.\n\n- **Emerging AI‑assisted exploitation & Empire 6.3.0 release (post‑exploitation)**  \n  - What: New open‑source AI auto‑exploiter PoCs and Empire 6.3.0 post‑exploitation framework updates are being promoted to offensive and criminal communities.  \n  - Why it matters: Expect faster weaponization of fresh CVEs and more sophisticated post‑ex activity (lateral movement, credential theft) that looks “operator‑like” even from low‑skill adversaries.  \n  - Recommended immediate actions:  \n    - Tighten detections around common post‑ex tactics: credential dumping, PowerShell/CLI abuse, C2 beacons; validate that Empire‑like behaviors generate high‑severity alerts.  \n    - For any newly exposed external service/CVE, assume rapid exploitation; escalate patching and increase log collection/retention around those assets.\n\n---\n\n### Monitoring & detection recommendations\n\n- **Browser exploitation (Chromium 0‑day, React2Shell)**  \n  - Log sources: EDR, web proxy, secure web gateway.  \n  - Hunt for: Browsers spawning cmd.exe/powershell/wscript/node (T1203, T1204, T1059); sudden downloads then execution of binaries/scripts from non‑standard sites.\n\n- **Internet‑facing network devices (Sierra Wireless AirLink ALEOS)**  \n  - Log sources: Perimeter firewall, router logs, NIDS.  \n  - Hunt for: New/abnormal inbound connections to management ports from Internet IPs; config changes, unexpected outbound connections from routers (T1078, T1090).\n\n- **Mobile account abuse (iOS zero‑day)**  \n  - Log sources: IdP (Azure AD/Okta), MDM, email security, VPN.  \n  - Hunt for: New device enrollments or logins for VIPs from unusual geos/ASNs; rapid token re‑use across multiple IPs; new mobile OS versions followed by suspicious access patterns (T1078, T1071).\n\n- **Post‑exploitation & C2 (Empire 6.3.0, AI auto‑exploiter)**  \n  - Log sources: EDR, Windows event logs (Sysmon), DNS, proxy.  \n  - Hunt for:  \n    - Obfuscated PowerShell/CLI, encoded commands, AMSI bypass attempts (T1059.001/003).  \n    - Periodic low‑volume C2‑like HTTPS/DNS traffic to newly registered or low‑reputation domains (T1071, T1105).\n\n- **Web application exploitation (React2Shell, supply‑chain attack on GitHub users)**  \n  - Log sources: WAF, web server logs, Git hosting logs (GitHub Enterprise/GitLab), CI/CD.  \n  - Hunt for:  \n    - Unexpected POSTs to debugging/admin endpoints, high 500 error spikes followed by new processes (T1190).  \n    - New tokens, SSH keys, or OAuth app authorizations on developer accounts; anomalous git pushes from new devices/IPs.\n\n- **Credential access and lateral movement (Empire, AI tools)**  \n  - Log sources: AD security logs, EDR, Windows event logs.  \n  - Hunt for: LSASS access attempts, use of built‑in credential tools, mass authentication attempts using valid accounts, new admin group memberships (T1003, T1078, T1087).\n\n- **Email and social vectors for targeted mobile/exec phishing**  \n  - Log sources: Email gateway, messaging platforms (Teams/Slack logs if available).  \n  - Hunt for: Highly targeted lures to execs/security staff with links to exploit sites or malicious attachments; unusual use of personal addresses for business matters (T1566).\n\n---\n\n### Medium-term follow-ups\n\n- **Patch and configuration program for KEV items**  \n  - Ensure Chromium and Sierra Wireless KEV entries are added to our internal “must‑patch” list with ownership, deadlines, and verification steps.\n\n- **Mobile device security hardening**  \n  - Review and strengthen mobile baseline (iOS/Android): enforced timely updates, disabling risky profiles, restricting side‑loading, and requiring device attestation for high‑risk access.\n\n- **Web application and supply‑chain security review**  \n  - Assess exposure to React2Shell‑like issues and GitHub/CI workflows; enforce least‑privilege tokens, branch protections, and mandatory code review for pipeline changes.\n\n- **Detection engineering for post‑exploitation frameworks**  \n  - Develop/test Sigma/EDR rules tuned to Empire‑style behaviors rather than signatures; incorporate ATT&CK coverage review for lateral movement and privilege escalation.\n\n- **AI‑enabled threat landscape preparedness**  \n  - Start a short internal workstream to track AI‑assisted exploitation trends and evaluate where rate‑limiting, attack surface reduction, and better telemetry can offset faster attacker iteration.\n\n- **Tabletop and IR runbooks for device and mobile 0‑days**  \n  - Update/run tabletops involving browser and mobile 0‑day scenarios (VIP device compromise, router foothold) and ensure playbooks cover rapid containment, token revocation, and comms.",
+  "highlights": [
+    {
+      "title": "Cyber incident disrupts Washington's West Pierce Fire & Rescue",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1plxrnc/cyber_incident_disrupts_washingtons_west_pierce/",
+      "source": "/r/cybersecurity",
+      "published": "2025-12-13T22:22:55+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Security Lessons from November’s Incidents",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1plrq1f/security_lessons_from_novembers_incidents/",
+      "source": "/r/cybersecurity",
+      "published": "2025-12-13T18:03:22+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Linux / Unix",
+        "Identity / Access",
+        "Phishing / Social Engineering"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Failed CRTP Twice",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1plrphe/failed_crtp_twice/",
+      "source": "/r/cybersecurity",
+      "published": "2025-12-13T18:02:48+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Pluralistic: Federal Wallet Inspectors (13 Dec 2025)",
+      "link": "https://pluralistic.net/2025/12/13/uncle-sucker/",
+      "source": "https://pluralistic.net/feed/",
+      "published": "2025-12-13T16:14:50+00:00",
+      "smart_groups": [
+        "Curated",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "Cloud / SaaS",
+        "Identity / Access",
+        "Network / OT / ICS",
+        "Crypto / Web3"
+      ],
+      "curated": true
+    },
+    {
+      "title": "HTB: WhiteRabbit",
+      "link": "https://0xdf.gitlab.io/2025/12/13/htb-whiterabbit.html",
+      "source": "https://0xdf.gitlab.io/feed.xml",
+      "published": "2025-12-13T14:45:00+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Web / API Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Researchers and Developers Targeted in AI-Driven GitHub Supply Chain Attack",
+      "link": "https://gbhackers.com/researchers-targeted-in-ai-driven-github-supply-chain-attack/",
+      "source": "GBHackers News",
+      "published": "2025-12-13T14:08:03+00:00",
+      "smart_groups": [
+        "Curated",
+        "Malware / Payloads"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Google Warns Multiple Hacker Groups Are Exploiting React2Shell to Spread Malware",
+      "link": "https://cybersecuritynews.com/google-warns-exploiting-react2shell-to-spread-malware/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2025-12-13T13:49:03+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Malware / Payloads"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Empire 6.3.0 Launches With New Features for Red Teams and Penetration Testers",
+      "link": "https://cybersecuritynews.com/empire-6-3-0-red-teams-and-penetration-testers/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2025-12-13T13:39:59+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Empire 6.3.0 Released as Updated Post-Exploitation Framework for Red Teams",
+      "link": "https://gbhackers.com/empire-6-3-0-released/",
+      "source": "GBHackers News",
+      "published": "2025-12-13T13:21:32+00:00",
+      "smart_groups": [
+        "Curated",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": true
+    },
+    {
+      "title": "CISA Warns of Google Chromium 0-Day Vulnerability Exploited in Attacks",
+      "link": "https://cybersecuritynews.com/chromium-0-day-vulnerability-exploited/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2025-12-13T13:00:57+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Network / OT / ICS"
+      ],
+      "curated": true
+    }
+  ]
+}

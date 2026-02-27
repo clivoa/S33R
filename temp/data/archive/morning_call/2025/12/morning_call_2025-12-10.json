@@ -1,0 +1,134 @@
+{
+  "generated_at": "2025-12-10T21:23:07.149935+00:00",
+  "analysis_date": "2025-12-10",
+  "model": "gpt-5.1",
+  "window_hours": 24,
+  "source_file": "data/news_recent.json",
+  "source_generated_at": "2025-12-10T20:40:53.060063+00:00",
+  "source_days_back": 30,
+  "source_total_items": 4082,
+  "total_items_in_window_all": 347,
+  "total_items_in_window_curated": 108,
+  "morning_call_markdown": "### Executive Summary\n\n- Active exploitation continues on multiple fronts: React2Shell (CVE-2025-55182) in React Server Components, WinRAR RCE (CVE-2025-6218), and Windows Cloud Files Mini Filter driver 0‑day are all being abused in the wild and flagged by CISA KEV.\n- Critical enterprise software issues: Ivanti Endpoint Manager (EPM) remote code execution + admin session hijack, Gogs RCE 0‑day exploited in the wild, and newly disclosed Splunk Enterprise flaws all require rapid exposure checks.\n- High‑impact platform updates: Microsoft’s December Patch Tuesday fixes three zero‑days (incl. an already exploited Windows privilege escalation); SAP, Fortinet, and Google Gemini Enterprise release urgent patches.\n- Targeted campaigns: North Korea is weaponizing React2Shell to deploy EtherRAT and Linux PeerBlight; new Rust‑based 01flip ransomware emerges; Shai‑Hulud 2.0 supply‑chain guidance released by Microsoft.\n\n---\n\n### High-priority items (immediate attention)\n\n#### 1. React2Shell (CVE-2025-55182) – Active exploitation, North Korean EtherRAT / PeerBlight\n\n- **What happened**\n  - Critical React Server Components vulnerability (“React2Shell”) is under active exploitation and has been added to CISA KEV.\n  - North Korean actors exploit it to deploy EtherRAT backdoor and PeerBlight Linux malware, enabling proxy tunneling into internal networks and API access.\n- **Why it matters**\n  - Any internet‑facing React Server Components or apps using vulnerable libraries may provide direct access to internal APIs and data.\n  - EtherRAT/PeerBlight can establish persistent C2 and lateral movement paths inside our network.\n- **Immediate SOC actions**\n  - **Exposure check (with app/platform teams)**\n    - Identify any public‑facing apps using React Server Components and confirm if affected versions/components are in use.\n  - **Web & app‑layer monitoring**\n    - Review WAF and web server logs for:\n      - Unusual POSTs / crafted paths to RSC endpoints with suspicious template/payload parameters.\n      - Sudden spikes in 4xx/5xx errors or anomalous query strings against React apps.\n  - **Endpoint & network hunting**\n    - On web/app servers:\n      - Look for new processes spawned by Node/React runtimes or web servers (ATT&CK T1059, T1203).\n      - Hunt for new outbound connections from these hosts to uncommon IPs/ports, especially long‑lived reverse shells or SOCKS/proxy tunnels (T1090).\n    - Search EDR/network logs for:\n      - `EtherRAT`-like behavior: persistence creation, registry/autorun entries, unusual scheduled tasks, or services tied to web service accounts.\n      - PeerBlight patterns on Linux: unknown binaries in `/tmp`, `/dev/shm`, or world‑writable dirs and new systemd services created shortly after web access anomalies.\n  - **Containment readiness**\n    - Pre‑agree with app owners that any suspected exploited React app can be immediately geo‑fenced, rate‑limited or taken behind VPN/CDN while patches are applied.\n\n---\n\n#### 2. WinRAR RCE (CVE-2025-6218) & CISA KEV Windows/WinRAR entries – Active mass exploitation\n\n- **What happened**\n  - A WinRAR remote code execution vuln is being actively exploited by multiple threat groups and has been added to CISA KEV.\n  - CISA additionally lists other Windows flaws as known exploited.\n- **Why it matters**\n  - Financial staff often use WinRAR for archives (including in FX/trade ops and back office); spear‑phishing with malicious archives is a long‑standing entry vector.\n  - Exploitation is user‑driven (opening archives) and may bypass email inspection if archives are password‑protected.\n- **Immediate SOC actions**\n  - **Inventory & blocking**\n    - Query EDR/asset mgmt for WinRAR installations and versions.\n    - If vulnerable versions are found and cannot be updated immediately, request temporary **software restriction**: block `winrar.exe` execution on high‑risk segments or from unknown paths.\n  - **Email & web monitoring**\n    - Email security: flag and review spikes in RAR/ZIP attachments, particularly from new senders or related to finance/HR themes (T1566).\n    - Proxy/web: inspect downloads of RAR files from newly registered or low‑reputation domains.\n  - **Endpoint hunting**\n    - Hunt for:\n      - `winrar.exe` or related processes spawning scripting engines or LOLBins (`powershell.exe`, `wscript.exe`, `cmd.exe`, `mshta.exe`, `rundll32.exe`) shortly after file open (T1204, T1203).\n      - New executables dropped in `%TEMP%`, `Downloads`, or user profile dirs immediately after RAR file opens.\n  - **User messaging (via SecOps -> comms)**\n    - Urgent advisory to staff: do not open archives from unexpected emails; route suspicious archives to security for analysis.\n\n---\n\n#### 3. Microsoft December Patch Tuesday – 3 zero‑days, incl. exploited Cloud Files Mini Filter driver\n\n- **What happened**\n  - Microsoft released December updates fixing 56–57 vulnerabilities, including:\n    - A **Windows Cloud Files Mini Filter driver 0‑day** under active exploitation for privilege escalation (CISA‑highlighted).\n    - Additional zero‑days and Outlook / Windows Defender Firewall issues; CISA also mentions newly exploited Windows flaws.\n- **Why it matters**\n  - Privilege escalation is a key step following phish or initial malware; this narrows detection windows and can undermine EDR.\n  - Outlook bugs enable RCE via crafted emails; firewall bugs can weaken host‑based network controls.\n- **Immediate SOC actions**\n  - **Patch status & prioritization**\n    - Confirm with infra team that:\n      - Domain controllers, RDS/Citrix servers, VDI, jump hosts, and laptops with privileged users are prioritized for December patches.\n    - Track % coverage over the next 72 hours.\n  - **Hunting for exploitation**\n    - Look for:\n      - Local privilege escalation behavior: low‑priv user (often service or local account) unexpectedly gaining admin actions, adding users to local admins group, or modifying security settings (T1068).\n      - Event logs showing failure/success anomalies around driver access or security policy changes after an initial suspicious process (like from Office, browser, or email client).\n  - **Outlook & firewall focus**\n    - Email logs: search for suspicious attachment types or malformed messages tied to exploitation PoCs for Outlook CVEs (T1204).\n    - Endpoints: detect any abnormal changes to Windows Defender Firewall rules via `netsh`, `PowerShell`, or direct registry edits (T1562.004).\n\n---\n\n#### 4. Ivanti Endpoint Manager (EPM) – Critical RCE & admin session hijacking\n\n- **What happened**\n  - Critical Ivanti EPM vulnerabilities: admin session hijacking via stored XSS and remote code execution, with many EPM servers exposed online.\n- **Why it matters**\n  - EPM has high trust and broad reach; compromise effectively grants adversaries domain‑wide software deployment and configuration control (ideal for ransomware or supply‑chain‑style attacks).\n- **Immediate SOC actions**\n  - **Exposure & patch verification**\n    - Confirm whether we run Ivanti EPM and if it is internet‑facing or accessible from semi‑trusted networks.\n    - Verify latest patches are applied; if not, prioritize emergency maintenance window.\n  - **Access log review**\n    - Review EPM web UI logs for:\n      - Logins from unusual IPs/regions or at unusual times.\n      - Unexpected admin actions: creating new deployment tasks, modifying agent configs, or adding new admins (T1098).\n  - **Endpoint & network hunting**\n    - On endpoints managed by EPM:\n      - Look for EPM agents launching unexpected binaries/scripts or deploying software outside scheduled change windows (T1059, T1203).\n    - Monitor network for new outbound connections from EPM server(s) to unknown external IPs.\n  - **Hardening**\n    - If feasible, temporarily restrict EPM management interface to admin jumpboxes/VPN only.\n    - Ensure MFA enforced for EPM admin accounts.\n\n---\n\n#### 5. Windows PowerShell 0‑day & Defender Firewall data‑exposure flaw\n\n- **What happened**\n  - Reports of a **Windows PowerShell 0‑day** that allows arbitrary code execution.\n  - Windows Defender Firewall vulnerability that allows attackers to access sensitive data.\n- **Why it matters**\n  - PowerShell is a primary admin tool and widely abused by threat actors; a 0‑day increases the risk of stealthy post‑exploitation.\n  - Firewall weakness may help exfiltrate or move laterally even where host‑based rules are relied upon.\n- **Immediate SOC actions**\n  - **Constrain PowerShell**\n    - Ensure:\n      - Constrained Language Mode where possible on non‑admin endpoints.\n      - Script Block Logging and Module Logging are enabled and being ingested (T1059.001 visibility).\n  - **Hunting**\n    - Query for:\n      - PowerShell spawned by Office/Outlook, browsers, or WinRAR (T1204 → T1059).\n      - Encoded or obfuscated commands (`-enc`, long base64 strings, heavy use of `FromBase",
+  "highlights": [
+    {
+      "title": "An offline encrypted messaging method with no metadata exposure",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1pjd2ui/an_offline_encrypted_messaging_method_with_no/",
+      "source": "/r/cybersecurity",
+      "published": "2025-12-10T20:09:21+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Built a dependency-free tool to scan npm/Yarn/pnpm/bun/deno projects for vulnerable packages",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1pjcsdp/built_a_dependencyfree_tool_to_scan/",
+      "source": "/r/cybersecurity",
+      "published": "2025-12-10T19:59:03+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Cloud / SaaS",
+        "Supply Chain / Software"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Welcome to the Microsoft Security Community!",
+      "link": "https://techcommunity.microsoft.com/t5/microsoft-security-community/welcome-to-the-microsoft-security-community/ba-p/4471927",
+      "source": "Microsoft Security Blog (TechCommunity)",
+      "published": "2025-12-10T19:33:11+00:00",
+      "smart_groups": [
+        "Curated",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "Windows / Microsoft",
+        "Cloud / SaaS",
+        "Crypto / Web3"
+      ],
+      "curated": true
+    },
+    {
+      "title": ".NET SOAPwn Flaw Opens Door for File Writes and Remote Code Execution via Rogue WSDL",
+      "link": "https://thehackernews.com/2025/12/net-soapwn-flaw-opens-door-for-file.html",
+      "source": "The Hacker News",
+      "published": "2025-12-10T19:21:00+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Mobile device hardening: A forensic comparison of advanced protection programmes in IOS and Android",
+      "link": "https://www.youtube.com/watch?v=a-_di0nfOL8",
+      "source": "SANS DFIR (YouTube)",
+      "published": "2025-12-10T18:35:53+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Tool: Location log analysis of Google Maps IOS",
+      "link": "https://www.youtube.com/watch?v=8GE-fIw7sb8",
+      "source": "SANS DFIR (YouTube)",
+      "published": "2025-12-10T18:33:15+00:00",
+      "smart_groups": [
+        "Curated",
+        "Ransomware",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "PDF forensics and authenticity detection",
+      "link": "https://www.youtube.com/watch?v=ELcsKcR_seo",
+      "source": "SANS DFIR (YouTube)",
+      "published": "2025-12-10T18:32:19+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Network / OT / ICS"
+      ],
+      "curated": true
+    },
+    {
+      "title": "How do you break out of being “pigeonholed” when your company has a team for everything?",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1pjaahe/how_do_you_break_out_of_being_pigeonholed_when/",
+      "source": "/r/cybersecurity",
+      "published": "2025-12-10T18:26:29+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "MacOS telemetry vs EDR telemetry - Which is better?",
+      "link": "https://www.youtube.com/watch?v=V6VnQ-h4K-o",
+      "source": "SANS DFIR (YouTube)",
+      "published": "2025-12-10T18:23:26+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Microsoft won’t fix .NET RCE bug affecting enterprise apps",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1pj9rrm/microsoft_wont_fix_net_rce_bug_affecting/",
+      "source": "/r/cybersecurity",
+      "published": "2025-12-10T18:07:48+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    }
+  ]
+}

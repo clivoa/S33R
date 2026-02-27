@@ -1,0 +1,138 @@
+{
+  "generated_at": "2025-12-22T06:50:43.562122+00:00",
+  "analysis_date": "2025-12-22",
+  "model": "gpt-5.1",
+  "window_hours": 24,
+  "source_file": "data/news_recent.json",
+  "source_generated_at": "2025-12-22T06:46:27.069281+00:00",
+  "source_days_back": 30,
+  "source_total_items": 6389,
+  "total_items_in_window_all": 78,
+  "total_items_in_window_curated": 24,
+  "morning_call_markdown": "### Executive Summary\n- Active/exploited infrastructure bugs: Cisco Secure Email zero-day and a 9.3‑severity WatchGuard Firebox flaw are being abused in the wild; email and perimeter devices are high-risk.\n- Web stack threats: React RSC vulnerability (CVE-2025-55182) and a Next.js 0‑day campaign show active credential theft and server compromise against modern web apps.\n- Tooling/automation risk: New recon and vuln-hunting tools (Gaia, Vulnhalla) and “agentic automation” misconfigurations will accelerate Internet-wide scanning and exploit development.\n\n---\n\n### High-priority items (immediate attention)\n\n- Cisco Secure Email zero‑day actively exploited (multiple reports incl. weekly recaps)  \n  - Why it matters: Direct impact on email security gateways; compromise can give attackers mail visibility and internal footholds.  \n  - Actions today:  \n    - Identify all Cisco Secure Email / ESA / Secure Email Gateways; confirm patch/mitigation status with infra team.  \n    - In email security logs, hunt for anomalous admin login attempts, config changes, or unexpected outbound connections from these appliances over last 14–30 days.\n\n- WatchGuard Firebox firmware flaw (CVSS 9.3) exploited in the wild  \n  - Why it matters: Firewalls/VPN appliances exposed; exploitation can provide perimeter bypass or full device control.  \n  - Actions today:  \n    - Confirm whether any Firebox/WatchGuard devices exist in our estate or third-party managed links; if yes, verify versions against vendor advisory and ensure emergency patching or mitigation.  \n    - Review firewall/VPN logs for suspicious management access from Internet IPs, new/modified policies, or unusual VPN user creation (past 30 days).\n\n- Next.js 0‑day campaign (“Operation PCPcat”) stealing credentials from ~59k servers  \n  - Why it matters: Shows active, at-scale exploitation of modern JavaScript frameworks for credential theft; similar TTPs may apply to our public web apps.  \n  - Actions today:  \n    - Coordinate with app and cloud teams to identify any Next.js/Node-based Internet-facing services; validate they are on patched versions or have vendor-recommended mitigations.  \n    - From WAF, reverse proxy, and app logs, hunt for anomalous requests against Next.js/React routes (e.g., unusual query strings, unexpected POSTs to internal APIs) around the timeframe in the report.\n\n- React RSC (Server Components) vulnerability CVE‑2025‑55182 with Azure WAF rules available  \n  - Why it matters: Could enable data exposure or RCE in React-based apps; MS is pushing specific WAF protections indicating exploitation likelihood.  \n  - Actions today:  \n    - For Azure-hosted apps, verify Azure WAF React RSC rule set is enabled in “Prevention” mode on relevant frontends; for non‑Azure WAF, request equivalent signatures/rules.  \n    - Monitor WAF logs for React RSC-specific rule hits and spikes in blocked requests; escalate repeated offenders for further investigation.\n\n- Cisco, WatchGuard and other edge/email device 0‑days grouped as “weekly threat summary / zero-days, CVSS 10s, supply chain abuse”  \n  - Why it matters: Adversaries are prioritizing network edges and email/supply-chain paths; these are common entry points into financials.  \n  - Actions today:  \n    - Run a quick perimeter asset validation: ensure CMDB/inventory of all Internet-facing appliances (email, VPN, WAF, remote access) matches what we actually see in external scans.  \n    - Tighten monitoring on all perimeter devices: enable detailed logging to SIEM; add alerts on config changes, firmware upgrades, and new admin accounts.\n\n---\n\n### Monitoring & detection recommendations\n\n- Perimeter/email appliance exploitation (Cisco Secure Email, Firebox, other VPN/WAF devices)  \n  - Log sources: Appliance syslogs, management plane logs, NetFlow, firewall logs.  \n  - Focus: Unusual admin logins from foreign geos, changes to routing/relay rules, unexpected outbound connections or tunnels. (MITRE T1190, T1078, T1090)\n\n- Modern web stack exploitation (Next.js 0‑day, React RSC CVE‑2025‑55182)  \n  - Log sources: WAF, reverse proxy, web server logs, app logs, container logs.  \n  - Focus: Sudden spikes in 4xx/5xx on specific routes, abnormal POSTs to auth/SSO endpoints, large data responses from atypical endpoints, WAF rule hits tied to React/Next. (T1190, T1552)\n\n- Credential theft via compromised web servers (Operation PCPcat)  \n  - Log sources: IdP (SSO), web/app, DB, EDR on web servers.  \n  - Focus: Unusual successful logins just after failed attempts from the same IP, credential stuffing patterns, new user-agents or IP ranges authenticating to high-value apps. (T1110, T1556)\n\n- Increased scanning and recon (Gaia recon tool, new automation frameworks, wider availability of PoCs)  \n  - Log sources: Firewall, IDS/IPS, perimeter WAF, cloud load balancers.  \n  - Focus: Broad scanning across many ports and paths, HTTP requests probing for framework fingerprints, repeated hits on /.git, /_next, /api/*, admin panels. (T1595, T1046)\n\n- Linux and Redis/Kernel bug discovery via automated tools (Vulnhalla)  \n  - Log sources: EDR on Linux, syslog, kernel logs, Redis logs.  \n  - Focus: Crashes or restarts of Redis or kernel-related components, segfaults, or anomalous system calls that might indicate exploit dev or failed attempts. (T1068)\n\n- Mobile and SMS-related threats (Android malware with SMS theft + RAT)  \n  - Log sources: MDM, mobile security platform, SMS/OTP logs, IdP.  \n  - Focus: Excessive 2FA/OTP failures, multiple OTP requests for same user, new mobile devices enrolling and immediately accessing high-priv apps. (T1111, T1090)\n\n- Phishing/social engineering & PornHub/Crypto-themed breaches (weekly recap, awareness items)  \n  - Log sources: Secure email gateway, proxy, EDR, IdP.  \n  - Focus: Emails and web traffic referencing adult sites, “crypto bill” or investment lures, or fake updates; look for users entering creds on lookalike domains. (T1566, T1189)\n\n- Supply-chain and third-party abuse (highlighted in weekly summary)  \n  - Log sources: Vendor remote access logs, API gateway, VPN, IdP.  \n  - Focus: Third-party accounts accessing outside agreed schedules, from new locations, or performing admin/config actions for the first time. (T1195, T1078)\n\n---\n\n### Medium-term follow-ups\n\n- Comprehensive edge-device review  \n  - Build/refresh inventory of all Internet-facing appliances (email gateways, VPNs, WAFs, remote admin tools); ensure contacts, patch status, and logging configurations are documented.\n\n- Web application security posture  \n  - Align with app/dev teams to catalog all React/Next.js/Node apps; verify patch and WAF coverage for CVE‑2025‑55182‑class issues and Next.js 0‑days, and schedule regular dependency scanning.\n\n- Logging and SIEM tuning for appliances and cloud WAF  \n  - Standardize and centralize logs from Cisco Secure Email, WatchGuard, and other gateways; create/ refine SIEM correlation rules around admin changes, firmware updates, and WAF rule triggers.\n\n- Mobile/OTP hardening  \n  - Review 2FA policies (SMS vs app-based), alerting on unusual OTP behavior, and user guidance on mobile malware; coordinate with fraud teams to detect anomalous transaction patterns linked to OTP abuse.\n\n- Automation/agentic workflow risk review (n8n and similar tools)  \n  - Identify any low-code/automation platforms in use; assess permission scopes, secret storage practices, and network reach; define minimum-security baselines and monitoring.\n\n- IR playbook updates  \n  - Fold these current 0‑day patterns into existing playbooks: specific runbooks for email gateway compromise, edge device RCE, and modern web app credential theft, including quick forensics steps and containment actions.",
+  "highlights": [
+    {
+      "title": "Android Malware Operations Merge Droppers, SMS Theft, and RAT Capabilities at Scale",
+      "link": "https://thehackernews.com/2025/12/android-malware-operations-merge.html",
+      "source": "The Hacker News",
+      "published": "2025-12-22T06:11:00+00:00",
+      "smart_groups": [
+        "Curated",
+        "Malware / Payloads"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Anubis: Open-source web AI firewall to protect from scraper bots",
+      "link": "https://www.helpnetsecurity.com/2025/12/22/anubis-open-source-web-ai-firewall-protect-from-bots/",
+      "source": "Help Net Security",
+      "published": "2025-12-22T06:00:27+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "When OAuth Becomes a Weapon: Lessons from CVE-2025-6514",
+      "link": "https://www.reddit.com/r/netsec/comments/1psq0mx/when_oauth_becomes_a_weapon_lessons_from/",
+      "source": "/r/netsec",
+      "published": "2025-12-22T04:06:49+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Identity / Access"
+      ],
+      "curated": true
+    },
+    {
+      "title": "6 wichtige Punkte für Ihren Incident Response Plan",
+      "link": "https://www.csoonline.com/article/3842982/6-wichtige-punkte-fur-ihren-incident-response-plan.html",
+      "source": "CSO Online",
+      "published": "2025-12-22T04:00:00+00:00",
+      "smart_groups": [
+        "Curated",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "Identity / Access",
+        "Crypto / Web3"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Podcast: Die IT-Tops und -Flops 2025",
+      "link": "https://www.csoonline.com/article/4107605/podcast-die-it-tops-und-flops-2025-2.html",
+      "source": "CSO Online",
+      "published": "2025-12-22T04:00:00+00:00",
+      "smart_groups": [
+        "Curated",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "Malware / Payloads",
+        "Network / OT / ICS"
+      ],
+      "curated": true
+    },
+    {
+      "title": "New recon tool: Gaia",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1pskhby/new_recon_tool_gaia/",
+      "source": "/r/cybersecurity",
+      "published": "2025-12-21T23:36:33+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Trust me, Don't trust me.",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1psipoz/trust_me_dont_trust_me/",
+      "source": "/r/cybersecurity",
+      "published": "2025-12-21T22:17:18+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Windows / Microsoft"
+      ],
+      "curated": true
+    },
+    {
+      "title": "n8n and new agentic automation is showing security cracks",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1psej0c/n8n_and_new_agentic_automation_is_showing/",
+      "source": "/r/cybersecurity",
+      "published": "2025-12-21T19:16:42+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Protect against React RSC CVE-2025-55182 with Azure Web Application Firewall (WAF)",
+      "link": "https://techcommunity.microsoft.com/t5/azure-network-security-blog/protect-against-react-rsc-cve-2025-55182-with-azure-web/ba-p/4475291",
+      "source": "Azure Network Security Blog",
+      "published": "2025-12-21T18:55:41+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Cloud / SaaS",
+        "Web / API Security",
+        "Crypto / Web3"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Building a Hybrid Malicious URL Detector, How to Integrate Traditional Blacklists Without Relying on APIs Like VT?",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1psdak4/building_a_hybrid_malicious_url_detector_how_to/",
+      "source": "/r/cybersecurity",
+      "published": "2025-12-21T18:25:21+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    }
+  ]
+}

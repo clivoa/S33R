@@ -1,0 +1,144 @@
+{
+  "generated_at": "2026-02-24T07:16:04.353084+00:00",
+  "analysis_date": "2026-02-24",
+  "model": "gpt-5.1",
+  "window_hours": 24,
+  "source_file": "data/news_recent.json",
+  "source_generated_at": "2026-02-23T23:07:25.153396+00:00",
+  "source_days_back": 30,
+  "source_total_items": 8581,
+  "total_items_in_window_all": 279,
+  "total_items_in_window_curated": 68,
+  "morning_call_markdown": "### Executive Summary\n- Active exploitation of recently patched Roundcube webmail and BeyondTrust remote access vulnerabilities; CISA and others warn of ongoing attacks.\n- Hundreds of FortiGate firewalls and Ivanti EPMM/Connect Secure VPN/MDM servers have been compromised using AI-assisted mass exploitation and Chinese APT campaigns.\n- Ransomware and RAT/stealer campaigns continue via email and web (WordPress, Excel, macros, PDF/jsPDF), emphasizing need for hardened email/web controls and identity monitoring.\n\n---\n\n### High-priority items (immediate attention)\n\n- **Roundcube webmail vulnerabilities actively exploited (CISA alert)**\n  - What happened: Multiple recently patched Roundcube flaws are being exploited in the wild for remote code execution and email compromise.\n  - Why it matters: Any self-hosted Roundcube instance (incl. subsidiaries/partners) is a high-value entry point for internal mailbox takeover and lateral movement.\n  - Recommended immediate actions: Identify if any internal or third‑party Roundcube is in use; confirm patch status and isolate unpatched systems; increase monitoring of webmail logs for anomalous access, unknown admin actions, and outbound connections from webmail servers.\n\n- **BeyondTrust remote access CVE‑2026‑1731 under active attack**\n  - What happened: Ongoing exploitation of a critical vulnerability in BeyondTrust remote access products enabling unauthorized access.\n  - Why it matters: Remote access platforms are high-privilege pivots into internal networks and often integrated with our AD/IdP.\n  - Recommended immediate actions: Confirm whether any BeyondTrust products are in our environment or critical vendors; verify immediate patching or compensating controls; hunt for anomalous logins, new accounts, or configuration changes on these systems over the last 30 days.\n\n- **FortiGate firewalls mass-compromised via AI-assisted attacks**\n  - What happened: Hundreds of FortiGate devices were hacked by an attacker using AI tools to automate scanning, exploit selection, and post‑compromise actions.\n  - Why it matters: Demonstrates at‑scale, low-skill exploitation of perimeter devices; any lag in patching or exposure of management interfaces is now higher risk.\n  - Recommended immediate actions: Reconfirm our FortiGate inventory, firmware versions, and exposure (mgmt plane not on the Internet); review recent FortiGate logs for new admins, config changes, unusual outbound tunnels; ensure latest Fortinet advisories applied and consider emergency config review.\n\n- **Ivanti VPN / EPMM MDM zero‑days exploited by Chinese threat actors**\n  - What happened: Reports confirm Chinese actors used VPN/MDM flaws in Ivanti products to seize server control and pivot into customer environments.\n  - Why it matters: VPN/MDM systems bridge external devices and the core network; exploitation provides stealthy, persistent access and potential device-level control.\n  - Recommended immediate actions: Verify we (or key vendors) do not run affected Ivanti products; if present, confirm patching, disable unnecessary services, and review logs for webshell-like activity, suspicious API calls, and anomalous admin actions since initial disclosure.\n\n- **Web/email-delivered malware: APT28 macros & WordPress/Excel/JPEG-based payloads**\n  - What happened: APT28 used webhook-based macro malware; GrayCharlie is injecting malicious JS into WordPress to drop NetSupport RAT and Stealc; XWorm 7.2 is being delivered via Excel exploit hiding payloads in JPEG; new MIMICRAT and Arkanix stealer campaigns reported.\n  - Why it matters: These TTPs align with common initial access routes into financial orgs (phishing, drive‑by, weaponized docs), leading to RATs/stealers and follow-on ransomware.\n  - Recommended immediate actions: Tighten email filtering and sandboxing for Office, PDF, and archive attachments; confirm macro-blocking policies; monitor EDR for RAT/stealer behaviors (NetSupport misuse, XWorm, generic RAT patterns); prioritize triage of any new alerts involving Office, WScript/PowerShell, and outbound C2‑like traffic.\n\n---\n\n### Monitoring & detection recommendations\n\n- **Perimeter appliances (FortiGate, Ivanti, BeyondTrust) – Initial access (T1190, T1133)**\n  - Log sources: Firewall/SSL VPN logs, remote access platform logs, reverse proxy/WAF.\n  - What to monitor: Repeated failed logins, logins from unusual geos/ASNs, new admin accounts, unexpected configuration exports/changes, spikes in SSL VPN sessions, outbound connections from appliances to unknown IPs.\n\n- **Webmail & web apps (Roundcube, WordPress, jsPDF, PDF platforms) – Web exploitation (T1190, T1059)**\n  - Log sources: Web server logs, application logs, WAF, reverse proxies.\n  - What to monitor: Suspicious POSTs to Roundcube/WordPress admin or plugin endpoints, abnormal user-agents, webshell-like patterns in URLs or responses, unexpected file uploads, outbound connections from web servers.\n\n- **Email-based malware (APT28, XWorm, MIMICRAT, NetSupport RAT, Stealc, Arkanix) – Phishing & malware (T1566, T1204, T1059, T1105)**\n  - Log sources: Secure email gateway, O365/Exchange logs, EDR, DNS, web proxy.\n  - What to monitor: High-risk attachments (Office, macros, encrypted ZIPs), links to newly registered domains, process chains like `office.exe → powershell/wscript/mshta`, installations of remote support tools (NetSupport) on endpoints where not approved.\n\n- **Credential theft and stealer activity (Stealc, Arkanix, RATs) – Credential access & exfil (T1003, T1555, T1041)**\n  - Log sources: EDR, browser logs (if available), IdP/SSO, VPN, DLP.\n  - What to monitor: Access token exports, suspicious access to browser/credential stores, sudden logins using valid credentials from new locations/devices, high-volume data exfil from workstations to untrusted IPs.\n\n- **Ransomware precursors – Lateral movement & privilege escalation (T1078, T1021, T1068)**\n  - Log sources: AD/LDAP, Windows security logs, EDR, network telemetry.\n  - What to monitor: Sudden use of built‑in tools (PsExec, WMI, SMB), mass authentication failures, new service creations, shadow copy deletions, mass file renames/encrypt‑like behavior.\n\n- **OAuth / API key abuse (Google OAuth abuse, CrowdStrike API key canary) – Cloud identity (T1528, T1078)**\n  - Log sources: Cloud audit logs (Google, Azure, AWS), IdP logs, API gateway logs.\n  - What to monitor: New OAuth consents to untrusted apps, anomalous API key usage (time/geography/service), disabled MFA, and privilege escalations via service principals.\n\n- **Social engineering & account takeover (WhatsApp exploit sales, Facebook phishing ring) – Social & identity attacks (T1566, T1078)**\n  - Log sources: IdP, MDM, mobile security, helpdesk tickets.\n  - What to monitor: Repeated MFA reset requests, SIM/MFA device changes, high volume of password reset requests, new device enrollments for privileged users.\n\n- **Cryptominer BYOVD campaign (XMRig with vulnerable drivers) – Defense evasion & resource abuse (T1068, T1562, T1496)**\n  - Log sources: EDR, Sysmon, Windows event logs, hypervisor metrics.\n  - What to monitor: Installation of unsigned/vulnerable drivers, disabling of EDR, abnormal CPU/GPU usage on servers, outbound mining protocol traffic or connections to known mining pools.\n\n---\n\n### Medium-term follow-ups\n\n- **Patch and hardening review for perimeter and remote access**\n  - Comprehensive review of firmware/patch levels and configuration hardening for FortiGate, Ivanti, BeyondTrust, VPNs, and MDM; ensure management interfaces are restricted and MFA enforced.\n\n- **Email and document security posture**\n  - Validate organization-wide macro blocking, attachment sandboxing, and “safe links/attachments” policies; update user awareness on malicious Excel/PDF and delivery scams.\n\n- **Third-party and supply-chain risk**\n  - Confirm key vendors (especially outsourcing, telecom, cloud, and chip/IT suppliers) patch statuses for Ivanti, Fortinet, BeyondTrust, Roundcube; request attestation or recent pen-test results as appropriate.\n\n- **Logging and retention for critical infrastructure**\n  - Ensure adequate log retention and centralization for all perimeter devices, mail/web servers, and remote access platforms to support backward-looking hunts over several months.\n\n- **Ransomware tabletop and IR playbook refresh**\n  - Incorporate lessons from recent healthcare and aviation ransomware incidents; rehearse scenarios involving loss of core apps, remote access compromise, and data extortion.\n\n- **Developer and CI/CD security (npm/AI toolchain supply chain memo)**\n  - Engage DevSecOps to review npm/package management, CI/CD pipelines, and AI tooling integration; implement integrity checks, package pinning, and secrets management (including evaluating managed identities for SQL/on-prem as appropriate).",
+  "highlights": [
+    {
+      "title": "How do you triage your vulnerabilities",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1rcvtsm/how_do_you_triage_your_vulnerabilities/",
+      "source": "/r/cybersecurity",
+      "published": "2026-02-23T22:16:14+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Introducing the next generation of SOC automation: Sentinel playbook generator",
+      "link": "https://techcommunity.microsoft.com/t5/microsoft-sentinel-blog/introducing-the-next-generation-of-soc-automation-sentinel/ba-p/4494438",
+      "source": "Microsoft Sentinel Blog",
+      "published": "2026-02-23T21:17:22+00:00",
+      "smart_groups": [
+        "Curated",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "Crypto / Web3"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Microsoft Defender Experts - S.T.A.R. Series",
+      "link": "https://techcommunity.microsoft.com/t5/microsoft-security-experts-blog/microsoft-defender-experts-s-t-a-r-series/ba-p/4472199",
+      "source": "Microsoft Security Experts",
+      "published": "2026-02-23T20:56:11+00:00",
+      "smart_groups": [
+        "Curated",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Windows / Microsoft",
+        "Linux / Unix",
+        "Malware / Payloads",
+        "Network / OT / ICS",
+        "Phishing / Social Engineering",
+        "Crypto / Web3"
+      ],
+      "curated": true
+    },
+    {
+      "title": "APT28 Targeted European Entities Using Webhook-Based Macro Malware",
+      "link": "https://thehackernews.com/2026/02/apt28-targeted-european-entities-using.html",
+      "source": "The Hacker News",
+      "published": "2026-02-23T19:41:00+00:00",
+      "smart_groups": [
+        "Curated",
+        "Ransomware",
+        "Exploit / PoC",
+        "Threat Actors / APT",
+        "Malware / Payloads"
+      ],
+      "curated": true
+    },
+    {
+      "title": "GrayCharlie Injects Malicious JavaScript into WordPress Sites to Deliver NetSupport RAT and Stealc",
+      "link": "https://cybersecuritynews.com/graycharlie-injects-malicious-javascript/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-02-23T19:38:13+00:00",
+      "smart_groups": [
+        "Curated",
+        "Malware / Payloads"
+      ],
+      "curated": true
+    },
+    {
+      "title": "600+ FortiGate Devices Hacked by AI-Armed Amateur",
+      "link": "https://www.darkreading.com/threat-intelligence/600-fortigate-devices-hacked-ai-amateur",
+      "source": "darkreading",
+      "published": "2026-02-23T19:37:59+00:00",
+      "smart_groups": [
+        "Curated",
+        "Ransomware"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Conduent Data Breach – Largest Data Breach in U.S. History As Ransomware Group Stolen 8 TB of Data",
+      "link": "https://cybersecuritynews.com/conduent-data-breach/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-02-23T18:48:16+00:00",
+      "smart_groups": [
+        "Curated",
+        "Ransomware",
+        "Data Breaches / Leaks"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Wormable XMRig campaign leverages BYOVD and timed kill switch for stealth",
+      "link": "https://securityaffairs.com/188388/malware/wormable-xmrig-campaign-leverages-byovd-and-timed-kill-switch-for-stealth.html",
+      "source": "Security Affairs",
+      "published": "2026-02-23T18:36:09+00:00",
+      "smart_groups": [
+        "Curated",
+        "Exploit / PoC"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Anyone else getting (REF-Random letters, random name) email attacks?",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1rcp8gg/anyone_else_getting_refrandom_letters_random_name/",
+      "source": "/r/cybersecurity",
+      "published": "2026-02-23T18:18:56+00:00",
+      "smart_groups": [
+        "Curated",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "Identity / Access"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Ransomware attack forces University of Mississippi Medical Center to close clinics",
+      "link": "https://www.scworld.com/brief/ransomware-attack-forces-university-of-mississippi-medical-center-to-close-clinics",
+      "source": "SCM feed for Latest",
+      "published": "2026-02-23T18:13:03+00:00",
+      "smart_groups": [
+        "Curated",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "Network / OT / ICS"
+      ],
+      "curated": true
+    }
+  ]
+}
