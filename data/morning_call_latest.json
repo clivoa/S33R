@@ -1,65 +1,126 @@
 {
-  "generated_at": "2026-03-01T07:03:45.334259+00:00",
-  "analysis_date": "2026-03-01",
+  "generated_at": "2026-03-02T07:15:30.412461+00:00",
+  "analysis_date": "2026-03-02",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-03-01T06:58:33.735998+00:00",
+  "source_generated_at": "2026-03-02T07:07:42.727114+00:00",
   "source_days_back": 30,
-  "source_total_items": 8427,
-  "total_items_in_window_all": 105,
-  "total_items_in_window_curated": 25,
-  "morning_call_markdown": "### Executive Summary\n- AI agent tooling emerged as a new, **practical local attack surface** (OpenClaw “0‑click”/WebSocket hijack + prompt-injection discussion) — treat developer endpoints running agents as high-risk today.\n- Multiple reports highlight **Windows initial access vectors** (WebDAV/File Explorer abuse; trojanized utilities delivering RAT), aligning with common pre-ransomware tradecraft.\n- **Phishing evasions** are evolving (abuse of `.arpa` + IPv6 tunnels) — expect mail/web controls to miss some lures unless you add targeted monitoring.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) AI agent hijack / “0-click” OpenClaw / WebSocket local agent exposure (ClawJacked/OpenClaw)**\n- **What happened:** Research reports a “0-click” style issue where malicious sites can hijack local OpenClaw AI agents via WebSocket / agent exposure patterns.\n- **Why it matters operationally:** If dev workstations run agent services locally, a drive-by web visit could trigger **code/tool execution, data access, or credential exposure** from the agent context.\n- **Recommended immediate actions for the SOC today:** Identify endpoints running OpenClaw/agent runtimes; alert on local agent listeners (esp. WebSocket) and block/limit to localhost + auth where possible.\n\n**2) Windows malware delivery via WebDAV + File Explorer abuse**\n- **What happened:** Campaigns are abusing Windows File Explorer behaviors and WebDAV to distribute malware (delivery + user interaction/URI handling patterns).\n- **Why it matters operationally:** WebDAV-based delivery is a **repeatable initial access path** into corporate Windows fleets, often preceding credential theft and ransomware.\n- **Recommended immediate actions for the SOC today:** Hunt for WebDAV connections and `davclnt.dll`/WebClient usage anomalies; review egress/proxy for suspicious WebDAV traffic and consider tightening WebClient/WebDAV where business allows.\n\n**3) Trojanized utilities delivering RAT (Microsoft warning; “gaming utilities” as lure)**\n- **What happened:** Microsoft warns of RAT infections delivered via trojanized utilities (reported as “gaming utilities,” but technique generalizes to cracked/tools installers).\n- **Why it matters operationally:** RAT footholds enable **credential theft, lateral movement, and ransomware staging**, and “non-business” software is a common bypass of user caution.\n- **Recommended immediate actions for the SOC today:** Increase alerting on new unsigned binaries in user profile paths + suspicious persistence; coordinate with IT to reinforce application control / blocklists for known “utility/loader” classes.\n\n**4) Phishing evasion: `.arpa` TLD abuse + IPv6 tunneling**\n- **What happened:** Phishing schemes are reportedly using `.arpa` infrastructure patterns and IPv6 tunnels to evade conventional detection.\n- **Why it matters operationally:** Email security, URL filtering, and DNS-based controls may have **coverage gaps for IPv6 and atypical TLD patterns**, increasing click-to-compromise risk.\n- **Recommended immediate actions for the SOC today:** Add targeted monitoring for outbound IPv6 tunnel indicators and `.arpa` lookups/URLs in email/web logs; validate IPv6 visibility in proxy/DNS logging and escalate gaps.\n\n**5) New/updated offensive modules in Metasploit (Linux RC4, BeyondTrust, registry persistence)**\n- **What happened:** Metasploit updates add modules touching Linux crypto/RC4 themes, BeyondTrust targeting, and Windows registry persistence.\n- **Why it matters operationally:** Public modules lower the bar for exploitation/persistence, increasing the chance of **spray-and-pray exploitation** against exposed services and post-exploitation persistence.\n- **Recommended immediate actions for the SOC today:** Confirm BeyondTrust exposure (internet-facing and internal admin planes); watch for registry-run key persistence and unusual admin tool usage tied to BeyondTrust/privileged access tooling.\n\n---\n\n### Monitoring & detection recommendations\n- **AI agent endpoints (OpenClaw/agent tooling):** EDR + host firewall logs for new listeners on localhost/0.0.0.0, WebSocket-capable services, and unusual child processes spawned by agent runtimes (ATT&CK: T1204, T1059).\n- **WebDAV/File Explorer delivery:** Windows event logs + EDR for `WebClient` service activity, `rundll32`/`explorer.exe` spawning unusual executables, and network connections to WebDAV endpoints (ATT&CK: T1105, T1204).\n- **Trojanized utilities/RAT:** EDR for execution from `%AppData%`, `%Temp%`, Downloads; alert on unsigned binaries + anomalous outbound C2 from new processes; persistence via Run keys / scheduled tasks (ATT&CK: T1547, T1053).\n- **Phishing with `.arpa` + IPv6 tunnels:** Email gateway + proxy + DNS logs for `.arpa` domains/URLs, IPv6-only destinations, and tunnel protocols (e.g., unusual 41/6in4, Teredo-like patterns) where logged (ATT&CK: T1566).\n- **BeyondTrust / PAM targeting:** PAM/BeyondTrust audit logs + IdP logs for abnormal admin session creation, new connectors, failed auth spikes, and unusual source IPs; correlate with EDR admin tool execution (ATT&CK: T1078).\n- **Registry persistence modules:** Sysmon (if deployed) / EDR for modifications to `HKCU/HKLM\\...\\Run*`, `RunOnce`, and suspicious COM/Winlogon persistence keys (ATT&CK: T1547.001).\n- **Ransomware staging signals (from RAT/WebDAV vectors):** Watch for rapid file encryption precursors (mass file renames, vssadmin usage, backup service stops) and lateral movement tools (ATT&CK: T1486, T1021).\n\n---\n\n### Medium-term follow-ups\n- **AI agent governance:** Inventory approved agent frameworks; require auth/binding to localhost, restrict tool permissions, and add “agent config/prompt injection” review to secure SDLC (assumption: some dev teams use local agents).\n- **WebDAV hardening:** Validate business need for WebClient/WebDAV; disable where possible, otherwise enforce egress controls and tighten proxy inspection for DAV methods.\n- **Application control posture:** Expand allowlisting/deny rules for common trojanized “utility/installer/loader” patterns; reinforce software sourcing policy for endpoints with privileged access.\n- **IPv6 security parity:** Confirm proxy/DNS/email controls fully inspect and log IPv6 traffic; update detections and ensure SOC has dashboards for IPv6 egress anomalies.\n- **Exploit readiness:** Track Metasploit-added targets in vuln management; prioritize patching/hardening for any exposed admin tooling (e.g., PAM) and Linux services implicated by new public modules.\n- **Ransomware resilience check:** Re-validate restore testing cadence and privileged account segmentation, given continued high ransomware activity signals (trend item; not a new single incident).",
+  "source_total_items": 8275,
+  "total_items_in_window_all": 120,
+  "total_items_in_window_curated": 33,
+  "morning_call_markdown": "### Executive Summary\n- Multiple **actively exploited / high-impact vuln themes** surfaced (FreePBX exploitation at scale; critical enterprise platform vulns in ServiceNow AI + Trend Micro Apex One) — verify exposure and patch status today.\n- **Supply-chain and developer tooling risk** remains elevated (self-spreading npm malware; “AI agent”/OpenClaw hijack) — prioritize controls around build pipelines, dev endpoints, and secrets.\n- **Credential theft vectors via browser extensions + trojanized utilities** continue (malicious extensions, fake Roblox/Xeno tools leading to RAT) — tighten endpoint/browser telemetry and block/allow lists.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Active exploitation: Sangoma FreePBX (CVE-2025-64328)**\n- **What happened:** Reporting indicates exploitation impacting ~900 internet-facing FreePBX instances.\n- **Why it matters operationally:** PBX compromise often leads to **initial access**, credential theft, toll fraud, and lateral movement into corporate networks (financial orgs frequently have voice infrastructure tied to IAM/helpdesk).\n- **Recommended immediate actions for the SOC today:** Identify any exposed FreePBX assets, confirm patch level/mitigations; hunt for new admin users/config changes and unusual outbound connections from PBX subnets.\n\n**2) Critical enterprise platform/agent exposure: ServiceNow AI (CVE-2026-0542) + Trend Micro Apex One (CVE-2025-71210/71211)**\n- **What happened:** New “critical” vulnerability reporting for **ServiceNow AI platform** and **Trend Micro Apex One** (details in news are limited; assume high severity until validated).\n- **Why it matters operationally:** These platforms sit at high-privilege control planes (ITSM workflows / endpoint security management) — compromise can enable **mass host impact**, data access, or security tooling tampering.\n- **Recommended immediate actions for the SOC today:** Validate whether we run affected versions/tenants; if yes, fast-track vendor guidance and compensating controls (admin access review, network ACLs, restrict management interfaces, monitor for suspicious admin/API activity).\n\n**3) Software supply-chain: self-spreading npm malware + CI/CD “security debt”**\n- **What happened:** Continued coverage of **automatically spreading npm malware** and widespread dependency staleness/unprotected pipelines.\n- **Why it matters operationally:** Dev toolchain compromise is a reliable path to **credential/secrets theft** and downstream production intrusion; financial services are high-value for this.\n- **Recommended immediate actions for the SOC today:** Increase alerting on build runners/dev endpoints for suspicious npm/pip activity and new package installs; coordinate with DevSecOps to validate integrity controls (lockfiles, provenance/signing, least-privilege tokens).\n\n**4) Developer AI agent hijack / OpenClaw “ClawJacked” (0-click / malicious website-driven)**\n- **What happened:** Reports of a flaw/attack pattern where malicious sites can hijack “developer AI agents” (OpenClaw) to access data.\n- **Why it matters operationally:** Threat model expands to **browser-to-agent** pivot and silent data access; likely impacts developer workstations where code, tokens, and internal docs exist.\n- **Recommended immediate actions for the SOC today:** Identify endpoints running OpenClaw/AI-agent tooling; advise developers to pause/limit agent browser integration until mitigations are confirmed; hunt for unusual data access/export from dev hosts.\n\n---\n\n### Monitoring & detection recommendations\n- **Voice/PBX exploitation (FreePBX):** Monitor PBX/server logs + firewall for new inbound admin/auth attempts, new webshell-like file writes, and unexpected outbound traffic; map to **T1190 (Exploit Public-Facing Application)**.\n- **Endpoint security platform tampering (Apex One):** EDR + Apex One console audit logs for policy changes, agent uninstall/disable events, new administrator creation; map to **T1562.001 (Disable or Modify Tools)**.\n- **ServiceNow AI / ITSM abuse:** ServiceNow audit logs + IdP logs for abnormal admin/API usage (new tokens, unusual IP/geos, spikes in workflow executions/export); map to **T1078 (Valid Accounts)** / **T1098 (Account Manipulation)**.\n- **Supply-chain/dev endpoints:** EDR + proxy/DNS for unusual calls to package registries, sudden install of new dependencies, execution of postinstall scripts; CI/CD logs for new runners, modified pipelines, or token scope changes (assume **T1552 (Unsecured Credentials)** risk).\n- **Browser extension credential theft / script injection themes:** Browser management telemetry (Chrome/Edge enterprise logs if available) + EDR for new extension installs, unsigned extensions, and persistence via browser profile changes; monitor web requests for injected scripts (theme aligns with **T1176 (Browser Extensions)**).\n- **Trojanized utilities leading to RAT (fake Roblox/Xeno tools):** Windows event logs + EDR for user-launched installers from Downloads/Temp, new services/scheduled tasks, and suspicious outbound C2; map to **T1059 (Command and Scripting Interpreter)** + **T1547 (Boot or Logon Autostart Execution)**.\n- **Non-human identity (NHI) / service principals:** Cloud/IAM logs for abnormal service account usage across telemetry boundaries (new OAuth app grants, token replay patterns, unusual API calls from automation accounts); map to **T1550 (Use Alternate Authentication Material)** when applicable.\n\n---\n\n### Medium-term follow-ups\n- **Exposure review:** Confirm inventory/ownership for PBX/telephony platforms and whether any are internet-facing; ensure patch SLAs include “shadow IT” voice systems.\n- **Vendor validation:** Obtain official advisories/patch notes for ServiceNow AI and Trend Micro Apex One items; document affected versions and required mitigations (news context lacks full technical detail).\n- **DevSecOps hardening:** Enforce dependency controls (lockfiles, allowed registries, SCA gating), protect CI/CD secrets (short-lived tokens, workload identity, least-privilege), and add build runner EDR coverage where feasible.\n- **Browser extension governance:** Tighten enterprise extension allow-list, block “developer mode” where possible, and review permissions for high-risk extensions (screen capture, scripting, cookie access).\n- **AI tooling policy:** Establish guidance for “AI agents” on corporate endpoints (approved tools, isolation/sandboxing, no direct access to prod secrets, logging requirements).\n- **Resilience note (cloud outage reporting):** Even if not security-driven, validate runbooks for regional cloud disruption (monitoring gaps, failover communications) since outages can mask attacker activity.",
   "highlights": [
     {
-      "title": "Retired Court Clerk Duped of Lakhs in Agra, Confined Indoors for 3 Days to Force RTGS Transfer",
-      "link": "https://www.news4hackers.com/retired-court-clerk-duped-of-lakhs-in-agra-confined-indoors-for-3-days-to-force-rtgs-transfer/",
-      "source": "News4Hackers",
-      "published": "2026-03-01T04:31:55+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "OpenClaw 0-Click Vulnerability Allows Malicious Websites to Hijack Developer AI Agents",
-      "link": "https://cybersecuritynews.com/openclaw-0-click-vulnerability/",
-      "source": "Cyber Security News (FeedBurner)",
-      "published": "2026-03-01T02:34:34+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Curated",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Agent security is a real attack surface, and a massive blind spot right now",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1rhkylz/agent_security_is_a_real_attack_surface_and_a/",
+      "title": "[PoC] ChronoHash: A Time-Synchronized Fragmented Authentication Protocol to mitigate Keyloggers and Replay Attacks",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1rim0q2/poc_chronohash_a_timesynchronized_fragmented/",
       "source": "/r/cybersecurity",
-      "published": "2026-03-01T02:08:06+00:00",
+      "published": "2026-03-02T07:03:36+00:00",
       "smart_groups": [
-        "Curated",
+        "Malware / Payloads",
         "Vulnerabilities / CVEs",
-        "Phishing / Social Engineering",
-        "Exploit / PoC",
+        "Curated",
+        "Identity / Access",
         "OSINT / Community"
       ],
       "curated": true
     },
     {
-      "title": "[Release] IG-Detective v2.0.0 — An Advanced Python OSINT and Forensic Framework for IG 🕵️‍♂️",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1rhjzis/release_igdetective_v200_an_advanced_python_osint/",
-      "source": "/r/cybersecurity",
-      "published": "2026-03-01T01:22:15+00:00",
+      "title": "Your dependencies are 278 days out of date and your pipelines aren’t protected",
+      "link": "https://www.helpnetsecurity.com/2026/03/02/devsecops-supply-chain-risk-security-debt/",
+      "source": "Help Net Security",
+      "published": "2026-03-02T07:00:06+00:00",
       "smart_groups": [
-        "Web / API Security",
+        "Curated",
+        "Exploit / PoC",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Overview: Google Cloud API Vulnerability (No CVE) | UpGuard",
+      "link": "https://www.upguard.comnews/google-data-breach-2026-03-01",
+      "source": "UpGuard – News",
+      "published": "2026-03-02T06:45:07+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
         "Cloud / SaaS",
         "Curated",
-        "Identity / Access",
-        "Network / OT / ICS",
+        "Vendors / Product Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Security debt is becoming a governance issue for CISOs",
+      "link": "https://www.helpnetsecurity.com/2026/03/02/ciso-security-debt-report/",
+      "source": "Help Net Security",
+      "published": "2026-03-02T06:30:59+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Hacked Prayer App Used as Cyber Weapon During US-Israel Strikes on Iran",
+      "link": "https://cybersecuritynews.com/hacked-prayer-app/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-03-02T06:27:42+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Mobile Security",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Pixel Perfect Browser Extension Exploited for Stealth Script Injection and Security Header Stripping",
+      "link": "https://gbhackers.com/pixel-perfect-browser-extension/",
+      "source": "GBHackers News",
+      "published": "2026-03-02T06:09:05+00:00",
+      "smart_groups": [
+        "Curated",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Cybersecurity with BlacksmithAI: An Open-Source AI-Powered Penetration Testing Framework",
+      "link": "https://www.news4hackers.com/cybersecurity-with-blacksmithai-an-open-source-ai-powered-penetration-testing-framework/",
+      "source": "News4Hackers",
+      "published": "2026-03-02T06:02:09+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "BlacksmithAI: Open-source AI-powered penetration testing framework",
+      "link": "https://www.helpnetsecurity.com/2026/03/02/blacksmithai-open-source-ai-powered-penetration-testing-framework/",
+      "source": "Help Net Security",
+      "published": "2026-03-02T06:00:23+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Curated",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Career Advice: DevSecOps vs Pure Cybersecurity?",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1rikmaw/career_advice_devsecops_vs_pure_cybersecurity/",
+      "source": "/r/cybersecurity",
+      "published": "2026-03-02T05:43:48+00:00",
+      "smart_groups": [
+        "Cloud / SaaS",
+        "Curated",
         "Ransomware",
         "Vulnerabilities / CVEs",
         "OSINT / Community"
@@ -67,80 +128,14 @@
       "curated": true
     },
     {
-      "title": "Minimal now supports 22 Hardened Container Images",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1rhhe28/minimal_now_supports_22_hardened_container_images/",
-      "source": "/r/cybersecurity",
-      "published": "2026-02-28T23:27:17+00:00",
+      "title": "Critical Trend Micro Apex One Vulnerabilities (CVE-2025-71210, CVE-2025-71211) | UpGuard",
+      "link": "https://www.upguard.comnews/trend-micro-data-breach-2026-01-03",
+      "source": "UpGuard – News",
+      "published": "2026-03-02T05:43:38+00:00",
       "smart_groups": [
-        "Curated",
         "Vulnerabilities / CVEs",
-        "OSINT / Community"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Network Security News Feed",
-      "link": "https://www.reddit.com/r/netsec/comments/1rhd7j8/network_security_news_feed/",
-      "source": "/r/netsec",
-      "published": "2026-02-28T20:33:01+00:00",
-      "smart_groups": [
         "Curated",
-        "Vulnerabilities / CVEs",
-        "OSINT / Community"
-      ],
-      "curated": true
-    },
-    {
-      "title": "ClawJacked Flaw Lets Malicious Sites Hijack Local OpenClaw AI Agents via WebSocket",
-      "link": "https://thehackernews.com/2026/02/clawjacked-flaw-lets-malicious-sites.html",
-      "source": "The Hacker News",
-      "published": "2026-02-28T17:21:00+00:00",
-      "smart_groups": [
-        "Curated",
-        "Exploit / PoC",
-        "Vulnerabilities / CVEs",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Phishing Schemes Abuse .arpa TLD and IPv6 Tunnels to Evade Detection",
-      "link": "https://cybersecuritynews.com/phishing-schemes-abuse-arpa-tld-and-ipv6-tunnels/",
-      "source": "Cyber Security News (FeedBurner)",
-      "published": "2026-02-28T15:46:08+00:00",
-      "smart_groups": [
-        "Threat Actors / APT",
-        "Curated",
-        "Exploit / PoC",
-        "Phishing / Social Engineering",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "This Is the System That Intercepted Iran's Missiles Over the UAE",
-      "link": "https://www.wired.com/story/uae-missile-intercept-system-iran/",
-      "source": "Security News: Cybersecurity, Hacks, Privacy, National Security",
-      "published": "2026-02-28T15:12:51+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "HTB: Guardian",
-      "link": "https://0xdf.gitlab.io/2026/02/28/htb-guardian.html",
-      "source": "https://0xdf.gitlab.io/feed.xml",
-      "published": "2026-02-28T14:45:00+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "Web / API Security",
-        "Exploit / PoC",
-        "Linux / Unix",
-        "General Security"
+        "Vendors / Product Security"
       ],
       "curated": true
     }
