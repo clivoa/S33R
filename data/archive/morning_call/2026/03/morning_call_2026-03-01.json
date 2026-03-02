@@ -1,0 +1,148 @@
+{
+  "generated_at": "2026-03-01T07:03:45.334259+00:00",
+  "analysis_date": "2026-03-01",
+  "model": "gpt-5.2",
+  "window_hours": 24,
+  "source_file": "data/news_recent.json",
+  "source_generated_at": "2026-03-01T06:58:33.735998+00:00",
+  "source_days_back": 30,
+  "source_total_items": 8427,
+  "total_items_in_window_all": 105,
+  "total_items_in_window_curated": 25,
+  "morning_call_markdown": "### Executive Summary\n- AI agent tooling emerged as a new, **practical local attack surface** (OpenClaw “0‑click”/WebSocket hijack + prompt-injection discussion) — treat developer endpoints running agents as high-risk today.\n- Multiple reports highlight **Windows initial access vectors** (WebDAV/File Explorer abuse; trojanized utilities delivering RAT), aligning with common pre-ransomware tradecraft.\n- **Phishing evasions** are evolving (abuse of `.arpa` + IPv6 tunnels) — expect mail/web controls to miss some lures unless you add targeted monitoring.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) AI agent hijack / “0-click” OpenClaw / WebSocket local agent exposure (ClawJacked/OpenClaw)**\n- **What happened:** Research reports a “0-click” style issue where malicious sites can hijack local OpenClaw AI agents via WebSocket / agent exposure patterns.\n- **Why it matters operationally:** If dev workstations run agent services locally, a drive-by web visit could trigger **code/tool execution, data access, or credential exposure** from the agent context.\n- **Recommended immediate actions for the SOC today:** Identify endpoints running OpenClaw/agent runtimes; alert on local agent listeners (esp. WebSocket) and block/limit to localhost + auth where possible.\n\n**2) Windows malware delivery via WebDAV + File Explorer abuse**\n- **What happened:** Campaigns are abusing Windows File Explorer behaviors and WebDAV to distribute malware (delivery + user interaction/URI handling patterns).\n- **Why it matters operationally:** WebDAV-based delivery is a **repeatable initial access path** into corporate Windows fleets, often preceding credential theft and ransomware.\n- **Recommended immediate actions for the SOC today:** Hunt for WebDAV connections and `davclnt.dll`/WebClient usage anomalies; review egress/proxy for suspicious WebDAV traffic and consider tightening WebClient/WebDAV where business allows.\n\n**3) Trojanized utilities delivering RAT (Microsoft warning; “gaming utilities” as lure)**\n- **What happened:** Microsoft warns of RAT infections delivered via trojanized utilities (reported as “gaming utilities,” but technique generalizes to cracked/tools installers).\n- **Why it matters operationally:** RAT footholds enable **credential theft, lateral movement, and ransomware staging**, and “non-business” software is a common bypass of user caution.\n- **Recommended immediate actions for the SOC today:** Increase alerting on new unsigned binaries in user profile paths + suspicious persistence; coordinate with IT to reinforce application control / blocklists for known “utility/loader” classes.\n\n**4) Phishing evasion: `.arpa` TLD abuse + IPv6 tunneling**\n- **What happened:** Phishing schemes are reportedly using `.arpa` infrastructure patterns and IPv6 tunnels to evade conventional detection.\n- **Why it matters operationally:** Email security, URL filtering, and DNS-based controls may have **coverage gaps for IPv6 and atypical TLD patterns**, increasing click-to-compromise risk.\n- **Recommended immediate actions for the SOC today:** Add targeted monitoring for outbound IPv6 tunnel indicators and `.arpa` lookups/URLs in email/web logs; validate IPv6 visibility in proxy/DNS logging and escalate gaps.\n\n**5) New/updated offensive modules in Metasploit (Linux RC4, BeyondTrust, registry persistence)**\n- **What happened:** Metasploit updates add modules touching Linux crypto/RC4 themes, BeyondTrust targeting, and Windows registry persistence.\n- **Why it matters operationally:** Public modules lower the bar for exploitation/persistence, increasing the chance of **spray-and-pray exploitation** against exposed services and post-exploitation persistence.\n- **Recommended immediate actions for the SOC today:** Confirm BeyondTrust exposure (internet-facing and internal admin planes); watch for registry-run key persistence and unusual admin tool usage tied to BeyondTrust/privileged access tooling.\n\n---\n\n### Monitoring & detection recommendations\n- **AI agent endpoints (OpenClaw/agent tooling):** EDR + host firewall logs for new listeners on localhost/0.0.0.0, WebSocket-capable services, and unusual child processes spawned by agent runtimes (ATT&CK: T1204, T1059).\n- **WebDAV/File Explorer delivery:** Windows event logs + EDR for `WebClient` service activity, `rundll32`/`explorer.exe` spawning unusual executables, and network connections to WebDAV endpoints (ATT&CK: T1105, T1204).\n- **Trojanized utilities/RAT:** EDR for execution from `%AppData%`, `%Temp%`, Downloads; alert on unsigned binaries + anomalous outbound C2 from new processes; persistence via Run keys / scheduled tasks (ATT&CK: T1547, T1053).\n- **Phishing with `.arpa` + IPv6 tunnels:** Email gateway + proxy + DNS logs for `.arpa` domains/URLs, IPv6-only destinations, and tunnel protocols (e.g., unusual 41/6in4, Teredo-like patterns) where logged (ATT&CK: T1566).\n- **BeyondTrust / PAM targeting:** PAM/BeyondTrust audit logs + IdP logs for abnormal admin session creation, new connectors, failed auth spikes, and unusual source IPs; correlate with EDR admin tool execution (ATT&CK: T1078).\n- **Registry persistence modules:** Sysmon (if deployed) / EDR for modifications to `HKCU/HKLM\\...\\Run*`, `RunOnce`, and suspicious COM/Winlogon persistence keys (ATT&CK: T1547.001).\n- **Ransomware staging signals (from RAT/WebDAV vectors):** Watch for rapid file encryption precursors (mass file renames, vssadmin usage, backup service stops) and lateral movement tools (ATT&CK: T1486, T1021).\n\n---\n\n### Medium-term follow-ups\n- **AI agent governance:** Inventory approved agent frameworks; require auth/binding to localhost, restrict tool permissions, and add “agent config/prompt injection” review to secure SDLC (assumption: some dev teams use local agents).\n- **WebDAV hardening:** Validate business need for WebClient/WebDAV; disable where possible, otherwise enforce egress controls and tighten proxy inspection for DAV methods.\n- **Application control posture:** Expand allowlisting/deny rules for common trojanized “utility/installer/loader” patterns; reinforce software sourcing policy for endpoints with privileged access.\n- **IPv6 security parity:** Confirm proxy/DNS/email controls fully inspect and log IPv6 traffic; update detections and ensure SOC has dashboards for IPv6 egress anomalies.\n- **Exploit readiness:** Track Metasploit-added targets in vuln management; prioritize patching/hardening for any exposed admin tooling (e.g., PAM) and Linux services implicated by new public modules.\n- **Ransomware resilience check:** Re-validate restore testing cadence and privileged account segmentation, given continued high ransomware activity signals (trend item; not a new single incident).",
+  "highlights": [
+    {
+      "title": "Retired Court Clerk Duped of Lakhs in Agra, Confined Indoors for 3 Days to Force RTGS Transfer",
+      "link": "https://www.news4hackers.com/retired-court-clerk-duped-of-lakhs-in-agra-confined-indoors-for-3-days-to-force-rtgs-transfer/",
+      "source": "News4Hackers",
+      "published": "2026-03-01T04:31:55+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "OpenClaw 0-Click Vulnerability Allows Malicious Websites to Hijack Developer AI Agents",
+      "link": "https://cybersecuritynews.com/openclaw-0-click-vulnerability/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-03-01T02:34:34+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Curated",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Agent security is a real attack surface, and a massive blind spot right now",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1rhkylz/agent_security_is_a_real_attack_surface_and_a/",
+      "source": "/r/cybersecurity",
+      "published": "2026-03-01T02:08:06+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Phishing / Social Engineering",
+        "Exploit / PoC",
+        "OSINT / Community"
+      ],
+      "curated": true
+    },
+    {
+      "title": "[Release] IG-Detective v2.0.0 — An Advanced Python OSINT and Forensic Framework for IG 🕵️‍♂️",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1rhjzis/release_igdetective_v200_an_advanced_python_osint/",
+      "source": "/r/cybersecurity",
+      "published": "2026-03-01T01:22:15+00:00",
+      "smart_groups": [
+        "Web / API Security",
+        "Cloud / SaaS",
+        "Curated",
+        "Identity / Access",
+        "Network / OT / ICS",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "OSINT / Community"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Minimal now supports 22 Hardened Container Images",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1rhhe28/minimal_now_supports_22_hardened_container_images/",
+      "source": "/r/cybersecurity",
+      "published": "2026-02-28T23:27:17+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "OSINT / Community"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Network Security News Feed",
+      "link": "https://www.reddit.com/r/netsec/comments/1rhd7j8/network_security_news_feed/",
+      "source": "/r/netsec",
+      "published": "2026-02-28T20:33:01+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "OSINT / Community"
+      ],
+      "curated": true
+    },
+    {
+      "title": "ClawJacked Flaw Lets Malicious Sites Hijack Local OpenClaw AI Agents via WebSocket",
+      "link": "https://thehackernews.com/2026/02/clawjacked-flaw-lets-malicious-sites.html",
+      "source": "The Hacker News",
+      "published": "2026-02-28T17:21:00+00:00",
+      "smart_groups": [
+        "Curated",
+        "Exploit / PoC",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Phishing Schemes Abuse .arpa TLD and IPv6 Tunnels to Evade Detection",
+      "link": "https://cybersecuritynews.com/phishing-schemes-abuse-arpa-tld-and-ipv6-tunnels/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-02-28T15:46:08+00:00",
+      "smart_groups": [
+        "Threat Actors / APT",
+        "Curated",
+        "Exploit / PoC",
+        "Phishing / Social Engineering",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "This Is the System That Intercepted Iran's Missiles Over the UAE",
+      "link": "https://www.wired.com/story/uae-missile-intercept-system-iran/",
+      "source": "Security News: Cybersecurity, Hacks, Privacy, National Security",
+      "published": "2026-02-28T15:12:51+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "HTB: Guardian",
+      "link": "https://0xdf.gitlab.io/2026/02/28/htb-guardian.html",
+      "source": "https://0xdf.gitlab.io/feed.xml",
+      "published": "2026-02-28T14:45:00+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Web / API Security",
+        "Exploit / PoC",
+        "Linux / Unix",
+        "General Security"
+      ],
+      "curated": true
+    }
+  ]
+}
