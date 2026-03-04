@@ -1,0 +1,155 @@
+{
+  "generated_at": "2026-03-03T07:09:51.867451+00:00",
+  "analysis_date": "2026-03-03",
+  "model": "gpt-5.2",
+  "window_hours": 24,
+  "source_file": "data/news_recent.json",
+  "source_generated_at": "2026-03-03T07:02:59.590959+00:00",
+  "source_days_back": 30,
+  "source_total_items": 8582,
+  "total_items_in_window_all": 397,
+  "total_items_in_window_curated": 95,
+  "morning_call_markdown": "### Executive Summary\n- Multiple **actively exploited edge / endpoint paths** surfaced: **Ivanti Connect Secure (RESURGE malware)**, **SonicWall firewall exploitation attempts at scale**, and a **Windows MSHTML 0‑day used by APT28 (CVE‑2026‑21513)**—treat as “assume scanning/exploitation in the wild.”\n- **Browser + AI/extension attack surface is heating up** (Chrome “Gemini panel”/extension privilege issues; malicious extension abuse) with credible user-impact (mic/cam access, session theft, enterprise SSO token exposure via browser).\n- **Supply-chain + dev tool compromise themes** (malicious Go module; OpenVSX/Trivy/AI prompt hijacks) warrant controls on build agents, developer endpoints, and extension marketplaces.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Ivanti Connect Secure exploitation + RESURGE malware (CISA-reported)**\n- What happened: Reporting indicates **RESURGE malware** leveraging **Ivanti Connect Secure 0-days / known vuln chains** to gain access and persist.\n- Why it matters operationally: Ivanti is a common remote-access edge; compromise can lead to **credential theft, lateral movement, and ransomware staging** with minimal endpoint telemetry.\n- Recommended immediate actions for the SOC today: **Identify all Ivanti ICS assets + verify patch level/config**; **hunt for unusual admin logins, new web shells/files, and anomalous outbound traffic from the appliance** (if appliance logs limited, correlate at firewall/proxy).\n\n**2) SonicWall firewall exploitation attempts (“4,000+ IPs” scanning/attacking)**\n- What happened: Large-scale activity reported targeting **SonicWall firewalls** to exploit vulnerabilities (exact CVEs not clear from summary—assume multiple known issues).\n- Why it matters operationally: Edge device exploitation can bypass MFA and endpoint controls; financial orgs are frequent targets for **initial access** and **network pivoting**.\n- Recommended immediate actions for the SOC today: **Check exposure (internet-facing mgmt/VPN), confirm firmware currency, disable WAN management if not required**; **increase alerting on repeated auth failures, config changes, and new VPN sessions from rare geos/ASNs**.\n\n**3) Windows MSHTML 0-day used by APT28 (CVE‑2026‑21513) + PoC ALPC privilege escalation**\n- What happened: Multiple sources report **APT28 exploited MSHTML 0‑day (CVE‑2026‑21513) before Feb 2026 patching**; separate reporting notes a **PoC for Windows Error Reporting ALPC privilege escalation**.\n- Why it matters operationally: Combination supports **phish-to-code execution** then **local privilege escalation**—a realistic chain against user endpoints and jump hosts.\n- Recommended immediate actions for the SOC today: **Validate patch deployment for Feb 2026 Windows updates on high-risk rings (VIPs, admins, VDI, jump boxes)**; **hunt for MSHTML/Office child-process anomalies and unexpected WER/ALPC-related behavior** on endpoints.\n\n**4) Chrome “Gemini panel” / extension privilege issues + malicious extension abuse**\n- What happened: Multiple write-ups describe a **Chrome AI panel / extension interaction weakness** enabling **privilege escalation/hijacking**, plus separate reporting on **extension abuse enabling script injection / security header removal**.\n- Why it matters operationally: Browser is the new control plane for **SSO, payments ops, admin consoles**; extension-level compromise can enable **session theft, data access, and mic/cam privacy impact**.\n- Recommended immediate actions for the SOC today: **Inventory Chrome versions + force-update policy; review and restrict extensions (allowlist) on managed endpoints**; **monitor for new/rare extensions and unusual Chrome permission prompts / enterprise policy changes**.\n\n**5) Real-world exploitation of FreePBX command injection (web shells observed)**\n- What happened: Reports indicate **FreePBX instances infected with web shells** via **command injection vulnerability exploitation**.\n- Why it matters operationally: VoIP/telephony systems often sit on flat networks; compromise can enable **internal recon, credential harvesting, and call fraud**, and provide a foothold for broader attacks.\n- Recommended immediate actions for the SOC today: **Confirm whether any FreePBX is present internally/hosted and internet-exposed**; **hunt for web shell indicators via web access logs + unexpected outbound connections from PBX hosts**.\n\n---\n\n### Monitoring & detection recommendations\n- **Edge VPN / appliance hunting (Ivanti/SonicWall)**: Firewall/VPN logs + NetFlow for **new inbound exploitation patterns, repeated hits, and rare source geos**; focus on **External Remote Services (T1133)** and **Valid Accounts (T1078)**.\n- **Endpoint exploitation chain (MSHTML → execution)**: EDR telemetry for **Office/Browser spawning cmd/powershell/mshta/rundll32**; watch **User Execution (T1204)** and **Command and Scripting Interpreter (T1059)**.\n- **Privilege escalation / suspicious WER activity**: Windows Security + Sysmon/EDR for **WERFault.exe unusual parent/child relationships**, token elevation events, and unexpected service installs; map to **Exploitation for Privilege Escalation (T1068)**.\n- **Chrome extension risk**: Browser management logs (Chrome enterprise), EDR app inventory for **new extension installs**, permission changes, and Chrome policy modifications; map to **Browser Extensions (T1176)**.\n- **Email → Google-hosted phish (GTFire theme)**: Email gateway + CASB for **links to legitimate Google services used as redirect/hosting**; correlate with IdP sign-in logs for **impossible travel / new device** (**Phishing T1566**, **Credentials from Web Browsers T1555.003**).\n- **Supply chain/dev endpoints (malicious Go module, OpenVSX/Trivy/AI prompt hijack)**: EDR on build agents for **new network beacons, unexpected shells, and new startup items**; CI/CD logs for **new dependencies, checksum changes, and unusual package fetches** (**Supply Chain Compromise T1195**).\n- **PBX/web shell activity (FreePBX)**: Web server logs (Apache/Nginx) + EDR on PBX hosts for **POSTs to admin endpoints, suspicious .php drops, and outbound connections to unknown IPs** (**Web Shell T1505.003**).\n\n---\n\n### Medium-term follow-ups\n- **Patch governance**: Confirm SLA compliance for **Feb 2026 Windows patches**, Chrome updates, and any relevant **SonicWall/Ivanti** advisories; document compensating controls where patching lags.\n- **Browser hardening**: Move to **extension allowlisting**, disable developer mode, restrict high-risk permissions (mic/cam) by policy, and tighten download/execution controls for user profiles.\n- **Remote access segmentation**: Re-validate that VPN/appliance management interfaces are **not internet-exposed**, enforce MFA with phishing-resistant methods where possible, and isolate admin access paths.\n- **Telephony/“forgotten” infrastructure review**: Ensure PBX systems have asset ownership, logging, EDR (where feasible), and are segmented; add them to vulnerability scanning and backup testing.\n- **Supply-chain controls**: Require **dependency pinning + artifact signing/verification** in CI/CD; limit marketplace extensions/plugins on developer tooling; review secrets handling on build runners.\n- **Ransomware readiness check**: Given continued ransomware activity (NAS targeting and broader surge), validate **immutable/offline backups**, restore drills, and monitoring for **mass encryption / data staging** (assume attackers will blend AI-assisted lures with commodity tooling).",
+  "highlights": [
+    {
+      "title": "California Consulting Firms Hit by Ransomware Attacks: NAS Devices Under Siege",
+      "link": "https://www.news4hackers.com/california-consulting-firms-hit-by-ransomware-attacks-nas-devices-under-siege/",
+      "source": "News4Hackers",
+      "published": "2026-03-03T06:01:54+00:00",
+      "smart_groups": [
+        "Curated",
+        "Ransomware",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Angular i18n Flaw Lets Hackers Execute Malicious Code via Critical XSS Vulnerability",
+      "link": "https://gbhackers.com/angular-i18n-flaw/",
+      "source": "GBHackers News",
+      "published": "2026-03-03T06:01:33+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Web / API Security",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Cyberattackers Exploit OpenVSX Aqua Trivy with Malicious AI Prompts to Hijack Coding Tools",
+      "link": "https://gbhackers.com/openvsx-aqua-trivy/",
+      "source": "GBHackers News",
+      "published": "2026-03-03T06:00:14+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Threat Actors / APT",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Healthcare organizations are accepting cyber risk to cut costs",
+      "link": "https://www.helpnetsecurity.com/2026/03/03/pwc-healthcare-cybersecurity-threats-2026/",
+      "source": "Help Net Security",
+      "published": "2026-03-03T06:00:04+00:00",
+      "smart_groups": [
+        "Data Protection / Privacy",
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Android Security Update Fixes 129 Flaws and Tackles Actively Exploited Zero-Day Flaw",
+      "link": "https://gbhackers.com/android-security-update-fixes-129-flaws/",
+      "source": "GBHackers News",
+      "published": "2026-03-03T05:47:43+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Cloud / SaaS",
+        "Exploit / PoC",
+        "Mobile Security",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Operation Epic Fury: Potential Iranian Cyber Counteroffensive Operations",
+      "link": "https://www.tenable.com/blog/operation-epic-fury-potential-iranian-cyber-counteroffensive-operations",
+      "source": "Tenable Blog",
+      "published": "2026-03-03T05:28:38+00:00",
+      "smart_groups": [
+        "Network / OT / ICS",
+        "Curated",
+        "Malware / Payloads",
+        "Threat Actors / APT",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "Phishing / Social Engineering",
+        "Exploit / PoC",
+        "Identity / Access",
+        "Web / API Security",
+        "Vendors / Product Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Last Week in Security (LWiS) - 2026-03-02",
+      "link": "https://blog.badsectorlabs.com/last-week-in-security-lwis-2026-03-02.html",
+      "source": "https://blog.badsectorlabs.com/feeds/all.atom.xml",
+      "published": "2026-03-03T04:59:00+00:00",
+      "smart_groups": [
+        "Detection Engineering",
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Windows / Microsoft",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Chrome Gemini Vulnerability Lets Attackers Access Victims’ Camera and Microphone Remotely",
+      "link": "https://gbhackers.com/chrome-gemini-vulnerability/",
+      "source": "GBHackers News",
+      "published": "2026-03-03T04:45:50+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Curated",
+        "Data Protection / Privacy",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Cysources courses are good?",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1rjg3na/cysources_courses_are_good/",
+      "source": "/r/cybersecurity",
+      "published": "2026-03-03T04:45:40+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "OSINT / Community"
+      ],
+      "curated": true
+    },
+    {
+      "title": "OpenZeppelin finds data contamination in OpenAI’s EVMbench",
+      "link": "https://cointelegraph.com/news/openzeppelin-audits-openai-evmbench-finds-data-contamination?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound",
+      "source": "Cointelegraph.com News",
+      "published": "2026-03-03T04:18:22+00:00",
+      "smart_groups": [
+        "Curated",
+        "Data Breaches / Leaks",
+        "Vulnerabilities / CVEs",
+        "Crypto / Web3"
+      ],
+      "curated": true
+    }
+  ]
+}
