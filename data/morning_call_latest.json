@@ -1,136 +1,66 @@
 {
-  "generated_at": "2026-03-03T07:09:51.867451+00:00",
-  "analysis_date": "2026-03-03",
+  "generated_at": "2026-03-04T07:05:50.508903+00:00",
+  "analysis_date": "2026-03-04",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-03-03T07:02:59.590959+00:00",
+  "source_generated_at": "2026-03-04T06:59:18.148810+00:00",
   "source_days_back": 30,
-  "source_total_items": 8582,
-  "total_items_in_window_all": 397,
-  "total_items_in_window_curated": 95,
-  "morning_call_markdown": "### Executive Summary\n- Multiple **actively exploited edge / endpoint paths** surfaced: **Ivanti Connect Secure (RESURGE malware)**, **SonicWall firewall exploitation attempts at scale**, and a **Windows MSHTML 0‑day used by APT28 (CVE‑2026‑21513)**—treat as “assume scanning/exploitation in the wild.”\n- **Browser + AI/extension attack surface is heating up** (Chrome “Gemini panel”/extension privilege issues; malicious extension abuse) with credible user-impact (mic/cam access, session theft, enterprise SSO token exposure via browser).\n- **Supply-chain + dev tool compromise themes** (malicious Go module; OpenVSX/Trivy/AI prompt hijacks) warrant controls on build agents, developer endpoints, and extension marketplaces.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Ivanti Connect Secure exploitation + RESURGE malware (CISA-reported)**\n- What happened: Reporting indicates **RESURGE malware** leveraging **Ivanti Connect Secure 0-days / known vuln chains** to gain access and persist.\n- Why it matters operationally: Ivanti is a common remote-access edge; compromise can lead to **credential theft, lateral movement, and ransomware staging** with minimal endpoint telemetry.\n- Recommended immediate actions for the SOC today: **Identify all Ivanti ICS assets + verify patch level/config**; **hunt for unusual admin logins, new web shells/files, and anomalous outbound traffic from the appliance** (if appliance logs limited, correlate at firewall/proxy).\n\n**2) SonicWall firewall exploitation attempts (“4,000+ IPs” scanning/attacking)**\n- What happened: Large-scale activity reported targeting **SonicWall firewalls** to exploit vulnerabilities (exact CVEs not clear from summary—assume multiple known issues).\n- Why it matters operationally: Edge device exploitation can bypass MFA and endpoint controls; financial orgs are frequent targets for **initial access** and **network pivoting**.\n- Recommended immediate actions for the SOC today: **Check exposure (internet-facing mgmt/VPN), confirm firmware currency, disable WAN management if not required**; **increase alerting on repeated auth failures, config changes, and new VPN sessions from rare geos/ASNs**.\n\n**3) Windows MSHTML 0-day used by APT28 (CVE‑2026‑21513) + PoC ALPC privilege escalation**\n- What happened: Multiple sources report **APT28 exploited MSHTML 0‑day (CVE‑2026‑21513) before Feb 2026 patching**; separate reporting notes a **PoC for Windows Error Reporting ALPC privilege escalation**.\n- Why it matters operationally: Combination supports **phish-to-code execution** then **local privilege escalation**—a realistic chain against user endpoints and jump hosts.\n- Recommended immediate actions for the SOC today: **Validate patch deployment for Feb 2026 Windows updates on high-risk rings (VIPs, admins, VDI, jump boxes)**; **hunt for MSHTML/Office child-process anomalies and unexpected WER/ALPC-related behavior** on endpoints.\n\n**4) Chrome “Gemini panel” / extension privilege issues + malicious extension abuse**\n- What happened: Multiple write-ups describe a **Chrome AI panel / extension interaction weakness** enabling **privilege escalation/hijacking**, plus separate reporting on **extension abuse enabling script injection / security header removal**.\n- Why it matters operationally: Browser is the new control plane for **SSO, payments ops, admin consoles**; extension-level compromise can enable **session theft, data access, and mic/cam privacy impact**.\n- Recommended immediate actions for the SOC today: **Inventory Chrome versions + force-update policy; review and restrict extensions (allowlist) on managed endpoints**; **monitor for new/rare extensions and unusual Chrome permission prompts / enterprise policy changes**.\n\n**5) Real-world exploitation of FreePBX command injection (web shells observed)**\n- What happened: Reports indicate **FreePBX instances infected with web shells** via **command injection vulnerability exploitation**.\n- Why it matters operationally: VoIP/telephony systems often sit on flat networks; compromise can enable **internal recon, credential harvesting, and call fraud**, and provide a foothold for broader attacks.\n- Recommended immediate actions for the SOC today: **Confirm whether any FreePBX is present internally/hosted and internet-exposed**; **hunt for web shell indicators via web access logs + unexpected outbound connections from PBX hosts**.\n\n---\n\n### Monitoring & detection recommendations\n- **Edge VPN / appliance hunting (Ivanti/SonicWall)**: Firewall/VPN logs + NetFlow for **new inbound exploitation patterns, repeated hits, and rare source geos**; focus on **External Remote Services (T1133)** and **Valid Accounts (T1078)**.\n- **Endpoint exploitation chain (MSHTML → execution)**: EDR telemetry for **Office/Browser spawning cmd/powershell/mshta/rundll32**; watch **User Execution (T1204)** and **Command and Scripting Interpreter (T1059)**.\n- **Privilege escalation / suspicious WER activity**: Windows Security + Sysmon/EDR for **WERFault.exe unusual parent/child relationships**, token elevation events, and unexpected service installs; map to **Exploitation for Privilege Escalation (T1068)**.\n- **Chrome extension risk**: Browser management logs (Chrome enterprise), EDR app inventory for **new extension installs**, permission changes, and Chrome policy modifications; map to **Browser Extensions (T1176)**.\n- **Email → Google-hosted phish (GTFire theme)**: Email gateway + CASB for **links to legitimate Google services used as redirect/hosting**; correlate with IdP sign-in logs for **impossible travel / new device** (**Phishing T1566**, **Credentials from Web Browsers T1555.003**).\n- **Supply chain/dev endpoints (malicious Go module, OpenVSX/Trivy/AI prompt hijack)**: EDR on build agents for **new network beacons, unexpected shells, and new startup items**; CI/CD logs for **new dependencies, checksum changes, and unusual package fetches** (**Supply Chain Compromise T1195**).\n- **PBX/web shell activity (FreePBX)**: Web server logs (Apache/Nginx) + EDR on PBX hosts for **POSTs to admin endpoints, suspicious .php drops, and outbound connections to unknown IPs** (**Web Shell T1505.003**).\n\n---\n\n### Medium-term follow-ups\n- **Patch governance**: Confirm SLA compliance for **Feb 2026 Windows patches**, Chrome updates, and any relevant **SonicWall/Ivanti** advisories; document compensating controls where patching lags.\n- **Browser hardening**: Move to **extension allowlisting**, disable developer mode, restrict high-risk permissions (mic/cam) by policy, and tighten download/execution controls for user profiles.\n- **Remote access segmentation**: Re-validate that VPN/appliance management interfaces are **not internet-exposed**, enforce MFA with phishing-resistant methods where possible, and isolate admin access paths.\n- **Telephony/“forgotten” infrastructure review**: Ensure PBX systems have asset ownership, logging, EDR (where feasible), and are segmented; add them to vulnerability scanning and backup testing.\n- **Supply-chain controls**: Require **dependency pinning + artifact signing/verification** in CI/CD; limit marketplace extensions/plugins on developer tooling; review secrets handling on build runners.\n- **Ransomware readiness check**: Given continued ransomware activity (NAS targeting and broader surge), validate **immutable/offline backups**, restore drills, and monitoring for **mass encryption / data staging** (assume attackers will blend AI-assisted lures with commodity tooling).",
+  "source_total_items": 8924,
+  "total_items_in_window_all": 417,
+  "total_items_in_window_curated": 133,
+  "morning_call_markdown": "### Executive Summary\n- **Actively exploited enterprise vuln:** CISA added **VMware Aria Operations RCE (CVE-2026-22719)** to KEV—treat as “internet-facing compromise likely” if exposed.\n- **Identity-led intrusion trend:** Microsoft warns of **OAuth abuse in Entra ID** enabling phishing that can evade traditional “check the link” user guidance; expect token/OAuth-app persistence attempts.\n- **Mobile + supply-chain pressure:** Reports of **spy-grade iOS exploit kit (Coruna)** used for financial crime and **malicious OSS packages (npm/Laravel/PHP)** delivering stealers/RATs—raises risk to exec devices + developer pipelines.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) VMware Aria Operations RCE (CVE-2026-22719) added to CISA KEV (active exploitation)**\n- **What happened:** CISA flagged **VMware Aria Operations** RCE as **actively exploited** and added it to the KEV catalog.\n- **Why it matters operationally:** If we have any internet-reachable or poorly segmented Aria Ops instances, this is a fast path to **initial access → lateral movement → ransomware**.\n- **Recommended immediate actions for the SOC today:** Confirm asset inventory/exposure (external scan + CMDB); **prioritize emergency patch/mitigation** and add temporary edge controls (WAF/ACL/VPN-only), then hunt for post-exploitation on those hosts.\n\n**2) Entra ID OAuth phishing / consent-grant abuse (token-centric compromise)**\n- **What happened:** Microsoft reported **phishing exploiting OAuth in Entra ID** to bypass common detections and render “verify the URL” advice ineffective.\n- **Why it matters operationally:** Leads to **persistent access via OAuth app consent** and token theft—often bypassing MFA and enabling mailbox/data access without password resets.\n- **Recommended immediate actions for the SOC today:** Review Entra audit logs for **new/rare OAuth app consents** and risky permission grants; temporarily tighten consent policies (admin approval workflow) and alert on suspicious OAuth app creation/service principal changes.\n\n**3) AI-driven exploitation toolkits targeting edge devices (FortiGate/“CyberStrikeAI” theme)**\n- **What happened:** Multiple outlets reported **open-source/AI-assisted attack tooling** being used to automate exploitation at scale, including **FortiGate-focused** activity (details vary by source—assume opportunistic scanning + rapid weaponization).\n- **Why it matters operationally:** Our perimeter devices (VPN/NGFW/SASE) are high-value; automation increases volume of **credential stuffing, exploit attempts, and rapid pivoting**.\n- **Recommended immediate actions for the SOC today:** Increase monitoring on **VPN/Firewall admin interfaces** (geo-anomalies, brute force, config changes); validate edge patch levels and ensure management planes are **not internet-exposed** (restrict by IP/VPN + MFA).\n\n**4) Mobile exploitation risk: Coruna iOS exploit kit + Android exploited Qualcomm zero-day patched**\n- **What happened:** Reporting indicates **Coruna iOS exploit kit** (multiple vulns) used beyond government tooling and tied to **financial crime**; Android March updates include an **exploited Qualcomm zero-day** (some reports note patching gaps—treat as uneven coverage across OEMs).\n- **Why it matters operationally:** Elevated risk of **executive/VIP device compromise**, session theft, and out-of-band MFA interception; mobile is a frequent entry point for targeted fraud and BEC enablement.\n- **Recommended immediate actions for the SOC today:** Confirm MDM compliance for iOS/Android (minimum OS versions, rapid updates); trigger targeted checks on VIP devices for **unexpected profiles/certs, new MDM enrollments, and risky app installs**.\n\n**5) Software supply-chain: malicious npm packages + malicious Laravel/PHP packages delivering RAT/stealers**\n- **What happened:** Multiple reports of **malicious OSS packages** (npm campaigns; Laravel/PHP packages) deploying credential stealers and RATs.\n- **Why it matters operationally:** Direct impact to CI/CD and developer workstations; can lead to **secrets theft (API keys), repo compromise, and downstream production exposure**.\n- **Recommended immediate actions for the SOC today:** Monitor for **new package installs** from dev endpoints/CI runners and unusual outbound from build agents; coordinate with AppSec to block/allowlist registries and enforce **dependency pinning + provenance checks**.\n\n---\n\n### Monitoring & detection recommendations\n- **Entra ID / OAuth consent abuse:** Monitor Entra **AuditLogs/SignInLogs** for *Consent to application*, *Add service principal*, *Update application* events; hunt for **high-priv OAuth scopes** granted to rarely used apps (MITRE **T1528**, **T1550**).\n- **Token/identity anomalies after OAuth phish:** Alert on **impossible travel**, new device registrations, unusual **refresh token use**, and mailbox rule creation in M365 (MITRE **T1098**, **T1114**).\n- **VMware Aria Operations exploitation:** From EDR + VMware/Aria logs, hunt for **new webshell-like processes**, suspicious child processes from the Aria service context, and outbound connections from the Aria host to internal admin segments (MITRE **T1190**, **T1059**, **T1505**).\n- **Edge device exploitation / AI-driven scanning:** On firewalls/VPNs/WAF, increase detection for **bursts of 401/403**, exploit-signature matches, and requests to **admin endpoints** from diverse IPs; correlate with new successful admin logins (MITRE **T1110**, **T1190**).\n- **Supply-chain on CI/dev endpoints:** Collect from EDR + proxy/DNS: executions of **npm/composer/php** on build runners outside normal pipelines; outbound to code hosting/paste sites/storage for staged payloads (MITRE **T1552**, **T1566** when paired with social lures).\n- **Signed malware / RMM backdoors (workplace app impersonation):** From EDR, alert on **new RMM tool installs**, unusual signed binaries from user profile paths, and first-time-seen remote admin agents initiating outbound beacons (MITRE **T1219**, **T1105**).\n- **Mobile device risk (MDM):** Monitor MDM for **new configuration profiles, certificate installs, sideloading indicators**, and devices falling out of compliance right after travel or SMS/email lure activity (MITRE **T1649**).\n\n---\n\n### Medium-term follow-ups\n- **Patch/hardening program:** Validate patch SLAs for **VMware Aria**, perimeter appliances, and mobile OS; add KEV items to “expedite” lane with exposure-based prioritization.\n- **Entra ID consent governance:** Implement/verify **admin-consent workflow**, restrict user consent to low-risk permissions, and require publisher verification where feasible.\n- **Perimeter management-plane controls:** Ensure firewall/VPN management interfaces are **segmented, MFA enforced, logging centralized**, and only reachable via privileged access paths.\n- **Dev supply-chain controls:** Roll out **dependency scanning + lockfiles**, private registry/proxy with deny rules, and secrets scanning for repos/CI logs; review “who can publish” internal packages.\n- **Mobile security posture:** For high-risk roles (trading, payments, execs), enforce **rapid OS update windows**, stronger app controls, and consider enhanced mobile threat defense telemetry.\n- **Preparedness:** Update IR playbooks for **OAuth consent compromise** (revoke tokens, remove app grants, reset sessions, mailbox rule review) and run a quick tabletop with SOC + IAM.",
   "highlights": [
     {
-      "title": "California Consulting Firms Hit by Ransomware Attacks: NAS Devices Under Siege",
-      "link": "https://www.news4hackers.com/california-consulting-firms-hit-by-ransomware-attacks-nas-devices-under-siege/",
-      "source": "News4Hackers",
-      "published": "2026-03-03T06:01:54+00:00",
-      "smart_groups": [
-        "Curated",
-        "Ransomware",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Angular i18n Flaw Lets Hackers Execute Malicious Code via Critical XSS Vulnerability",
-      "link": "https://gbhackers.com/angular-i18n-flaw/",
+      "title": "Microsoft Alerts Customers to New Phishing Attack Exploiting OAuth in Entra ID to Bypass Detection",
+      "link": "https://gbhackers.com/microsoft-alerts-customers-to-new-phishing-attack/",
       "source": "GBHackers News",
-      "published": "2026-03-03T06:01:33+00:00",
+      "published": "2026-03-04T06:49:55+00:00",
       "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "Web / API Security",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Cyberattackers Exploit OpenVSX Aqua Trivy with Malicious AI Prompts to Hijack Coding Tools",
-      "link": "https://gbhackers.com/openvsx-aqua-trivy/",
-      "source": "GBHackers News",
-      "published": "2026-03-03T06:00:14+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "Threat Actors / APT",
-        "Exploit / PoC",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Healthcare organizations are accepting cyber risk to cut costs",
-      "link": "https://www.helpnetsecurity.com/2026/03/03/pwc-healthcare-cybersecurity-threats-2026/",
-      "source": "Help Net Security",
-      "published": "2026-03-03T06:00:04+00:00",
-      "smart_groups": [
-        "Data Protection / Privacy",
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Android Security Update Fixes 129 Flaws and Tackles Actively Exploited Zero-Day Flaw",
-      "link": "https://gbhackers.com/android-security-update-fixes-129-flaws/",
-      "source": "GBHackers News",
-      "published": "2026-03-03T05:47:43+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "Cloud / SaaS",
-        "Exploit / PoC",
-        "Mobile Security",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Operation Epic Fury: Potential Iranian Cyber Counteroffensive Operations",
-      "link": "https://www.tenable.com/blog/operation-epic-fury-potential-iranian-cyber-counteroffensive-operations",
-      "source": "Tenable Blog",
-      "published": "2026-03-03T05:28:38+00:00",
-      "smart_groups": [
-        "Network / OT / ICS",
-        "Curated",
-        "Malware / Payloads",
-        "Threat Actors / APT",
-        "Ransomware",
-        "Vulnerabilities / CVEs",
-        "Phishing / Social Engineering",
-        "Exploit / PoC",
         "Identity / Access",
-        "Web / API Security",
-        "Vendors / Product Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Last Week in Security (LWiS) - 2026-03-02",
-      "link": "https://blog.badsectorlabs.com/last-week-in-security-lwis-2026-03-02.html",
-      "source": "https://blog.badsectorlabs.com/feeds/all.atom.xml",
-      "published": "2026-03-03T04:59:00+00:00",
-      "smart_groups": [
-        "Detection Engineering",
-        "Curated",
-        "Vulnerabilities / CVEs",
+        "Threat Actors / APT",
         "Windows / Microsoft",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Chrome Gemini Vulnerability Lets Attackers Access Victims’ Camera and Microphone Remotely",
-      "link": "https://gbhackers.com/chrome-gemini-vulnerability/",
-      "source": "GBHackers News",
-      "published": "2026-03-03T04:45:50+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
         "Curated",
-        "Data Protection / Privacy",
+        "Exploit / PoC",
+        "Phishing / Social Engineering",
+        "Vulnerabilities / CVEs",
         "General Security"
       ],
       "curated": true
     },
     {
-      "title": "Cysources courses are good?",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1rjg3na/cysources_courses_are_good/",
+      "title": "Silver Dragon APT Group Exploits Google Drive for Covert Attacks on Europe, Asia",
+      "link": "https://gbhackers.com/silver-dragon-apt-group/",
+      "source": "GBHackers News",
+      "published": "2026-03-04T06:08:06+00:00",
+      "smart_groups": [
+        "Threat Actors / APT",
+        "Curated",
+        "Exploit / PoC",
+        "Malware / Payloads",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "mquire: Open-source Linux memory forensics tool",
+      "link": "https://www.helpnetsecurity.com/2026/03/04/mquire-open-source-linux-memory-forensics-tool/",
+      "source": "Help Net Security",
+      "published": "2026-03-04T06:00:24+00:00",
+      "smart_groups": [
+        "Linux / Unix",
+        "Curated",
+        "Network / OT / ICS",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "what are the biggest challenges in Integrating IAM with LLM systems in production?",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1rkd5hv/what_are_the_biggest_challenges_in_integrating/",
       "source": "/r/cybersecurity",
-      "published": "2026-03-03T04:45:40+00:00",
+      "published": "2026-03-04T05:35:19+00:00",
       "smart_groups": [
         "Curated",
         "Vulnerabilities / CVEs",
@@ -139,15 +69,78 @@
       "curated": true
     },
     {
-      "title": "OpenZeppelin finds data contamination in OpenAI’s EVMbench",
-      "link": "https://cointelegraph.com/news/openzeppelin-audits-openai-evmbench-finds-data-contamination?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound",
-      "source": "Cointelegraph.com News",
-      "published": "2026-03-03T04:18:22+00:00",
+      "title": "Why workforce identity is still a vulnerability, and what to do about it",
+      "link": "https://www.helpnetsecurity.com/2026/03/04/workforce-identity-assurance/",
+      "source": "Help Net Security",
+      "published": "2026-03-04T05:30:00+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Curated",
+        "Ransomware",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Data breach reported for Worcester State University | UpGuard",
+      "link": "https://www.upguard.comnews/worcester-state-university-data-breach-2026-03-03",
+      "source": "UpGuard – News",
+      "published": "2026-03-04T05:26:07+00:00",
+      "smart_groups": [
+        "Data Breaches / Leaks",
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Vendors / Product Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Malicious Laravel Packages Deploy PHP RAT, Grant Remote Access to Attackers",
+      "link": "https://gbhackers.com/malicious-laravel-packages/",
+      "source": "GBHackers News",
+      "published": "2026-03-04T05:08:53+00:00",
+      "smart_groups": [
+        "Malware / Payloads",
+        "Curated",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Thousands of iPhones Compromised in Massive Hack via Coruna Exploit Kit with 23 Vulnerabilities",
+      "link": "https://gbhackers.com/thousands-of-iphones-compromised-in-massive-hack-via-coruna-exploit-kit/",
+      "source": "GBHackers News",
+      "published": "2026-03-04T05:05:17+00:00",
       "smart_groups": [
         "Curated",
-        "Data Breaches / Leaks",
+        "Exploit / PoC",
         "Vulnerabilities / CVEs",
-        "Crypto / Web3"
+        "Mobile Security",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Intent-Based Access Control (IBAC) – FGA for AI Agent Permissions",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1rkc8o1/intentbased_access_control_ibac_fga_for_ai_agent/",
+      "source": "/r/cybersecurity",
+      "published": "2026-03-04T04:47:34+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "OSINT / Community"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Intent-Based Access Control (IBAC) – FGA for AI Agent Permissions",
+      "link": "https://www.reddit.com/r/netsec/comments/1rkc7kz/intentbased_access_control_ibac_fga_for_ai_agent/",
+      "source": "/r/netsec",
+      "published": "2026-03-04T04:46:01+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "OSINT / Community"
       ],
       "curated": true
     }
