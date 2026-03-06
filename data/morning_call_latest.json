@@ -1,82 +1,64 @@
 {
-  "generated_at": "2026-03-05T07:09:48.450480+00:00",
-  "analysis_date": "2026-03-05",
+  "generated_at": "2026-03-06T07:07:23.036891+00:00",
+  "analysis_date": "2026-03-06",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-03-05T07:03:05.373445+00:00",
+  "source_generated_at": "2026-03-06T06:59:51.366938+00:00",
   "source_days_back": 30,
-  "source_total_items": 9013,
-  "total_items_in_window_all": 406,
-  "total_items_in_window_curated": 127,
-  "morning_call_markdown": "### Executive Summary\n- Multiple **actively exploited** enterprise and mobile vulnerabilities are in scope today: **VMware Aria Operations** added to exploited lists, and a **Qualcomm/Android zero-day** being used in targeted attacks.  \n- **“Coruna” iOS exploit kit** (iOS 13–17.2.1) is being reported as powering global attacks and now appearing in **crypto-theft/scam** operations—raise mobile and VIP monitoring.  \n- Identity and cloud abuse remains high: **Tycoon2FA phishing platform disruption** may trigger **infrastructure churn/retaliatory campaigns**, while attackers increasingly use **trusted cloud + utilities** (Google Cloud redirects; **AzCopy** for exfil in ransomware).\n\n---\n\n### High-priority items (immediate attention)\n\n**1) VMware Aria Operations vulnerability (reported exploited / added to exploited lists)**\n- **What happened:** Reporting indicates a **VMware Aria Operations** flaw is **actively exploited**, risking cloud and virtualized resource compromise.  \n- **Why it matters operationally:** Aria Ops often has **broad visibility/credentials** into vSphere and cloud management; exploitation can enable rapid privilege escalation and lateral movement into core infrastructure.  \n- **Recommended immediate actions for the SOC today:** Confirm Aria Ops exposure and version; prioritize vendor mitigations/patch; hunt for **new admin sessions, unusual API calls, new tokens/keys**, and outbound connections from Aria Ops hosts.\n\n**2) Mobile exploitation surge: “Coruna” iOS exploit kit + Qualcomm/Android zero-day**\n- **What happened:** A **nation-state-grade iOS exploit kit (“Coruna”)** targeting **iOS 13–17.2.1** is publicly reported; Google/others also highlight an **actively exploited Qualcomm memory corruption** bug impacting Android via March patching guidance.  \n- **Why it matters operationally:** Financial institutions are exposed via **VIP device compromise**, **MFA interception**, session theft, and fraud enablement—especially where mobile devices access email, IdP, trading, or admin portals.  \n- **Recommended immediate actions for the SOC today:** Coordinate with MDM team to **enforce OS minimums and push updates** (iOS and Android); tighten conditional access for mobile (device compliance required); monitor for **impossible travel/new device enrollments** and rapid credential resets from mobile-origin logins.\n\n**3) Cisco Catalyst SD-WAN / “Cisco flaw” exposure reporting**\n- **What happened:** Reports describe **Cisco Catalyst SD-WAN flaws** that could enable **root access**, with additional commentary about government networks being exposed in a Cisco issue (details may vary by product).  \n- **Why it matters operationally:** Edge/network management compromise is a fast path to **traffic interception**, credential harvesting, and downstream ransomware staging (high impact in branch/WAN-heavy financial orgs).  \n- **Recommended immediate actions for the SOC today:** Identify any Catalyst SD-WAN/vManage-like assets and confirm patch status; restrict management interfaces to admin networks only; hunt for **new local accounts, config changes, unexpected SSH/HTTPS management access**, and anomalous device-to-internet egress.\n\n**4) Email/helpdesk platform RCE: FreeScout “Mail2Shell” zero-click**\n- **What happened:** A **zero-click “Mail2Shell” attack** reportedly allows hijacking **FreeScout** mail/helpdesk servers (CVE not provided in the summary).  \n- **Why it matters operationally:** Helpdesk/mail systems often integrate with SSO, mailboxes, and ticket workflows; compromise can enable **phishing from trusted channels** and credential capture.  \n- **Recommended immediate actions for the SOC today:** Inventory for FreeScout usage (including shadow IT); restrict inbound email handling paths where possible; monitor web server and application logs for **new processes spawned by mail handling**, webshell indicators, and suspicious outbound from the host.\n\n**5) Cloud/identity abuse: Tycoon2FA takedown + malicious Google Workspace OAuth app + cloud-hosted phishing redirects + AzCopy exfil**\n- **What happened:** Tycoon2FA infrastructure was disrupted; separate reporting highlights a **malicious Google Workspace OAuth app supply-chain style abuse**, **Google Cloud Storage buckets hosting malicious redirects**, and **AzCopy** being used for data exfil in ransomware campaigns.  \n- **Why it matters operationally:** Post-takedown, operators frequently **retool** (new domains/relays) and shift to **OAuth consent phishing** and trusted tooling for stealthy persistence/exfil—high risk for finance where IdP access = everything.  \n- **Recommended immediate actions for the SOC today:** Review IdP/O365/Google Workspace for **new OAuth app consents** and high-privilege scopes; alert on **AzCopy execution** in endpoints/servers; increase controls around external redirects and email URL rewriting; watch for **MFA fatigue, reverse-proxy phishing patterns**, and suspicious token refresh activity.\n\n---\n\n### Monitoring & detection recommendations\n- **VMware management plane hunting:** EDR + vCenter/Aria Ops logs + firewall egress; look for unusual admin logins and new service accounts (ATT&CK: Valid Accounts **T1078**, Remote Services **T1021**).  \n- **Mobile-to-IdP anomalies:** IdP (Entra/Okta), VPN, MDM compliance logs; alert on **new device registrations**, device non-compliance bypass, and unusual token refresh patterns (ATT&CK: Steal Web Session Cookie **T1539**, Modify Authentication Process **T1556**).  \n- **Cisco edge device compromise signals:** Firewall/VPN/NetFlow + device syslog; detect **management interface hits from non-admin IP ranges**, config changes, new users, and unexpected outbound connections from network appliances (ATT&CK: Exploit Public-Facing Application **T1190**).  \n- **Helpdesk/email server exploitation:** Web server logs + EDR on FreeScout hosts; alert on mail-processing spawned shells, new PHP files, suspicious cron/systemd persistence (ATT&CK: Command and Scripting Interpreter **T1059**, Web Shell **T1505.003**).  \n- **OAuth consent + SaaS persistence:** Google Workspace/Azure AD audit logs; hunt **OAuth app grants**, scope escalation, token replay, and sign-ins from unfamiliar ASNs (ATT&CK: Account Manipulation **T1098**).  \n- **Cloud-hosted redirect phishing:** Email security gateway + proxy/DNS; detect surges to newly created **GCS bucket URLs** or redirector patterns; tune URL detonation for “cloud storage” lures (ATT&CK: Phishing **T1566**).  \n- **AzCopy / trusted tool exfil:** EDR process telemetry + command-line logging + CASB; alert on `azcopy` execution, large outbound to Azure Storage, and unusual storage account destinations (ATT&CK: Exfiltration Over Web Service **T1567**).\n\n---\n\n### Medium-term follow-ups\n- **Patching program:** Validate coverage for **Android March fixes (incl. exploited Qualcomm)** and ensure iOS devices are beyond vulnerable ranges where possible; document exceptions for business-owned VIP devices.  \n- **Network edge hardening:** Review segmentation/ACLs for SD-WAN and other management planes; enforce MFA and admin access via jump hosts only; confirm logging retention for appliance syslog.  \n- **SaaS OAuth governance:** Implement/strengthen **OAuth app allowlisting**, admin consent workflow, and periodic reviews of high-risk scopes across Google Workspace/M365.  \n- **Ransomware readiness:** Given ongoing ransomware activity and reported exfil via trusted utilities, validate **egress controls**, tested restores, and “break glass” account monitoring.  \n- **Third-party/vendor exposure checks:** Track disclosures impacting service providers (e.g., LexisNexis breach reported via exploit); review vendor access paths and require incident notifications/attestations where applicable.  \n- **Endpoint hygiene & awareness:** Reinforce controls against pirated software/malware delivery and tech-support scam tooling (e.g., Havoc C2 misuse); ensure user reporting channels and blocklists are current.",
+  "source_total_items": 9017,
+  "total_items_in_window_all": 362,
+  "total_items_in_window_curated": 114,
+  "morning_call_markdown": "### Executive Summary\n- **Cisco edge/security appliances are a top immediate risk:** multiple **Catalyst SD‑WAN Manager** vulns confirmed **actively exploited**, and Cisco also released **emergency firewall patches** (potential RCE/exposure risk).\n- **Credential theft + phishing remains the primary access path:** continued **2FA phishing** ecosystem churn (Tycoon disruption) plus **SEO/malvertising fake installer lures** delivering infostealers/fileless execution.\n- **Auth-layer bypass risk in apps:** a **critical pac4j-jwt authentication bypass** advisory is out (high impact for any Java services using it), requiring rapid dependency triage.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Cisco Catalyst SD‑WAN Manager – active exploitation + PoC circulating**\n- **What happened:** Cisco confirmed **two Catalyst SD‑WAN Manager vulnerabilities** are being **exploited in the wild**, with reports of **PoC availability** and additional SD‑WAN flaws noted.  \n- **Why it matters operationally:** Internet-facing SD‑WAN management planes are high-leverage for **initial access → network control**, and “patched ≠ clean” if compromise pre-dated fixes.  \n- **Recommended immediate actions for the SOC today:** Verify patch status/exposure for SD‑WAN Manager/Controllers; hunt for **recent admin/session anomalies & config changes** and isolate/IR any device with suspicious management activity.\n\n**2) Cisco firewall product patch wave (incl. emergency/critical items)**\n- **What happened:** Cisco shipped patches across firewall products (reported as **dozens of bugs**), with external coverage highlighting **critical firewall vulnerabilities**.  \n- **Why it matters operationally:** Firewalls are frequent targets for **edge RCE/credential theft** leading to domain/network pivoting—particularly high impact in financial environments.  \n- **Recommended immediate actions for the SOC today:** Identify all Cisco firewall management/edge components; prioritize patching per vendor guidance and add temporary controls (restrict management to jump hosts/VPN, tighten ACLs) until patched.\n\n**3) pac4j-jwt (JwtAuthenticator) – authentication bypass (critical)**\n- **What happened:** A CIS advisory highlights an **auth bypass** in **pac4j-jwt (JwtAuthenticator)** that could allow **user impersonation**.  \n- **Why it matters operationally:** If any internal/external apps rely on pac4j-jwt, this can become **straight-to-account takeover** without endpoint malware.  \n- **Recommended immediate actions for the SOC today:** Triage SBOM/dependency inventories for pac4j usage; coordinate with AppSec to **patch/upgrade** and monitor for suspicious token validation patterns and privilege escalation in affected apps.\n\n**4) Infostealer delivery via fake developer tools + fileless execution (mshta/SEO lures)**\n- **What happened:** Multiple reports of **fake download pages/installer lures** (e.g., “Claude Code”, “OpenClaw” via Bing boosting) delivering **infostealers** and fileless execution (e.g., **mshta.exe**).  \n- **Why it matters operationally:** Infostealers rapidly lead to **credential/session theft**, SaaS takeover, and follow-on fraud; developer/admin endpoints are high-value.  \n- **Recommended immediate actions for the SOC today:** Increase alerting on **mshta/LOLBin** execution from browsers/email clients; push comms to dev/IT about verified download sources and block known risky categories (newly registered domains / ad-redirect patterns) where possible.\n\n**5) China-linked / APT activity leveraging Windows + cloud storage for staging**\n- **What happened:** Reporting describes a **China-linked espionage campaign** abusing **Windows** and **Google Drive** (cloud storage) for delivery/staging; separate reporting covers APT tooling (e.g., loaders/backdoors) in current conflicts.  \n- **Why it matters operationally:** Financial institutions are common espionage targets; cloud storage abuse can blend into normal traffic and bypass perimeter controls.  \n- **Recommended immediate actions for the SOC today:** Hunt for anomalous **Google Drive client/API usage** on endpoints/servers and unusual OAuth grants; review endpoint telemetry for new persistence and suspicious child processes from Office/browser chains.\n\n---\n\n### Monitoring & detection recommendations\n- **Edge device exploitation (Cisco SD‑WAN/Firewall):** monitor **VPN/firewall/SD‑WAN mgmt logs**, config audit trails, and admin logins for spikes/new geos/new accounts (ATT&CK **T1190**, **T1078**).  \n- **Post-exploitation on network appliances:** watch for outbound connections from appliances to unusual destinations and unexpected DNS; correlate with **netflow/proxy** and device syslogs (ATT&CK **T1041**).  \n- **Fileless/LOLBin execution from lures:** on **EDR**, hunt for `mshta.exe`, `rundll32.exe`, `regsvr32.exe` spawned by browsers/Office/email clients; enrich with command-line + parent process (ATT&CK **T1218**, **T1204**).  \n- **Infostealer outcomes:** on **IdP/SaaS** (Entra/Okta/Google Workspace), monitor **impossible travel**, new device/session cookies, MFA fatigue/abnormal prompts, and new OAuth consents (ATT&CK **T1528**, **T1556**).  \n- **2FA phishing after “Tycoon” disruption:** expect kit/operator migration—tighten detections on **reverse-proxy phishing indicators** (new sign-in user agents, token replay patterns) in **IdP** logs (ATT&CK **T1566**, **T1110**).  \n- **Cloud-storage staging (Google Drive):** on **CASB/proxy/DLP** and endpoint logs, alert on large uploads/downloads, unusual Drive sync paths, and Drive access by service accounts outside baseline (ATT&CK **T1105**).  \n- **Web/app auth bypass risk (pac4j-jwt):** review **WAF/API gateway + app logs** for abnormal auth success rates, token parsing errors, and privilege anomalies on endpoints/accounts tied to affected services (ATT&CK **T1550**).  \n\n---\n\n### Medium-term follow-ups\n- **Appliance exposure reduction:** move management interfaces behind **dedicated admin VPN/jump hosts**, enforce MFA, and restrict by IP allowlists; validate immutable logging for edge devices.  \n- **“Patched ≠ clean” playbook:** formalize a workflow for SD‑WAN/firewall events: patch, then **compromise assessment** (account review, config diff, firmware integrity checks, log retention validation).  \n- **Dependency governance:** ensure SBOM coverage for Java auth libraries (pac4j ecosystem) and implement “critical auth bypass” as an **emergency change** category.  \n- **Anti-malvertising controls:** strengthen browser protections (enterprise safe-browsing, ad/redirect blocking), and review download allowlists for developer tooling.  \n- **Mobile risk posture:** given continued reporting on iOS exploit commoditization, re-check **MDM compliance**, rapid iOS update SLAs, and high-risk user groups (execs, traders, admins).  \n- **Credential theft resilience:** expand phishing-resistant MFA for privileged users; reduce token lifetime where feasible; validate conditional access policies for session/token replay scenarios.",
   "highlights": [
     {
-      "title": "14 old software bugs that took way too long to squash",
-      "link": "https://www.csoonline.com/article/570815/10-old-software-bugs-that-took-way-too-long-to-squash.html",
-      "source": "CSO Online",
-      "published": "2026-03-05T06:30:00+00:00",
+      "title": "Self-taught in infosec, what’s the one resource you’d recommend above everything else, and why?",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1rm6v2m/selftaught_in_infosec_whats_the_one_resource_youd/",
+      "source": "/r/cybersecurity",
+      "published": "2026-03-06T06:50:11+00:00",
       "smart_groups": [
-        "Vulnerabilities / CVEs",
         "Curated",
-        "Linux / Unix",
         "Exploit / PoC",
-        "Web / API Security",
-        "Malware / Payloads",
-        "Ransomware",
-        "Cloud / SaaS",
-        "Identity / Access",
         "Network / OT / ICS",
-        "Windows / Microsoft",
+        "Vulnerabilities / CVEs",
+        "OSINT / Community"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Cisco Catalyst SD WAN just got hit with active exploits, seriously reconsidering our whole setup now, Done with it.",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1rm6s1l/cisco_catalyst_sd_wan_just_got_hit_with_active/",
+      "source": "/r/cybersecurity",
+      "published": "2026-03-06T06:45:30+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Threat Actors / APT",
+        "Exploit / PoC",
+        "OSINT / Community"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Why phishing still works today",
+      "link": "https://www.helpnetsecurity.com/2026/03/06/why-phishing-still-works-today/",
+      "source": "Help Net Security",
+      "published": "2026-03-06T06:30:12+00:00",
+      "smart_groups": [
+        "Curated",
+        "Exploit / PoC",
+        "Phishing / Social Engineering",
         "General Security"
       ],
       "curated": true
     },
     {
-      "title": "Google warns of crypto scams using ‘new and powerful’ iPhone exploit kit",
-      "link": "https://cointelegraph.com/news/google-warns-crypto-scams-using-new-and-powerful-iphone-exploit-kit?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound",
-      "source": "Cointelegraph.com News",
-      "published": "2026-03-05T06:17:42+00:00",
-      "smart_groups": [
-        "Curated",
-        "Exploit / PoC",
-        "Crypto / Web3"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Cisco Catalyst SD-WAN Flaws Expose Devices to Root Access, Threatening Network Security",
-      "link": "https://gbhackers.com/cisco-catalyst-sd-wan-flaws/",
+      "title": "FBI Detains U.S. Government Contractor in Massive $46 Million Fraud Scheme",
+      "link": "https://gbhackers.com/fbi-detains-u-s-government-contractor/",
       "source": "GBHackers News",
-      "published": "2026-03-05T06:11:42+00:00",
+      "published": "2026-03-06T06:27:01+00:00",
       "smart_groups": [
-        "Cloud / SaaS",
-        "Curated",
-        "Exploit / PoC",
-        "Vulnerabilities / CVEs",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Google uncovers Coruna iOS Exploit Kit targeting iOS 13–17.2.1",
-      "link": "https://securityaffairs.com/188928/security/google-uncovers-coruna-ios-exploit-kit-targeting-ios-13-17-2-1.html",
-      "source": "Security Affairs",
-      "published": "2026-03-05T06:10:52+00:00",
-      "smart_groups": [
-        "Curated",
-        "Exploit / PoC",
-        "Mobile Security",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "As AI agents start making purchases, security teams must rethink risk",
-      "link": "https://www.helpnetsecurity.com/2026/03/05/donald-kossmann-chargebacks911-agentic-commerce-security-risks/",
-      "source": "Help Net Security",
-      "published": "2026-03-05T06:00:18+00:00",
-      "smart_groups": [
+        "Crypto / Web3",
         "Curated",
         "Vulnerabilities / CVEs",
         "General Security"
@@ -84,23 +66,52 @@
       "curated": true
     },
     {
-      "title": "Workers reviewing Meta Ray-Ban footage encounter users’ intimate moments",
-      "link": "https://www.helpnetsecurity.com/2026/03/05/meta-ray-ban-smart-glasses-privacy-risks/",
-      "source": "Help Net Security",
-      "published": "2026-03-05T05:30:59+00:00",
+      "title": "Threat actors are using fake Claude Code download pages to deploy a fileless infostealer via mshta.exe — developers should be aware",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1rm5nss/threat_actors_are_using_fake_claude_code_download/",
+      "source": "/r/cybersecurity",
+      "published": "2026-03-06T05:44:42+00:00",
       "smart_groups": [
+        "Malware / Payloads",
         "Data Protection / Privacy",
+        "Threat Actors / APT",
         "Curated",
+        "Network / OT / ICS",
         "Vulnerabilities / CVEs",
+        "Windows / Microsoft",
+        "OSINT / Community"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Defense against configurations with Bruce Mines",
+      "link": "https://www.scworld.com/resource/defense-against-configurations-with-bruce-mines",
+      "source": "SCM feed for Latest",
+      "published": "2026-03-06T05:44:34+00:00",
+      "smart_groups": [
+        "Curated",
+        "Exploit / PoC",
         "General Security"
       ],
       "curated": true
     },
     {
-      "title": "Operation Leak: Authorities Dismantle LeakBase Forum, Secure User Data and IP Logs",
-      "link": "https://gbhackers.com/operation-leak-authorities-dismantle-leakbase-forum/",
+      "title": "WordPress Membership Plugin Flaw Lets Attackers Create Admin Accounts",
+      "link": "https://gbhackers.com/wordpress-membership-plugin-flaw/",
       "source": "GBHackers News",
-      "published": "2026-03-05T05:19:59+00:00",
+      "published": "2026-03-06T05:31:25+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Securing remote workforce with ThreatLocker's Erik Jansen",
+      "link": "https://www.scworld.com/resource/securing-remote-workforce-with-threatlockers-erik-jansen",
+      "source": "SCM feed for Latest",
+      "published": "2026-03-06T05:27:43+00:00",
       "smart_groups": [
         "Curated",
         "Vulnerabilities / CVEs",
@@ -109,24 +120,13 @@
       "curated": true
     },
     {
-      "title": "A16z eyes 5th crypto fund as some peers look to new tech: Report",
-      "link": "https://cointelegraph.com/news/a16z-eyes-5th-crypto-fund-as-peers-look-new-tech-report?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound",
-      "source": "Cointelegraph.com News",
-      "published": "2026-03-05T05:02:08+00:00",
+      "title": "Google Uncovers 90 Zero-Day Vulnerabilities Under Active Exploitation in 2025",
+      "link": "https://gbhackers.com/google-uncovers-90-zero-day-vulnerabilities/",
+      "source": "GBHackers News",
+      "published": "2026-03-06T05:04:27+00:00",
       "smart_groups": [
         "Curated",
         "Vulnerabilities / CVEs",
-        "Crypto / Web3"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Nation-State iOS Exploit Kit ‘Coruna’ Discovered in Global Cyber Attacks",
-      "link": "https://www.news4hackers.com/nation-state-ios-exploit-kit-coruna-discovered-in-global-cyber-attacks/",
-      "source": "News4Hackers",
-      "published": "2026-03-05T05:02:04+00:00",
-      "smart_groups": [
-        "Curated",
         "Exploit / PoC",
         "Mobile Security",
         "General Security"
@@ -134,14 +134,14 @@
       "curated": true
     },
     {
-      "title": "Why India Needs Indigenous HSMs for DPDP Act and RBI Compliance",
-      "link": "https://jisasoftech.com/why-india-needs-indigenous-hsms-for-dpdp-act-and-rbi-compliance/",
-      "source": "JISA Softech",
-      "published": "2026-03-05T04:59:52+00:00",
+      "title": "Solv Protocol offers 10% bounty after hacker snatches $2.7M",
+      "link": "https://cointelegraph.com/news/hacker-steals-nearly-3-million-from-solv-protocol?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound",
+      "source": "Cointelegraph.com News",
+      "published": "2026-03-06T04:44:31+00:00",
       "smart_groups": [
         "Curated",
-        "Vulnerabilities / CVEs",
-        "Vendors / Product Security"
+        "Exploit / PoC",
+        "Crypto / Web3"
       ],
       "curated": true
     }
