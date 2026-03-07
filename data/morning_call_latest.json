@@ -1,147 +1,146 @@
 {
-  "generated_at": "2026-03-06T07:07:23.036891+00:00",
-  "analysis_date": "2026-03-06",
+  "generated_at": "2026-03-07T06:59:15.204959+00:00",
+  "analysis_date": "2026-03-07",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-03-06T06:59:51.366938+00:00",
+  "source_generated_at": "2026-03-07T06:50:04.468378+00:00",
   "source_days_back": 30,
-  "source_total_items": 9017,
-  "total_items_in_window_all": 362,
-  "total_items_in_window_curated": 114,
-  "morning_call_markdown": "### Executive Summary\n- **Cisco edge/security appliances are a top immediate risk:** multiple **Catalyst SD‑WAN Manager** vulns confirmed **actively exploited**, and Cisco also released **emergency firewall patches** (potential RCE/exposure risk).\n- **Credential theft + phishing remains the primary access path:** continued **2FA phishing** ecosystem churn (Tycoon disruption) plus **SEO/malvertising fake installer lures** delivering infostealers/fileless execution.\n- **Auth-layer bypass risk in apps:** a **critical pac4j-jwt authentication bypass** advisory is out (high impact for any Java services using it), requiring rapid dependency triage.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Cisco Catalyst SD‑WAN Manager – active exploitation + PoC circulating**\n- **What happened:** Cisco confirmed **two Catalyst SD‑WAN Manager vulnerabilities** are being **exploited in the wild**, with reports of **PoC availability** and additional SD‑WAN flaws noted.  \n- **Why it matters operationally:** Internet-facing SD‑WAN management planes are high-leverage for **initial access → network control**, and “patched ≠ clean” if compromise pre-dated fixes.  \n- **Recommended immediate actions for the SOC today:** Verify patch status/exposure for SD‑WAN Manager/Controllers; hunt for **recent admin/session anomalies & config changes** and isolate/IR any device with suspicious management activity.\n\n**2) Cisco firewall product patch wave (incl. emergency/critical items)**\n- **What happened:** Cisco shipped patches across firewall products (reported as **dozens of bugs**), with external coverage highlighting **critical firewall vulnerabilities**.  \n- **Why it matters operationally:** Firewalls are frequent targets for **edge RCE/credential theft** leading to domain/network pivoting—particularly high impact in financial environments.  \n- **Recommended immediate actions for the SOC today:** Identify all Cisco firewall management/edge components; prioritize patching per vendor guidance and add temporary controls (restrict management to jump hosts/VPN, tighten ACLs) until patched.\n\n**3) pac4j-jwt (JwtAuthenticator) – authentication bypass (critical)**\n- **What happened:** A CIS advisory highlights an **auth bypass** in **pac4j-jwt (JwtAuthenticator)** that could allow **user impersonation**.  \n- **Why it matters operationally:** If any internal/external apps rely on pac4j-jwt, this can become **straight-to-account takeover** without endpoint malware.  \n- **Recommended immediate actions for the SOC today:** Triage SBOM/dependency inventories for pac4j usage; coordinate with AppSec to **patch/upgrade** and monitor for suspicious token validation patterns and privilege escalation in affected apps.\n\n**4) Infostealer delivery via fake developer tools + fileless execution (mshta/SEO lures)**\n- **What happened:** Multiple reports of **fake download pages/installer lures** (e.g., “Claude Code”, “OpenClaw” via Bing boosting) delivering **infostealers** and fileless execution (e.g., **mshta.exe**).  \n- **Why it matters operationally:** Infostealers rapidly lead to **credential/session theft**, SaaS takeover, and follow-on fraud; developer/admin endpoints are high-value.  \n- **Recommended immediate actions for the SOC today:** Increase alerting on **mshta/LOLBin** execution from browsers/email clients; push comms to dev/IT about verified download sources and block known risky categories (newly registered domains / ad-redirect patterns) where possible.\n\n**5) China-linked / APT activity leveraging Windows + cloud storage for staging**\n- **What happened:** Reporting describes a **China-linked espionage campaign** abusing **Windows** and **Google Drive** (cloud storage) for delivery/staging; separate reporting covers APT tooling (e.g., loaders/backdoors) in current conflicts.  \n- **Why it matters operationally:** Financial institutions are common espionage targets; cloud storage abuse can blend into normal traffic and bypass perimeter controls.  \n- **Recommended immediate actions for the SOC today:** Hunt for anomalous **Google Drive client/API usage** on endpoints/servers and unusual OAuth grants; review endpoint telemetry for new persistence and suspicious child processes from Office/browser chains.\n\n---\n\n### Monitoring & detection recommendations\n- **Edge device exploitation (Cisco SD‑WAN/Firewall):** monitor **VPN/firewall/SD‑WAN mgmt logs**, config audit trails, and admin logins for spikes/new geos/new accounts (ATT&CK **T1190**, **T1078**).  \n- **Post-exploitation on network appliances:** watch for outbound connections from appliances to unusual destinations and unexpected DNS; correlate with **netflow/proxy** and device syslogs (ATT&CK **T1041**).  \n- **Fileless/LOLBin execution from lures:** on **EDR**, hunt for `mshta.exe`, `rundll32.exe`, `regsvr32.exe` spawned by browsers/Office/email clients; enrich with command-line + parent process (ATT&CK **T1218**, **T1204**).  \n- **Infostealer outcomes:** on **IdP/SaaS** (Entra/Okta/Google Workspace), monitor **impossible travel**, new device/session cookies, MFA fatigue/abnormal prompts, and new OAuth consents (ATT&CK **T1528**, **T1556**).  \n- **2FA phishing after “Tycoon” disruption:** expect kit/operator migration—tighten detections on **reverse-proxy phishing indicators** (new sign-in user agents, token replay patterns) in **IdP** logs (ATT&CK **T1566**, **T1110**).  \n- **Cloud-storage staging (Google Drive):** on **CASB/proxy/DLP** and endpoint logs, alert on large uploads/downloads, unusual Drive sync paths, and Drive access by service accounts outside baseline (ATT&CK **T1105**).  \n- **Web/app auth bypass risk (pac4j-jwt):** review **WAF/API gateway + app logs** for abnormal auth success rates, token parsing errors, and privilege anomalies on endpoints/accounts tied to affected services (ATT&CK **T1550**).  \n\n---\n\n### Medium-term follow-ups\n- **Appliance exposure reduction:** move management interfaces behind **dedicated admin VPN/jump hosts**, enforce MFA, and restrict by IP allowlists; validate immutable logging for edge devices.  \n- **“Patched ≠ clean” playbook:** formalize a workflow for SD‑WAN/firewall events: patch, then **compromise assessment** (account review, config diff, firmware integrity checks, log retention validation).  \n- **Dependency governance:** ensure SBOM coverage for Java auth libraries (pac4j ecosystem) and implement “critical auth bypass” as an **emergency change** category.  \n- **Anti-malvertising controls:** strengthen browser protections (enterprise safe-browsing, ad/redirect blocking), and review download allowlists for developer tooling.  \n- **Mobile risk posture:** given continued reporting on iOS exploit commoditization, re-check **MDM compliance**, rapid iOS update SLAs, and high-risk user groups (execs, traders, admins).  \n- **Credential theft resilience:** expand phishing-resistant MFA for privileged users; reduce token lifetime where feasible; validate conditional access policies for session/token replay scenarios.",
+  "source_total_items": 8988,
+  "total_items_in_window_all": 307,
+  "total_items_in_window_curated": 98,
+  "morning_call_markdown": "### Executive Summary\n- Multiple **Known Exploited Vulnerabilities (KEV)** updates: **Apple iOS**, **Cisco Catalyst SD‑WAN**, and a **Rockwell ICS** flaw reported under active exploitation—treat as patch/mitigation emergencies where in-scope.\n- **Phishing-to-malware** continues to evolve: “**ClickFix**” now leveraging **Windows Terminal** to execute payloads (incl. **Lumma Stealer**)—expect higher success rates against helpdesk-heavy/ops users.\n- **Iran-linked activity (MuddyWater/SeedWorm)** reported deploying new backdoor (**Dindoor**) against US orgs—raise watch for credential theft + remote access tooling.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) KEV: Apple iOS exploited (Coruna exploit kit / spyware + crypto theft)**\n- **What happened:** CISA added **3 Apple iOS flaws** tied to the Coruna exploit kit to the **KEV** list; reporting indicates exploitation for spyware/crypto-theft.\n- **Why it matters operationally:** Mobile compromise can bypass endpoint controls and enable **account takeover**, MFA session theft, and sensitive comms access for execs/traders.\n- **Recommended immediate actions for the SOC today:** Confirm **MDM compliance** (latest iOS/iPadOS), quarantine noncompliant devices; hunt for **new/unmanaged iOS devices** enrolling or accessing O365/VPN; escalate any reports of unusual MFA prompts/token use from mobile.\n\n**2) Active exploitation: Cisco Catalyst SD‑WAN vulnerabilities**\n- **What happened:** Cisco warned of **ongoing exploitation** of **two recently patched Catalyst SD‑WAN flaws** (details vary by advisory; assume edge-facing management/control plane exposure).\n- **Why it matters operationally:** SD‑WAN edge compromise is a fast path to **network pivoting**, traffic interception, and broad ransomware staging in distributed environments.\n- **Recommended immediate actions for the SOC today:** Verify patch levels on **all SD‑WAN controllers/edges**; add temporary **edge ACL/WAF restrictions** to management interfaces; review last 7 days for **new admin accounts/config changes** on SD‑WAN devices and anomalous management logins.\n\n**3) KEV / OT spillover risk: Rockwell Automation ICS vulnerability under active exploit**\n- **What happened:** Rockwell ICS vulnerability was reported as **added to KEV** and **actively exploited** for remote ICS hacking (exact product/CVE not fully clear from the feed—assume common internet-exposed ICS management paths).\n- **Why it matters operationally:** Even if core banking is IT-focused, **facilities/branch infrastructure** and third-party building/industrial systems can be leveraged for **initial access** or disruption.\n- **Recommended immediate actions for the SOC today:** Inventory any Rockwell exposure (incl. vendor-managed sites); ensure **no direct internet exposure** of ICS management; alert OT/facilities contacts to validate compensating controls and review remote access logs.\n\n**4) Phishing tradecraft: “ClickFix” using Windows Terminal to run payloads (Lumma Stealer)**\n- **What happened:** Microsoft-reported “ClickFix” campaigns now use **Windows Terminal** as an execution path to deliver malware (incl. **Lumma Stealer**).\n- **Why it matters operationally:** This is a high-volume pathway to **credential theft** (browser creds, cookies, crypto wallets) and can quickly become **VPN/VDI/SaaS account takeover** in financial environments.\n- **Recommended immediate actions for the SOC today:** Increase alerting on **Windows Terminal (wt.exe)** spawning scripting engines or LOLBins; push user comms to report “fix/captcha/click-to-run” prompts; rapidly triage any endpoint with new infostealer indicators (browser DB access + suspicious outbound).\n\n**5) Iran-linked intrusion set: MuddyWater / SeedWorm using “Dindoor” backdoor**\n- **What happened:** Multiple sources report **MuddyWater** targeting US orgs with a new backdoor (“**Dindoor**”) and related tooling.\n- **Why it matters operationally:** Likely involves **credential access**, persistence, and lateral movement—financial orgs are high-value for espionage and disruptive follow-on.\n- **Recommended immediate actions for the SOC today:** Prioritize triage of any **new remote service creation**, suspicious scheduled tasks, and abnormal PowerShell; review IdP logs for **impossible travel / atypical OAuth consent** and block suspicious sessions.\n\n---\n\n### Monitoring & detection recommendations\n- **Windows Terminal abuse (ClickFix/Lumma):** EDR process telemetry for `wt.exe` → `powershell.exe/cmd.exe/mshta.exe/rundll32.exe` chains; correlate with email/web events (MITRE **T1059**, **T1204**).\n- **Infostealer outcomes:** Proxy/DNS + EDR for endpoints accessing browser credential stores + unusual outbound to file-sharing/CDNs shortly after user interaction; focus on Finance/Trading/VIP groups (MITRE **T1555**, **T1041**).\n- **Cisco SD‑WAN exploitation indicators:** SD‑WAN controller/edge logs for new admin users, config pushes outside change window, management logins from new geos, spikes in 401/403/500 around mgmt endpoints (MITRE **T1190**).\n- **Mobile-driven account takeover:** IdP/SSO logs for token refresh anomalies, new device enrollments, repeated MFA failures followed by success, and high-risk sign-ins tied to mobile user agents.\n- **MuddyWater-style tradecraft:** EDR for PowerShell with download/exec patterns, WMI persistence, scheduled tasks, new services; network for new outbound C2 over HTTPS to rare domains (MITRE **T1059.001**, **T1053.005**, **T1543.003**).\n- **Supply-chain / dev tooling risk:** Repo/package monitoring + EDR for developer workstations pulling unusual npm packages (e.g., typosquats) and processes contacting Discord/webhooks; review secrets-scanner alerts for new `.env` exposures (MITRE **T1195**).\n- **RMM tool weaponization:** Remote admin tool detections (AnyDesk/ScreenConnect/etc.)—new installs, unsigned binaries, abnormal child processes, and first-seen inbound remote sessions (MITRE **T1219**).\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** Validate remediation timelines for **KEV-listed Apple + Rockwell**, and confirm **Cisco SD‑WAN** patch coverage across all regions/tenants.\n- **Mobile hardening:** Enforce MDM policies (OS minimums, jailbreak detection, app store controls) and confirm conditional access blocks **unmanaged mobile** from high-risk apps.\n- **Email/web controls:** Tune phishing protections for “ClickFix” lures (HTML smuggling-like user flows, fake fix/captcha themes); review user reporting runbooks and mail quarantine SLAs.\n- **Edge exposure reduction:** Re-audit **internet-facing management** surfaces (SD‑WAN, OT remote access, admin portals); ensure MFA + IP allowlisting + break-glass monitoring.\n- **Developer supply-chain hygiene:** Require lockfiles, private registries where possible, and automated detection for **typosquat packages**; reinforce secret management (no `.env` in repos).\n- **Incident readiness:** Reconfirm playbooks for **infostealer** (credential reset scope, session revocation, browser wipe) and for **network edge device compromise** (config snapshot, isolate, rotate creds/certs).",
   "highlights": [
     {
-      "title": "Self-taught in infosec, what’s the one resource you’d recommend above everything else, and why?",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1rm6v2m/selftaught_in_infosec_whats_the_one_resource_youd/",
+      "title": "wolfCOSE a Post-quantum COSE library (ML-DSA, ECDH-ES) targeting MISRA C:2023 for embedded/safety-critical firmware",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1rmvn5e/wolfcose_a_postquantum_cose_library_mldsa_ecdhes/",
       "source": "/r/cybersecurity",
-      "published": "2026-03-06T06:50:11+00:00",
+      "published": "2026-03-07T00:48:52+00:00",
       "smart_groups": [
         "Curated",
-        "Exploit / PoC",
+        "Vulnerabilities / CVEs",
+        "OSINT / Community"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Trump’s cyber strategy emphasizes offensive operations, deregulation, AI",
+      "link": "https://www.csoonline.com/article/4141989/trumps-cyber-strategy-emphasizes-offensive-operations-deregulation-ai.html",
+      "source": "CSO Online",
+      "published": "2026-03-06T23:59:55+00:00",
+      "smart_groups": [
         "Network / OT / ICS",
-        "Vulnerabilities / CVEs",
-        "OSINT / Community"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Cisco Catalyst SD WAN just got hit with active exploits, seriously reconsidering our whole setup now, Done with it.",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1rm6s1l/cisco_catalyst_sd_wan_just_got_hit_with_active/",
-      "source": "/r/cybersecurity",
-      "published": "2026-03-06T06:45:30+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "Threat Actors / APT",
-        "Exploit / PoC",
-        "OSINT / Community"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Why phishing still works today",
-      "link": "https://www.helpnetsecurity.com/2026/03/06/why-phishing-still-works-today/",
-      "source": "Help Net Security",
-      "published": "2026-03-06T06:30:12+00:00",
-      "smart_groups": [
-        "Curated",
-        "Exploit / PoC",
-        "Phishing / Social Engineering",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "FBI Detains U.S. Government Contractor in Massive $46 Million Fraud Scheme",
-      "link": "https://gbhackers.com/fbi-detains-u-s-government-contractor/",
-      "source": "GBHackers News",
-      "published": "2026-03-06T06:27:01+00:00",
-      "smart_groups": [
-        "Crypto / Web3",
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Threat actors are using fake Claude Code download pages to deploy a fileless infostealer via mshta.exe — developers should be aware",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1rm5nss/threat_actors_are_using_fake_claude_code_download/",
-      "source": "/r/cybersecurity",
-      "published": "2026-03-06T05:44:42+00:00",
-      "smart_groups": [
-        "Malware / Payloads",
         "Data Protection / Privacy",
-        "Threat Actors / APT",
         "Curated",
-        "Network / OT / ICS",
         "Vulnerabilities / CVEs",
-        "Windows / Microsoft",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "We (at Tachyon) found an auth bypass in MLflow",
+      "link": "https://www.reddit.com/r/netsec/comments/1rmu48k/we_at_tachyon_found_an_auth_bypass_in_mlflow/",
+      "source": "/r/netsec",
+      "published": "2026-03-06T23:43:02+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
         "OSINT / Community"
       ],
       "curated": true
     },
     {
-      "title": "Defense against configurations with Bruce Mines",
-      "link": "https://www.scworld.com/resource/defense-against-configurations-with-bruce-mines",
+      "title": "3 Apple flaws from Coruna exploit kit added to CISA vulnerability list",
+      "link": "https://www.scworld.com/news/3-apple-flaws-from-coruna-exploit-kit-added-to-cisa-vulnerability-list",
       "source": "SCM feed for Latest",
-      "published": "2026-03-06T05:44:34+00:00",
+      "published": "2026-03-06T22:53:29+00:00",
       "smart_groups": [
+        "Cloud / SaaS",
         "Curated",
         "Exploit / PoC",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "WordPress Membership Plugin Flaw Lets Attackers Create Admin Accounts",
-      "link": "https://gbhackers.com/wordpress-membership-plugin-flaw/",
-      "source": "GBHackers News",
-      "published": "2026-03-06T05:31:25+00:00",
-      "smart_groups": [
-        "Curated",
         "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Securing remote workforce with ThreatLocker's Erik Jansen",
-      "link": "https://www.scworld.com/resource/securing-remote-workforce-with-threatlockers-erik-jansen",
-      "source": "SCM feed for Latest",
-      "published": "2026-03-06T05:27:43+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Google Uncovers 90 Zero-Day Vulnerabilities Under Active Exploitation in 2025",
-      "link": "https://gbhackers.com/google-uncovers-90-zero-day-vulnerabilities/",
-      "source": "GBHackers News",
-      "published": "2026-03-06T05:04:27+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
         "Mobile Security",
         "General Security"
       ],
       "curated": true
     },
     {
-      "title": "Solv Protocol offers 10% bounty after hacker snatches $2.7M",
-      "link": "https://cointelegraph.com/news/hacker-steals-nearly-3-million-from-solv-protocol?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound",
-      "source": "Cointelegraph.com News",
-      "published": "2026-03-06T04:44:31+00:00",
+      "title": "Russian man admits role in global Phobos ransomware attacks",
+      "link": "https://www.scworld.com/brief/russian-man-admits-role-in-global-phobos-ransomware-attacks",
+      "source": "SCM feed for Latest",
+      "published": "2026-03-06T22:44:29+00:00",
       "smart_groups": [
         "Curated",
+        "Ransomware",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "A Race Within A Race: Exploiting CVE-2025-38617 in Linux Packet Sockets",
+      "link": "https://www.reddit.com/r/netsec/comments/1rmsmhg/a_race_within_a_race_exploiting_cve202538617_in/",
+      "source": "/r/netsec",
+      "published": "2026-03-06T22:42:41+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
         "Exploit / PoC",
-        "Crypto / Web3"
+        "Linux / Unix",
+        "OSINT / Community"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Actively exploited zero-days rise as surveillance firms ramp up abuse",
+      "link": "https://www.scworld.com/brief/actively-exploited-zero-days-rise-as-surveillance-firms-ramp-up-abuse",
+      "source": "SCM feed for Latest",
+      "published": "2026-03-06T22:36:07+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Browser extension weaponization for malware delivery examined",
+      "link": "https://www.scworld.com/brief/browser-extension-weaponization-for-malware-delivery-examined",
+      "source": "SCM feed for Latest",
+      "published": "2026-03-06T22:34:44+00:00",
+      "smart_groups": [
+        "Threat Actors / APT",
+        "Curated",
+        "Exploit / PoC",
+        "Malware / Payloads",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Stealer malware distributed via bogus GitHub tools",
+      "link": "https://www.scworld.com/brief/stealer-malware-distributed-via-bogus-github-tools",
+      "source": "SCM feed for Latest",
+      "published": "2026-03-06T22:32:14+00:00",
+      "smart_groups": [
+        "Malware / Payloads",
+        "Curated",
+        "Crypto / Web3",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Iran vs Everyone: 2FA-Bypass Phish, APT41 Drive, iOS 0days, Josh Marpet, and More - SWN #561",
+      "link": "https://www.youtube.com/watch?v=FsCpuZvt-mQ",
+      "source": "Security Weekly News (YouTube)",
+      "published": "2026-03-06T22:00:15+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Identity / Access",
+        "Mobile Security",
+        "Community / Briefing"
       ],
       "curated": true
     }
