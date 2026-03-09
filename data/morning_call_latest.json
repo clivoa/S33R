@@ -1,21 +1,46 @@
 {
-  "generated_at": "2026-03-08T07:00:20.707381+00:00",
-  "analysis_date": "2026-03-08",
+  "generated_at": "2026-03-09T07:17:17.237313+00:00",
+  "analysis_date": "2026-03-09",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-03-08T06:52:45.381286+00:00",
+  "source_generated_at": "2026-03-09T06:08:00.184754+00:00",
   "source_days_back": 30,
-  "source_total_items": 8693,
-  "total_items_in_window_all": 94,
-  "total_items_in_window_curated": 23,
-  "morning_call_markdown": "### Executive Summary\n- Ransomware activity: reporting links **Termite ransomware intrusions** to **ClickFix lures** delivering **CastleRAT**—expect phishing-to-RAT-to-ransomware chains in Windows estates.\n- Nation-state tooling: **Iran-linked MuddyWater** reportedly using a new **“Dindoor” backdoor** against U.S. networks—watch for stealthy persistence and credential access.\n- Public-facing app risk: a **critical “zero-click” command injection** issue reported in the **AVideo streaming platform**—prioritize any exposed instances and web exploitation telemetry.\n\n---\n\n### High-priority items (immediate attention)\n**1) Termite ransomware chain via ClickFix + CastleRAT (Windows)**\n- **What happened:** Reporting connects Termite ransomware breaches to **ClickFix social engineering** leading to **CastleRAT** deployment.  \n- **Why it matters operationally:** Likely initial access via user interaction → remote access tooling → lateral movement → ransomware; high impact for financial ops continuity.  \n- **Recommended immediate actions for the SOC today:** Triage for ClickFix-style user prompts and new remote admin/RAT artifacts; raise severity on any CastleRAT-like behavior and enforce rapid isolation/containment for affected hosts.\n\n**2) Iran-linked MuddyWater using “Dindoor” backdoor (targeting U.S. networks)**\n- **What happened:** Reporting claims **MuddyWater** is targeting U.S. orgs with a new **Dindoor** backdoor.  \n- **Why it matters operationally:** APT tradecraft typically includes credential theft, long dwell time, and living-off-the-land—high risk to privileged access and sensitive data.  \n- **Recommended immediate actions for the SOC today:** Hunt for anomalous PowerShell/WMI/service creation and suspicious outbound C2 patterns; validate MFA/conditional access coverage on admin accounts and escalate any persistence indicators to IR.\n\n**3) Critical “zero-click” command injection in AVideo (public-facing web app)**\n- **What happened:** A critical, reportedly **zero-click command injection** vulnerability was disclosed in the **AVideo platform** (details may be incomplete; assume internet-exploitable until verified).  \n- **Why it matters operationally:** If any AVideo instances exist in our environment/third parties, this can enable server-side command execution → foothold → data theft/pivoting.  \n- **Recommended immediate actions for the SOC today:** Confirm asset inventory/exposure (internet-facing scans, CMDB) for AVideo; monitor WAF/web logs for command-injection patterns and consider temporary access restriction until patched/mitigated.\n\n**4) Mobile spyware via fake “Red Alert” app (regional lure)**\n- **What happened:** Fake “Red Alert rocket alert” app reportedly used to **spy on users** (mobile malware).  \n- **Why it matters operationally:** Relevant if staff travel/operate in-region or use BYOD; can enable credential/session theft and MFA fatigue/social engineering follow-on.  \n- **Recommended immediate actions for the SOC today:** Notify service desk/SOC to fast-track reports of suspicious mobile apps; monitor IdP for unusual sign-ins from new mobile devices and enforce device compliance where possible.\n\n---\n\n### Monitoring & detection recommendations\n- **Ransomware pre-staging (Termite/CastleRAT):** EDR + Windows Security logs for new services/scheduled tasks, remote tool execution, and rapid file encryption precursors (ATT&CK: **T1053**, **T1543**, **T1486**).\n- **ClickFix/social engineering:** Email security + browser telemetry + proxy logs for users visiting unusual “fix/captcha/update” pages followed by downloads or script execution; correlate with EDR “first-seen” binaries.\n- **RAT/C2 behavior:** Firewall/DNS/Proxy logs for rare domains, unusual beaconing intervals, and new outbound connections from workstation subnets to uncommon ports; pivot from “new process → new network” in EDR (ATT&CK: **T1071**).\n- **MuddyWater-style persistence:** Windows event logs (4688/7045), Sysmon (if present) for **service creation**, **WMI event filters**, and suspicious PowerShell with encoded commands (ATT&CK: **T1059.001**, **T1047**, **T1546**).\n- **Credential access & privilege escalation:** AD logs + EDR for LSASS access attempts, suspicious credential dumping detections, and abnormal admin logons outside change windows (ATT&CK: **T1003**, **T1078**).\n- **Internet-facing app exploitation (AVideo):** WAF/web server logs for command injection signatures (e.g., suspicious separators, unexpected shell invocation patterns), spikes in 5xx/4xx, and anomalous POSTs to admin/upload endpoints (ATT&CK: **T1190**).\n- **Mobile-to-IdP risk:** IdP (Entra/Okta/etc.) logs for new device registrations, impossible travel, and high-risk sign-ins; tighten alerting on token reuse/suspicious session behavior (ATT&CK: **T1078**, **T1550**).\n\n---\n\n### Medium-term follow-ups\n- **Ransomware resilience:** Validate offline/immutable backups and restore testing cadence; confirm rapid isolation playbooks and privileged access segmentation for Windows admin tiers.\n- **User-facing lure hardening:** Update awareness guidance for “ClickFix” style prompts (fake CAPTCHA/verification/update); ensure browser download controls and script-blocking policies where feasible.\n- **AVideo/Vuln management:** If AVideo is present (directly or via vendors), obtain vendor advisory/CVE details, apply patches/mitigations, and add targeted WAF rules; otherwise document “not in environment.”\n- **APT readiness:** Review detections for common MuddyWater TTPs (PowerShell, scheduled tasks, WMI persistence) and ensure EDR coverage on server/admin endpoints.\n- **Mobile security posture:** Reassess BYOD policy, MDM enforcement for banking apps/admin access, and conditional access requirements for high-privilege roles.\n- **AI/agent security (research trend):** If SOC/engineering uses AI agents/tools, confirm data handling rules, plugin/connectors review, and red-team testing plan (treat as governance, not immediate SOC action).",
+  "source_total_items": 8549,
+  "total_items_in_window_all": 118,
+  "total_items_in_window_curated": 26,
+  "morning_call_markdown": "### Executive Summary\n- Patch/mitigate **widely exploited edge vulnerabilities**: Cisco Catalyst SD‑WAN and **CISA-listed Apple iOS/macOS actively exploited** issues are the most likely near-term intrusion paths.\n- Treat **Windows RDS “0‑day for sale”** as a high-risk signal: validate exposure, tighten RDP controls, and increase monitoring for lateral movement.\n- Expect **malware delivery via OAuth redirect abuse** + stealthier ransomware tradecraft: prioritize IdP/app-consent monitoring and early-stage intrusion detections.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Cisco Catalyst SD‑WAN vulnerability now widely exploited**\n- **What happened:** Reporting indicates a recent Cisco Catalyst SD‑WAN flaw is being exploited broadly in the wild.  \n- **Why it matters operationally:** Internet/branch edge compromise can enable rapid foothold → credential access/lateral movement across financial networks.  \n- **Recommended immediate actions for the SOC today:** Confirm asset exposure + patch status; add temporary controls (restrict management plane/VPN access, geo/IP allowlists where feasible) and raise alerting on SD‑WAN admin/auth events.\n\n**2) Apple iOS/macOS vulnerabilities added to CISA “actively exploited” (Coruna exploit kit referenced)**\n- **What happened:** CISA alerting highlights actively exploited Apple vulnerabilities affecting iOS/macOS (community reporting ties to an exploit kit).  \n- **Why it matters operationally:** High likelihood of real-world exploitation against end-user devices (execs, traders, admins) → initial access and credential theft.  \n- **Recommended immediate actions for the SOC today:** Verify MDM compliance (OS versions, Rapid Security Responses); hunt for unusual Safari/WebKit process trees and post-exploitation behaviors on macOS endpoints; enforce conditional access for non-compliant mobile/macOS devices.\n\n**3) Windows Remote Desktop Services “0‑day exploit for sale” (unconfirmed)**\n- **What happened:** A report claims an RDS 0‑day is being marketed; details and exploitation status are unclear (assume elevated risk until disproven).  \n- **Why it matters operationally:** RDS exposure is a common ransomware entry point; even “for sale” chatter often precedes opportunistic scanning and attacks.  \n- **Recommended immediate actions for the SOC today:** Validate **no direct internet exposure** of RDP/RDS; enforce NLA/MFA via RD Gateway/VPN only and tighten firewall rules; increase monitoring for RDP brute force, new local admins, and remote service creation.\n\n**4) OAuth redirection logic abused for malware delivery (weaponized login flows)**\n- **What happened:** Multiple writeups flag OAuth redirect logic being exploited to deliver malware/phishing via seemingly legitimate auth flows.  \n- **Why it matters operationally:** Bypasses user suspicion and can lead to token theft, malicious app consent, and SaaS takeover—high impact in financial environments.  \n- **Recommended immediate actions for the SOC today:** Monitor IdP for new/rare OAuth app consents and suspicious redirect URIs; temporarily restrict user consent (where policy allows) and block/flag high-risk OAuth apps; alert on sign-ins from new geos followed by consent grants.\n\n**5) Critical ExifTool issue enabling code execution via malicious images (macOS focus in reporting)**\n- **What happened:** A critical ExifTool vulnerability is reported that could allow code execution when processing crafted images (details/versions unclear from summary).  \n- **Why it matters operationally:** Image-based initial access is realistic via email/chat/ticket attachments; analysts and back-office users often handle external images.  \n- **Recommended immediate actions for the SOC today:** Identify where ExifTool is installed/used (macOS workstations, automation pipelines); isolate/sandbox image processing workflows; enhance attachment detonation and EDR monitoring for child processes spawned from image handlers.\n\n---\n\n### Monitoring & detection recommendations\n- **Edge/network devices (Cisco SD‑WAN):** Collect/alert on SD‑WAN controller/edge **admin logins, config changes, new tunnels**, and auth failures; correlate with firewall inbound mgmt-plane hits. *(MITRE: T1190, T1078)*\n- **RDP/RDS exposure & abuse:** On DCs/servers/VDI, monitor **4624/4625 (LogonType 10/3), 4776**, RD Gateway logs, and firewall denies/accepts for 3389; alert on password spray patterns and first-time source IPs. *(T1110, T1021.001)*\n- **Post-RDP foothold behaviors:** EDR hunt for **remote service creation / scheduled tasks / PsExec-like execution**, and privilege escalation artifacts (new local admins, SAM/LSASS access attempts). *(T1053, T1543, T1003)*\n- **IdP/OAuth abuse:** In Entra ID/Okta logs, alert on **new application consent grants**, changes to redirect URIs, and “unusual app” sign-in sequences; join with CASB/SaaS audit logs for token use anomalies. *(T1550, T1528)*\n- **Apple endpoint exploitation signals:** On macOS EDR, hunt for **Safari/WebKit spawning shells**, unusual unsigned binaries in user-writable paths, and persistence creation (LaunchAgents/Daemons). *(T1203, T1547.011)*\n- **Malware delivery via attachments/images:** Email security + EDR: flag **image attachments** followed by new executable drops, scripting (python/ruby/node), or suspicious child processes from previewers/converters. *(T1566.001, T1204)*\n- **Ransomware early warnings (tradecraft “tarnung”/stealth):** SIEM correlation for **defender/EDR tamper events**, mass file renames, and sudden SMB write spikes from a single host; prioritize alerts from privileged/admin endpoints. *(T1562.001, T1486)*\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** Confirm timelines and ownership for Cisco SD‑WAN and Apple (iOS/macOS) remediation; track exceptions with compensating controls and expiry dates.\n- **RDP hardening program:** Reduce RDP footprint, enforce RD Gateway, implement MFA everywhere, and validate segmentation (no direct server-to-server RDP across tiers).\n- **OAuth/app-consent policy:** Move toward **admin-approved app allowlists**, restricted user consent, and continuous review of enterprise apps + redirect URI hygiene.\n- **Attachment/image processing controls:** Route external images through sandboxing/detonation; document and harden any automation using ExifTool (containerize, least privilege, egress controls).\n- **AI agent/tooling security:** If using AI agents or MCP-like tool infrastructure internally, review access scopes, secret handling, and audit trails before expanding capabilities (community checklist referenced).\n- **Tabletop / IR readiness:** Run a short drill for “edge device compromise → ransomware” and “OAuth token theft → SaaS takeover” to validate detection-to-containment paths and contact trees.",
   "highlights": [
     {
-      "title": "Is it realistic to do Google Cyber + Sec+ certificates in 12 weeks while working 28hrs?",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1rnvani/is_it_realistic_to_do_google_cyber_sec/",
-      "source": "/r/cybersecurity",
-      "published": "2026-03-08T04:34:00+00:00",
+      "title": "Critical ExifTool Vulnerability Allows Malicious Images to Execute Code on macOS",
+      "link": "https://gbhackers.com/critical-exiftool-vulnerability/",
+      "source": "GBHackers News",
+      "published": "2026-03-09T05:54:23+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Curated",
+        "Malware / Payloads",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Post-Quantum Shift Could Force Crypto Exchanges to Rethink Wallet Security",
+      "link": "https://decrypt.co/360394/post-quantum-shift-crypto-exchanges-wallet-security",
+      "source": "Decrypt",
+      "published": "2026-03-09T05:53:18+00:00",
+      "smart_groups": [
+        "Crypto / Web3",
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "**MCP Security Checklist - 40 controls for securing AI agent tool infrastructure**",
+      "link": "https://www.reddit.com/r/netsec/comments/1roru4f/mcp_security_checklist_40_controls_for_securing/",
+      "source": "/r/netsec",
+      "published": "2026-03-09T05:38:31+00:00",
       "smart_groups": [
         "Curated",
         "Vulnerabilities / CVEs",
@@ -24,35 +49,12 @@
       "curated": true
     },
     {
-      "title": "How this JWT Security Tool Works",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1rnuuf9/how_this_jwt_security_tool_works/",
-      "source": "/r/cybersecurity",
-      "published": "2026-03-08T04:11:04+00:00",
+      "title": "WiFi Signals Can Track Human Activity Through Walls by Mapping Body Keypoints",
+      "link": "https://gbhackers.com/wifi-signals-can-track-human-activity-through-walls/",
+      "source": "GBHackers News",
+      "published": "2026-03-09T05:08:46+00:00",
       "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "OSINT / Community"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Most underrated projects in cybersecurity",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1rntwj3/most_underrated_projects_in_cybersecurity/",
-      "source": "/r/cybersecurity",
-      "published": "2026-03-08T03:23:54+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "OSINT / Community"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Critical Zero-Click Command Injection in AVideo Platform Allows Stream Hijacking",
-      "link": "https://cybersecuritynews.com/avideo-platform-vulnerability/",
-      "source": "Cyber Security News (FeedBurner)",
-      "published": "2026-03-08T03:13:07+00:00",
-      "smart_groups": [
+        "Data Protection / Privacy",
         "Curated",
         "Vulnerabilities / CVEs",
         "General Security"
@@ -60,42 +62,14 @@
       "curated": true
     },
     {
-      "title": "Free CompTIA Security+ SY0-701 Study App | 300+ Questions, Mock Exam & Flashcards",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1rnm0ul/free_comptia_security_sy0701_study_app_300/",
-      "source": "/r/cybersecurity",
-      "published": "2026-03-07T21:32:18+00:00",
+      "title": "CISA Alerts Users to Actively Exploited Vulnerabilities Impacting macOS and iOS",
+      "link": "https://gbhackers.com/cisa-alerts-users-vulnerabilities-impacting-macos-and-ios/",
+      "source": "GBHackers News",
+      "published": "2026-03-09T04:47:33+00:00",
       "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "OSINT / Community"
-      ],
-      "curated": true
-    },
-    {
-      "title": "I vibe coded an open-source Cybersecurity Glossary to track buzzwords",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1rnjlou/i_vibe_coded_an_opensource_cybersecurity_glossary/",
-      "source": "/r/cybersecurity",
-      "published": "2026-03-07T19:55:22+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "OSINT / Community"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Pluralistic: The web is bearable with RSS (07 Mar 2026)",
-      "link": "https://pluralistic.net/2026/03/07/reader-mode/",
-      "source": "https://pluralistic.net/feed/",
-      "published": "2026-03-07T18:02:49+00:00",
-      "smart_groups": [
-        "Data Protection / Privacy",
-        "Crypto / Web3",
-        "Ransomware",
         "Cloud / SaaS",
         "Curated",
-        "Identity / Access",
-        "Network / OT / ICS",
+        "Exploit / PoC",
         "Vulnerabilities / CVEs",
         "Mobile Security",
         "General Security"
@@ -103,38 +77,69 @@
       "curated": true
     },
     {
-      "title": "The Incendiary Bomb Never Seen in Israel Before",
-      "link": "https://www.bellingcat.com/news/2026/03/07/the-incendiary-bomb-never-seen-in-israel-before/",
-      "source": "Bellingcat",
-      "published": "2026-03-07T17:46:31+00:00",
+      "title": "Unsupervised Learning NO. 519",
+      "link": "https://newsletter.danielmiessler.com/p/unsupervised-learning-no-519",
+      "source": "https://rss.beehiiv.com/feeds/gQxaV1KHkQ.xml",
+      "published": "2026-03-09T04:46:33+00:00",
       "smart_groups": [
         "Curated",
+        "Vulnerabilities / CVEs",
+        "Community / Briefing"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Tarnung als Taktik: Warum Ransomware-Angriffe raffinierter werden",
+      "link": "https://www.csoonline.com/article/4139390/tarnung-als-taktik-warum-ransomware-angriffe-raffinierter-werden.html",
+      "source": "CSO Online",
+      "published": "2026-03-09T04:00:00+00:00",
+      "smart_groups": [
+        "Ransomware",
+        "Cloud / SaaS",
+        "Curated",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "WiFi Signals Reveal Human Activities Through Walls by Mapping Body Keypoints",
+      "link": "https://cybersecuritynews.com/wifi-signals-reveal-human-activities/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-03-09T03:45:41+00:00",
+      "smart_groups": [
+        "Curated",
+        "Exploit / PoC",
         "Vulnerabilities / CVEs",
         "General Security"
       ],
       "curated": true
     },
     {
-      "title": "What do cybersecurity salaries look like at large tech/finance companies?",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1rnfoht/what_do_cybersecurity_salaries_look_like_at_large/",
+      "title": "Looking for Security Research Collaborators",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1rods0z/looking_for_security_research_collaborators/",
       "source": "/r/cybersecurity",
-      "published": "2026-03-07T17:24:26+00:00",
+      "published": "2026-03-08T19:22:31+00:00",
       "smart_groups": [
+        "Vulnerabilities / CVEs",
         "Curated",
         "Exploit / PoC",
+        "Linux / Unix",
+        "Malware / Payloads",
+        "Network / OT / ICS",
         "OSINT / Community"
       ],
       "curated": true
     },
     {
-      "title": "Best RSAC events to meet people worth talking to?",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1rnefgi/best_rsac_events_to_meet_people_worth_talking_to/",
-      "source": "/r/cybersecurity",
-      "published": "2026-03-07T16:35:52+00:00",
+      "title": "Critical Nginx UI flaw CVE-2026-27944 exposes server backups",
+      "link": "https://securityaffairs.com/189123/security/critical-nginx-ui-flaw-cve-2026-27944-exposes-server-backups.html",
+      "source": "Security Affairs",
+      "published": "2026-03-08T19:10:38+00:00",
       "smart_groups": [
         "Curated",
-        "Malware / Payloads",
-        "OSINT / Community"
+        "Vulnerabilities / CVEs",
+        "Data Protection / Privacy",
+        "General Security"
       ],
       "curated": true
     }
