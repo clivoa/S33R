@@ -1,0 +1,147 @@
+{
+  "generated_at": "2026-03-09T07:17:17.237313+00:00",
+  "analysis_date": "2026-03-09",
+  "model": "gpt-5.2",
+  "window_hours": 24,
+  "source_file": "data/news_recent.json",
+  "source_generated_at": "2026-03-09T06:08:00.184754+00:00",
+  "source_days_back": 30,
+  "source_total_items": 8549,
+  "total_items_in_window_all": 118,
+  "total_items_in_window_curated": 26,
+  "morning_call_markdown": "### Executive Summary\n- Patch/mitigate **widely exploited edge vulnerabilities**: Cisco Catalyst SD‑WAN and **CISA-listed Apple iOS/macOS actively exploited** issues are the most likely near-term intrusion paths.\n- Treat **Windows RDS “0‑day for sale”** as a high-risk signal: validate exposure, tighten RDP controls, and increase monitoring for lateral movement.\n- Expect **malware delivery via OAuth redirect abuse** + stealthier ransomware tradecraft: prioritize IdP/app-consent monitoring and early-stage intrusion detections.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Cisco Catalyst SD‑WAN vulnerability now widely exploited**\n- **What happened:** Reporting indicates a recent Cisco Catalyst SD‑WAN flaw is being exploited broadly in the wild.  \n- **Why it matters operationally:** Internet/branch edge compromise can enable rapid foothold → credential access/lateral movement across financial networks.  \n- **Recommended immediate actions for the SOC today:** Confirm asset exposure + patch status; add temporary controls (restrict management plane/VPN access, geo/IP allowlists where feasible) and raise alerting on SD‑WAN admin/auth events.\n\n**2) Apple iOS/macOS vulnerabilities added to CISA “actively exploited” (Coruna exploit kit referenced)**\n- **What happened:** CISA alerting highlights actively exploited Apple vulnerabilities affecting iOS/macOS (community reporting ties to an exploit kit).  \n- **Why it matters operationally:** High likelihood of real-world exploitation against end-user devices (execs, traders, admins) → initial access and credential theft.  \n- **Recommended immediate actions for the SOC today:** Verify MDM compliance (OS versions, Rapid Security Responses); hunt for unusual Safari/WebKit process trees and post-exploitation behaviors on macOS endpoints; enforce conditional access for non-compliant mobile/macOS devices.\n\n**3) Windows Remote Desktop Services “0‑day exploit for sale” (unconfirmed)**\n- **What happened:** A report claims an RDS 0‑day is being marketed; details and exploitation status are unclear (assume elevated risk until disproven).  \n- **Why it matters operationally:** RDS exposure is a common ransomware entry point; even “for sale” chatter often precedes opportunistic scanning and attacks.  \n- **Recommended immediate actions for the SOC today:** Validate **no direct internet exposure** of RDP/RDS; enforce NLA/MFA via RD Gateway/VPN only and tighten firewall rules; increase monitoring for RDP brute force, new local admins, and remote service creation.\n\n**4) OAuth redirection logic abused for malware delivery (weaponized login flows)**\n- **What happened:** Multiple writeups flag OAuth redirect logic being exploited to deliver malware/phishing via seemingly legitimate auth flows.  \n- **Why it matters operationally:** Bypasses user suspicion and can lead to token theft, malicious app consent, and SaaS takeover—high impact in financial environments.  \n- **Recommended immediate actions for the SOC today:** Monitor IdP for new/rare OAuth app consents and suspicious redirect URIs; temporarily restrict user consent (where policy allows) and block/flag high-risk OAuth apps; alert on sign-ins from new geos followed by consent grants.\n\n**5) Critical ExifTool issue enabling code execution via malicious images (macOS focus in reporting)**\n- **What happened:** A critical ExifTool vulnerability is reported that could allow code execution when processing crafted images (details/versions unclear from summary).  \n- **Why it matters operationally:** Image-based initial access is realistic via email/chat/ticket attachments; analysts and back-office users often handle external images.  \n- **Recommended immediate actions for the SOC today:** Identify where ExifTool is installed/used (macOS workstations, automation pipelines); isolate/sandbox image processing workflows; enhance attachment detonation and EDR monitoring for child processes spawned from image handlers.\n\n---\n\n### Monitoring & detection recommendations\n- **Edge/network devices (Cisco SD‑WAN):** Collect/alert on SD‑WAN controller/edge **admin logins, config changes, new tunnels**, and auth failures; correlate with firewall inbound mgmt-plane hits. *(MITRE: T1190, T1078)*\n- **RDP/RDS exposure & abuse:** On DCs/servers/VDI, monitor **4624/4625 (LogonType 10/3), 4776**, RD Gateway logs, and firewall denies/accepts for 3389; alert on password spray patterns and first-time source IPs. *(T1110, T1021.001)*\n- **Post-RDP foothold behaviors:** EDR hunt for **remote service creation / scheduled tasks / PsExec-like execution**, and privilege escalation artifacts (new local admins, SAM/LSASS access attempts). *(T1053, T1543, T1003)*\n- **IdP/OAuth abuse:** In Entra ID/Okta logs, alert on **new application consent grants**, changes to redirect URIs, and “unusual app” sign-in sequences; join with CASB/SaaS audit logs for token use anomalies. *(T1550, T1528)*\n- **Apple endpoint exploitation signals:** On macOS EDR, hunt for **Safari/WebKit spawning shells**, unusual unsigned binaries in user-writable paths, and persistence creation (LaunchAgents/Daemons). *(T1203, T1547.011)*\n- **Malware delivery via attachments/images:** Email security + EDR: flag **image attachments** followed by new executable drops, scripting (python/ruby/node), or suspicious child processes from previewers/converters. *(T1566.001, T1204)*\n- **Ransomware early warnings (tradecraft “tarnung”/stealth):** SIEM correlation for **defender/EDR tamper events**, mass file renames, and sudden SMB write spikes from a single host; prioritize alerts from privileged/admin endpoints. *(T1562.001, T1486)*\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** Confirm timelines and ownership for Cisco SD‑WAN and Apple (iOS/macOS) remediation; track exceptions with compensating controls and expiry dates.\n- **RDP hardening program:** Reduce RDP footprint, enforce RD Gateway, implement MFA everywhere, and validate segmentation (no direct server-to-server RDP across tiers).\n- **OAuth/app-consent policy:** Move toward **admin-approved app allowlists**, restricted user consent, and continuous review of enterprise apps + redirect URI hygiene.\n- **Attachment/image processing controls:** Route external images through sandboxing/detonation; document and harden any automation using ExifTool (containerize, least privilege, egress controls).\n- **AI agent/tooling security:** If using AI agents or MCP-like tool infrastructure internally, review access scopes, secret handling, and audit trails before expanding capabilities (community checklist referenced).\n- **Tabletop / IR readiness:** Run a short drill for “edge device compromise → ransomware” and “OAuth token theft → SaaS takeover” to validate detection-to-containment paths and contact trees.",
+  "highlights": [
+    {
+      "title": "Critical ExifTool Vulnerability Allows Malicious Images to Execute Code on macOS",
+      "link": "https://gbhackers.com/critical-exiftool-vulnerability/",
+      "source": "GBHackers News",
+      "published": "2026-03-09T05:54:23+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Curated",
+        "Malware / Payloads",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Post-Quantum Shift Could Force Crypto Exchanges to Rethink Wallet Security",
+      "link": "https://decrypt.co/360394/post-quantum-shift-crypto-exchanges-wallet-security",
+      "source": "Decrypt",
+      "published": "2026-03-09T05:53:18+00:00",
+      "smart_groups": [
+        "Crypto / Web3",
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "**MCP Security Checklist - 40 controls for securing AI agent tool infrastructure**",
+      "link": "https://www.reddit.com/r/netsec/comments/1roru4f/mcp_security_checklist_40_controls_for_securing/",
+      "source": "/r/netsec",
+      "published": "2026-03-09T05:38:31+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "OSINT / Community"
+      ],
+      "curated": true
+    },
+    {
+      "title": "WiFi Signals Can Track Human Activity Through Walls by Mapping Body Keypoints",
+      "link": "https://gbhackers.com/wifi-signals-can-track-human-activity-through-walls/",
+      "source": "GBHackers News",
+      "published": "2026-03-09T05:08:46+00:00",
+      "smart_groups": [
+        "Data Protection / Privacy",
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "CISA Alerts Users to Actively Exploited Vulnerabilities Impacting macOS and iOS",
+      "link": "https://gbhackers.com/cisa-alerts-users-vulnerabilities-impacting-macos-and-ios/",
+      "source": "GBHackers News",
+      "published": "2026-03-09T04:47:33+00:00",
+      "smart_groups": [
+        "Cloud / SaaS",
+        "Curated",
+        "Exploit / PoC",
+        "Vulnerabilities / CVEs",
+        "Mobile Security",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Unsupervised Learning NO. 519",
+      "link": "https://newsletter.danielmiessler.com/p/unsupervised-learning-no-519",
+      "source": "https://rss.beehiiv.com/feeds/gQxaV1KHkQ.xml",
+      "published": "2026-03-09T04:46:33+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Community / Briefing"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Tarnung als Taktik: Warum Ransomware-Angriffe raffinierter werden",
+      "link": "https://www.csoonline.com/article/4139390/tarnung-als-taktik-warum-ransomware-angriffe-raffinierter-werden.html",
+      "source": "CSO Online",
+      "published": "2026-03-09T04:00:00+00:00",
+      "smart_groups": [
+        "Ransomware",
+        "Cloud / SaaS",
+        "Curated",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "WiFi Signals Reveal Human Activities Through Walls by Mapping Body Keypoints",
+      "link": "https://cybersecuritynews.com/wifi-signals-reveal-human-activities/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-03-09T03:45:41+00:00",
+      "smart_groups": [
+        "Curated",
+        "Exploit / PoC",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Looking for Security Research Collaborators",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1rods0z/looking_for_security_research_collaborators/",
+      "source": "/r/cybersecurity",
+      "published": "2026-03-08T19:22:31+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Curated",
+        "Exploit / PoC",
+        "Linux / Unix",
+        "Malware / Payloads",
+        "Network / OT / ICS",
+        "OSINT / Community"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Critical Nginx UI flaw CVE-2026-27944 exposes server backups",
+      "link": "https://securityaffairs.com/189123/security/critical-nginx-ui-flaw-cve-2026-27944-exposes-server-backups.html",
+      "source": "Security Affairs",
+      "published": "2026-03-08T19:10:38+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Data Protection / Privacy",
+        "General Security"
+      ],
+      "curated": true
+    }
+  ]
+}
