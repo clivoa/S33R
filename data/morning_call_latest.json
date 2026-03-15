@@ -1,21 +1,33 @@
 {
-  "generated_at": "2026-03-14T07:05:50.434746+00:00",
-  "analysis_date": "2026-03-14",
+  "generated_at": "2026-03-15T07:13:28.628428+00:00",
+  "analysis_date": "2026-03-15",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-03-14T06:58:55.765705+00:00",
+  "source_generated_at": "2026-03-15T07:07:45.930175+00:00",
   "source_days_back": 30,
-  "source_total_items": 9112,
-  "total_items_in_window_all": 292,
-  "total_items_in_window_curated": 97,
-  "morning_call_markdown": "### Executive Summary\n- **Patch/mitigate internet-exposed attack surface today:** actively exploited **Chrome zero-days**, **Cisco Catalyst SD‑WAN** exploitation alerts, and **n8n RCE in KEV** are the most immediate enterprise risks.\n- **Credential theft + initial access trending:** **Storm‑2561** pushing trojanized VPN clients via SEO poisoning; expect login anomalies and MFA fatigue/social engineering follow-on.\n- **Ransomware ecosystem remains active despite takedowns:** large-scale law enforcement disruption (45k malicious IPs, SocksEscort proxy service) may cause **attacker infrastructure churn** and new egress paths.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Google Chrome: two zero-days added/flagged as exploited (KEV + vendor reporting)**\n- **What happened:** Multiple sources report **two Chrome 146 zero-days (V8/Skia)** exploited in the wild and now prioritized by CISA/CERT-style advisories.\n- **Why it matters operationally:** Browser RCE is a high-probability **initial access** vector for finance users (phish/drive‑by), often preceding credential theft and lateral movement.\n- **Recommended immediate actions for the SOC today:** Confirm Chrome/Edge (Chromium) version compliance via endpoint inventory; **push emergency browser update** and isolate any endpoints showing post-browser exploit behavior (new child processes from `chrome.exe`, suspicious DLL loads).\n\n**2) CISA KEV: n8n RCE being exploited (automation/workflow platforms)**\n- **What happened:** CISA added an **n8n remote code execution** issue to KEV; reporting indicates exploitation in the wild.\n- **Why it matters operationally:** n8n commonly runs **server-side with broad API tokens/secrets**; compromise can become a pivot into SaaS, CI/CD, and data stores.\n- **Recommended immediate actions for the SOC today:** Identify all n8n instances (on-prem/cloud, including shadow IT) and **validate patch level/mitigations**; hunt for abnormal outbound connections and new/unknown workflow executions from n8n hosts.\n\n**3) Cisco Catalyst SD‑WAN: exploitation alert**\n- **What happened:** CISA/SC media reports **active exploitation of a Cisco Catalyst SD‑WAN vulnerability** (details vary by source; assume internet-exposed edge devices are targeted).\n- **Why it matters operationally:** Edge/network device compromise enables **traffic interception**, credential harvesting, and persistent access—high impact in regulated financial networks.\n- **Recommended immediate actions for the SOC today:** Pull a list of SD‑WAN/VPN edge assets and **check exposure + firmware versions**; review device auth logs/config change logs for new admin users, unexpected tunnels, and management-plane access spikes.\n\n**4) Veeam Backup & Replication: critical RCE patch advisory**\n- **What happened:** Veeam warned of **critical RCE flaws** affecting Backup & Replication servers (multiple reports; assume patch is available).\n- **Why it matters operationally:** Backup platforms are a prime ransomware target; RCE can lead to **backup deletion/encryption** and accelerate business-impacting incidents.\n- **Recommended immediate actions for the SOC today:** Prioritize patching of Veeam servers (especially internet/admin-network reachable); monitor for suspicious access to repositories, sudden job modifications, and credential use against Veeam services.\n\n**5) Credential theft / fake VPN clients: Storm‑2561 SEO poisoning**\n- **What happened:** Reporting describes **Storm‑2561** distributing trojanized “signed” VPN clients via SEO poisoning to steal enterprise credentials.\n- **Why it matters operationally:** Likely to increase **account compromise**, abnormal VPN/SSO logins, and secondary phishing/BEC attempts against finance operations.\n- **Recommended immediate actions for the SOC today:** Alert IT/helpdesk to validate VPN client download sources; monitor IdP/VPN for new devices, impossible travel, atypical ASN/geo, and rapid-fire failures/successes.\n\n---\n\n### Monitoring & detection recommendations\n- **Browser exploit follow-on (Chrome zero-days):** EDR process trees for `chrome.exe` spawning `cmd.exe/powershell.exe/rundll32.exe/mshta.exe` (ATT&CK **T1203**, **T1059**); correlate with web proxy logs for new/unusual download patterns.\n- **n8n exploitation:** Host logs on n8n servers (Linux auditd/sysmon for linux if present), container runtime logs, and reverse proxy logs for unusual POSTs to admin/workflow endpoints (ATT&CK **T1190**); watch secrets access and outbound calls to cloud APIs.\n- **Cisco SD‑WAN targeting:** Firewall/IDS + device management-plane logs for repeated auth attempts, new admin accounts, config/tunnel changes (ATT&CK **T1136**, **T1562.001**); alert on management access from non-admin subnets.\n- **Veeam abuse:** Windows event logs + Veeam application logs for new service installs, repo credential changes, job deletion, and unusual execution under Veeam service accounts (ATT&CK **T1485**, **T1569.002**).\n- **SEO poisoning → fake VPN installs:** DNS/web logs for searches and visits to lookalike VPN download sites; EDR for new VPN executables installed outside standard software distribution (ATT&CK **T1036**, **T1105**).\n- **Ransomware tradecraft (INC/others):** Detect **PsExec usage** and renamed/abused backup tools noted in reporting—EDR + Windows Security logs for `psexecsvc`, remote service creation, admin shares (ATT&CK **T1569.002**, **T1021.002**).\n- **Proxy/botnet churn after takedowns (45k IPs + SocksEscort disruption):** Netflow/proxy logs for sudden shifts to new residential/proxy egress; watch for new SOCKS usage and unusual TLS SNI patterns (ATT&CK **T1090**).\n\n---\n\n### Medium-term follow-ups\n- **Asset exposure validation:** Re-run external surface scans for workflow tools (n8n), backup consoles (Veeam), and SD‑WAN management interfaces; close/segment anything unnecessarily internet-reachable.\n- **Credential hardening:** Tighten conditional access for VPN/SSO (device compliance, geo/ASN controls, risk-based MFA); review privileged account inventory and rotate secrets where automation platforms store tokens.\n- **Linux/container posture (AppArmor “CrackArmor” research):** If you run hardened Linux/container hosts, track vendor patches and validate AppArmor profiles; consider compensating controls for container escape risk (assumption: applicability depends on distro/kernel).\n- **Supply-chain hygiene:** Recent “invisible code” repo/supply-chain reporting—reinforce signed commits, dependency pinning, and code review for homoglyph/hidden-character abuse in internal repos.\n- **Mobile fleet updates:** Emergency iOS 15.8.7 “Coruna” fixes noted for older devices—validate MDM compliance and block outdated iOS where feasible.\n- **Third-party/SaaS risk review:** Salesforce Experience Cloud/ShinyHunters reporting—confirm tenant logging is enabled, review exposed community/experience sites, and ensure MFA/SSO enforcement for admin roles (assumption: relevant only if used internally).",
+  "source_total_items": 8829,
+  "total_items_in_window_all": 97,
+  "total_items_in_window_curated": 27,
+  "morning_call_markdown": "### Executive Summary\n- Multiple perimeter/device and OS issues surfaced: **FortiGate exploitation in the wild** and a **Windows 11 RRAS out-of-band hotpatch for RCE**—both are high-impact paths to initial access.\n- **Supply-chain activity against developers/web properties** increased (malicious Open VSX extensions, malicious npm packages, hijacked Web SDK, “invisible code” repo attacks); expect credential theft and downstream compromise risk.\n- **Credential theft campaigns** continue via **SEO-poisoned trojan “VPN clients”**; watch for new VPN tooling installs, anomalous auth, and MFA fatigue/abuse patterns.\n\n### High-priority items (immediate attention)\n**1) FortiGate firewalls reportedly exploited to breach networks and steal credentials**\n- What happened: Reporting indicates **active exploitation of FortiGate devices** in a wave of attacks leading to credential theft and network access.  \n- Why it matters operationally: FortiGate is often edge-facing; compromise enables **initial access + lateral movement** into critical banking environments.  \n- Recommended immediate actions for the SOC today: **Confirm patch/firmware status + exposed management interfaces**; hunt for **new admin users/config changes/VPN auth anomalies** and escalate any suspicious FortiGate events immediately.\n\n**2) Microsoft Windows 11 Out-of-Band hotpatch for RRAS RCE**\n- What happened: Microsoft issued an **OOB Windows 11 hotpatch** addressing **RRAS remote code execution** risk (per external reporting).  \n- Why it matters operationally: RRAS exposure can enable **remote compromise** of remote-access servers/endpoints; high blast radius if RRAS is internet-facing or broadly enabled.  \n- Recommended immediate actions for the SOC today: **Identify systems with RRAS enabled/exposed** (servers and endpoints) and prioritize hotpatch deployment; increase monitoring for **RRAS service starts/config changes and unusual inbound connections**.\n\n**3) Critical HPE AOS-CX vulnerability allowing admin password reset**\n- What happened: A **critical HPE AOS-CX** issue reportedly allows **admin password resets** (vendor details/CVE not included in the feed excerpt).  \n- Why it matters operationally: Network switch takeover enables **traffic manipulation, credential interception, and persistence** in core segments.  \n- Recommended immediate actions for the SOC today: **Inventory AOS-CX in production and isolate/limit management plane access**; review logs for **unexpected password resets, new admin sessions, and config write events**.\n\n**4) Developer/web supply-chain compromises (Open VSX extensions, npm packages, hijacked Web SDK, “invisible code” repo techniques)**\n- What happened: Multiple reports of **malicious developer dependencies/extensions** and **SDK hijacking** spreading stealers, plus **repo attacks using “invisible”/obfuscated code**.  \n- Why it matters operationally: Impacts internal dev workstations and CI/CD; can lead to **credential/API token theft**, poisoned builds, and web session skimming risk.  \n- Recommended immediate actions for the SOC today: **Alert dev/DevOps to pause new extension/package installs** and review recent dependency/extension changes; hunt endpoints/CI for **new npm install activity, suspicious VS Code/VSX extension installs, and unusual outbound from build agents**.\n\n**5) Credential theft via SEO poisoning delivering trojan “VPN clients”**\n- What happened: Reporting attributes to “Storm-2561” an **SEO-poisoning campaign** distributing trojanized VPN clients to steal credentials.  \n- Why it matters operationally: Common user behavior (searching for VPN downloads) creates **high-volume credential theft** and follow-on account takeover risk.  \n- Recommended immediate actions for the SOC today: Monitor for **new VPN client installs from non-corporate sources**; tighten controls on **software install paths** and review **IdP sign-ins for new device fingerprints/locations**.\n\n### Monitoring & detection recommendations\n- **Perimeter/VPN/Firewall logs (FortiGate):** alert on **admin logins from new IPs, config changes, firmware updates, VPN user creation, auth failures/success spikes** (ATT&CK: Valid Accounts **T1078**, Modify Cloud/Network Config analog **T1562**-like behavior).\n- **Windows event logs + EDR (RRAS):** watch for **RemoteAccess/RRAS service state changes**, new listeners/ports, and suspicious child processes from `svchost` hosting RRAS (ATT&CK: Exploitation for Client Execution **T1203**, Command and Scripting Interpreter **T1059**).\n- **Network switch management telemetry (HPE AOS-CX):** monitor **AAA events, password reset actions, privilege changes, config write/commit**, and new management-plane source IPs (ATT&CK: Account Manipulation **T1098**).\n- **Proxy/DNS + EDR (SEO poisoning / trojan VPN):** hunt for **search-to-download chains** followed by execution of unsigned installers, and outbound to newly seen domains after install (ATT&CK: User Execution **T1204**, Credential Stealing **T1555**).\n- **Dev endpoints (EDR) + package manager logs:** detect **npm/yarn/pnpm installs** on non-dev hosts, execution from `node_modules`, and sudden addition of postinstall scripts (ATT&CK: Supply Chain Compromise **T1195**).\n- **CI/CD audit logs (GitHub/GitLab/Azure DevOps) + secrets monitoring:** alert on **new deploy keys/tokens, changes to workflow files, unusual runner activity**, and secrets accessed outside normal pipelines (ATT&CK: Modify Cloud Compute Infrastructure **T1578**, Steal Application Access Token **T1528**).\n- **Web telemetry (WAF/CDN) for SDK hijack/skimming risk:** watch for **unexpected third-party script changes**, new script domains, and integrity mismatches if SRI is used (ATT&CK: Web Injection **T1059.007** / supply-chain web).\n- **Email/IdP (BEC/credential theft):** prioritize detections for **impossible travel, new device enrollment, MFA method changes**, and suspicious OAuth consent grants (ATT&CK: Phishing **T1566**, External Remote Services **T1133**).\n\n### Medium-term follow-ups\n- **Patch/hardening program:** validate RRAS exposure policy (disable where not needed; restrict inbound) and ensure **edge device firmware cadence** includes FortiGate and HPE switching.\n- **Management plane controls:** enforce **allowlisted admin source IPs, MFA where supported, dedicated admin accounts**, and log forwarding from network devices to SIEM.\n- **Software supply-chain controls:** require **pinned dependencies, signed artifacts, private registries**, and approval gates for editor extensions; expand SCA coverage to Open VSX/VS Code extensions.\n- **CI/CD security posture:** rotate **developer tokens/CI secrets** if suspicious pipeline activity is found; baseline normal runner behavior and tighten egress for build agents.\n- **User awareness (targeted):** brief staff on **SEO-poisoned “VPN download” traps**; reinforce using **company portal/software center** only.\n- **Threat intel alignment:** track whether FortiGate/HPE/RRAS issues gain **active exploitation confirmation** from vendors/ISAC sources; update playbooks and detections accordingly (assumption: current items are primarily based on external reporting without full vendor advisory detail in the feed excerpt).",
   "highlights": [
     {
-      "title": "My 8-Year-Old Open-Source Project was a Victim of a Major Cyber Attack (because of AI)",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1rtcdod/my_8yearold_opensource_project_was_a_victim_of_a/",
+      "title": "Supply-chain attack using invisible code hits GitHub and other repositories",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1ru7f2h/supplychain_attack_using_invisible_code_hits/",
       "source": "/r/cybersecurity",
-      "published": "2026-03-14T06:45:31+00:00",
+      "published": "2026-03-15T07:04:40+00:00",
+      "smart_groups": [
+        "Curated",
+        "Supply Chain / Software",
+        "OSINT / Community"
+      ],
+      "curated": true
+    },
+    {
+      "title": "CVE-2024-45163: Remote DoS in Mirai C2 – research writeup + what it led me to build",
+      "link": "https://www.reddit.com/r/netsec/comments/1ru6xxl/cve202445163_remote_dos_in_mirai_c2_research/",
+      "source": "/r/netsec",
+      "published": "2026-03-15T06:35:33+00:00",
       "smart_groups": [
         "Curated",
         "Vulnerabilities / CVEs",
@@ -24,123 +36,112 @@
       "curated": true
     },
     {
-      "title": "Built a hybrid cloud + on-prem PAM platform — looking for brutal feedback from people running enterprise security",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1rtb2kf/built_a_hybrid_cloud_onprem_pam_platform_looking/",
-      "source": "/r/cybersecurity",
-      "published": "2026-03-14T05:29:52+00:00",
+      "title": "Microsoft Releases Out-of-Band Patch to Fix Critical RRAS RCE Vulnerabilities in Windows 11",
+      "link": "https://cybersecuritynews.com/windows-11-out-of-band-update/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-03-15T05:18:46+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Cloud / SaaS",
+        "Curated",
+        "Windows / Microsoft",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "FortiGate Firewalls Exploited in Wave of Attacks to Breach Networks and Steal Credentials",
+      "link": "https://cybersecuritynews.com/fortigate-firewalls-exploited/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-03-15T02:41:19+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Threat Actors / APT",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Microsoft releases Windows 11 OOB hotpatch to fix RRAS RCE flaw",
+      "link": "https://www.bleepingcomputer.com/news/microsoft/microsoft-releases-windows-11-oob-hotpatch-to-fix-rras-rce-flaw/",
+      "source": "BleepingComputer",
+      "published": "2026-03-14T21:48:14+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Curated",
+        "Windows / Microsoft",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Deploy AWS applications and access AWS accounts across multiple Regions with IAM Identity Center",
+      "link": "https://aws.amazon.com/blogs/security/deploy-aws-applications-and-access-aws-accounts-across-multiple-regions-with-iam-identity-center/",
+      "source": "AWS Security Blog",
+      "published": "2026-03-14T21:21:31+00:00",
       "smart_groups": [
         "Cloud / SaaS",
         "Curated",
-        "Linux / Unix",
-        "Vulnerabilities / CVEs",
-        "Windows / Microsoft",
-        "OSINT / Community"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Critical LangSmith Account Takeover Vulnerability Puts Users at Risk",
-      "link": "https://cybersecuritynews.com/critical-langsmith-account-takeover-vulnerability/",
-      "source": "Cyber Security News (FeedBurner)",
-      "published": "2026-03-14T05:02:31+00:00",
-      "smart_groups": [
-        "Curated",
         "Vulnerabilities / CVEs",
         "General Security"
       ],
       "curated": true
     },
     {
-      "title": "Authorities Crack Down on 45,000 Malicious IPs Powering Ransomware Attacks",
-      "link": "https://cybersecuritynews.com/authorities-crack-down-on-45000-malicious-ips/",
-      "source": "Cyber Security News (FeedBurner)",
-      "published": "2026-03-14T04:33:53+00:00",
+      "title": "URL Scanners Threat Actor Leveraging",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1rttqhk/url_scanners_threat_actor_leveraging/",
+      "source": "/r/cybersecurity",
+      "published": "2026-03-14T20:18:53+00:00",
       "smart_groups": [
+        "Email Security / BEC",
+        "Threat Actors / APT",
+        "Detection Engineering",
+        "Cloud / SaaS",
+        "Crypto / Web3",
         "Curated",
-        "Network / OT / ICS",
         "Malware / Payloads",
         "Phishing / Social Engineering",
+        "Vulnerabilities / CVEs",
+        "OSINT / Community"
+      ],
+      "curated": true
+    },
+    {
+      "title": "I built an open-source library of 700+ cybersecurity skills for AI coding agents -- covers DFIR, threat hunting, cloud security, and more",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1rtqito/i_built_an_opensource_library_of_700/",
+      "source": "/r/cybersecurity",
+      "published": "2026-03-14T18:13:16+00:00",
+      "smart_groups": [
+        "Detection Engineering",
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "OSINT / Community"
+      ],
+      "curated": true
+    },
+    {
+      "title": "OpenClaw AI Agent Flaws Could Enable Prompt Injection and Data Exfiltration",
+      "link": "https://thehackernews.com/2026/03/openclaw-ai-agent-flaws-could-enable.html",
+      "source": "The Hacker News",
+      "published": "2026-03-14T16:17:00+00:00",
+      "smart_groups": [
+        "Cloud / SaaS",
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Quick 3 minute questionnaire for my Assignment on RANSOMWARE. Any help would be much appreciated.",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1rtmp5k/quick_3_minute_questionnaire_for_my_assignment_on/",
+      "source": "/r/cybersecurity",
+      "published": "2026-03-14T15:44:36+00:00",
+      "smart_groups": [
+        "Curated",
         "Ransomware",
-        "Vulnerabilities / CVEs",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Global Authorities Take Down 45,000 Malicious IPs Used in Ransomware Campaigns",
-      "link": "https://gbhackers.com/global-authorities-take-down-45000-malicious-ips/",
-      "source": "GBHackers News",
-      "published": "2026-03-14T04:27:39+00:00",
-      "smart_groups": [
-        "Curated",
-        "Network / OT / ICS",
-        "Malware / Payloads",
-        "Phishing / Social Engineering",
-        "Ransomware",
-        "Vulnerabilities / CVEs",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "I hired a bad employee and I don't know what to do",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1rt7oq6/i_hired_a_bad_employee_and_i_dont_know_what_to_do/",
-      "source": "/r/cybersecurity",
-      "published": "2026-03-14T02:37:23+00:00",
-      "smart_groups": [
-        "Curated",
-        "Exploit / PoC",
-        "Network / OT / ICS",
-        "OSINT / Community"
-      ],
-      "curated": true
-    },
-    {
-      "title": "ecommerce vulnerability?",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1rt4x10/ecommerce_vulnerability/",
-      "source": "/r/cybersecurity",
-      "published": "2026-03-14T00:32:36+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Curated",
-        "OSINT / Community"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Is your AI agent a security risk? NanoClaw wants to put it in a virtual cage",
-      "link": "https://www.zdnet.com/article/nanoclaw-docker-sandbox/",
-      "source": "ZDNet – Security",
-      "published": "2026-03-14T00:30:40+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "How do you block rogue autonomous AI agents AND cryptographically audit them? (open-source runtime firewall + court receipts)",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1rt3brm/how_do_you_block_rogue_autonomous_ai_agents_and/",
-      "source": "/r/cybersecurity",
-      "published": "2026-03-13T23:26:45+00:00",
-      "smart_groups": [
-        "Curated",
-        "Linux / Unix",
-        "Vulnerabilities / CVEs",
-        "Web / API Security",
-        "OSINT / Community"
-      ],
-      "curated": true
-    },
-    {
-      "title": "I Found 39 Algolia Admin Keys Exposed Across Open Source Documentation Sites",
-      "link": "https://www.reddit.com/r/netsec/comments/1rt2i9k/i_found_39_algolia_admin_keys_exposed_across_open/",
-      "source": "/r/netsec",
-      "published": "2026-03-13T22:54:04+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
         "OSINT / Community"
       ],
       "curated": true
