@@ -1,0 +1,170 @@
+{
+  "generated_at": "2026-03-16T07:52:17.075637+00:00",
+  "analysis_date": "2026-03-16",
+  "model": "gpt-5.2",
+  "window_hours": 24,
+  "source_file": "data/news_recent.json",
+  "source_generated_at": "2026-03-16T07:28:21.424516+00:00",
+  "source_days_back": 30,
+  "source_total_items": 8611,
+  "total_items_in_window_all": 141,
+  "total_items_in_window_curated": 32,
+  "morning_call_markdown": "### Executive Summary\n- **Patch/edge exposure risk spikes:** reports of **FortiGate exploitation** and an **out-of-band Windows 11 RRAS RCE patch**—both are high-value footholds for ransomware and lateral movement.\n- **User-assisted intrusions trending:** multiple items highlight **Teams/Quick Assist abuse**, **ClickFix-style lures**, and **AI-assisted phishing using browser permissions**—expect more hands-on-keyboard follow-on activity.\n- **Data-loss and third-party risk:** large-scale breach reporting (e.g., **Telus/ShinyHunters**) and **Oracle EBS exploitation** narratives reinforce the need to validate vendor access paths, data egress controls, and monitoring for exfil.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Edge device compromise wave (FortiGate exploitation)**\n- **What happened:** reporting indicates **FortiGate firewall exploitation** is being used in a new wave of network breaches.\n- **Why it matters operationally:** perimeter device compromise can bypass MFA/EDR, enable VPN credential theft, and give attackers persistent access into segmented networks.\n- **Recommended immediate actions for the SOC today:** confirm FortiGate fleet versions/configs vs known exploited vulns; hunt for **new admin accounts/config changes**, unexpected SSL-VPN logins, and outbound connections from the firewall; escalate any anomalies for containment.\n\n**2) Microsoft Windows RRAS RCE (out-of-band patch / installation changes)**\n- **What happened:** Microsoft issued an **out-of-band patch** for **critical Windows 11 RRAS RCE**, with related reporting about blocking certain automated installs.\n- **Why it matters operationally:** RRAS exposure (VPN/routing) is a classic pre-ransomware entry point; exploitation can lead to rapid privilege escalation and domain compromise.\n- **Recommended immediate actions for the SOC today:** identify RRAS-enabled hosts (Windows 11 / Server where applicable) and prioritize patching/mitigations; monitor for suspicious RRAS service behavior and inbound scanning/exploit attempts; isolate any RRAS host showing abnormal network/service events.\n\n**3) Remote assistance & collaboration tool abuse (Teams / Quick Assist → backdoor)**\n- **What happened:** attackers reportedly abused **Microsoft Teams + Quick Assist** to deploy a stealthy backdoor (“A0Backdoor” campaign reporting).\n- **Why it matters operationally:** these flows look “legitimate,” evade traditional perimeter controls, and often precede credential theft, ransomware staging, and persistence.\n- **Recommended immediate actions for the SOC today:** review/lock down Quick Assist/remote helpdesk policies (allow-list, approval, logging); hunt for **Quick Assist execution**, unusual helpdesk sessions, and post-session payload drops; remind Service Desk to verify callers and escalate suspicious assist requests.\n\n**4) Phishing/infostealer tradecraft escalation (ClickFix + AI-assisted permission abuse)**\n- **What happened:** reporting on **evolving ClickFix techniques** in infostealer campaigns and **AI-assisted phishing** abusing **browser permissions** to capture data.\n- **Why it matters operationally:** raises likelihood of session/token theft, mailbox takeover, and downstream BEC/ransomware; browser-permission prompts can bypass some email controls.\n- **Recommended immediate actions for the SOC today:** increase alerting for high-confidence phish and “user executed fix/cmd/powershell” behaviors; monitor for new browser extension installs/permission changes; fast-track user reports from finance/treasury/front-office roles.\n\n**5) Third-party/data breach pressure (Telus/ShinyHunters; Oracle EBS exploit narrative)**\n- **What happened:** Telus disclosed an attack with potential massive data loss attributed to **ShinyHunters**; separate reporting ties a major breach to **Oracle EBS exploitation**.\n- **Why it matters operationally:** increases likelihood of credential stuffing, extortion, and targeted spearphishing using leaked customer/vendor data; Oracle EBS exposure is high-impact where deployed.\n- **Recommended immediate actions for the SOC today:** run targeted monitoring for **credential stuffing/password spray** against external portals and O365/IdP; confirm whether Oracle EBS exists in our environment/third parties and validate patch/exposure status; prepare comms/runbooks for data-leak-driven phishing waves.\n\n---\n\n### Monitoring & detection recommendations\n- **Perimeter/Firewall (FortiGate):** monitor firewall/VPN logs for **new admin users, config changes, firmware changes, unusual GeoIP logins**; map to ATT&CK **T1190 (Exploit Public-Facing Application)**.\n- **Windows RRAS hosts:** in Windows Event Logs/Sysmon/EDR, watch for **service crashes/restarts**, suspicious child processes from RRAS-related services, and unexpected inbound connections to RRAS; ATT&CK **T1210 (Exploitation of Remote Services)**.\n- **Remote assistance tooling:** from EDR + Windows logs, detect **QuickAssist.exe execution**, remote control session artifacts, and follow-on **PowerShell/cmd/mshta/rundll32** spawning; ATT&CK **T1219 (Remote Access Tools)** / **T1059 (Command and Scripting Interpreter)**.\n- **ClickFix / fake “fix-it” lures:** email + web proxy + EDR: look for users executing copied commands, **PowerShell with -EncodedCommand**, or downloads from newly registered domains following phishing; ATT&CK **T1204 (User Execution)**.\n- **Browser permission/extension abuse:** endpoint browser telemetry (Chrome/Edge) + EDR: alert on **new extensions**, permission changes, and abnormal access to cookies/session storage; ATT&CK **T1555 (Credentials from Password Stores)** (token/session theft risk).\n- **Infostealer outcomes:** IdP/O365 logs: spikes in **new OAuth consents, suspicious refresh token use, impossible travel, inbox rule creation**; ATT&CK **T1098 (Account Manipulation)** / **T1114 (Email Collection)**.\n- **Data exfil indicators:** proxy/DLP/CASB: unusual uploads to **file-sharing, paste sites, “cloud drives”**, or high-volume outbound after remote assist sessions; ATT&CK **T1567 (Exfiltration Over Web Service)**.\n- **Ransomware early warning:** SIEM correlation for **disabled security tools, mass file rename, vssadmin/WMIC shadow copy deletion**, and new scheduled tasks; ATT&CK **T1486 (Data Encrypted for Impact)** / **T1053 (Scheduled Task/Job)**.\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** validate RRAS exposure across estate; ensure emergency patch SLAs and rollback plans are tested (especially for remote access servers).\n- **FortiGate hardening:** enforce **MFA for VPN/admin**, restrict management interfaces, review local accounts, and enable/retain detailed VPN/admin audit logs.\n- **Remote support controls:** implement tighter **Quick Assist/remote support** approvals, just-in-time access, session recording where feasible, and user verification procedures.\n- **Phishing resilience:** update awareness playbooks specifically for **ClickFix-style “copy/paste to fix”** lures and **browser permission prompts**; tune email banners and reporting workflows.\n- **Third-party risk:** reassess vendors with large data holdings or network connectivity; require confirmation of **breach notification processes** and validate least-privilege access paths.\n- **Secrets hygiene (dev/secops):** evaluate adopting improved **secrets scanning** (e.g., Betterleaks/Gitleaks alternatives) for repos/CI to reduce credential leakage that fuels spraying and token theft.",
+  "highlights": [
+    {
+      "title": "What it takes to win that CSO role",
+      "link": "https://www.csoonline.com/article/4143208/what-it-takes-to-win-that-cso-role.html",
+      "source": "CSO Online",
+      "published": "2026-03-16T07:00:00+00:00",
+      "smart_groups": [
+        "Cloud / SaaS",
+        "Curated",
+        "Data Breaches / Leaks",
+        "Crypto / Web3",
+        "Identity / Access",
+        "Network / OT / ICS",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Remove Unnecessary Azure Storage Account Dependencies in VM Diagnostics",
+      "link": "https://techcommunity.microsoft.com/t5/core-infrastructure-and-security/remove-unnecessary-azure-storage-account-dependencies-in-vm/ba-p/4501380",
+      "source": "Core Infrastructure and Security Blog",
+      "published": "2026-03-16T07:00:00+00:00",
+      "smart_groups": [
+        "Cloud / SaaS",
+        "Curated",
+        "Identity / Access",
+        "Network / OT / ICS",
+        "Vulnerabilities / CVEs",
+        "Windows / Microsoft",
+        "Vendors / Product Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Konni Hijacks KakaoTalk Accounts in Spear-Phishing Malware Campaign",
+      "link": "https://gbhackers.com/kakaotalk-accounts/",
+      "source": "GBHackers News",
+      "published": "2026-03-16T06:44:33+00:00",
+      "smart_groups": [
+        "Malware / Payloads",
+        "Phishing / Social Engineering",
+        "Threat Actors / APT",
+        "Curated",
+        "Ransomware",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "OpenClaw AI Agents Vulnerable to Indirect Prompt Injection, Causing Data Leaks",
+      "link": "https://gbhackers.com/openclaw-ai-agents-vulnerable-to-indirect-prompt-injection/",
+      "source": "GBHackers News",
+      "published": "2026-03-16T06:41:12+00:00",
+      "smart_groups": [
+        "Curated",
+        "Data Breaches / Leaks",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Certificate lifespans are shrinking and most organizations aren’t ready",
+      "link": "https://www.helpnetsecurity.com/2026/03/16/globalsign-tls-certificate-lifecycle-management/",
+      "source": "Help Net Security",
+      "published": "2026-03-16T06:30:08+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "ClickFix techniques evolve in new infostealer campaigns",
+      "link": "https://www.csoonline.com/article/4145123/clickfix-techniques-evolve-in-new-infostealer-campaigns.html",
+      "source": "CSO Online",
+      "published": "2026-03-16T06:30:00+00:00",
+      "smart_groups": [
+        "Threat Actors / APT",
+        "Malware / Payloads",
+        "Phishing / Social Engineering",
+        "Windows / Microsoft",
+        "Detection Engineering",
+        "Cloud / SaaS",
+        "Curated",
+        "Exploit / PoC",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "FortiGate Firewall Exploitation Fuels Network Breaches in New Attack Wave",
+      "link": "https://gbhackers.com/fortigate-firewall-exploitation/",
+      "source": "GBHackers News",
+      "published": "2026-03-16T06:24:36+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Identity / Access",
+        "Threat Actors / APT",
+        "Cloud / SaaS",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "AI-Assisted Phishing Campaign Exploits Browser Permissions to Capture Victim Data",
+      "link": "https://cyble.com/blog/ai-assisted-phishing-campaign/",
+      "source": "Cyble",
+      "published": "2026-03-16T06:07:29+00:00",
+      "smart_groups": [
+        "Phishing / Social Engineering",
+        "Data Protection / Privacy",
+        "Email Security / BEC",
+        "Curated",
+        "Exploit / PoC",
+        "Threat Actors / APT",
+        "Malware / Payloads",
+        "Network / OT / ICS",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "Vendors / Product Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "VulHunt: Open-Source Vulnerability Detection and Management Framework",
+      "link": "https://www.news4hackers.com/vulhunt-open-source-vulnerability-detection-and-management-framework/",
+      "source": "News4Hackers",
+      "published": "2026-03-16T06:06:31+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Curated",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Attackers Exploit Teams, Quick Assist to Deploy Stealthy A0Backdoor",
+      "link": "https://gbhackers.com/stealthy-a0backdoor/",
+      "source": "GBHackers News",
+      "published": "2026-03-16T05:52:55+00:00",
+      "smart_groups": [
+        "Curated",
+        "Exploit / PoC",
+        "Malware / Payloads",
+        "Ransomware",
+        "General Security"
+      ],
+      "curated": true
+    }
+  ]
+}
