@@ -1,148 +1,168 @@
 {
-  "generated_at": "2026-03-15T07:13:28.628428+00:00",
-  "analysis_date": "2026-03-15",
+  "generated_at": "2026-03-16T07:52:17.075637+00:00",
+  "analysis_date": "2026-03-16",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-03-15T07:07:45.930175+00:00",
+  "source_generated_at": "2026-03-16T07:28:21.424516+00:00",
   "source_days_back": 30,
-  "source_total_items": 8829,
-  "total_items_in_window_all": 97,
-  "total_items_in_window_curated": 27,
-  "morning_call_markdown": "### Executive Summary\n- Multiple perimeter/device and OS issues surfaced: **FortiGate exploitation in the wild** and a **Windows 11 RRAS out-of-band hotpatch for RCE**—both are high-impact paths to initial access.\n- **Supply-chain activity against developers/web properties** increased (malicious Open VSX extensions, malicious npm packages, hijacked Web SDK, “invisible code” repo attacks); expect credential theft and downstream compromise risk.\n- **Credential theft campaigns** continue via **SEO-poisoned trojan “VPN clients”**; watch for new VPN tooling installs, anomalous auth, and MFA fatigue/abuse patterns.\n\n### High-priority items (immediate attention)\n**1) FortiGate firewalls reportedly exploited to breach networks and steal credentials**\n- What happened: Reporting indicates **active exploitation of FortiGate devices** in a wave of attacks leading to credential theft and network access.  \n- Why it matters operationally: FortiGate is often edge-facing; compromise enables **initial access + lateral movement** into critical banking environments.  \n- Recommended immediate actions for the SOC today: **Confirm patch/firmware status + exposed management interfaces**; hunt for **new admin users/config changes/VPN auth anomalies** and escalate any suspicious FortiGate events immediately.\n\n**2) Microsoft Windows 11 Out-of-Band hotpatch for RRAS RCE**\n- What happened: Microsoft issued an **OOB Windows 11 hotpatch** addressing **RRAS remote code execution** risk (per external reporting).  \n- Why it matters operationally: RRAS exposure can enable **remote compromise** of remote-access servers/endpoints; high blast radius if RRAS is internet-facing or broadly enabled.  \n- Recommended immediate actions for the SOC today: **Identify systems with RRAS enabled/exposed** (servers and endpoints) and prioritize hotpatch deployment; increase monitoring for **RRAS service starts/config changes and unusual inbound connections**.\n\n**3) Critical HPE AOS-CX vulnerability allowing admin password reset**\n- What happened: A **critical HPE AOS-CX** issue reportedly allows **admin password resets** (vendor details/CVE not included in the feed excerpt).  \n- Why it matters operationally: Network switch takeover enables **traffic manipulation, credential interception, and persistence** in core segments.  \n- Recommended immediate actions for the SOC today: **Inventory AOS-CX in production and isolate/limit management plane access**; review logs for **unexpected password resets, new admin sessions, and config write events**.\n\n**4) Developer/web supply-chain compromises (Open VSX extensions, npm packages, hijacked Web SDK, “invisible code” repo techniques)**\n- What happened: Multiple reports of **malicious developer dependencies/extensions** and **SDK hijacking** spreading stealers, plus **repo attacks using “invisible”/obfuscated code**.  \n- Why it matters operationally: Impacts internal dev workstations and CI/CD; can lead to **credential/API token theft**, poisoned builds, and web session skimming risk.  \n- Recommended immediate actions for the SOC today: **Alert dev/DevOps to pause new extension/package installs** and review recent dependency/extension changes; hunt endpoints/CI for **new npm install activity, suspicious VS Code/VSX extension installs, and unusual outbound from build agents**.\n\n**5) Credential theft via SEO poisoning delivering trojan “VPN clients”**\n- What happened: Reporting attributes to “Storm-2561” an **SEO-poisoning campaign** distributing trojanized VPN clients to steal credentials.  \n- Why it matters operationally: Common user behavior (searching for VPN downloads) creates **high-volume credential theft** and follow-on account takeover risk.  \n- Recommended immediate actions for the SOC today: Monitor for **new VPN client installs from non-corporate sources**; tighten controls on **software install paths** and review **IdP sign-ins for new device fingerprints/locations**.\n\n### Monitoring & detection recommendations\n- **Perimeter/VPN/Firewall logs (FortiGate):** alert on **admin logins from new IPs, config changes, firmware updates, VPN user creation, auth failures/success spikes** (ATT&CK: Valid Accounts **T1078**, Modify Cloud/Network Config analog **T1562**-like behavior).\n- **Windows event logs + EDR (RRAS):** watch for **RemoteAccess/RRAS service state changes**, new listeners/ports, and suspicious child processes from `svchost` hosting RRAS (ATT&CK: Exploitation for Client Execution **T1203**, Command and Scripting Interpreter **T1059**).\n- **Network switch management telemetry (HPE AOS-CX):** monitor **AAA events, password reset actions, privilege changes, config write/commit**, and new management-plane source IPs (ATT&CK: Account Manipulation **T1098**).\n- **Proxy/DNS + EDR (SEO poisoning / trojan VPN):** hunt for **search-to-download chains** followed by execution of unsigned installers, and outbound to newly seen domains after install (ATT&CK: User Execution **T1204**, Credential Stealing **T1555**).\n- **Dev endpoints (EDR) + package manager logs:** detect **npm/yarn/pnpm installs** on non-dev hosts, execution from `node_modules`, and sudden addition of postinstall scripts (ATT&CK: Supply Chain Compromise **T1195**).\n- **CI/CD audit logs (GitHub/GitLab/Azure DevOps) + secrets monitoring:** alert on **new deploy keys/tokens, changes to workflow files, unusual runner activity**, and secrets accessed outside normal pipelines (ATT&CK: Modify Cloud Compute Infrastructure **T1578**, Steal Application Access Token **T1528**).\n- **Web telemetry (WAF/CDN) for SDK hijack/skimming risk:** watch for **unexpected third-party script changes**, new script domains, and integrity mismatches if SRI is used (ATT&CK: Web Injection **T1059.007** / supply-chain web).\n- **Email/IdP (BEC/credential theft):** prioritize detections for **impossible travel, new device enrollment, MFA method changes**, and suspicious OAuth consent grants (ATT&CK: Phishing **T1566**, External Remote Services **T1133**).\n\n### Medium-term follow-ups\n- **Patch/hardening program:** validate RRAS exposure policy (disable where not needed; restrict inbound) and ensure **edge device firmware cadence** includes FortiGate and HPE switching.\n- **Management plane controls:** enforce **allowlisted admin source IPs, MFA where supported, dedicated admin accounts**, and log forwarding from network devices to SIEM.\n- **Software supply-chain controls:** require **pinned dependencies, signed artifacts, private registries**, and approval gates for editor extensions; expand SCA coverage to Open VSX/VS Code extensions.\n- **CI/CD security posture:** rotate **developer tokens/CI secrets** if suspicious pipeline activity is found; baseline normal runner behavior and tighten egress for build agents.\n- **User awareness (targeted):** brief staff on **SEO-poisoned “VPN download” traps**; reinforce using **company portal/software center** only.\n- **Threat intel alignment:** track whether FortiGate/HPE/RRAS issues gain **active exploitation confirmation** from vendors/ISAC sources; update playbooks and detections accordingly (assumption: current items are primarily based on external reporting without full vendor advisory detail in the feed excerpt).",
+  "source_total_items": 8611,
+  "total_items_in_window_all": 141,
+  "total_items_in_window_curated": 32,
+  "morning_call_markdown": "### Executive Summary\n- **Patch/edge exposure risk spikes:** reports of **FortiGate exploitation** and an **out-of-band Windows 11 RRAS RCE patch**—both are high-value footholds for ransomware and lateral movement.\n- **User-assisted intrusions trending:** multiple items highlight **Teams/Quick Assist abuse**, **ClickFix-style lures**, and **AI-assisted phishing using browser permissions**—expect more hands-on-keyboard follow-on activity.\n- **Data-loss and third-party risk:** large-scale breach reporting (e.g., **Telus/ShinyHunters**) and **Oracle EBS exploitation** narratives reinforce the need to validate vendor access paths, data egress controls, and monitoring for exfil.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Edge device compromise wave (FortiGate exploitation)**\n- **What happened:** reporting indicates **FortiGate firewall exploitation** is being used in a new wave of network breaches.\n- **Why it matters operationally:** perimeter device compromise can bypass MFA/EDR, enable VPN credential theft, and give attackers persistent access into segmented networks.\n- **Recommended immediate actions for the SOC today:** confirm FortiGate fleet versions/configs vs known exploited vulns; hunt for **new admin accounts/config changes**, unexpected SSL-VPN logins, and outbound connections from the firewall; escalate any anomalies for containment.\n\n**2) Microsoft Windows RRAS RCE (out-of-band patch / installation changes)**\n- **What happened:** Microsoft issued an **out-of-band patch** for **critical Windows 11 RRAS RCE**, with related reporting about blocking certain automated installs.\n- **Why it matters operationally:** RRAS exposure (VPN/routing) is a classic pre-ransomware entry point; exploitation can lead to rapid privilege escalation and domain compromise.\n- **Recommended immediate actions for the SOC today:** identify RRAS-enabled hosts (Windows 11 / Server where applicable) and prioritize patching/mitigations; monitor for suspicious RRAS service behavior and inbound scanning/exploit attempts; isolate any RRAS host showing abnormal network/service events.\n\n**3) Remote assistance & collaboration tool abuse (Teams / Quick Assist → backdoor)**\n- **What happened:** attackers reportedly abused **Microsoft Teams + Quick Assist** to deploy a stealthy backdoor (“A0Backdoor” campaign reporting).\n- **Why it matters operationally:** these flows look “legitimate,” evade traditional perimeter controls, and often precede credential theft, ransomware staging, and persistence.\n- **Recommended immediate actions for the SOC today:** review/lock down Quick Assist/remote helpdesk policies (allow-list, approval, logging); hunt for **Quick Assist execution**, unusual helpdesk sessions, and post-session payload drops; remind Service Desk to verify callers and escalate suspicious assist requests.\n\n**4) Phishing/infostealer tradecraft escalation (ClickFix + AI-assisted permission abuse)**\n- **What happened:** reporting on **evolving ClickFix techniques** in infostealer campaigns and **AI-assisted phishing** abusing **browser permissions** to capture data.\n- **Why it matters operationally:** raises likelihood of session/token theft, mailbox takeover, and downstream BEC/ransomware; browser-permission prompts can bypass some email controls.\n- **Recommended immediate actions for the SOC today:** increase alerting for high-confidence phish and “user executed fix/cmd/powershell” behaviors; monitor for new browser extension installs/permission changes; fast-track user reports from finance/treasury/front-office roles.\n\n**5) Third-party/data breach pressure (Telus/ShinyHunters; Oracle EBS exploit narrative)**\n- **What happened:** Telus disclosed an attack with potential massive data loss attributed to **ShinyHunters**; separate reporting ties a major breach to **Oracle EBS exploitation**.\n- **Why it matters operationally:** increases likelihood of credential stuffing, extortion, and targeted spearphishing using leaked customer/vendor data; Oracle EBS exposure is high-impact where deployed.\n- **Recommended immediate actions for the SOC today:** run targeted monitoring for **credential stuffing/password spray** against external portals and O365/IdP; confirm whether Oracle EBS exists in our environment/third parties and validate patch/exposure status; prepare comms/runbooks for data-leak-driven phishing waves.\n\n---\n\n### Monitoring & detection recommendations\n- **Perimeter/Firewall (FortiGate):** monitor firewall/VPN logs for **new admin users, config changes, firmware changes, unusual GeoIP logins**; map to ATT&CK **T1190 (Exploit Public-Facing Application)**.\n- **Windows RRAS hosts:** in Windows Event Logs/Sysmon/EDR, watch for **service crashes/restarts**, suspicious child processes from RRAS-related services, and unexpected inbound connections to RRAS; ATT&CK **T1210 (Exploitation of Remote Services)**.\n- **Remote assistance tooling:** from EDR + Windows logs, detect **QuickAssist.exe execution**, remote control session artifacts, and follow-on **PowerShell/cmd/mshta/rundll32** spawning; ATT&CK **T1219 (Remote Access Tools)** / **T1059 (Command and Scripting Interpreter)**.\n- **ClickFix / fake “fix-it” lures:** email + web proxy + EDR: look for users executing copied commands, **PowerShell with -EncodedCommand**, or downloads from newly registered domains following phishing; ATT&CK **T1204 (User Execution)**.\n- **Browser permission/extension abuse:** endpoint browser telemetry (Chrome/Edge) + EDR: alert on **new extensions**, permission changes, and abnormal access to cookies/session storage; ATT&CK **T1555 (Credentials from Password Stores)** (token/session theft risk).\n- **Infostealer outcomes:** IdP/O365 logs: spikes in **new OAuth consents, suspicious refresh token use, impossible travel, inbox rule creation**; ATT&CK **T1098 (Account Manipulation)** / **T1114 (Email Collection)**.\n- **Data exfil indicators:** proxy/DLP/CASB: unusual uploads to **file-sharing, paste sites, “cloud drives”**, or high-volume outbound after remote assist sessions; ATT&CK **T1567 (Exfiltration Over Web Service)**.\n- **Ransomware early warning:** SIEM correlation for **disabled security tools, mass file rename, vssadmin/WMIC shadow copy deletion**, and new scheduled tasks; ATT&CK **T1486 (Data Encrypted for Impact)** / **T1053 (Scheduled Task/Job)**.\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** validate RRAS exposure across estate; ensure emergency patch SLAs and rollback plans are tested (especially for remote access servers).\n- **FortiGate hardening:** enforce **MFA for VPN/admin**, restrict management interfaces, review local accounts, and enable/retain detailed VPN/admin audit logs.\n- **Remote support controls:** implement tighter **Quick Assist/remote support** approvals, just-in-time access, session recording where feasible, and user verification procedures.\n- **Phishing resilience:** update awareness playbooks specifically for **ClickFix-style “copy/paste to fix”** lures and **browser permission prompts**; tune email banners and reporting workflows.\n- **Third-party risk:** reassess vendors with large data holdings or network connectivity; require confirmation of **breach notification processes** and validate least-privilege access paths.\n- **Secrets hygiene (dev/secops):** evaluate adopting improved **secrets scanning** (e.g., Betterleaks/Gitleaks alternatives) for repos/CI to reduce credential leakage that fuels spraying and token theft.",
   "highlights": [
     {
-      "title": "Supply-chain attack using invisible code hits GitHub and other repositories",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1ru7f2h/supplychain_attack_using_invisible_code_hits/",
-      "source": "/r/cybersecurity",
-      "published": "2026-03-15T07:04:40+00:00",
+      "title": "What it takes to win that CSO role",
+      "link": "https://www.csoonline.com/article/4143208/what-it-takes-to-win-that-cso-role.html",
+      "source": "CSO Online",
+      "published": "2026-03-16T07:00:00+00:00",
       "smart_groups": [
-        "Curated",
-        "Supply Chain / Software",
-        "OSINT / Community"
-      ],
-      "curated": true
-    },
-    {
-      "title": "CVE-2024-45163: Remote DoS in Mirai C2 – research writeup + what it led me to build",
-      "link": "https://www.reddit.com/r/netsec/comments/1ru6xxl/cve202445163_remote_dos_in_mirai_c2_research/",
-      "source": "/r/netsec",
-      "published": "2026-03-15T06:35:33+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "OSINT / Community"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Microsoft Releases Out-of-Band Patch to Fix Critical RRAS RCE Vulnerabilities in Windows 11",
-      "link": "https://cybersecuritynews.com/windows-11-out-of-band-update/",
-      "source": "Cyber Security News (FeedBurner)",
-      "published": "2026-03-15T05:18:46+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
         "Cloud / SaaS",
         "Curated",
-        "Windows / Microsoft",
+        "Data Breaches / Leaks",
+        "Crypto / Web3",
+        "Identity / Access",
+        "Network / OT / ICS",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
         "General Security"
       ],
       "curated": true
     },
     {
-      "title": "FortiGate Firewalls Exploited in Wave of Attacks to Breach Networks and Steal Credentials",
-      "link": "https://cybersecuritynews.com/fortigate-firewalls-exploited/",
-      "source": "Cyber Security News (FeedBurner)",
-      "published": "2026-03-15T02:41:19+00:00",
+      "title": "Remove Unnecessary Azure Storage Account Dependencies in VM Diagnostics",
+      "link": "https://techcommunity.microsoft.com/t5/core-infrastructure-and-security/remove-unnecessary-azure-storage-account-dependencies-in-vm/ba-p/4501380",
+      "source": "Core Infrastructure and Security Blog",
+      "published": "2026-03-16T07:00:00+00:00",
+      "smart_groups": [
+        "Cloud / SaaS",
+        "Curated",
+        "Identity / Access",
+        "Network / OT / ICS",
+        "Vulnerabilities / CVEs",
+        "Windows / Microsoft",
+        "Vendors / Product Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Konni Hijacks KakaoTalk Accounts in Spear-Phishing Malware Campaign",
+      "link": "https://gbhackers.com/kakaotalk-accounts/",
+      "source": "GBHackers News",
+      "published": "2026-03-16T06:44:33+00:00",
+      "smart_groups": [
+        "Malware / Payloads",
+        "Phishing / Social Engineering",
+        "Threat Actors / APT",
+        "Curated",
+        "Ransomware",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "OpenClaw AI Agents Vulnerable to Indirect Prompt Injection, Causing Data Leaks",
+      "link": "https://gbhackers.com/openclaw-ai-agents-vulnerable-to-indirect-prompt-injection/",
+      "source": "GBHackers News",
+      "published": "2026-03-16T06:41:12+00:00",
+      "smart_groups": [
+        "Curated",
+        "Data Breaches / Leaks",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Certificate lifespans are shrinking and most organizations aren’t ready",
+      "link": "https://www.helpnetsecurity.com/2026/03/16/globalsign-tls-certificate-lifecycle-management/",
+      "source": "Help Net Security",
+      "published": "2026-03-16T06:30:08+00:00",
       "smart_groups": [
         "Curated",
         "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "ClickFix techniques evolve in new infostealer campaigns",
+      "link": "https://www.csoonline.com/article/4145123/clickfix-techniques-evolve-in-new-infostealer-campaigns.html",
+      "source": "CSO Online",
+      "published": "2026-03-16T06:30:00+00:00",
+      "smart_groups": [
         "Threat Actors / APT",
+        "Malware / Payloads",
+        "Phishing / Social Engineering",
+        "Windows / Microsoft",
+        "Detection Engineering",
+        "Cloud / SaaS",
+        "Curated",
+        "Exploit / PoC",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "FortiGate Firewall Exploitation Fuels Network Breaches in New Attack Wave",
+      "link": "https://gbhackers.com/fortigate-firewall-exploitation/",
+      "source": "GBHackers News",
+      "published": "2026-03-16T06:24:36+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Identity / Access",
+        "Threat Actors / APT",
+        "Cloud / SaaS",
         "Exploit / PoC",
         "General Security"
       ],
       "curated": true
     },
     {
-      "title": "Microsoft releases Windows 11 OOB hotpatch to fix RRAS RCE flaw",
-      "link": "https://www.bleepingcomputer.com/news/microsoft/microsoft-releases-windows-11-oob-hotpatch-to-fix-rras-rce-flaw/",
-      "source": "BleepingComputer",
-      "published": "2026-03-14T21:48:14+00:00",
+      "title": "AI-Assisted Phishing Campaign Exploits Browser Permissions to Capture Victim Data",
+      "link": "https://cyble.com/blog/ai-assisted-phishing-campaign/",
+      "source": "Cyble",
+      "published": "2026-03-16T06:07:29+00:00",
       "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Curated",
-        "Windows / Microsoft",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Deploy AWS applications and access AWS accounts across multiple Regions with IAM Identity Center",
-      "link": "https://aws.amazon.com/blogs/security/deploy-aws-applications-and-access-aws-accounts-across-multiple-regions-with-iam-identity-center/",
-      "source": "AWS Security Blog",
-      "published": "2026-03-14T21:21:31+00:00",
-      "smart_groups": [
-        "Cloud / SaaS",
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "URL Scanners Threat Actor Leveraging",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1rttqhk/url_scanners_threat_actor_leveraging/",
-      "source": "/r/cybersecurity",
-      "published": "2026-03-14T20:18:53+00:00",
-      "smart_groups": [
-        "Email Security / BEC",
-        "Threat Actors / APT",
-        "Detection Engineering",
-        "Cloud / SaaS",
-        "Crypto / Web3",
-        "Curated",
-        "Malware / Payloads",
         "Phishing / Social Engineering",
+        "Data Protection / Privacy",
+        "Email Security / BEC",
+        "Curated",
+        "Exploit / PoC",
+        "Threat Actors / APT",
+        "Malware / Payloads",
+        "Network / OT / ICS",
+        "Ransomware",
         "Vulnerabilities / CVEs",
-        "OSINT / Community"
+        "Vendors / Product Security"
       ],
       "curated": true
     },
     {
-      "title": "I built an open-source library of 700+ cybersecurity skills for AI coding agents -- covers DFIR, threat hunting, cloud security, and more",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1rtqito/i_built_an_opensource_library_of_700/",
-      "source": "/r/cybersecurity",
-      "published": "2026-03-14T18:13:16+00:00",
+      "title": "VulHunt: Open-Source Vulnerability Detection and Management Framework",
+      "link": "https://www.news4hackers.com/vulhunt-open-source-vulnerability-detection-and-management-framework/",
+      "source": "News4Hackers",
+      "published": "2026-03-16T06:06:31+00:00",
       "smart_groups": [
-        "Detection Engineering",
-        "Curated",
         "Vulnerabilities / CVEs",
-        "OSINT / Community"
-      ],
-      "curated": true
-    },
-    {
-      "title": "OpenClaw AI Agent Flaws Could Enable Prompt Injection and Data Exfiltration",
-      "link": "https://thehackernews.com/2026/03/openclaw-ai-agent-flaws-could-enable.html",
-      "source": "The Hacker News",
-      "published": "2026-03-14T16:17:00+00:00",
-      "smart_groups": [
-        "Cloud / SaaS",
         "Curated",
-        "Vulnerabilities / CVEs",
         "General Security"
       ],
       "curated": true
     },
     {
-      "title": "Quick 3 minute questionnaire for my Assignment on RANSOMWARE. Any help would be much appreciated.",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1rtmp5k/quick_3_minute_questionnaire_for_my_assignment_on/",
-      "source": "/r/cybersecurity",
-      "published": "2026-03-14T15:44:36+00:00",
+      "title": "Attackers Exploit Teams, Quick Assist to Deploy Stealthy A0Backdoor",
+      "link": "https://gbhackers.com/stealthy-a0backdoor/",
+      "source": "GBHackers News",
+      "published": "2026-03-16T05:52:55+00:00",
       "smart_groups": [
         "Curated",
+        "Exploit / PoC",
+        "Malware / Payloads",
         "Ransomware",
-        "OSINT / Community"
+        "General Security"
       ],
       "curated": true
     }
