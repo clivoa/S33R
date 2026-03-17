@@ -1,0 +1,153 @@
+{
+  "generated_at": "2026-03-17T07:19:07.894702+00:00",
+  "analysis_date": "2026-03-17",
+  "model": "gpt-5.2",
+  "window_hours": 24,
+  "source_file": "data/news_recent.json",
+  "source_generated_at": "2026-03-17T06:09:20.315088+00:00",
+  "source_days_back": 30,
+  "source_total_items": 8849,
+  "total_items_in_window_all": 351,
+  "total_items_in_window_curated": 80,
+  "morning_call_markdown": "### Executive Summary\n- **Active exploitation:** CISA added a **Wing FTP Server vulnerability** to KEV; assume opportunistic scanning and rapid weaponization against exposed servers.\n- **Endpoint/browser risk spike:** **Chrome zero-days are being exploited in the wild**; combined with ongoing **remote-assistance abuse (Teams/Quick Assist)** this increases initial access risk for corporate endpoints.\n- **Supply-chain pressure on dev tooling:** The **GlassWorm campaign** is expanding (stolen GitHub tokens / force-push into Python repos, Open VSX extension abuse); treat CI/CD and developer workstations as high-risk entry points.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) CISA KEV: Wing FTP Server actively exploited**\n- **What happened:** CISA flagged a **Wing FTP Server flaw** as **actively exploited** (added to KEV).\n- **Why it matters operationally:** Any **internet-exposed FTP/admin** service is a high-likelihood compromise path (initial access → webshell/credential theft → lateral movement).\n- **Recommended immediate actions for the SOC today:** **Identify any Wing FTP instances** (external scan + CMDB) and **confirm patch/mitigation**; **hunt** for new/unknown processes spawned by Wing FTP service and suspicious outbound connections from those hosts.\n\n**2) Exploited Google Chrome zero-days (emergency fixes)**\n- **What happened:** Multiple reports indicate **Chrome 0-days are being exploited** and have received emergency patches.\n- **Why it matters operationally:** Browser exploitation is a fast path to **endpoint foothold** and session/token theft in a financial environment (especially for privileged users).\n- **Recommended immediate actions for the SOC today:** **Verify fleet patch compliance** for Chrome (and Chromium-based browsers where applicable) and **escalate non-compliant high-risk user groups**; **monitor for post-browser-exploit behavior** (new persistence, unusual child processes from browser).\n\n**3) Software supply chain: GlassWorm expanding via GitHub tokens / force-push + ecosystem poisoning**\n- **What happened:** GlassWorm campaign reportedly uses **stolen GitHub tokens to force-push malware into Python repos**, with related reporting on **Open VSX extension hijacks/dependency abuse** and “aftermath” repo compromises.\n- **Why it matters operationally:** Impacts **developer endpoints, CI runners, artifact integrity**; can introduce backdoors into internal apps and pipelines (hard to detect, high blast radius).\n- **Recommended immediate actions for the SOC today:** **Alert DevOps** to rotate **GitHub tokens/secrets** and review **recent force-push / unusual repo activity**; **hunt in CI/CD logs** for unexpected dependency/version changes and newly introduced outbound network activity during builds.\n\n**4) Social engineering → remote access: Teams/Quick Assist abuse delivering backdoor**\n- **What happened:** Attackers are abusing **Microsoft Teams + Quick Assist** to drop a stealthy backdoor (reported as “A0Backdoor”).\n- **Why it matters operationally:** This is a common bridge from **phishing/vishing** into **interactive access** (hands-on-keyboard, credential capture, ransomware staging).\n- **Recommended immediate actions for the SOC today:** **Review Quick Assist usage** (who/when/from where) and **flag unsolicited assistance sessions**; **tighten controls** (block/limit Quick Assist if policy allows, require helpdesk workflow) and increase scrutiny on Teams messages initiating support requests.\n\n**5) Linux exposure: AppArmor/“CrackArmor” privilege escalation flaws (multiple critical vulns)**\n- **What happened:** Reports highlight **multiple critical AppArmor-related vulnerabilities** enabling **local privilege escalation** on Linux.\n- **Why it matters operationally:** If an attacker lands any user-level foothold (phish, exposed service, supply chain), this can speed **root escalation** on Linux servers and cloud workloads.\n- **Recommended immediate actions for the SOC today:** **Triage Linux estate** (internet-facing + production + CI runners) for kernel/AppArmor versions and **prioritize patch windows**; **hunt for local escalation signals** (suspicious `sudo`/setuid use, unusual kernel module activity, anomalous writes to sensitive paths).\n\n---\n\n### Monitoring & detection recommendations\n- **Internet-facing services (Wing FTP focus):** Firewall/WAF + server logs + EDR; alert on **new external connections to FTP/admin ports** and **new child processes** from the Wing FTP service account (ATT&CK **T1190**, **T1059**).\n- **Browser exploit fallout:** EDR + proxy/DNS; hunt for **browser spawning script engines** (e.g., `chrome.exe` → `powershell/cmd/wscript/mshta`) and unusual downloads/executions shortly after browsing (ATT&CK **T1203**, **T1059**).\n- **Remote assistance abuse:** Microsoft 365 audit logs + endpoint telemetry; detect **Quick Assist launches** and **Teams chat links** preceding remote sessions; correlate with **new persistence** (Run keys/services/scheduled tasks) (ATT&CK **T1566**, **T1219**, **T1547**).\n- **Supply chain (GitHub/CI/CD):** GitHub audit logs + CI runner logs + EDR; alert on **token use from new geos/ASNs**, **force-push events**, changes to `requirements.txt/pyproject.toml/package-lock.json`, and CI jobs initiating **unexpected outbound traffic** (ATT&CK **T1552.001**, **T1195**, **T1071**).\n- **Developer tooling malware themes (fake installers / poisoned packages):** Web proxy + EDR; flag downloads of **popular tools from non-official domains** and execution from **Downloads/Temp**; watch for **new unsigned binaries** and credential-stealing behavior.\n- **Credential theft targeting VPN users:** IdP/VPN logs; monitor **impossible travel**, **MFA fatigue patterns**, repeated failures followed by success, and new device enrollments (ATT&CK **T1110**, **T1078**).\n- **Botnet scanning/noise (RondoDox / network device targeting):** IDS/NetFlow; look for **broad exploit scanning patterns** from residential IP space and spikes in inbound attempts to edge services; ensure blocks don’t suppress true positives.\n\n---\n\n### Medium-term follow-ups\n- **Patch/hardening program:** Add **Chrome emergency updates**, **Wing FTP remediation**, and **Linux AppArmor fixes** to a tracked “rapid risk burn-down” list with deadlines and exception handling.\n- **Remote assistance policy:** Formalize controls for **Quick Assist/remote support** (allowed support groups, ticket requirement, user warnings, logging retention); consider blocking consumer remote tools org-wide.\n- **DevSecOps guardrails:** Enforce **token hygiene** (short-lived tokens, scoped permissions), **branch protection** (disallow force-push on protected branches), and dependency controls (lockfiles, allowlists, artifact signing where feasible).\n- **Cloud/AI data leakage items (AWS Bedrock bulletins + AI agent prompt injection reports):** Validate configurations and access boundaries for AI tooling; ensure **S3 ownership/permissions checks** and **data egress monitoring** for AI-assisted workflows (assumption: only relevant if your org uses these services).\n- **Phishing readiness (shipment-tracking + real-time banking-data phishing):** Tune email controls for **parcel/shipping lures**, reinforce reporting playbooks, and update user comms for high-risk regions/roles.\n- **Third-party/vendor risk watch:** Track public-sector and registry-related breach reports as indicators of **identity data exposure**; prepare for downstream **fraud/ATO attempts** against staff and customers (increase monitoring on account recovery and call-center identity verification paths).",
+  "highlights": [
+    {
+      "title": "Gov.Uk Suffers Data Leak | UpGuard",
+      "link": "https://www.upguard.comnews/gov-uk-data-breach-2026-03-16",
+      "source": "UpGuard – News",
+      "published": "2026-03-17T05:57:31+00:00",
+      "smart_groups": [
+        "Data Breaches / Leaks",
+        "Curated",
+        "Vendors / Product Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Five Individuals Arrested for Identity Theft and Bank Account Fraud Involving Student Names",
+      "link": "https://www.news4hackers.com/five-individuals-arrested-for-identity-theft-and-bank-account-fraud-involving-student-names-2/",
+      "source": "News4Hackers",
+      "published": "2026-03-17T05:32:37+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "CISA Flags Actively Exploited Wing FTP Vulnerability Leaking Server Paths",
+      "link": "https://thehackernews.com/2026/03/cisa-flags-actively-exploited-wing-ftp.html",
+      "source": "The Hacker News",
+      "published": "2026-03-17T05:23:00+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Curated",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "New CondiBot Variant and ‘Monaco’ Miner Target More Network Devices",
+      "link": "https://gbhackers.com/condibot-variant-and-monaco/",
+      "source": "GBHackers News",
+      "published": "2026-03-17T05:15:47+00:00",
+      "smart_groups": [
+        "Curated",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "CISA Alerts Users to Exploited Chrome 0-Day Flaws",
+      "link": "https://gbhackers.com/cisa-alerts-chrome-0-day-flaws/",
+      "source": "GBHackers News",
+      "published": "2026-03-17T05:09:36+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Cloud / SaaS",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Was ist ein Keylogger?",
+      "link": "https://www.csoonline.com/article/3491754/was-ist-ein-keylogger.html",
+      "source": "CSO Online",
+      "published": "2026-03-17T03:39:00+00:00",
+      "smart_groups": [
+        "Malware / Payloads",
+        "Curated",
+        "Identity / Access",
+        "Crypto / Web3",
+        "Network / OT / ICS",
+        "Phishing / Social Engineering",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "Mobile Security",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Built a self-destructing text/file sharing tool with client-side encryption. Server holds zero knowledge",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1rvvqnt/built_a_selfdestructing_textfile_sharing_tool/",
+      "source": "/r/cybersecurity",
+      "published": "2026-03-17T03:35:32+00:00",
+      "smart_groups": [
+        "Data Protection / Privacy",
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "OSINT / Community"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Security Community Spotlight: Luca Romero Arrieche Heller",
+      "link": "https://techcommunity.microsoft.com/t5/microsoft-security-community/security-community-spotlight-luca-romero-arrieche-heller/ba-p/4501723",
+      "source": "Microsoft Security Blog (TechCommunity)",
+      "published": "2026-03-17T02:35:25+00:00",
+      "smart_groups": [
+        "Windows / Microsoft",
+        "Identity / Access",
+        "Detection Engineering",
+        "Curated",
+        "Linux / Unix",
+        "Network / OT / ICS",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "Vendors / Product Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "China-Nexus Hackers Skulk in Southeast Asian Military Orgs for Years",
+      "link": "https://www.darkreading.com/threat-intelligence/china-nexus-hackers-southeast-asian-military-orgs",
+      "source": "darkreading",
+      "published": "2026-03-17T01:00:00+00:00",
+      "smart_groups": [
+        "Curated",
+        "Malware / Payloads",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "RondoDox Botnet Expands to 174 Exploits, Leveraging Residential IP Infrastructure at Scale",
+      "link": "https://cybersecuritynews.com/rondodox-botnet-expands/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-03-17T00:16:18+00:00",
+      "smart_groups": [
+        "Curated",
+        "Exploit / PoC",
+        "Malware / Payloads",
+        "General Security"
+      ],
+      "curated": true
+    }
+  ]
+}
