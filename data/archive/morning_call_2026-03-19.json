@@ -1,0 +1,153 @@
+{
+  "generated_at": "2026-03-19T07:13:54.975812+00:00",
+  "analysis_date": "2026-03-19",
+  "model": "gpt-5.2",
+  "window_hours": 24,
+  "source_file": "data/news_recent.json",
+  "source_generated_at": "2026-03-19T06:07:39.290324+00:00",
+  "source_days_back": 30,
+  "source_total_items": 9272,
+  "total_items_in_window_all": 413,
+  "total_items_in_window_curated": 125,
+  "morning_call_markdown": "### Executive Summary\n- **Active exploitation of a Cisco firewall management zero-day is being used to deliver Interlock ransomware** — treat exposed/Internet-reachable Cisco security management surfaces as **at-risk now**.\n- **Mobile exploit activity is escalating (DarkSword iOS exploit kit + Android OS-level payment takeover technique)** — raise vigilance for **mobile-to-corporate credential theft and session hijack**.\n- **Multiple high-impact vulns with PoCs/KEV movement (SharePoint/Zimbra KEV; critical telnetd RCE PoC; Ubuntu snapd LPE; WatchGuard Fireware OOB write)** — prioritize exposure checks and patch/mitigation validation.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Cisco firewall management 0-day leveraged for Interlock ransomware (reported active since Jan)**\n- **What happened:** Reporting indicates **active exploitation of a Cisco firewall/FMC zero-day (CVE-2026-20131)** to gain root access and deploy **Interlock ransomware**.  \n- **Why it matters operationally:** Direct path from **edge/security tooling compromise → domain foothold → ransomware**, high blast radius in enterprise networks (finance-target attractive).  \n- **Recommended immediate actions for the SOC today:** Confirm **FMC/management interfaces are not Internet-exposed**; hunt for **new admin users/config changes, unexpected remote exec, outbound C2** from firewall managers; escalate any FMC anomalies to IR immediately.\n\n**2) “DarkSword” iOS exploit kit proliferation + iPhone infostealer activity**\n- **What happened:** Multiple sources report **DarkSword iOS exploit chain/exploit kit** used by **state-linked actors/spyware vendors** and in **infostealer campaigns**.  \n- **Why it matters operationally:** Likely enables **credential/session theft** and persistence on high-value users; risk of **MFA token/session hijack**, mailbox compromise, and privileged app access.  \n- **Recommended immediate actions for the SOC today:** Coordinate with MDM team to **enforce latest iOS/iPadOS updates** and verify devices are compliant; increase monitoring for **impossible travel/new device sign-ins and token refresh anomalies** for executives/privileged users.\n\n**3) CISA KEV movement: Microsoft SharePoint + Zimbra vulnerabilities flagged as exploited**\n- **What happened:** CISA added **SharePoint and Zimbra flaws** to the **Known Exploited Vulnerabilities (KEV)** catalog; separate reporting highlights **Zimbra XSS actively exploited**.  \n- **Why it matters operationally:** SharePoint/Zimbra are common in hybrid enterprise stacks; exploitation frequently leads to **webshells, credential theft, and lateral movement**.  \n- **Recommended immediate actions for the SOC today:** Identify any **externally reachable SharePoint/Zimbra** and validate patch levels/mitigations; hunt for **new/modified web-accessible files, suspicious admin logins, and abnormal POST traffic** to these apps.\n\n**4) Critical unpatched GNU telnetd RCE (CVE-2026-32746) with PoC**\n- **What happened:** Community and media report a **critical telnetd buffer overflow** enabling **unauthenticated root RCE**; PoC is circulating (patch status unclear/assume uneven).  \n- **Why it matters operationally:** Telnet may exist on legacy systems, network gear, lab/dev appliances; quick mass scanning/exploitation is likely once PoC spreads.  \n- **Recommended immediate actions for the SOC today:** Scan internally/externally for **TCP/23 exposure** and **disable/ACL** immediately; add temporary detection for **telnetd crashes/restarts** and unusual inbound connections to port 23.\n\n**5) High-risk edge/infra vulns surfacing (WatchGuard Fireware OOB write; ScreenConnect hijack; OT/ICS RCE)**\n- **What happened:** New disclosures include **WatchGuard Fireware OS OOB write (CVE-2026-3342)**, **ConnectWise ScreenConnect session hijacking flaw**, and **Delta Electronics COMMGR2 critical RCE (CVE-2026-3630)** (OT/ICS).  \n- **Why it matters operationally:** These are **perimeter/admin tooling** classes often targeted for fast enterprise takeover; ScreenConnect/remote admin abuse is a common ransomware precursor.  \n- **Recommended immediate actions for the SOC today:** Inventory whether we run **WatchGuard/ScreenConnect/COMMGR2** (incl. subsidiaries/vendors); if present, **restrict admin interfaces, rotate exposed credentials/keys where applicable, and monitor for new remote sessions/agent installs**.\n\n---\n\n### Monitoring & detection recommendations\n- **Cisco FMC / firewall manager compromise → ransomware staging**: Monitor **firewall/FMC audit logs + EDR on management hosts** for new local users, privilege escalation, service creation (MITRE **T1136, T1068, T1543**), and unusual outbound traffic from management networks.\n- **Ransomware deployment patterns (Interlock/others)**: On **EDR + Windows event logs**, hunt for **PsExec/WMI/WinRM** remote execution and rapid encryption-like file ops (MITRE **T1021, T1047, T1486**); prioritize endpoints contacting the firewall management segment.\n- **SharePoint/Zimbra exploitation**: Use **WAF/reverse proxy + IIS/app logs + EDR on web servers** to detect suspicious POSTs, anomalous user agents, new/modified web files, and spawned shells from web worker processes (MITRE **T1190, T1505.003**).\n- **Mobile-to-IdP abuse (DarkSword / Android payment takeover theme)**: In **IdP (Azure AD/Okta) + email security + CASB**, alert on new device registrations, token refresh from atypical ASNs/geo, OAuth consent grants, and mailbox rule creation (MITRE **T1550, T1098, T1114.003**).\n- **Telnetd RCE scanning/exploitation**: In **network IDS + firewall logs**, watch spikes in **inbound TCP/23** and connections from known scanning ranges; correlate with **process crashes/restarts** on Linux/embedded devices (MITRE **T1046**).\n- **ScreenConnect/remote tooling misuse**: From **RMM/ScreenConnect logs + EDR**, alert on new session creation, extraction/access of machine keys, new persistent agents, and unusual technician account logins (MITRE **T1219**).\n- **Supply chain / repo compromise signals (ForceMemo / extension ecosystem noise)**: In **developer tooling logs (GitHub audit, CI/CD)**, monitor for **force-push events, new deploy keys/tokens, unexpected workflow changes** (MITRE **T1578, T1552.001**).\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** Align vuln mgmt to fast-track **KEV-listed SharePoint/Zimbra**, plus high-risk edge components (Cisco mgmt, WatchGuard, ScreenConnect); ensure **SLA exceptions are documented**.\n- **External exposure control:** Re-validate **Internet-exposed management planes** (firewalls, RMM, email admin, hypervisors) with continuous scanning + strict allowlisting/VPN-only access.\n- **Mobile security posture:** Review MDM baseline for **rapid OS update enforcement**, device attestation, and tighter controls for **high-risk user groups** (execs, traders, admins).\n- **Telnet eradication:** Run a structured program to **remove Telnet**, replace with SSH, and segment any unavoidable legacy dependencies; add compensating controls (ACLs, jump hosts).\n- **Endpoint management hardening:** Incorporate CISA guidance on **endpoint management system hardening** (assume relevance to tools like SCCM/Intune/MDM/RMM): admin tiering, token hygiene, and logging completeness.\n- **Third-party / contractor risk:** Given ongoing “remote IT worker infiltration” reporting, tighten **contractor identity verification**, device controls, and **least-privilege** for remote admin roles.",
+  "highlights": [
+    {
+      "title": "CVE-2026-3630: Critical Buffer Overflow in Delta Electronics COMMGR2 Enables Remote Code Execution",
+      "link": "https://www.praetorian.com/blog/cve-2026-3630/",
+      "source": "https://www.praetorian.com/feed/",
+      "published": "2026-03-19T05:46:46+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Curated",
+        "Exploit / PoC",
+        "Network / OT / ICS",
+        "Vendors / Product Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "New iOS Exploit Uses Advanced iPhone Hacking Tools to Steal Personal Data",
+      "link": "https://gbhackers.com/new-ios-exploit-uses-advanced-iphone-hacking-tools/",
+      "source": "GBHackers News",
+      "published": "2026-03-19T05:30:52+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Data Protection / Privacy",
+        "Exploit / PoC",
+        "Mobile Security",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Elite members of North Korean society fake their way into Western paychecks",
+      "link": "https://www.helpnetsecurity.com/2026/03/19/north-korean-remote-it-workers-corporate-infiltration-scheme/",
+      "source": "Help Net Security",
+      "published": "2026-03-19T05:30:38+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "From virtio-snd 0-Day to Hypervisor Escape: Exploiting QEMU with an Uncontrolled Heap Overflow",
+      "link": "https://www.reddit.com/r/netsec/comments/1rxrq07/from_virtiosnd_0day_to_hypervisor_escape/",
+      "source": "/r/netsec",
+      "published": "2026-03-19T05:19:00+00:00",
+      "smart_groups": [
+        "Curated",
+        "Exploit / PoC",
+        "OSINT / Community"
+      ],
+      "curated": true
+    },
+    {
+      "title": "CVE-2026-3342: Critical Out-of-Bounds Write Vulnerability in WatchGuard Fireware OS",
+      "link": "https://www.praetorian.com/blog/cve-2026-3342-watchguard-fireware-vulnerability/",
+      "source": "https://www.praetorian.com/feed/",
+      "published": "2026-03-19T05:13:23+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Curated",
+        "Vendors / Product Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Cisco Firewall Zero-Day Actively Exploited to Deliver Interlock Ransomware",
+      "link": "https://gbhackers.com/cisco-firewall-zero-day-actively-exploited/",
+      "source": "GBHackers News",
+      "published": "2026-03-19T05:08:05+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Threat Actors / APT",
+        "Exploit / PoC",
+        "Ransomware",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Your APIs are under siege, and attackers are just getting warmed up",
+      "link": "https://www.helpnetsecurity.com/2026/03/19/akamai-api-attack-trends-report/",
+      "source": "Help Net Security",
+      "published": "2026-03-19T05:00:57+00:00",
+      "smart_groups": [
+        "Curated",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Cloud Access Security Broker – ein Kaufratgeber",
+      "link": "https://www.csoonline.com/article/3494345/der-kaufratgeber-fur-cloud-access-security-broker.html",
+      "source": "CSO Online",
+      "published": "2026-03-19T03:39:00+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Identity / Access",
+        "Detection Engineering",
+        "Cloud / SaaS",
+        "Crypto / Web3",
+        "Exploit / PoC",
+        "Malware / Payloads",
+        "Network / OT / ICS",
+        "Phishing / Social Engineering",
+        "Ransomware",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Algorand Foundation cuts 25% of staff, citing macro uncertainty",
+      "link": "https://cointelegraph.com/news/algorand-foundation-staff-layoffs-crypto-market-uncertainty-macro?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound",
+      "source": "Cointelegraph.com News",
+      "published": "2026-03-19T02:24:28+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Crypto / Web3"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Interesting Message Stored in Cowrie Logs, (Wed, Mar 18th)",
+      "link": "https://isc.sans.edu/diary/rss/32810",
+      "source": "SANS Internet Storm Center",
+      "published": "2026-03-19T00:38:49+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Government / CERT"
+      ],
+      "curated": true
+    }
+  ]
+}
