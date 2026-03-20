@@ -1,39 +1,65 @@
 {
-  "generated_at": "2026-03-19T07:13:54.975812+00:00",
-  "analysis_date": "2026-03-19",
+  "generated_at": "2026-03-20T07:12:57.514024+00:00",
+  "analysis_date": "2026-03-20",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-03-19T06:07:39.290324+00:00",
+  "source_generated_at": "2026-03-20T07:05:26.025848+00:00",
   "source_days_back": 30,
-  "source_total_items": 9272,
+  "source_total_items": 9258,
   "total_items_in_window_all": 413,
-  "total_items_in_window_curated": 125,
-  "morning_call_markdown": "### Executive Summary\n- **Active exploitation of a Cisco firewall management zero-day is being used to deliver Interlock ransomware** — treat exposed/Internet-reachable Cisco security management surfaces as **at-risk now**.\n- **Mobile exploit activity is escalating (DarkSword iOS exploit kit + Android OS-level payment takeover technique)** — raise vigilance for **mobile-to-corporate credential theft and session hijack**.\n- **Multiple high-impact vulns with PoCs/KEV movement (SharePoint/Zimbra KEV; critical telnetd RCE PoC; Ubuntu snapd LPE; WatchGuard Fireware OOB write)** — prioritize exposure checks and patch/mitigation validation.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Cisco firewall management 0-day leveraged for Interlock ransomware (reported active since Jan)**\n- **What happened:** Reporting indicates **active exploitation of a Cisco firewall/FMC zero-day (CVE-2026-20131)** to gain root access and deploy **Interlock ransomware**.  \n- **Why it matters operationally:** Direct path from **edge/security tooling compromise → domain foothold → ransomware**, high blast radius in enterprise networks (finance-target attractive).  \n- **Recommended immediate actions for the SOC today:** Confirm **FMC/management interfaces are not Internet-exposed**; hunt for **new admin users/config changes, unexpected remote exec, outbound C2** from firewall managers; escalate any FMC anomalies to IR immediately.\n\n**2) “DarkSword” iOS exploit kit proliferation + iPhone infostealer activity**\n- **What happened:** Multiple sources report **DarkSword iOS exploit chain/exploit kit** used by **state-linked actors/spyware vendors** and in **infostealer campaigns**.  \n- **Why it matters operationally:** Likely enables **credential/session theft** and persistence on high-value users; risk of **MFA token/session hijack**, mailbox compromise, and privileged app access.  \n- **Recommended immediate actions for the SOC today:** Coordinate with MDM team to **enforce latest iOS/iPadOS updates** and verify devices are compliant; increase monitoring for **impossible travel/new device sign-ins and token refresh anomalies** for executives/privileged users.\n\n**3) CISA KEV movement: Microsoft SharePoint + Zimbra vulnerabilities flagged as exploited**\n- **What happened:** CISA added **SharePoint and Zimbra flaws** to the **Known Exploited Vulnerabilities (KEV)** catalog; separate reporting highlights **Zimbra XSS actively exploited**.  \n- **Why it matters operationally:** SharePoint/Zimbra are common in hybrid enterprise stacks; exploitation frequently leads to **webshells, credential theft, and lateral movement**.  \n- **Recommended immediate actions for the SOC today:** Identify any **externally reachable SharePoint/Zimbra** and validate patch levels/mitigations; hunt for **new/modified web-accessible files, suspicious admin logins, and abnormal POST traffic** to these apps.\n\n**4) Critical unpatched GNU telnetd RCE (CVE-2026-32746) with PoC**\n- **What happened:** Community and media report a **critical telnetd buffer overflow** enabling **unauthenticated root RCE**; PoC is circulating (patch status unclear/assume uneven).  \n- **Why it matters operationally:** Telnet may exist on legacy systems, network gear, lab/dev appliances; quick mass scanning/exploitation is likely once PoC spreads.  \n- **Recommended immediate actions for the SOC today:** Scan internally/externally for **TCP/23 exposure** and **disable/ACL** immediately; add temporary detection for **telnetd crashes/restarts** and unusual inbound connections to port 23.\n\n**5) High-risk edge/infra vulns surfacing (WatchGuard Fireware OOB write; ScreenConnect hijack; OT/ICS RCE)**\n- **What happened:** New disclosures include **WatchGuard Fireware OS OOB write (CVE-2026-3342)**, **ConnectWise ScreenConnect session hijacking flaw**, and **Delta Electronics COMMGR2 critical RCE (CVE-2026-3630)** (OT/ICS).  \n- **Why it matters operationally:** These are **perimeter/admin tooling** classes often targeted for fast enterprise takeover; ScreenConnect/remote admin abuse is a common ransomware precursor.  \n- **Recommended immediate actions for the SOC today:** Inventory whether we run **WatchGuard/ScreenConnect/COMMGR2** (incl. subsidiaries/vendors); if present, **restrict admin interfaces, rotate exposed credentials/keys where applicable, and monitor for new remote sessions/agent installs**.\n\n---\n\n### Monitoring & detection recommendations\n- **Cisco FMC / firewall manager compromise → ransomware staging**: Monitor **firewall/FMC audit logs + EDR on management hosts** for new local users, privilege escalation, service creation (MITRE **T1136, T1068, T1543**), and unusual outbound traffic from management networks.\n- **Ransomware deployment patterns (Interlock/others)**: On **EDR + Windows event logs**, hunt for **PsExec/WMI/WinRM** remote execution and rapid encryption-like file ops (MITRE **T1021, T1047, T1486**); prioritize endpoints contacting the firewall management segment.\n- **SharePoint/Zimbra exploitation**: Use **WAF/reverse proxy + IIS/app logs + EDR on web servers** to detect suspicious POSTs, anomalous user agents, new/modified web files, and spawned shells from web worker processes (MITRE **T1190, T1505.003**).\n- **Mobile-to-IdP abuse (DarkSword / Android payment takeover theme)**: In **IdP (Azure AD/Okta) + email security + CASB**, alert on new device registrations, token refresh from atypical ASNs/geo, OAuth consent grants, and mailbox rule creation (MITRE **T1550, T1098, T1114.003**).\n- **Telnetd RCE scanning/exploitation**: In **network IDS + firewall logs**, watch spikes in **inbound TCP/23** and connections from known scanning ranges; correlate with **process crashes/restarts** on Linux/embedded devices (MITRE **T1046**).\n- **ScreenConnect/remote tooling misuse**: From **RMM/ScreenConnect logs + EDR**, alert on new session creation, extraction/access of machine keys, new persistent agents, and unusual technician account logins (MITRE **T1219**).\n- **Supply chain / repo compromise signals (ForceMemo / extension ecosystem noise)**: In **developer tooling logs (GitHub audit, CI/CD)**, monitor for **force-push events, new deploy keys/tokens, unexpected workflow changes** (MITRE **T1578, T1552.001**).\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** Align vuln mgmt to fast-track **KEV-listed SharePoint/Zimbra**, plus high-risk edge components (Cisco mgmt, WatchGuard, ScreenConnect); ensure **SLA exceptions are documented**.\n- **External exposure control:** Re-validate **Internet-exposed management planes** (firewalls, RMM, email admin, hypervisors) with continuous scanning + strict allowlisting/VPN-only access.\n- **Mobile security posture:** Review MDM baseline for **rapid OS update enforcement**, device attestation, and tighter controls for **high-risk user groups** (execs, traders, admins).\n- **Telnet eradication:** Run a structured program to **remove Telnet**, replace with SSH, and segment any unavoidable legacy dependencies; add compensating controls (ACLs, jump hosts).\n- **Endpoint management hardening:** Incorporate CISA guidance on **endpoint management system hardening** (assume relevance to tools like SCCM/Intune/MDM/RMM): admin tiering, token hygiene, and logging completeness.\n- **Third-party / contractor risk:** Given ongoing “remote IT worker infiltration” reporting, tighten **contractor identity verification**, device controls, and **least-privilege** for remote admin roles.",
+  "total_items_in_window_curated": 146,
+  "morning_call_markdown": "### Executive Summary\n- Multiple **known-exploited edge/platform flaws** are in focus (CISA KEV updates incl. **SharePoint + Zimbra**, plus reports of **Cisco FMC/SCC firewall management** exploitation tied to ransomware activity).\n- **Ransomware tradecraft escalation**: widespread **BYOVD “EDR killers”** and reports of ransomware leveraging **signed vulnerable drivers** to disable security controls.\n- **Mobile + cloud data risk**: ongoing **iOS exploit kit activity** impacting older iPhones; and a reported **GCP BigQuery cross-tenant exfil path** via an assistant feature (validate exposure/controls).\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Internet-facing management plane exploitation (CISA KEV focus: SharePoint, Zimbra; plus Cisco FMC/SCC firewall management)**\n- **What happened:** CISA KEV was updated to include **SharePoint and Zimbra** bugs; CISA also added **Cisco FMC/SCC firewall management** flaws, and reporting links Cisco firewall/FMC exploitation to ransomware pre-disclosure activity.\n- **Why it matters operationally:** These are common **externally reachable admin surfaces**; compromise typically yields **initial access + lateral movement** into Windows/AD and high-value apps (email, collaboration, edge security).\n- **Recommended immediate actions for the SOC today:** Confirm external exposure + patch status; prioritize blocking/virtual patching (WAF/IPS) and review last 7–14 days for suspicious auth, webshell, and admin actions on these platforms.\n\n**2) Ransomware operators using BYOVD “EDR killers” (signed vulnerable drivers)**\n- **What happened:** Reporting highlights **dozens of EDR killer tools** abusing **BYOVD** with many **signed vulnerable drivers** to disable endpoint protections.\n- **Why it matters operationally:** Successful BYOVD often precedes **ransomware detonation** by turning off telemetry/controls; detection windows are short and can look like “legit driver installs.”\n- **Recommended immediate actions for the SOC today:** Hunt for **new/unsigned or suspicious driver loads** and service installs on endpoints/servers; ensure driver-blocking policies (e.g., Microsoft vulnerable driver blocklist/WDAC) are enforced where feasible.\n\n**3) Critical Jenkins vulnerabilities (CI/CD RCE risk)**\n- **What happened:** New reporting flags **critical Jenkins vulnerabilities** with RCE potential (details vary by plugin/core—assume common CI/CD exposure until validated).\n- **Why it matters operationally:** CI/CD compromise enables **source/code theft, pipeline tampering, credential harvesting**, and downstream **supply-chain impact** across internal apps and cloud.\n- **Recommended immediate actions for the SOC today:** Identify Jenkins internet exposure and admin access paths; monitor for new admin users/credential changes, unusual job creation, and outbound connections from Jenkins nodes.\n\n**4) Active iOS exploit-kit activity impacting older iPhones (DarkSword/Coruna)**\n- **What happened:** Multiple sources report **in-the-wild iOS exploit kit** activity targeting **older iPhone models / older iOS versions**.\n- **Why it matters operationally:** Elevated risk for **executive/VIP compromise**, session theft, and MFA fatigue/OTP interception via device takeover—material for financial-sector fraud and intrusion.\n- **Recommended immediate actions for the SOC today:** Validate MDM compliance (minimum iOS version, jailbreak signals, device risk); tighten conditional access for mobile logins and investigate anomalous sign-ins tied to mobile devices.\n\n**5) Cloud data exposure: GCP BigQuery cross-tenant exfil path via assistant feature (as reported)**\n- **What happened:** Research describes potential **cross-tenant data source exfiltration** in **GCP BigQuery** via a “Canvas Assistant” workflow (treat as high risk pending confirmation in our environment).\n- **Why it matters operationally:** If applicable, this is a **data boundary failure** impacting regulated data; exploitation may appear as normal BigQuery queries/exports.\n- **Recommended immediate actions for the SOC today:** Confirm whether the feature/workflow is enabled; review BigQuery audit logs for unusual cross-project access, mass query/export activity, and newly granted dataset permissions.\n\n---\n\n### Monitoring & detection recommendations\n- **Edge/app platforms (SharePoint/Zimbra/Cisco FMC/SCC):** WAF/reverse-proxy + IIS/SharePoint ULS + Zimbra logs + firewall mgmt audit logs; hunt for **new admin sessions, anomalous POSTs, webshell-like file writes** (ATT&CK: T1190).\n- **BYOVD / EDR tampering:** EDR + Windows Event Logs (System, Security) + Sysmon (DriverLoad/Event ID 6/7 where available); alert on **new kernel driver loads**, **sc.exe create**, suspicious **PnPUtil** usage (ATT&CK: T1562.001, T1068).\n- **Jenkins/CI anomalies:** Jenkins audit logs + SCM logs + vault/secret manager logs; detect **new credentials, new nodes/agents, job config changes**, and unexpected egress from build agents (ATT&CK: T1552, T1578).\n- **Ransomware pre-encryption behaviors:** EDR + file server logs; watch for **mass file rename/write**, **vssadmin/wbadmin/bcdedit** usage, and abnormal **SMB lateral movement spikes** (ATT&CK: T1486, T1021.002).\n- **Mobile-driven account compromise:** IdP/SSO logs + MDM + CASB; monitor **impossible travel**, **new device registration**, token refresh anomalies, and mobile device posture failures (ATT&CK: T1078, T1550).\n- **GCP BigQuery exfil indicators:** GCP Cloud Audit Logs (BigQuery Admin + Data Access); look for **large result exports**, new **authorized views**, and unusual **dataset permission grants** (ATT&CK: T1530).\n- **Phishing + banking trojan themes (Horabot resurfacing):** Email gateway + endpoint telemetry; detect **ISO/LNK/script attachments**, unusual **outbound SMTP from endpoints**, and Office child-process spawning (ATT&CK: T1566.001, T1059).\n\n---\n\n### Medium-term follow-ups\n- **Patch/hardening program:** Align vulnerability mgmt to **CISA KEV** for SharePoint/Zimbra/Cisco mgmt; verify compensating controls where immediate patching isn’t possible.\n- **Driver control posture:** Expand **WDAC / vulnerable driver blocklist** coverage; validate EDR self-protection settings and alerting on tamper events.\n- **CI/CD security review:** Reduce Jenkins exposure (VPN-only/admin jump), rotate secrets, enforce least privilege for build agents, and implement signed pipeline changes.\n- **Mobile security baseline:** Increase minimum supported iOS versions; enforce stronger conditional access for high-risk roles and require rapid device patch SLAs.\n- **Cloud data governance:** Review BigQuery dataset sharing policies, assistant/AI feature enablement, and implement anomaly detection for bulk exports and permission changes.\n- **Endpoint management system hardening:** In light of broader advisories to harden endpoint management tooling, validate MFA, RBAC, audit logging, and restrict admin consoles to privileged access workstations/jump hosts.",
   "highlights": [
     {
-      "title": "CVE-2026-3630: Critical Buffer Overflow in Delta Electronics COMMGR2 Enables Remote Code Execution",
-      "link": "https://www.praetorian.com/blog/cve-2026-3630/",
-      "source": "https://www.praetorian.com/feed/",
-      "published": "2026-03-19T05:46:46+00:00",
+      "title": "Field workers don’t need more access, they need better security",
+      "link": "https://www.helpnetsecurity.com/2026/03/20/chris-thompson-west-shore-home-field-worker-cybersecurity/",
+      "source": "Help Net Security",
+      "published": "2026-03-20T06:30:08+00:00",
       "smart_groups": [
-        "Vulnerabilities / CVEs",
         "Curated",
-        "Exploit / PoC",
-        "Network / OT / ICS",
-        "Vendors / Product Security"
+        "Vulnerabilities / CVEs",
+        "Mobile Security",
+        "General Security"
       ],
       "curated": true
     },
     {
-      "title": "New iOS Exploit Uses Advanced iPhone Hacking Tools to Steal Personal Data",
-      "link": "https://gbhackers.com/new-ios-exploit-uses-advanced-iphone-hacking-tools/",
-      "source": "GBHackers News",
-      "published": "2026-03-19T05:30:52+00:00",
+      "title": "DoJ Disrupts 3 Million-Device IoT Botnets Behind Record 31.4 Tbps Global DDoS Attacks",
+      "link": "https://thehackernews.com/2026/03/doj-disrupts-3-million-device-iot.html",
+      "source": "The Hacker News",
+      "published": "2026-03-20T06:25:00+00:00",
       "smart_groups": [
         "Curated",
+        "Malware / Payloads",
         "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "New Critical Jenkins Vulnerabilities Put CI/CD Servers at Risk of RCE Exploits",
+      "link": "https://gbhackers.com/new-critical-jenkins-vulnerabilities/",
+      "source": "GBHackers News",
+      "published": "2026-03-20T06:24:04+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Curated",
+        "Cloud / SaaS",
+        "Exploit / PoC",
+        "Ransomware",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Apple Warns Older iPhones Vulnerable to Coruna, DarkSword Exploit Kit Attacks",
+      "link": "https://thehackernews.com/2026/03/apple-warns-older-iphones-vulnerable-to.html",
+      "source": "The Hacker News",
+      "published": "2026-03-20T05:16:00+00:00",
+      "smart_groups": [
         "Data Protection / Privacy",
+        "Curated",
         "Exploit / PoC",
         "Mobile Security",
         "General Security"
@@ -41,10 +67,25 @@
       "curated": true
     },
     {
-      "title": "Elite members of North Korean society fake their way into Western paychecks",
-      "link": "https://www.helpnetsecurity.com/2026/03/19/north-korean-remote-it-workers-corporate-infiltration-scheme/",
+      "title": "Russian APT Exploits Zimbra XSS to Target Ukrainian Government in ‘Operation GhostMail’",
+      "link": "https://cybersecuritynews.com/russian-apt-exploits-zimbra-xss/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-03-20T05:13:12+00:00",
+      "smart_groups": [
+        "Threat Actors / APT",
+        "Web / API Security",
+        "Curated",
+        "Exploit / PoC",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Llamafile, Mozilla’s portable LLM runner, gets GPU support and a rebuilt core",
+      "link": "https://www.helpnetsecurity.com/2026/03/20/llamafile-0-10-0-released/",
       "source": "Help Net Security",
-      "published": "2026-03-19T05:30:38+00:00",
+      "published": "2026-03-20T05:00:53+00:00",
       "smart_groups": [
         "Curated",
         "Vulnerabilities / CVEs",
@@ -53,99 +94,56 @@
       "curated": true
     },
     {
-      "title": "From virtio-snd 0-Day to Hypervisor Escape: Exploiting QEMU with an Uncontrolled Heap Overflow",
-      "link": "https://www.reddit.com/r/netsec/comments/1rxrq07/from_virtiosnd_0day_to_hypervisor_escape/",
-      "source": "/r/netsec",
-      "published": "2026-03-19T05:19:00+00:00",
+      "title": "Authorities Dismantle IoT Botnet Linked to Record-Shattering 30 Tbps DDoS Campaigns",
+      "link": "https://gbhackers.com/authorities-dismantle-iot-botnet/",
+      "source": "GBHackers News",
+      "published": "2026-03-20T04:52:59+00:00",
       "smart_groups": [
         "Curated",
-        "Exploit / PoC",
+        "Malware / Payloads",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Die besten IAM-Tools",
+      "link": "https://www.csoonline.com/article/3495114/identity-access-managementdie-9-besten-iam-tools.html",
+      "source": "CSO Online",
+      "published": "2026-03-20T04:00:00+00:00",
+      "smart_groups": [
+        "Identity / Access",
+        "Cloud / SaaS",
+        "Windows / Microsoft",
+        "Linux / Unix",
+        "Crypto / Web3",
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "How are yall staying informed on AI stuff",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1rylh1f/how_are_yall_staying_informed_on_ai_stuff/",
+      "source": "/r/cybersecurity",
+      "published": "2026-03-20T03:27:31+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
         "OSINT / Community"
       ],
       "curated": true
     },
     {
-      "title": "CVE-2026-3342: Critical Out-of-Bounds Write Vulnerability in WatchGuard Fireware OS",
-      "link": "https://www.praetorian.com/blog/cve-2026-3342-watchguard-fireware-vulnerability/",
-      "source": "https://www.praetorian.com/feed/",
-      "published": "2026-03-19T05:13:23+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Curated",
-        "Vendors / Product Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Cisco Firewall Zero-Day Actively Exploited to Deliver Interlock Ransomware",
-      "link": "https://gbhackers.com/cisco-firewall-zero-day-actively-exploited/",
-      "source": "GBHackers News",
-      "published": "2026-03-19T05:08:05+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "Threat Actors / APT",
-        "Exploit / PoC",
-        "Ransomware",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Your APIs are under siege, and attackers are just getting warmed up",
-      "link": "https://www.helpnetsecurity.com/2026/03/19/akamai-api-attack-trends-report/",
-      "source": "Help Net Security",
-      "published": "2026-03-19T05:00:57+00:00",
+      "title": "Foster City, California, ransomware incident halts most city services",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1ryklm8/foster_city_california_ransomware_incident_halts/",
+      "source": "/r/cybersecurity",
+      "published": "2026-03-20T02:46:45+00:00",
       "smart_groups": [
         "Curated",
         "Ransomware",
-        "Vulnerabilities / CVEs",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Cloud Access Security Broker – ein Kaufratgeber",
-      "link": "https://www.csoonline.com/article/3494345/der-kaufratgeber-fur-cloud-access-security-broker.html",
-      "source": "CSO Online",
-      "published": "2026-03-19T03:39:00+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "Identity / Access",
-        "Detection Engineering",
-        "Cloud / SaaS",
-        "Crypto / Web3",
-        "Exploit / PoC",
-        "Malware / Payloads",
-        "Network / OT / ICS",
-        "Phishing / Social Engineering",
-        "Ransomware",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Algorand Foundation cuts 25% of staff, citing macro uncertainty",
-      "link": "https://cointelegraph.com/news/algorand-foundation-staff-layoffs-crypto-market-uncertainty-macro?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound",
-      "source": "Cointelegraph.com News",
-      "published": "2026-03-19T02:24:28+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "Crypto / Web3"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Interesting Message Stored in Cowrie Logs, (Wed, Mar 18th)",
-      "link": "https://isc.sans.edu/diary/rss/32810",
-      "source": "SANS Internet Storm Center",
-      "published": "2026-03-19T00:38:49+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "Government / CERT"
+        "OSINT / Community"
       ],
       "curated": true
     }
