@@ -1,114 +1,128 @@
 {
-  "generated_at": "2026-03-24T07:19:35.772025+00:00",
-  "analysis_date": "2026-03-24",
+  "generated_at": "2026-03-25T07:18:32.147755+00:00",
+  "analysis_date": "2026-03-25",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-03-24T06:10:38.952001+00:00",
+  "source_generated_at": "2026-03-25T06:09:39.486945+00:00",
   "source_days_back": 30,
-  "source_total_items": 8954,
-  "total_items_in_window_all": 416,
-  "total_items_in_window_curated": 117,
-  "morning_call_markdown": "### Executive Summary\n- Active/exploitable edge and IAM risks: critical Citrix NetScaler ADC/Gateway issues plus an emergency Oracle Identity Manager pre-auth RCE require immediate exposure checks and patch/mitigation action.  \n- Supply-chain compromises are expanding in cloud-native tooling (Trivy ecosystem + compromised GitHub Action), increasing risk of CI/CD secret theft and poisoned container images.  \n- Mobile/browser credential-theft risk is rising: a leaked iOS exploit chain lowers attacker effort; Chrome update/Chrome bypass + “VoidStealer” reporting reinforces “patch + monitor for cookie/token theft” today.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Critical edge access/VPN-style exposure: Citrix NetScaler ADC & Gateway vulnerabilities**\n- **What happened:** Multiple reports flag critical NetScaler ADC/Gateway flaws enabling remote attacks (details/patch guidance may vary by deployment).  \n- **Why it matters operationally:** NetScaler is common in financial remote access; compromise can yield initial access and rapid lateral movement (often followed by ransomware).  \n- **Recommended immediate actions for the SOC today:** Identify all internet-facing NetScaler instances + versions; validate patch/mitigation status and review last 7 days of auth/config changes and suspicious sessions.\n\n**2) Identity platform pre-auth RCE: Oracle Identity Manager (CVE-2026-21992)**\n- **What happened:** Oracle issued an emergency fix for a pre-auth remote code execution in Identity Manager (CVE-2026-21992).  \n- **Why it matters operationally:** IAM compromise is a “keys to the kingdom” scenario (privilege escalation, persistence, token forgery, broad account takeover).  \n- **Recommended immediate actions for the SOC today:** Confirm whether OIM is deployed (prod/dev/DR); if present, prioritize patching and hunt for unusual web requests/process execution on OIM hosts and new admin/service accounts.\n\n**3) Software supply-chain: Trivy compromise + spread to Docker/GitHub repos; Aqua repos defaced**\n- **What happened:** Ongoing Trivy supply-chain incident updates indicate propagation via compromised artifacts/images and repository impacts; reporting emphasizes CI/CD secret targeting.  \n- **Why it matters operationally:** Our build pipelines may ingest poisoned scanners/images, leading to credential theft (cloud keys, repo tokens) and downstream trojanized builds.  \n- **Recommended immediate actions for the SOC today:** Temporarily block/allowlist Trivy-related image pulls/actions to known-good digests; rotate CI/CD secrets/tokens that touched affected pipelines and audit recent workflow changes.\n\n**4) CI/CD GitHub Action compromise: KICS GitHub Action reportedly compromised**\n- **What happened:** Reporting indicates a compromised “KICS GitHub Action” in another supply-chain event (TeamPCP referenced).  \n- **Why it matters operationally:** A compromised Action can exfiltrate GitHub secrets and cloud credentials during builds, enabling rapid environment takeover.  \n- **Recommended immediate actions for the SOC today:** Inventory GitHub Actions usage for KICS (and similar security-scanning actions); pin to immutable SHAs/digests and review recent workflow commits + outbound network from runners.\n\n**5) Mobile & browser exploitation/credential theft: leaked iOS exploit chain + Chrome update/bypass and “VoidStealer”**\n- **What happened:** An iOS exploit chain (“DarkSword”) reportedly leaked; Chrome shipped fixes for multiple vulns, while reporting highlights a Chrome protection bypass and cookie/password-stealing malware.  \n- **Why it matters operationally:** Stolen cookies/tokens enable MFA-resistant session hijack against email, SaaS, and trading/ops portals; mobile exploitation can target executives and privileged users.  \n- **Recommended immediate actions for the SOC today:** Push/pull compliance for iOS and Chrome updates; monitor for abnormal session activity (new device/browser fingerprints, impossible travel, token replay) and tighten conditional access where feasible.\n\n---\n\n### Monitoring & detection recommendations\n- **NetScaler/Gateway edge hunting:** WAF/reverse-proxy + NetScaler logs for suspicious requests to management/auth endpoints, new/odd sessions, config exports, and unexpected restarts (MITRE: **T1190** Exploit Public-Facing Application).  \n- **Oracle Identity Manager:** Web server logs + host EDR on OIM nodes for unusual child processes spawned by the app server, new binaries in app dirs, and unexpected outbound connections (MITRE: **T1059**, **T1105**).  \n- **CI/CD supply-chain & secret theft:** GitHub audit logs (workflow file edits, new runners, secret access) + build runner EDR + egress proxy for unusual outbound to paste/file-sharing or new domains (MITRE: **T1552** Unsecured Credentials, **T1566** if phishing used to seed access).  \n- **Container/image integrity:** Registry logs (pulls of Trivy/related images), Kubernetes audit logs for new daemonsets/jobs from CI namespaces, and runtime alerts for image hash drift (MITRE: **T1610** Deploy Container).  \n- **Cookie/token theft detection:** IdP/SSO logs (Azure AD/Entra/Okta/etc.) for anomalous refresh token usage, new device sign-ins, atypical user agents, and suspicious OAuth app consents (MITRE: **T1539** Steal Web Session Cookie).  \n- **Malvertising/SEO-poisoning → RAT delivery (AsyncRAT themes):** Secure web gateway/DNS + EDR for downloads from lookalike software sites, new scheduled tasks/run keys, and outbound C2 beacons from user subnets (MITRE: **T1204**, **T1053**, **T1071**).  \n- **Ransomware speed/“22 seconds handoff” theme (Mandiant):** Prioritize detections for rapid privilege escalation and lateral movement: LSASS access attempts, remote service creation, PsExec/SMB exec, sudden GPO changes (MITRE: **T1068**, **T1021**, **T1484**).\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** Validate SLAs for edge/IAM/browser updates (NetScaler/OIM/Chrome/iOS); align “patch fast” guidance with change-control for internet-facing systems.  \n- **Supply-chain hardening:** Enforce pinned SHAs for GitHub Actions, verified publisher policies, artifact signing/attestation (SLSA-style), and egress controls for build runners.  \n- **CI/CD secret hygiene:** Reduce long-lived tokens, adopt workload identity/OIDC where possible, and implement automated secret rotation after pipeline changes or third-party action updates.  \n- **Mobile security posture:** Reconfirm MDM coverage for privileged roles, enforce rapid iOS update windows, and review high-risk app install policies (sideloading, “fake update” lures).  \n- **Kubernetes resilience:** Review cluster controls against wiper-style workloads (admission policies, least-privileged service accounts, backup/restore runbooks, immutable infrastructure).  \n- **Awareness & fraud alignment:** Brief IAM/SOC + fraud teams on session hijack patterns (cookie theft) and tighten conditional access prompts for high-value financial workflows.",
+  "source_total_items": 9335,
+  "total_items_in_window_all": 433,
+  "total_items_in_window_curated": 122,
+  "morning_call_markdown": "### Executive Summary\n- **Active supply-chain activity tied to TeamPCP**: compromise chain impacts CI/CD and widely used OSS packages (notably **LiteLLM on PyPI**) with credential/K8s secret theft and persistence risk.  \n- **Critical edge-device patch pressure**: **Citrix NetScaler ADC/Gateway critical flaw (CVE-2026-3055)** flagged as likely to be exploited soon; **PTC Windchill/FlexPLM RCE** also warned as “imminent threat.”  \n- **Identity + cloud attack volume remains high**: **Tycoon2FA** phishing kit revival and other tax-season lures; assume MFA-bypass attempts against cloud/IdP users will continue.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) TeamPCP supply-chain campaign (CI/CD → OSS packages, incl. LiteLLM)**\n- **What happened:** Reporting indicates TeamPCP leveraged CI/CD compromise to backdoor software artifacts and **trojanized LiteLLM PyPI versions 1.82.7–1.82.8**; broader supply-chain activity discussed across sources.  \n- **Why it matters operationally:** Direct path to **cloud credential / SSH key / Kubernetes secret theft** and persistent access in developer and build environments (high blast radius into prod).  \n- **Recommended immediate actions for the SOC today:** **Block/contain** any use of affected LiteLLM versions; **query EDR + CI logs** for new package installs/builds pulling those versions and isolate hosts/runners where found.\n\n**2) Trivy scanner supply-chain compromise (cloud/K8s environments potentially impacted)**\n- **What happened:** Multiple reports claim **Aqua Security Trivy** was compromised and used as a pivot in the wider supply-chain chain; one report alleges **1K+ cloud environments infected** (scope/claims vary—treat as unverified until vendor confirmation).  \n- **Why it matters operationally:** Trivy commonly runs in **CI pipelines and K8s clusters** with broad access; a poisoned scanner can exfiltrate secrets and alter build outputs without obvious endpoint malware.  \n- **Recommended immediate actions for the SOC today:** **Identify where Trivy runs** (CI runners, build agents, K8s jobs) and freeze updates to known-good versions until vetted; **review CI/CD secret access** and rotate high-risk tokens if exposure is suspected.\n\n**3) Citrix NetScaler ADC/Gateway critical vulnerability (CVE-2026-3055)**\n- **What happened:** Citrix issued patches and multiple outlets warn **exploitation is imminent** for a critical NetScaler ADC/Gateway flaw (CVE-2026-3055).  \n- **Why it matters operationally:** NetScaler is often **internet-facing** in financial services; exploitation can lead to **credential theft, session compromise, or device takeover** and can be a precursor to ransomware.  \n- **Recommended immediate actions for the SOC today:** **Confirm patch status + exposure** (internet-facing VIPs, management interfaces); **increase alerting** on NetScaler auth anomalies/config changes and place temporary WAF/ACL mitigations if patching lags.\n\n**4) PTC Windchill / FlexPLM critical RCE (vendor warns “imminent threat”)**\n- **What happened:** PTC warning of an **imminent threat** from a critical RCE affecting **Windchill and FlexPLM**.  \n- **Why it matters operationally:** If present internally or vendor-hosted for business partners, this is a **high-impact foothold** into sensitive engineering/docs and a lateral-movement staging point.  \n- **Recommended immediate actions for the SOC today:** **Asset inventory check** for any Windchill/FlexPLM instances (including third-party managed); **monitor inbound exploitation patterns** to those hosts and fast-track patch/mitigation.\n\n**5) MFA-bypass phishing resurgence (Tycoon2FA + tax-season lures)**\n- **What happened:** Tycoon2FA infrastructure is back post-disruption; multiple campaigns leverage **seasonal/tax themes** and cloud login capture.  \n- **Why it matters operationally:** In financial orgs, MFA-bypass kits often lead to **email takeover → payment fraud/BEC → lateral movement**; higher likelihood of targeting exec/admin users.  \n- **Recommended immediate actions for the SOC today:** **Tighten conditional access** (device compliance, phishing-resistant MFA where possible) for high-risk groups; **hunt for suspicious IdP sign-ins** (new device, impossible travel, token replay patterns).\n\n---\n\n### Monitoring & detection recommendations\n- **CI/CD & build systems (TeamPCP/Trivy theme):** Monitor GitHub Actions/CI logs for **new workflow changes, runner registration, secret access spikes**; ATT&CK **T1552 (Unsecured Credentials)**, **T1195 (Supply Chain Compromise)**.  \n- **Developer endpoints:** EDR hunt for **new Python package installs** (pip) of LiteLLM in the affected version range and unusual outbound connections from dev tools; focus on machines running IDEs/build tooling.  \n- **Kubernetes/cloud control plane:** Audit for **new service accounts, secret reads, unexpected CronJobs/Jobs**, and anomalous API calls; ATT&CK **T1613 (Container Admin Command)** / **T1525 (Implant Internal Image)** (as applicable).  \n- **NetScaler edge monitoring (CVE-2026-3055):** Use ADC/Gateway logs + perimeter IDS/WAF for **abnormal requests, auth failures/successes bursts, config export/download events**, and unexpected admin logins.  \n- **PTC app servers:** Web/app logs for **unusual POSTs to admin endpoints, new webshell-like file writes, JVM/process spawns**; correlate with EDR process tree anomalies.  \n- **IdP/SSO (Tycoon2FA):** Alert on **high-risk sign-ins**, new MFA method registration, token issuance anomalies, and access to mail rules/forwarding shortly after sign-in; ATT&CK **T1566 (Phishing)**, **T1556 (Modify Authentication Process)**.  \n- **Email security:** Spike detection for **tax/finance-themed lures**, Google Forms-based delivery chains, and URLs leading to credential capture; auto-quarantine for newly observed sender domains targeting finance teams.\n\n---\n\n### Medium-term follow-ups\n- **Supply-chain hardening:** Enforce **dependency pinning, signed artifacts, SBOM review**, and restrict CI runners’ egress + secrets scope (least privilege).  \n- **Secret hygiene:** Validate **token/SSH key rotation playbooks** for CI/CD and K8s; ensure short-lived creds and workload identity where possible.  \n- **Edge asset governance:** Re-validate inventory and exposure for **NetScaler and other internet-facing appliances**, including management plane isolation and configuration backup monitoring.  \n- **Phishing-resistant MFA roadmap:** Expand **FIDO2/WebAuthn** (or equivalent) for admins/executives; reduce reliance on push/OTP in high-risk roles.  \n- **Tabletop for “dev-to-prod compromise”:** Run an IR exercise covering **poisoned package → credential theft → cloud lateral movement**, including decision points for pipeline shutdown.  \n- **Vendor follow-up:** Track Aqua/Trivy and PTC advisories for **confirmed scope, remediation steps, and indicators**; update internal detection content when vendors publish authoritative details.",
   "highlights": [
     {
-      "title": "DarkSword iOS exploit chain leaked on GitHub which lowers barrier for real-world attacks",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1s25ogp/darksword_ios_exploit_chain_leaked_on_github/",
+      "title": "TeamPCP supply chain attack on multiple companies via CI/CD compromise and more",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1s326t9/teampcp_supply_chain_attack_on_multiple_companies/",
       "source": "/r/cybersecurity",
-      "published": "2026-03-24T06:00:59+00:00",
+      "published": "2026-03-25T05:37:46+00:00",
       "smart_groups": [
+        "Malware / Payloads",
         "Curated",
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "Mobile Security",
+        "Supply Chain / Software",
+        "Network / OT / ICS",
         "OSINT / Community"
       ],
       "curated": true
     },
     {
-      "title": "Attackers are handing off access in 22 seconds, Mandiant finds",
-      "link": "https://www.helpnetsecurity.com/2026/03/24/mandiant-m-trends-2026-report/",
+      "title": "Your security stack looks fine from the dashboard and that’s the problem",
+      "link": "https://www.helpnetsecurity.com/2026/03/25/ciso-enterprise-endpoint-security-gaps/",
       "source": "Help Net Security",
-      "published": "2026-03-24T06:00:57+00:00",
+      "published": "2026-03-25T05:00:50+00:00",
+      "smart_groups": [
+        "Cloud / SaaS",
+        "Crypto / Web3",
+        "Curated",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Aqua Security’s Trivy Scanner Hit by Supply Chain Attack, Threatening Software Integrity",
+      "link": "https://gbhackers.com/aqua-securitys-trivy-scanner-hit-by-supply-chain-attack/",
+      "source": "GBHackers News",
+      "published": "2026-03-25T04:38:08+00:00",
       "smart_groups": [
         "Curated",
-        "Cloud / SaaS",
-        "Exploit / PoC",
+        "Vulnerabilities / CVEs",
+        "Threat Actors / APT",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Empathie trifft IT-Sicherheit: Der Weg zu gelebter Compliance",
+      "link": "https://www.csoonline.com/article/4025731/empathie-trifft-it-sicherheit-der-weg-zu-gelebter-compliance.html",
+      "source": "CSO Online",
+      "published": "2026-03-25T04:00:00+00:00",
+      "smart_groups": [
+        "Curated",
+        "Network / OT / ICS",
         "Phishing / Social Engineering",
         "Ransomware",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Last Week in Security (LWiS) - 2026-03-24",
+      "link": "https://blog.badsectorlabs.com/last-week-in-security-lwis-2026-03-24.html",
+      "source": "https://blog.badsectorlabs.com/feeds/all.atom.xml",
+      "published": "2026-03-25T03:59:00+00:00",
+      "smart_groups": [
+        "Curated",
         "Vulnerabilities / CVEs",
         "General Security"
       ],
       "curated": true
     },
     {
-      "title": "Critical NetScaler ADC and Gateway Flaws Expose Systems to Remote Attacks",
-      "link": "https://gbhackers.com/critical-netscaler-adc-and-gateway-flaws/",
-      "source": "GBHackers News",
-      "published": "2026-03-24T05:13:47+00:00",
+      "title": "Aqua Security’s Trivy Scanner Compromised in Supply Chain Attack",
+      "link": "https://cybersecuritynews.com/trivy-scanner-compromised/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-03-25T03:47:50+00:00",
       "smart_groups": [
+        "Curated",
         "Vulnerabilities / CVEs",
-        "Curated",
-        "Data Protection / Privacy",
-        "Cloud / SaaS",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Chrome Security Update Fixes 8 Vulnerabilities That Could Enable Remote Code Execution",
-      "link": "https://gbhackers.com/chrome-security-update-fixes-8-vulnerabilities/",
-      "source": "GBHackers News",
-      "published": "2026-03-24T04:52:29+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Curated",
-        "Linux / Unix",
-        "Windows / Microsoft",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "India’s Evolving Cyber Threat Landscape: State-Sponsored Attacks, Hacktivism, and What’s Next in 2026",
-      "link": "https://cyble.com/blog/india-cyber-threat-landscape-2026-attacks-trends/",
-      "source": "Cyble",
-      "published": "2026-03-24T04:50:51+00:00",
-      "smart_groups": [
-        "Curated",
-        "Data Breaches / Leaks",
-        "Network / OT / ICS",
+        "Supply Chain / Software",
         "Threat Actors / APT",
-        "Vulnerabilities / CVEs",
-        "Data Protection / Privacy",
-        "Crypto / Web3",
-        "Exploit / PoC",
-        "Identity / Access",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Iran-linked ransomware group Pay2Key targets US healthcare systems again",
+      "link": "https://www.news4hackers.com/iran-linked-ransomware-group-pay2key-targets-us-healthcare-systems-again/",
+      "source": "News4Hackers",
+      "published": "2026-03-25T03:03:28+00:00",
+      "smart_groups": [
+        "Curated",
         "Ransomware",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Which Came First: The System Prompt, or the RCE?",
+      "link": "https://www.praetorian.com/blog/which-came-first-system-prompt-or-rce/",
+      "source": "https://www.praetorian.com/feed/",
+      "published": "2026-03-25T02:30:53+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
         "Vendors / Product Security"
       ],
       "curated": true
     },
     {
-      "title": "Balancer Labs Winds Down Months After $128M DeFi Exploit",
-      "link": "https://decrypt.co/362141/balancer-labs-winds-down-128m-defi-exploit",
-      "source": "Decrypt",
-      "published": "2026-03-24T04:36:39+00:00",
+      "title": "Hardware-Enforced Security Solutions for Artificial Intelligence Agents",
+      "link": "https://www.news4hackers.com/hardware-enforced-security-solutions-for-artificial-intelligence-agents/",
+      "source": "News4Hackers",
+      "published": "2026-03-25T01:03:02+00:00",
       "smart_groups": [
-        "Crypto / Web3",
-        "Curated",
-        "Exploit / PoC"
-      ],
-      "curated": true
-    },
-    {
-      "title": "ISO und ISMS: Darum gehen Security-Zertifizierungen schief",
-      "link": "https://www.csoonline.com/article/3495826/iso-und-isms-darum-gehen-security-zertifizierungen-schief.html",
-      "source": "CSO Online",
-      "published": "2026-03-24T03:34:00+00:00",
-      "smart_groups": [
-        "Identity / Access",
-        "Crypto / Web3",
         "Curated",
         "Vulnerabilities / CVEs",
         "General Security"
@@ -116,41 +130,13 @@
       "curated": true
     },
     {
-      "title": "Balancer Labs shuts down 4 months after $100M+ exploit, protocol to continue",
-      "link": "https://cointelegraph.com/news/balancer-labs-shuts-down-protocol-continues?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound",
-      "source": "Cointelegraph.com News",
-      "published": "2026-03-24T03:00:23+00:00",
+      "title": "X-PHY's Camellia Chan on hardware-enforced security for the age of AI agents",
+      "link": "https://www.scworld.com/resource/x-phys-camellia-chan-on-hardware-enforced-security-for-the-age-of-ai-agents",
+      "source": "SCM feed for Latest",
+      "published": "2026-03-25T00:12:03+00:00",
       "smart_groups": [
         "Curated",
-        "Exploit / PoC",
-        "Ransomware",
-        "Crypto / Web3"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Hacker walks away with $24.5 million after breaching Resolv DeFi platform",
-      "link": "https://therecord.media/hacker-breaches-resolv-defi-25-million",
-      "source": "The Record – Cybercrime",
-      "published": "2026-03-24T00:27:00+00:00",
-      "smart_groups": [
-        "Crypto / Web3",
-        "Curated",
-        "Exploit / PoC",
-        "Data Breaches / Leaks"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Palo Alto updates security platform to discover AI agents",
-      "link": "https://www.csoonline.com/article/4148974/palo-alto-updates-security-platform-to-discover-ai-agents.html",
-      "source": "CSO Online",
-      "published": "2026-03-24T00:18:33+00:00",
-      "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Data Protection / Privacy",
-        "Cloud / SaaS",
-        "Curated",
         "General Security"
       ],
       "curated": true
