@@ -1,0 +1,152 @@
+{
+  "generated_at": "2026-03-26T07:37:11.039715+00:00",
+  "analysis_date": "2026-03-26",
+  "model": "gpt-5.2",
+  "window_hours": 24,
+  "source_file": "data/news_recent.json",
+  "source_generated_at": "2026-03-26T07:18:40.827872+00:00",
+  "source_days_back": 30,
+  "source_total_items": 9419,
+  "total_items_in_window_all": 416,
+  "total_items_in_window_curated": 92,
+  "morning_call_markdown": "### Executive Summary\n- Active **software supply-chain activity** is expanding (TeamPCP/LiteLLM + Trivy-related guidance): assume **developer endpoints, CI/CD, and cloud creds** are in scope and hunt accordingly today.\n- Multiple **internet-edge / network device critical vulns** in common enterprise gear (Citrix NetScaler, Cisco Secure Firewall/Catalyst, NGINX, Harbor): validate exposure and accelerate patch/mitigation windows.\n- New **identity/AD tradecraft** (Ghost SPN “stealth Kerberoasting”) + ongoing **malware delivery via GitHub/dev lures** (fake VS Code alerts, trojanized repos): tighten detections around auth anomalies and developer toolchains.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Supply-chain credential theft: TeamPCP/LiteLLM (PyPI) + related ecosystem fallout (Trivy guidance)**\n- **What happened:** Reports of **malicious LiteLLM PyPI packages** tied to TeamPCP stealing **cloud + CI/CD credentials**; Microsoft also published guidance around **detecting/defending a Trivy supply-chain attack**.\n- **Why it matters operationally:** Direct path to **cloud account takeover**, CI/CD pipeline abuse, secret exfiltration, and downstream ransomware/extortion—high impact for financial services even if prod isn’t directly affected.\n- **Recommended immediate actions for the SOC today:** Hunt for **recent pip/npm installs + suspicious post-install network/beaconing** on dev/CI hosts; trigger **credential/secret rotation** where LiteLLM/Trivy were present or build agents show anomalies.\n\n**2) Citrix NetScaler: new critical issue “similar severity to CitrixBleed2” + urgent patching**\n- **What happened:** Multiple sources flag a **new critical NetScaler vulnerability** with strong urgency to patch; details in media are limited (assume **internet-edge exposure** risk).\n- **Why it matters operationally:** NetScaler compromise commonly leads to **session theft/credential access** and rapid lateral movement; historically high exploitation velocity for Citrix edge bugs.\n- **Recommended immediate actions for the SOC today:** Confirm **asset inventory + internet exposure** (VIPs, gateways, management interfaces), then **prioritize emergency patch/mitigation** and increase monitoring for **new admin sessions/config changes** on NetScaler.\n\n**3) Network/perimeter device vulnerabilities: Cisco Secure Firewall RCE + Cisco Catalyst DoS chains + F5 NGINX MP4 code execution + Harbor registry compromise**\n- **What happened:** Reporting highlights **Cisco Secure Firewall RCE**, **Catalyst chained DoS**, **F5 NGINX Plus/OSS code execution via MP4**, and a **Harbor flaw enabling full registry compromise** (exact CVE details may vary by deployment).\n- **Why it matters operationally:** These are common enterprise control-plane components; compromise can enable **traffic interception**, **remote execution**, or **supply-chain poisoning via container images** (Harbor).\n- **Recommended immediate actions for the SOC today:** Validate which products/versions are deployed and **apply vendor mitigations/patches ASAP**; in parallel, enable/raise alerts on **new management-plane logins, config commits, and unexpected process spawns** on these appliances/hosts.\n\n**4) Malware delivery & developer targeting via GitHub/social engineering (fake VS Code alerts, trojanized repos, ClickFix)**\n- **What happened:** Large-scale phishing/lure campaigns use **fake VS Code security alerts on GitHub**, **trojanized GitHub repos (OpenClaw Trap)**, and **ClickFix-style instructions** to push RATs/infostealers (e.g., Remcos/NetSupport/StealC/Sectop).\n- **Why it matters operationally:** Developer endpoints and power users are high-value; compromise can lead to **source/code signing abuse**, secret theft, and privileged access to internal tooling.\n- **Recommended immediate actions for the SOC today:** Increase monitoring for **browser-to-shell transitions** and scripted installers (PowerShell/mshta/wscript/curl|bash) from developer endpoints; coordinate with IT to **warn dev teams** not to run “fix” commands from issues/PR comments.\n\n**5) Windows/AD identity tradecraft: “Ghost SPN” stealth Kerberoasting**\n- **What happened:** A “Ghost SPN” method described for **stealthier Kerberoasting** (abusing Service Principal Names / Kerberos ticket requests) to evade common detections.\n- **Why it matters operationally:** Raises risk of **offline password cracking** for service accounts; cracked service creds are frequently used for **privilege escalation and lateral movement** in ransomware intrusions.\n- **Recommended immediate actions for the SOC today:** Hunt for **unusual Kerberos service ticket request patterns** (high-volume TGS requests, rare services, odd requesters) and validate **service account password hygiene** (long random passwords / gMSA where possible).\n\n---\n\n### Monitoring & detection recommendations\n- **Supply-chain/CI compromise (LiteLLM/Trivy themes):** EDR + proxy/DNS logs on **build agents/dev endpoints** for new package install activity followed by **outbound to uncommon hosts**; watch for secret access spikes in CI (ATT&CK **T1552**, **T1195**).\n- **Cloud credential theft:** Cloud audit logs (AWS CloudTrail/Azure Activity/Entra) for **new access keys, new service principals, consent grants, token replay**, and anomalous geo/device patterns (ATT&CK **T1098**, **T1528**).\n- **Citrix/edge appliances:** WAF/VPN/NetScaler logs for **new sessions from unusual IPs**, sudden auth failures→success, and **config/backup exports**; correlate with IdP anomalies (ATT&CK **T1190**).\n- **Cisco/F5/Harbor management-plane:** Firewall/NAC + device syslog for **management interface access** (SSH/HTTPS), **new local users**, and **config commit events**; alert on process anomalies where agents exist (ATT&CK **T1078**).\n- **Kerberos “Ghost SPN” hunting:** Windows Security logs (DCs) for **4769 (TGS requests)** patterns: one host requesting many service tickets, tickets for rarely used SPNs, or after-hours bursts (ATT&CK **T1558.003**).\n- **GitHub/dev lures & ClickFix:** Email + web gateway + EDR for execution of **PowerShell with encoded/hidden flags**, **mshta/rundll32/wscript/cscript**, and downloads to temp directories followed by execution (ATT&CK **T1059**, **T1204**).\n- **Ransomware on Linux/virtualization/cloud workloads (Pay2Key reporting):** Linux EDR/syslog for **mass file modifications, unusual encryption tool execution, new cron/systemd timers**, and hypervisor management access anomalies (ATT&CK **T1486**, **T1053**).\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** Consolidate today’s edge-device items (Citrix/Cisco/F5/Harbor/TP-Link where relevant) into a **single emergency change plan** with clear owner, version validation, and rollback steps.\n- **Developer supply-chain controls:** Enforce **dependency pinning, hash checking, private mirrors**, and CI policy to block installs from untrusted registries; review SCA alerts for LiteLLM/Trivy usage across repos.\n- **Secrets management:** Accelerate rollout of **short-lived credentials**, vault-backed secrets, and CI/CD secret scanning; ensure **rapid rotation runbooks** are tested.\n- **Identity hardening:** Review service accounts for **gMSA adoption**, long random passwords, and SPN hygiene; tune detections for **Kerberoasting** variants to reduce false negatives.\n- **User awareness (targeted):** Brief dev teams on **GitHub issue/PR lure patterns** (fake security alerts, “run this command to fix”) and define a verified channel for security advisories.\n- **AI/LLM security (research items):** If the org uses internal LLMs/agents, assess exposure to **data poisoning/prompt injection/memory poisoning**; treat as a product-security track, not SOC-critical today (assumption: limited direct production reliance).",
+  "highlights": [
+    {
+      "title": "LeakBase Forum Admin Arrested by Russian Authorities in Global Cybercrime Operation",
+      "link": "https://gbhackers.com/leakbase-forum-admin-arrested/",
+      "source": "GBHackers News",
+      "published": "2026-03-26T07:03:08+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Microsoft Unveils New Guidance to Detect and Defend Against Trivy Supply Chain Attack",
+      "link": "https://gbhackers.com/microsoft-to-detect-defend-against-trivy-supply-chain-attack/",
+      "source": "GBHackers News",
+      "published": "2026-03-26T06:47:09+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Threat Actors / APT",
+        "Exploit / PoC",
+        "Malware / Payloads",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Fake VS Code Security Alerts on GitHub Spread Malware in Massive Phishing Attack",
+      "link": "https://gbhackers.com/fake-vs-code-security/",
+      "source": "GBHackers News",
+      "published": "2026-03-26T06:32:18+00:00",
+      "smart_groups": [
+        "Curated",
+        "Exploit / PoC",
+        "Malware / Payloads",
+        "Phishing / Social Engineering",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "A nearly undetectable LLM attack needs only a handful of poisoned samples",
+      "link": "https://www.helpnetsecurity.com/2026/03/26/llm-backdoor-attack-research/",
+      "source": "Help Net Security",
+      "published": "2026-03-26T06:00:00+00:00",
+      "smart_groups": [
+        "Curated",
+        "Malware / Payloads",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Ghost SPN Attack Lets Hackers Conduct Stealthy Kerberoasting Under the Radar",
+      "link": "https://cybersecuritynews.com/ghost-spn-attack/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-03-26T05:09:28+00:00",
+      "smart_groups": [
+        "Windows / Microsoft",
+        "Curated",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Cisco Secure Firewall Vulnerability Exposes Systems to Remote Code Execution by Attackers",
+      "link": "https://gbhackers.com/cisco-secure-firewall-vulnerability-3/",
+      "source": "GBHackers News",
+      "published": "2026-03-26T04:56:59+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Curated",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Node.js Releases Urgent Patches for Multiple Vulnerabilities Exposing Systems to DoS and Crashes",
+      "link": "https://gbhackers.com/node-js-releases-urgent-patches-for-multiple-vulnerabilities/",
+      "source": "GBHackers News",
+      "published": "2026-03-26T04:38:32+00:00",
+      "smart_groups": [
+        "Curated",
+        "Exploit / PoC",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "10 essenzielle Maßnahmen für physische Sicherheit",
+      "link": "https://www.csoonline.com/article/3493920/10-essenzielle-masnahmen-fur-physische-sicherheit.html",
+      "source": "CSO Online",
+      "published": "2026-03-26T04:01:00+00:00",
+      "smart_groups": [
+        "Identity / Access",
+        "Data Breaches / Leaks",
+        "Cloud / SaaS",
+        "Crypto / Web3",
+        "Curated",
+        "Malware / Payloads",
+        "Ransomware",
+        "Supply Chain / Software",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "LiteLLM malware supply chain attack analysis (pt-BR only, sorry)",
+      "link": "https://www.reddit.com/r/netsec/comments/1s3s59k/litellm_malware_supply_chain_attack_analysis_ptbr/",
+      "source": "/r/netsec",
+      "published": "2026-03-26T00:13:26+00:00",
+      "smart_groups": [
+        "Curated",
+        "Malware / Payloads",
+        "OSINT / Community"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Delve did the security compliance on LiteLLM, an AI project hit by malware",
+      "link": "https://techcrunch.com/2026/03/25/delve-did-the-security-compliance-on-litellm-an-ai-project-hit-by-malware/",
+      "source": "Security News | TechCrunch",
+      "published": "2026-03-26T00:03:52+00:00",
+      "smart_groups": [
+        "Phishing / Social Engineering",
+        "Curated",
+        "Malware / Payloads",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    }
+  ]
+}
