@@ -1,0 +1,158 @@
+{
+  "generated_at": "2026-03-28T07:14:10.363206+00:00",
+  "analysis_date": "2026-03-28",
+  "model": "gpt-5.2",
+  "window_hours": 24,
+  "source_file": "data/news_recent.json",
+  "source_generated_at": "2026-03-28T06:07:35.004726+00:00",
+  "source_days_back": 30,
+  "source_total_items": 9417,
+  "total_items_in_window_all": 326,
+  "total_items_in_window_curated": 73,
+  "morning_call_markdown": "### Executive Summary\n- Multiple **CISA KEV / rapidly exploited** issues in popular tooling and apps (notably **Langflow** and **Aqua Security Trivy**) — treat as *internet-facing emergency patch/mitigation* items.\n- Ongoing **software supply-chain activity (PyPI “telnyx” package backdoored)** using malware hidden in WAV files — prioritize dev pipeline/package monitoring and endpoint detections.\n- **Financial-sector themed malware/phishing** continues (invoice/SVG delivery for ransomware; ZIP-phish delivering stealers; fake CAPTCHA lures on macOS) — tighten email/web controls and hunt for initial access signals.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) CISA KEV: Langflow critical auth/RCE-style exposure with rapid exploitation**\n- What happened: Reports indicate a **critical Langflow vulnerability** was **exploited within ~20 hours** and added to CISA’s attention/KEV-driven coverage (exact CVE details assumed from reporting).\n- Why it matters operationally: If Langflow is internet-exposed (common in AI/dev environments), it’s a **fast compromise path** to server takeover, secrets access, and lateral movement.\n- Recommended immediate actions for the SOC today: **Identify any Langflow instances** (CMDB + cloud inventory + web scans) and **isolate/patch/disable external access**; start **retro-hunt for unusual requests/process execution** on those hosts since exposure date.\n\n**2) CISA KEV: Aqua Security Trivy Scanner vulnerability (actively exploited)**\n- What happened: **CISA added an Aqua Security Trivy Scanner vulnerability** to the **Known Exploited Vulnerabilities (KEV)** catalog.\n- Why it matters operationally: Trivy is often embedded in **CI/CD and container scanning**; exploitation can become a **build pipeline compromise** and a stepping stone to cloud credentials/secrets.\n- Recommended immediate actions for the SOC today: **Locate Trivy usage** across CI runners/build agents and **upgrade/mitigate per vendor guidance**; monitor **CI job anomalies** (unexpected outbound, new binaries, changed pipelines) and **rotate exposed secrets** if compromise suspected.\n\n**3) Software supply-chain: Backdoored “telnyx” PyPI package (TeamPCP) with WAV-staged malware**\n- What happened: Multiple outlets report **malicious versions of the “telnyx” PyPI package** pushing malware **hidden in WAV audio** (TeamPCP activity).\n- Why it matters operationally: This can impact **developer workstations, build agents, and production deployments** via dependency pulls, leading to credential theft and downstream compromise.\n- Recommended immediate actions for the SOC today: **Block/alert on installs of “telnyx”** in build logs and EDR telemetry; **search PyPI/artifact repos** for malicious versions in use and **quarantine affected hosts/pipelines** pending code/package review.\n\n**4) Citrix NetScaler/Gateway: critical flaw(s) drawing “CitrixBleed” comparisons (info leak risk)**\n- What happened: Reports flag **critical NetScaler/Gateway vulnerabilities** with **sensitive information exposure** potential and narrowing exploitation window (exact CVEs not confirmed from the excerpts).\n- Why it matters operationally: NetScaler is frequently **internet-facing in financial services**; compromise enables **session/token theft, credential capture, and perimeter bypass**.\n- Recommended immediate actions for the SOC today: **Confirm presence/exposure** of NetScaler/Gateway and **prioritize patch/mitigation**; review **ADC logs** for anomalous endpoints/requests and **force re-auth/session invalidation** if indicators of leakage appear.\n\n**5) Active phishing → malware/ransomware delivery themes impacting finance**\n- What happened: Ongoing campaigns include **fake invoice lures with embedded malicious SVG** (BianLian), **phishing ZIPs delivering a stealer** targeting financial firms (PXA stealer), and **fake Cloudflare CAPTCHA pages** spreading macOS stealer malware.\n- Why it matters operationally: These are **high-volume initial access paths** leading to credential theft, MFA fatigue/social engineering follow-on, and ransomware staging.\n- Recommended immediate actions for the SOC today: Tune email/web controls to **quarantine SVG-invoices and suspicious ZIPs**, and push **user warnings** to finance/AP and IT; hunt endpoints for **new persistence + browser credential access** after recent phish clicks.\n\n---\n\n### Monitoring & detection recommendations\n- **Internet-facing app exploitation (Langflow/AI tools):** WAF/reverse-proxy + server logs for **new/unusual routes, spikes in 4xx/5xx, POSTs to image/file endpoints**, plus EDR for **unexpected child processes from web services** (MITRE: T1190).\n- **CI/CD and build agent integrity (Trivy + PyPI supply chain):** CI logs (GitHub/GitLab/Jenkins), EDR on runners for **new pip installs, dependency drift, unsigned binaries**, outbound connections from runners (MITRE: T1554, T1195).\n- **PyPI “telnyx” hunting:** Proxy/DNS + EDR for **pypi.org file downloads** followed by **python spawning shell/system utilities**; inspect dev hosts for **new packages in venv/site-packages** around the alert window.\n- **Citrix NetScaler/Gateway watch:** ADC access logs + firewall for **new URI patterns, high request rates, unusual User-Agents**, and **post-auth anomalies**; correlate with IdP sign-ins for **impossible travel/new device** (MITRE: T1078).\n- **Phishing attachment execution (SVG/ZIP):** Email gateway + M365 audit + EDR for **AttachmentOpened / file write to Downloads** followed by **script interpreter execution** (powershell/wscript/mshta) (MITRE: T1566, T1059).\n- **Stealer behaviors (Windows/macOS):** EDR for **browser data access**, credential store queries, suspicious **keychain/db reads**, and **mass exfil attempts** to new domains (MITRE: T1555, T1041).\n- **Credential dumping / AD replication abuse awareness (DCSync/LSASS tooling):** DC security logs (4662/replication rights usage) + EDR alerts for **LSASS access** and abnormal `lsass.exe` handle opens (MITRE: T1003.006).\n\n---\n\n### Medium-term follow-ups\n- **Asset hygiene for AI/dev platforms:** Create/refresh inventory of **Langflow/LangChain/LangGraph** and other AI workflow services; enforce **no direct internet exposure** + SSO/MFA and network segmentation.\n- **Dependency governance:** Implement/expand **allowlisting for PyPI packages**, lockfiles, private mirrors, and **package signing/verification** where possible; add alerting for **typosquat/sudden version jumps**.\n- **NetScaler hardening baseline:** Ensure **management interfaces are isolated**, admin access via PAM, and consistent **patch cadence + config backup**; validate logging retention and parsing in SIEM.\n- **Email/web content controls:** Consider stricter policies for **SVG** and **archive attachments** to high-risk business units (AP/Finance); tighten URL rewriting/safelinks and sandbox coverage.\n- **Endpoint resilience against stealers/ransomware:** Review local admin sprawl, enforce **credential guard / LSASS protections**, and ensure EDR tamper protection is on across server and VDI fleets.\n- **Awareness quick-hit:** Targeted comms to **finance/AP and helpdesk** on “invoice SVG,” “ZIP phishing,” and “fake CAPTCHA” lures; reinforce **out-of-band verification** for payment and account changes.",
+  "highlights": [
+    {
+      "title": "Beware of Online Scammers Using Fake Arrest Calls as a Trap, warns Expert Prof. Triveni Singh",
+      "link": "https://www.news4hackers.com/beware-of-online-scammers-using-fake-arrest-calls-as-a-trap-warns-expert-prof-triveni-singh/",
+      "source": "News4Hackers",
+      "published": "2026-03-28T04:03:04+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Enforce RBAC with PAM",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1s5oy4j/enforce_rbac_with_pam/",
+      "source": "/r/cybersecurity",
+      "published": "2026-03-28T03:00:49+00:00",
+      "smart_groups": [
+        "Crypto / Web3",
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "OSINT / Community"
+      ],
+      "curated": true
+    },
+    {
+      "title": "CISA Adds Aquasecurity Trivy Scanner Vulnerability to KEV Catalog",
+      "link": "https://cybersecuritynews.com/aquasecurity-trivy-scanner-vulnerability/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-03-28T02:24:07+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Threat Actors / APT",
+        "Exploit / PoC",
+        "Ransomware",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "From Impersonation Calls to Transparent Reporting: Defending the New Front Door of Attacks",
+      "link": "https://techcommunity.microsoft.com/t5/microsoft-defender-for-office/from-impersonation-calls-to-transparent-reporting-defending-the/ba-p/4503050",
+      "source": "Microsoft Defender for Office 365 Blog",
+      "published": "2026-03-27T23:13:51+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Phishing / Social Engineering",
+        "Threat Actors / APT",
+        "Windows / Microsoft",
+        "Malware / Payloads",
+        "Network / OT / ICS",
+        "Vendors / Product Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Backdoored Telnyx PyPI package pushes malware hidden in WAV audio",
+      "link": "https://www.bleepingcomputer.com/news/security/backdoored-telnyx-pypi-package-pushes-malware-hidden-in-wav-audio/",
+      "source": "BleepingComputer",
+      "published": "2026-03-27T21:13:26+00:00",
+      "smart_groups": [
+        "Malware / Payloads",
+        "Supply Chain / Software",
+        "Crypto / Web3",
+        "Curated",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "European Commission data stolen in a cyberattack on the infrastructure hosting its web sites",
+      "link": "https://www.csoonline.com/article/4151363/european-commission-data-stolen-in-a-cyberattack-on-the-infrastructure-hosting-its-web-sites.html",
+      "source": "CSO Online",
+      "published": "2026-03-27T21:13:03+00:00",
+      "smart_groups": [
+        "Cloud / SaaS",
+        "Vulnerabilities / CVEs",
+        "Identity / Access",
+        "Data Protection / Privacy",
+        "Data Breaches / Leaks",
+        "Threat Actors / APT",
+        "Windows / Microsoft",
+        "Curated",
+        "Phishing / Social Engineering",
+        "Ransomware",
+        "Mobile Security",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Critical Langflow AI bug exploited within 20 hours added to CISA list",
+      "link": "https://www.scworld.com/news/critical-langflow-ai-bug-exploited-within-20-hours-added-to-cisa-list",
+      "source": "SCM feed for Latest",
+      "published": "2026-03-27T20:55:28+00:00",
+      "smart_groups": [
+        "Curated",
+        "Exploit / PoC",
+        "Ransomware",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "European Parliament rejects extension of CSAM scanning rules for tech platforms",
+      "link": "https://therecord.media/eu-parliament-rejects-csam-scanning-extension",
+      "source": "The Record",
+      "published": "2026-03-27T18:44:00+00:00",
+      "smart_groups": [
+        "Curated",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Anthropic Claude Mythos - new model leak and implications",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1s5by9i/anthropic_claude_mythos_new_model_leak_and/",
+      "source": "/r/cybersecurity",
+      "published": "2026-03-27T18:11:03+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Curated",
+        "Exploit / PoC",
+        "OSINT / Community"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Set Up a Cybersecurity Lab for Law Enforcement Agencies – Expert Guidance",
+      "link": "https://www.news4hackers.com/set-up-a-cybersecurity-lab-for-law-enforcement-agencies-expert-guidance/",
+      "source": "News4Hackers",
+      "published": "2026-03-27T18:04:10+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    }
+  ]
+}
