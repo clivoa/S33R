@@ -1,112 +1,39 @@
 {
-  "generated_at": "2026-03-29T07:19:58.403831+00:00",
-  "analysis_date": "2026-03-29",
+  "generated_at": "2026-03-30T08:01:30.020119+00:00",
+  "analysis_date": "2026-03-30",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-03-29T07:13:36.016640+00:00",
+  "source_generated_at": "2026-03-30T07:52:56.773350+00:00",
   "source_days_back": 30,
-  "source_total_items": 9133,
-  "total_items_in_window_all": 116,
-  "total_items_in_window_curated": 30,
-  "morning_call_markdown": "### Executive Summary\n- **Actively exploited edge appliance RCE:** CISA/partners report **F5 BIG-IP APM RCE (CVE-2025-53521)** exploitation—treat as internet-facing compromise risk.\n- **High-risk perimeter recon:** **Citrix NetScaler CVE-2026-3055 (CVSS 9.3) memory overread** is seeing active recon; prioritize exposure review and telemetry.\n- **Supply-chain + identity-led ransomware trend:** Ongoing reporting highlights **auto-update/software supply-chain abuse** and **identity-based ransomware** targeting SaaS/Cloud control planes—tighten IdP monitoring and third-party controls.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) F5 BIG-IP APM RCE — actively exploited (CVE-2025-53521)**\n- **What happened:** Multiple sources report **in-the-wild exploitation** of an **F5 BIG-IP APM remote code execution** vulnerability (CISA KEV referenced in coverage).\n- **Why it matters operationally:** BIG-IP often sits at the **perimeter (VPN/SSO access path)**; exploitation can enable **initial access, credential theft, lateral movement** in financial environments.\n- **Recommended immediate actions for the SOC today:** **Confirm inventory/exposure** (internet-facing APM/versions) and **escalate patch/mitigation verification**; **hunt for post-exploitation** on BIG-IP (unexpected processes/commands, new admin users, config changes) and review inbound exploit spikes.\n\n**2) Citrix NetScaler memory overread (CVE-2026-3055) — active recon**\n- **What happened:** Reporting indicates **active reconnaissance** against **Citrix NetScaler** for **CVE-2026-3055** (memory overread, high severity; PoC/research circulating).\n- **Why it matters operationally:** NetScaler is a common **gateway/ADC** in financials; recon typically precedes **credential access/session theft or follow-on exploitation**.\n- **Recommended immediate actions for the SOC today:** **Identify any exposed NetScaler** and ensure vendor guidance/updates are applied where available; **monitor for scanning/recon patterns** (abnormal URI/header patterns, spikes in 4xx/5xx, unusual client geos) and be ready to **isolate the appliance** if compromise indicators appear.\n\n**3) Software supply-chain abuse (auto-update + PyPI poisoning)**\n- **What happened:** Continued warnings on **auto-update supply-chain attacks**; separate reporting highlights a **backdoored PyPI package (Telnyx-themed) with malware hidden in WAV data**.\n- **Why it matters operationally:** Financial orgs rely on **CI/CD, package managers, updater channels**; supply-chain compromise bypasses perimeter controls and lands directly in trusted environments.\n- **Recommended immediate actions for the SOC today:** **Check for use of the referenced PyPI package/vendor namespace** in repositories/build logs (assumption: details are limited in summary—verify before actioning); **increase scrutiny on build agent egress and package installs** (new dependencies, unexpected version bumps) and escalate any anomalous updater traffic from servers.\n\n**4) Identity-based ransomware risk to SaaS/Cloud control planes**\n- **What happened:** Multiple items note **ransomware shifting to identity-driven intrusion** (IdP takeover, OAuth abuse, SaaS admin compromise) impacting cloud-based services.\n- **Why it matters operationally:** Even without endpoint malware, **IdP compromise** can enable **mass data access/exfiltration, mailbox/SaaS takeover, destructive actions** (incl. backups/snapshots).\n- **Recommended immediate actions for the SOC today:** **Review last 24–72h of IdP risky sign-ins** (MFA fatigue, impossible travel, unfamiliar devices) and **privilege changes**; **validate conditional access + MFA enforcement** on admin roles and ensure break-glass accounts are monitored.\n\n**5) Endpoint/user malware via social engineering (macOS stealer + community “plugin” dropper)**\n- **What happened:** Reports describe **macOS “Infinity Stealer”** delivered via **ClickFix-style lures**; OSINT flags a **malicious “plugin” dropper** (base64/zlib obfuscation) in a niche ecosystem (details unverified).\n- **Why it matters operationally:** Stealers drive **credential theft** → **SaaS/IdP compromise**; macOS endpoints in exec/dev populations can be high-impact.\n- **Recommended immediate actions for the SOC today:** **EDR hunt for suspicious browser-to-shell patterns** (scripted clipboard commands, curl|sh, osascript misuse) on macOS; **tighten web filtering/user comms** on “fix/captcha/copy-paste” lures and treat community/plugin intel as **untrusted until validated**.\n\n---\n\n### Monitoring & detection recommendations\n- **F5 BIG-IP APM (CVE-2025-53521):** Monitor **WAF/LB logs + F5 audit logs** for unusual request bursts, new sessions from rare geos, and **config/user changes**; map to **T1190 (Exploit Public-Facing Application)**.\n- **Citrix NetScaler recon (CVE-2026-3055):** Watch **ADC access logs** for scanning (high-rate requests, odd headers/paths, repeated errors) and correlate with **internet firewall** deny/allow spikes; **T1595 (Active Scanning)**.\n- **Identity-based ransomware:** In **IdP logs (Entra ID/Okta/etc.)**, alert on **new MFA methods, repeated MFA prompts, legacy auth, conditional access policy edits, role grants**; **T1078 (Valid Accounts), T1556 (Modify Authentication Process)**.\n- **SaaS/OAuth abuse:** Monitor **cloud audit logs** for **new OAuth app consents, service principal credential additions, mail forwarding rules, token replay-like behavior**; **T1528 (Steal Application Access Token)**.\n- **Supply-chain/CI/CD:** From **CI runners, build logs, artifact repositories, proxy logs**, flag **new dependencies**, unusual package download sources, and **build agent outbound** to rare domains; **T1195 (Supply Chain Compromise)**.\n- **macOS stealer / ClickFix:** In **EDR + DNS/Proxy**, hunt for **browser spawning shell**, `curl/wget` to paste sites, `osascript` abuse, and unusual keychain access prompts; **T1059 (Command and Scripting Interpreter)**.\n- **General exfil staging signals:** On **DLP/Proxy/Firewall**, watch for **large outbound uploads** from endpoints/admin hosts to new cloud storage/providers shortly after new IdP sessions; **T1567 (Exfiltration Over Web Service)**.\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** Confirm **SLA-driven patching** for edge appliances (F5/Citrix) and document compensating controls where downtime blocks immediate fixes.\n- **IdP hardening:** Enforce **phishing-resistant MFA** for admins, restrict **OAuth consent**, require **device compliance** for privileged access, and enable **continuous access evaluation** where available.\n- **Third-party/supply-chain controls:** Implement/refresh **SBOM + dependency allowlisting**, pin versions for critical services, and require **signature verification** for updater channels.\n- **Incident playbooks:** Update runbooks for **edge appliance compromise** (credential reset scope, session/token revocation, appliance config diffing, forensics collection).\n- **User awareness (targeted):** Brief high-risk groups (execs, devs, IT admins) on **ClickFix/copy-paste “fix” lures** and reporting path; ensure macOS EDR coverage is validated.\n- **Validate community-sourced malware claims:** Triage OSINT items (e.g., “plugin dropper”) in a **sandbox** before broad blocking; avoid production changes without confirmation.",
+  "source_total_items": 8981,
+  "total_items_in_window_all": 139,
+  "total_items_in_window_curated": 33,
+  "morning_call_markdown": "### Executive Summary\n- **Internet-facing appliances at risk:** F5 BIG-IP vulnerability has been **upgraded to critical RCE and is reportedly exploited in the wild**; **Citrix NetScaler CVE-2026-3055** is being actively probed ahead of exploitation.\n- **Cloud/container secret-theft activity trending:** “**CanisterWorm**” campaign targets **Docker/Kubernetes/Redis** to steal credentials and pivot in cloud environments.\n- **User-targeted exploitation rising:** Russia-linked **TA446** reported using an iPhone exploit (“DarkSword”) in a phishing wave—expect **high-risk spearphish** and mobile-targeted lures.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) F5 BIG-IP: DoS flaw upgraded to critical RCE + exploitation in the wild**\n- **What happened:** Reporting indicates an F5 BIG-IP issue was re-scored/updated to **critical RCE** and is **actively exploited** (incl. CISA warning).\n- **Why it matters operationally:** BIG-IP is commonly **internet-facing** in financial services; compromise enables **edge-to-internal pivot** and credential/session theft.\n- **Recommended immediate actions for the SOC today:** Confirm **asset exposure** (VIPs/mgmt planes), apply/accelerate **vendor mitigations/patching**; hunt for **new admin creation/config changes** and suspicious **iControl REST/TMUI** access patterns.\n\n**2) Citrix NetScaler CVE-2026-3055: active probing/pre-exploitation scanning**\n- **What happened:** Multiple sources report **active probing** of NetScaler systems tied to **CVE-2026-3055 (memory overread/data leak)** with public research fueling attacker activity.\n- **Why it matters operationally:** Even “data leak” bugs on edge appliances frequently become **credential disclosure + session hijack** paths; risk is amplified if appliances front auth apps.\n- **Recommended immediate actions for the SOC today:** Identify all **NetScaler/ADC** instances and verify **mitigations/updates**; monitor WAF/ADC logs for **anomalous requests** to NetScaler endpoints and spikes in **401/403/5xx** around auth paths.\n\n**3) Grafana: critical flaws enabling remote code execution (environment-dependent)**\n- **What happened:** Reporting highlights **critical Grafana vulnerabilities** that can lead to **RCE** (details/versions not fully clear in the summary—assume common internet-exposed dashboards at risk).\n- **Why it matters operationally:** Grafana often has **privileged data sources** (cloud metrics, DB creds); RCE can rapidly become **secrets theft and lateral movement**.\n- **Recommended immediate actions for the SOC today:** Inventory Grafana instances (incl. dev/test), enforce **authN** and restrict **network exposure** (no public access); review for **new plugins, datasource edits, and suspicious admin sessions**.\n\n**4) Cloud/container campaign: “CanisterWorm” targeting Docker/Kubernetes/Redis to steal secrets**\n- **What happened:** Campaign targets container platforms and Redis to **extract secrets**, likely via exposed services/misconfig and subsequent credential harvesting.\n- **Why it matters operationally:** Direct path to **cloud account takeover** (API keys, service tokens), then **persistence** and data access in regulated environments.\n- **Recommended immediate actions for the SOC today:** Hunt for **unexpected reads of K8s secrets**, exec into pods, and Redis exposure; validate **RBAC**, lock down **unauthenticated Redis**, and rotate any **high-risk secrets** if suspicious access is detected.\n\n**5) TA446 phishing + iPhone exploit use (“DarkSword”)**\n- **What happened:** Russia-linked TA446 reportedly uses a mobile exploit chain against **iPhone users** delivered via phishing.\n- **Why it matters operationally:** High-likelihood targeting of executives and finance users; mobile compromise can bypass some endpoint controls and enable **credential theft (MFA tokens, email access)**.\n- **Recommended immediate actions for the SOC today:** Increase monitoring for **targeted phishing** (look for low-volume, high-context lures); ensure rapid process to **quarantine accounts**, force **token/session revocation** across SaaS, and validate **MDM compliance** for iOS devices.\n\n---\n\n### Monitoring & detection recommendations\n- **Edge appliance exploitation (F5/Citrix):** Monitor **WAF/ADC logs, reverse proxy, IDS/IPS** for unusual URI patterns, method anomalies, and spikes in **5xx/4xx**; map to **T1190 (Exploit Public-Facing Application)**.\n- **Post-compromise on BIG-IP/NetScaler:** From **syslog/config audit**, alert on **new local admins**, config saves, new iRules/policies, and unexpected outbound connections; map to **T1098 (Account Manipulation)** / **T1562 (Impair Defenses)**.\n- **Grafana abuse:** In **Grafana audit/application logs**, watch for **new API keys**, datasource changes, plugin installs, and unusual admin logins; correlate with **EDR** if Grafana runs on servers (child processes, shell spawning) (**T1059**).\n- **Kubernetes/Docker:** Use **K8s audit logs, EKS/AKS control plane logs, container runtime/EDR** for `kubectl exec`, token reviews, secret GET/list, and new service accounts; map to **T1552 (Unsecured Credentials)** / **T1609 (Container Administration Command)**.\n- **Redis exposure/abuse:** From **network telemetry + Redis logs**, detect internet-sourced connections, unusual `CONFIG`, `SLAVEOF/REPLICAOF`, `MODULE LOAD`, bulk key reads; map to **T1046 (Network Service Scanning)** and **T1552**.\n- **Phishing → mobile/account takeover:** In **email security + IdP (Entra/Okta) + MDM** logs, hunt for targeted phish, subsequent **new device registrations**, impossible travel, and token refresh anomalies; map to **T1566 (Phishing)** / **T1078 (Valid Accounts)**.\n- **Session revocation gaps (community-reported):** Validate that “kill sessions” in IdP triggers revocation across **AWS/Slack/other SaaS** by monitoring **CloudTrail, Slack audit, CASB** for continued access after password reset; map to **T1539 (Steal Web Session Cookie)** / **T1078**.\n\n---\n\n### Medium-term follow-ups\n- **Patch/hardening program:** Ensure formal **internet-facing appliance patch SLAs** (F5/Citrix) with automated exposure validation and rollback plans.\n- **Grafana governance:** Enforce **no-public dashboards**, SSO/MFA, least-privileged service accounts for data sources, and **plugin allow-listing**.\n- **Cloud secrets hygiene:** Expand continuous checks for **public Redis**, overly permissive K8s RBAC, and plaintext secrets; implement/verify **secret rotation** and use of managed secret stores.\n- **Mobile security posture:** Review executive/high-risk user coverage: **MDM required**, rapid iOS patching, and playbooks for **mobile-targeted phishing** and device compromise.\n- **SaaS session lifecycle:** Document and test **end-to-end session invalidation** (IdP → AWS → Slack → other critical SaaS) and close any gaps with conditional access/CASB controls.\n- **AI/“shadow AI” leakage risk:** Reconfirm policy and DLP controls around staff use of external AI tools; monitor for uploads of **sensitive data** to unsanctioned services (assumption: leakage risk is primarily policy/process-driven, not a single CVE).",
   "highlights": [
     {
-      "title": "Seeking a business solution for data security",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1s6n82z/seeking_a_business_solution_for_data_security/",
-      "source": "/r/cybersecurity",
-      "published": "2026-03-29T05:59:25+00:00",
+      "title": "Critical Grafana Flaws Allow Attackers to Achieve Remote Code Execution",
+      "link": "https://gbhackers.com/critical-grafana-flaws/",
+      "source": "GBHackers News",
+      "published": "2026-03-30T07:37:07+00:00",
       "smart_groups": [
-        "Data Breaches / Leaks",
-        "Curated",
-        "OSINT / Community"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Auto-Update Supply Chain Attacks Surge: RSAC 2026 Predictions",
-      "link": "https://www.news4hackers.com/auto-update-supply-chain-attacks-surge-rsac-2026-predictions/",
-      "source": "News4Hackers",
-      "published": "2026-03-29T05:04:00+00:00",
-      "smart_groups": [
-        "Curated",
-        "Ransomware",
         "Vulnerabilities / CVEs",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Cloud-Based Software Services at Risk: Identity-Based Ransomware Attacks on the Rise",
-      "link": "https://www.news4hackers.com/cloud-based-software-services-at-risk-identity-based-ransomware-attacks-on-the-rise/",
-      "source": "News4Hackers",
-      "published": "2026-03-29T05:02:51+00:00",
-      "smart_groups": [
         "Curated",
+        "Threat Actors / APT",
         "Cloud / SaaS",
-        "Exploit / PoC",
-        "Ransomware",
-        "Vulnerabilities / CVEs",
+        "Network / OT / ICS",
         "General Security"
       ],
       "curated": true
     },
     {
-      "title": "[SECURITY ALERT] Dropper Malware identified in \"The Coffin of Andy and Leyley\" plugins (Base64/zlib obfuscation)",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1s6l2p2/security_alert_dropper_malware_identified_in_the/",
-      "source": "/r/cybersecurity",
-      "published": "2026-03-29T04:00:17+00:00",
-      "smart_groups": [
-        "Malware / Payloads",
-        "Curated",
-        "OSINT / Community"
-      ],
-      "curated": true
-    },
-    {
-      "title": "From Static Findings to Working Exploits: Runtime Validation of 6 High-Profile MCP Servers",
-      "link": "https://www.reddit.com/r/netsec/comments/1s6j3pg/from_static_findings_to_working_exploits_runtime/",
-      "source": "/r/netsec",
-      "published": "2026-03-29T02:20:27+00:00",
-      "smart_groups": [
-        "Curated",
-        "Exploit / PoC",
-        "OSINT / Community"
-      ],
-      "curated": true
-    },
-    {
-      "title": "First-Year IT Student (Cybersecurity Focus) — How Should I Build My LinkedIn to Showcase Skills Early?",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1s6iun8/firstyear_it_student_cybersecurity_focus_how/",
-      "source": "/r/cybersecurity",
-      "published": "2026-03-29T02:08:37+00:00",
-      "smart_groups": [
-        "Curated",
-        "Linux / Unix",
-        "Vulnerabilities / CVEs",
-        "OSINT / Community"
-      ],
-      "curated": true
-    },
-    {
-      "title": "BSides SF: SaaS, cloud assets vulnerable to identity-based ransomware attacks",
-      "link": "https://www.scworld.com/news/bsides-sf-saas-cloud-assets-vulnerable-to-identity-based-ransomware-attacks",
-      "source": "SCM feed for Latest",
-      "published": "2026-03-29T01:01:37+00:00",
-      "smart_groups": [
-        "Cloud / SaaS",
-        "Curated",
-        "Ransomware",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Apple issues urgent lock screen warnings for unpatched iPhones and iPads",
-      "link": "https://securityaffairs.com/190109/security/apple-issues-urgent-lock-screen-warnings-for-unpatched-iphones-and-ipads.html",
+      "title": "Russia-linked APT TA446 uses DarkSword exploit to target iPhone users in phishing wave",
+      "link": "https://securityaffairs.com/190139/apt/russia-linked-apt-ta446-uses-darksword-exploit-to-target-iphone-users-in-phishing-wave.html",
       "source": "Security Affairs",
-      "published": "2026-03-29T01:00:49+00:00",
+      "published": "2026-03-30T07:34:40+00:00",
       "smart_groups": [
+        "Threat Actors / APT",
+        "Phishing / Social Engineering",
         "Curated",
         "Exploit / PoC",
         "Mobile Security",
@@ -115,28 +42,109 @@
       "curated": true
     },
     {
-      "title": "Wormsign, RSAC 2026: More auto-updating supply-chain attacks on the way",
-      "link": "https://www.scworld.com/news/wormsign-rsac-2026-more-auto-updating-supply-chain-attacks-on-the-way",
-      "source": "SCM feed for Latest",
-      "published": "2026-03-29T00:05:08+00:00",
+      "title": "F5 BIG-IP DoS Flaw Upgraded to Critical RCE, Now Exploited in the Wild",
+      "link": "https://www.securityweek.com/f5-big-ip-dos-flaw-upgraded-to-critical-rce-now-exploited-in-the-wild/",
+      "source": "SecurityWeek",
+      "published": "2026-03-30T07:07:09+00:00",
       "smart_groups": [
         "Curated",
         "Exploit / PoC",
-        "Supply Chain / Software",
         "Vulnerabilities / CVEs",
         "General Security"
       ],
       "curated": true
     },
     {
-      "title": "The Sequels Are Never As Good, But We're Still In Pain (Citrix NetScaler CVE-2026-3055 Memory Overread) - watchTowr Labs",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1s6dnsa/the_sequels_are_never_as_good_but_were_still_in/",
-      "source": "/r/cybersecurity",
-      "published": "2026-03-28T22:13:39+00:00",
+      "title": "Three China-Linked Clusters Target Southeast Asian Government in 2025 Cyber Campaign",
+      "link": "https://thehackernews.com/2026/03/three-china-linked-clusters-target.html",
+      "source": "The Hacker News",
+      "published": "2026-03-30T07:00:00+00:00",
       "smart_groups": [
+        "Malware / Payloads",
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "CanisterWorm Targets Docker, Kubernetes, and Redis to Steal Secrets",
+      "link": "https://gbhackers.com/canisterworm-targets-docker/",
+      "source": "GBHackers News",
+      "published": "2026-03-30T06:50:42+00:00",
+      "smart_groups": [
+        "Cloud / SaaS",
+        "Curated",
+        "Exploit / PoC",
+        "Malware / Payloads",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Compromised account - killed sessions in Entra but user still had active access in AWS and Slack",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1s7ijfv/compromised_account_killed_sessions_in_entra_but/",
+      "source": "/r/cybersecurity",
+      "published": "2026-03-30T06:09:05+00:00",
+      "smart_groups": [
+        "Identity / Access",
+        "Cloud / SaaS",
         "Curated",
         "Vulnerabilities / CVEs",
         "OSINT / Community"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Hackers Probe Citrix NetScaler Systems Ahead of Suspected CVE-2026-3055 Exploitation",
+      "link": "https://gbhackers.com/hackers-probe-citrix-netscaler-systems-cve-2026-3055-exploitation/",
+      "source": "GBHackers News",
+      "published": "2026-03-30T05:41:24+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Data Protection / Privacy",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Open-Source Security Operations Workflow Orchestration with ShipSec Studio",
+      "link": "https://www.news4hackers.com/open-source-security-operations-workflow-orchestration-with-shipsec-studio/",
+      "source": "News4Hackers",
+      "published": "2026-03-30T05:01:54+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "ShipSec Studio brings open-source workflow orchestration to security operations",
+      "link": "https://www.helpnetsecurity.com/2026/03/30/shipsec-studio-security-workflow-automation-platform/",
+      "source": "Help Net Security",
+      "published": "2026-03-30T05:00:50+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Curated",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "CISA Warns of Actively Exploited F5 BIG-IP Vulnerability in Ongoing Attacks",
+      "link": "https://gbhackers.com/cisa-warns-of-actively-exploited-f5-big-ip-vulnerability/",
+      "source": "GBHackers News",
+      "published": "2026-03-30T04:55:49+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Threat Actors / APT",
+        "Curated",
+        "Exploit / PoC",
+        "General Security"
       ],
       "curated": true
     }
