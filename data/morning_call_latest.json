@@ -1,51 +1,33 @@
 {
-  "generated_at": "2026-03-30T08:01:30.020119+00:00",
-  "analysis_date": "2026-03-30",
+  "generated_at": "2026-03-31T07:45:38.082651+00:00",
+  "analysis_date": "2026-03-31",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-03-30T07:52:56.773350+00:00",
+  "source_generated_at": "2026-03-31T07:25:18.247424+00:00",
   "source_days_back": 30,
-  "source_total_items": 8981,
-  "total_items_in_window_all": 139,
-  "total_items_in_window_curated": 33,
-  "morning_call_markdown": "### Executive Summary\n- **Internet-facing appliances at risk:** F5 BIG-IP vulnerability has been **upgraded to critical RCE and is reportedly exploited in the wild**; **Citrix NetScaler CVE-2026-3055** is being actively probed ahead of exploitation.\n- **Cloud/container secret-theft activity trending:** “**CanisterWorm**” campaign targets **Docker/Kubernetes/Redis** to steal credentials and pivot in cloud environments.\n- **User-targeted exploitation rising:** Russia-linked **TA446** reported using an iPhone exploit (“DarkSword”) in a phishing wave—expect **high-risk spearphish** and mobile-targeted lures.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) F5 BIG-IP: DoS flaw upgraded to critical RCE + exploitation in the wild**\n- **What happened:** Reporting indicates an F5 BIG-IP issue was re-scored/updated to **critical RCE** and is **actively exploited** (incl. CISA warning).\n- **Why it matters operationally:** BIG-IP is commonly **internet-facing** in financial services; compromise enables **edge-to-internal pivot** and credential/session theft.\n- **Recommended immediate actions for the SOC today:** Confirm **asset exposure** (VIPs/mgmt planes), apply/accelerate **vendor mitigations/patching**; hunt for **new admin creation/config changes** and suspicious **iControl REST/TMUI** access patterns.\n\n**2) Citrix NetScaler CVE-2026-3055: active probing/pre-exploitation scanning**\n- **What happened:** Multiple sources report **active probing** of NetScaler systems tied to **CVE-2026-3055 (memory overread/data leak)** with public research fueling attacker activity.\n- **Why it matters operationally:** Even “data leak” bugs on edge appliances frequently become **credential disclosure + session hijack** paths; risk is amplified if appliances front auth apps.\n- **Recommended immediate actions for the SOC today:** Identify all **NetScaler/ADC** instances and verify **mitigations/updates**; monitor WAF/ADC logs for **anomalous requests** to NetScaler endpoints and spikes in **401/403/5xx** around auth paths.\n\n**3) Grafana: critical flaws enabling remote code execution (environment-dependent)**\n- **What happened:** Reporting highlights **critical Grafana vulnerabilities** that can lead to **RCE** (details/versions not fully clear in the summary—assume common internet-exposed dashboards at risk).\n- **Why it matters operationally:** Grafana often has **privileged data sources** (cloud metrics, DB creds); RCE can rapidly become **secrets theft and lateral movement**.\n- **Recommended immediate actions for the SOC today:** Inventory Grafana instances (incl. dev/test), enforce **authN** and restrict **network exposure** (no public access); review for **new plugins, datasource edits, and suspicious admin sessions**.\n\n**4) Cloud/container campaign: “CanisterWorm” targeting Docker/Kubernetes/Redis to steal secrets**\n- **What happened:** Campaign targets container platforms and Redis to **extract secrets**, likely via exposed services/misconfig and subsequent credential harvesting.\n- **Why it matters operationally:** Direct path to **cloud account takeover** (API keys, service tokens), then **persistence** and data access in regulated environments.\n- **Recommended immediate actions for the SOC today:** Hunt for **unexpected reads of K8s secrets**, exec into pods, and Redis exposure; validate **RBAC**, lock down **unauthenticated Redis**, and rotate any **high-risk secrets** if suspicious access is detected.\n\n**5) TA446 phishing + iPhone exploit use (“DarkSword”)**\n- **What happened:** Russia-linked TA446 reportedly uses a mobile exploit chain against **iPhone users** delivered via phishing.\n- **Why it matters operationally:** High-likelihood targeting of executives and finance users; mobile compromise can bypass some endpoint controls and enable **credential theft (MFA tokens, email access)**.\n- **Recommended immediate actions for the SOC today:** Increase monitoring for **targeted phishing** (look for low-volume, high-context lures); ensure rapid process to **quarantine accounts**, force **token/session revocation** across SaaS, and validate **MDM compliance** for iOS devices.\n\n---\n\n### Monitoring & detection recommendations\n- **Edge appliance exploitation (F5/Citrix):** Monitor **WAF/ADC logs, reverse proxy, IDS/IPS** for unusual URI patterns, method anomalies, and spikes in **5xx/4xx**; map to **T1190 (Exploit Public-Facing Application)**.\n- **Post-compromise on BIG-IP/NetScaler:** From **syslog/config audit**, alert on **new local admins**, config saves, new iRules/policies, and unexpected outbound connections; map to **T1098 (Account Manipulation)** / **T1562 (Impair Defenses)**.\n- **Grafana abuse:** In **Grafana audit/application logs**, watch for **new API keys**, datasource changes, plugin installs, and unusual admin logins; correlate with **EDR** if Grafana runs on servers (child processes, shell spawning) (**T1059**).\n- **Kubernetes/Docker:** Use **K8s audit logs, EKS/AKS control plane logs, container runtime/EDR** for `kubectl exec`, token reviews, secret GET/list, and new service accounts; map to **T1552 (Unsecured Credentials)** / **T1609 (Container Administration Command)**.\n- **Redis exposure/abuse:** From **network telemetry + Redis logs**, detect internet-sourced connections, unusual `CONFIG`, `SLAVEOF/REPLICAOF`, `MODULE LOAD`, bulk key reads; map to **T1046 (Network Service Scanning)** and **T1552**.\n- **Phishing → mobile/account takeover:** In **email security + IdP (Entra/Okta) + MDM** logs, hunt for targeted phish, subsequent **new device registrations**, impossible travel, and token refresh anomalies; map to **T1566 (Phishing)** / **T1078 (Valid Accounts)**.\n- **Session revocation gaps (community-reported):** Validate that “kill sessions” in IdP triggers revocation across **AWS/Slack/other SaaS** by monitoring **CloudTrail, Slack audit, CASB** for continued access after password reset; map to **T1539 (Steal Web Session Cookie)** / **T1078**.\n\n---\n\n### Medium-term follow-ups\n- **Patch/hardening program:** Ensure formal **internet-facing appliance patch SLAs** (F5/Citrix) with automated exposure validation and rollback plans.\n- **Grafana governance:** Enforce **no-public dashboards**, SSO/MFA, least-privileged service accounts for data sources, and **plugin allow-listing**.\n- **Cloud secrets hygiene:** Expand continuous checks for **public Redis**, overly permissive K8s RBAC, and plaintext secrets; implement/verify **secret rotation** and use of managed secret stores.\n- **Mobile security posture:** Review executive/high-risk user coverage: **MDM required**, rapid iOS patching, and playbooks for **mobile-targeted phishing** and device compromise.\n- **SaaS session lifecycle:** Document and test **end-to-end session invalidation** (IdP → AWS → Slack → other critical SaaS) and close any gaps with conditional access/CASB controls.\n- **AI/“shadow AI” leakage risk:** Reconfirm policy and DLP controls around staff use of external AI tools; monitor for uploads of **sensitive data** to unsanctioned services (assumption: leakage risk is primarily policy/process-driven, not a single CVE).",
+  "source_total_items": 9257,
+  "total_items_in_window_all": 394,
+  "total_items_in_window_curated": 109,
+  "morning_call_markdown": "### Executive Summary\n- Active exploitation is ongoing against **internet-facing edge appliances** (Citrix NetScaler and F5 BIG-IP APM; plus reports of an exploited Fortinet FortiClient EMS flaw) — treat as **patch/emergency mitigation** items.\n- A major **software supply-chain wave** is unfolding: **Axios npm compromise** delivering a cross-platform RAT/dropper, and **Telnyx Python SDK (PyPI) backdoor** tied to a broader TeamPCP campaign.\n- **Social engineering + infostealers** are spiking (tax-season lures; Vietnam-linked “PXA stealer” targeting professional networks) — expect **credential theft leading to account takeover** in SaaS/IdP.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Citrix NetScaler ADC/Gateway memory overread (CVE-2026-3055) – actively exploited; CISA patch deadline**\n- What happened: Multiple sources report a **critical NetScaler memory overread** being **exploited in the wild**, with CISA ordering rapid patching.\n- Why it matters operationally: NetScaler is commonly **internet-facing** in finance; exploitation can enable **credential/session theft and follow-on access** into internal apps.\n- Recommended immediate actions for the SOC today: **Confirm inventory + exposure** (public VIPs, versions); **accelerate patch/mitigation** and **review NetScaler auth/session anomalies** + WAF/ADC logs for exploit patterns (assumption: vendor/CSA guidance available internally).\n\n**2) F5 BIG-IP APM vulnerability reclassified/used as RCE – added to KEV**\n- What happened: Reporting indicates an F5 BIG-IP APM issue initially discussed as DoS is being **exploited as RCE** and is now on government “known exploited” radars.\n- Why it matters operationally: BIG-IP APM often fronts **SSO/VPN/portal access**; compromise becomes **edge-to-internal pivot** and credential interception risk.\n- Recommended immediate actions for the SOC today: **Prioritize patching** for any internet-facing BIG-IP/APM; **monitor for configuration changes/new admin users** and suspicious iControl REST/API activity in BIG-IP logs.\n\n**3) Fortinet FortiClient EMS (CVE-2026-21643) – reported active exploitation**\n- What happened: Multiple outlets cite a **critical FortiClient EMS vulnerability** being **actively exploited** (details vary by source; treat as credible).\n- Why it matters operationally: EMS can be a **central management plane**; compromise could enable **endpoint policy tampering**, staged malware, or credential access.\n- Recommended immediate actions for the SOC today: **Identify EMS instances and internet exposure**; **pull recent EMS admin/audit logs** for new admins, unusual logins, policy/package pushes; coordinate **emergency patch/isolations** if exposed.\n\n**4) Software supply-chain: Axios npm compromise pushing cross-platform RAT/dropper**\n- What happened: Axios’ npm account/package(s) were reportedly **compromised**, publishing malicious updates that **drop malware** (cross-platform RAT behavior reported).\n- Why it matters operationally: Dev build pipelines and developer endpoints can ingest tainted dependencies, leading to **code execution in CI/CD**, lateral movement, and secret theft.\n- Recommended immediate actions for the SOC today: **Alert engineering/DevOps** to pin/verify Axios versions and check build logs; **hunt for unusual npm install activity** and suspicious child processes spawned by node/npm on developer/runner hosts.\n\n**5) Broader supply-chain: Telnyx Python SDK on PyPI backdoored (credential theft) + TeamPCP campaign context**\n- What happened: Telnyx’s Python SDK on PyPI was reported **backdoored** to steal **cloud/dev credentials**, with links to a broader **TeamPCP supply-chain** ecosystem (Databricks compromise allegation noted but unconfirmed).\n- Why it matters operationally: Backdoored SDKs commonly target **API keys, cloud tokens, and CI secrets**, enabling silent persistence and fraud-enabling access paths.\n- Recommended immediate actions for the SOC today: **Block/flag installs** of the affected package versions (assumption: internal AppSec can confirm exact versions); **review CI/CD secret access patterns** and rotate any exposed tokens if suspicious dependency usage is found.\n\n---\n\n### Monitoring & detection recommendations\n- **Edge appliance exploitation (Citrix/F5/Fortinet):** Monitor **WAF/ADC/VPN logs + firewall** for spikes in 4xx/5xx, unusual POSTs, new endpoints/URIs, and outbound callbacks; map to **T1190 Exploit Public-Facing Application**.\n- **NetScaler/F5 post-compromise signals:** Pull **admin/audit logs** for new admin accounts, config saves, authentication policy edits, and unexpected restarts; correlate with **IdP/SSO** sign-in anomalies (**T1098 Account Manipulation**).\n- **Supply-chain on endpoints/CI runners:** In **EDR**, hunt for `node`, `npm`, `python`, `pip` spawning shells or downloaders (curl/wget/powershell) and new persistence shortly after dependency installs (**T1059 Command and Scripting Interpreter**).\n- **CI/CD & secrets exfil:** In **cloud logs** (GitHub/GitLab/Azure DevOps) and **CASB**, monitor for abnormal **PAT/token creation**, unusual artifact downloads, and new runner registrations; tie to **T1552 Unsecured Credentials**.\n- **Tax-season phishing + infostealers:** In **email gateway + EDR**, prioritize detections for HTML smuggling, weaponized attachments, and browser credential dump behavior; map to **T1566 Phishing** and **T1056 Input Capture** (as applicable).\n- **Professional-network themed lures / PXA stealer campaign:** Watch **proxy/DNS** for newly observed redirect chains and downloads from consumer file hosts; in **EDR**, hunt for rapid credential store access and unusual archive staging in user profiles.\n- **RDP hijacking tooling (“CTRL” report):** Monitor **Windows Security logs** (4624/4634/4672), **TerminalServices/RDP** logs, and EDR for unusual RDP session shadowing/interaction and sudden clipboard/keystroke automation; map to **T1021.001 Remote Services: RDP**.\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** Ensure **CISA KEV-driven SLA** coverage for edge systems (Citrix/F5/Fortinet) with clear “internet-facing first” prioritization and maintenance-window exceptions.\n- **Supply-chain controls:** Enforce **dependency pinning + lockfiles**, internal mirrors, signed package verification where possible, and CI policies preventing builds from fetching new packages at runtime.\n- **Credential hygiene:** Expand **token rotation cadence** for CI/CD and cloud service principals; require **scoped, short-lived tokens** and monitor for over-privileged secrets in repos.\n- **Mobile targeting awareness:** Reports of iOS exploit-kit usage by Russia-linked actors suggest revisiting **high-risk user mobile controls** (MDM compliance, rapid iOS updates, phishing-resistant MFA).\n- **AI/agent tooling risk review:** Given multiple AI tooling/security items (e.g., token exposure in coding assistants), validate **developer plugin governance** and ensure **no sensitive tokens** are accessible to unvetted extensions/agents.\n- **Ransomware readiness:** Recent reporting around ransomware tooling leaks and dual-ops groups: validate **immutable backups**, restore testing, and segmentation assumptions for critical payment/settlement systems.",
   "highlights": [
     {
-      "title": "Critical Grafana Flaws Allow Attackers to Achieve Remote Code Execution",
-      "link": "https://gbhackers.com/critical-grafana-flaws/",
-      "source": "GBHackers News",
-      "published": "2026-03-30T07:37:07+00:00",
+      "title": "Fahndung nach Cyberkriminellen – 130 Firmen attackiert",
+      "link": "https://www.csoonline.com/article/4152271/fahndung-nach-cyberkriminellen-130-firmen-attackiert-2.html",
+      "source": "CSO Online",
+      "published": "2026-03-31T07:16:58+00:00",
       "smart_groups": [
-        "Vulnerabilities / CVEs",
         "Curated",
-        "Threat Actors / APT",
-        "Cloud / SaaS",
-        "Network / OT / ICS",
+        "Ransomware",
         "General Security"
       ],
       "curated": true
     },
     {
-      "title": "Russia-linked APT TA446 uses DarkSword exploit to target iPhone users in phishing wave",
-      "link": "https://securityaffairs.com/190139/apt/russia-linked-apt-ta446-uses-darksword-exploit-to-target-iphone-users-in-phishing-wave.html",
-      "source": "Security Affairs",
-      "published": "2026-03-30T07:34:40+00:00",
-      "smart_groups": [
-        "Threat Actors / APT",
-        "Phishing / Social Engineering",
-        "Curated",
-        "Exploit / PoC",
-        "Mobile Security",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "F5 BIG-IP DoS Flaw Upgraded to Critical RCE, Now Exploited in the Wild",
-      "link": "https://www.securityweek.com/f5-big-ip-dos-flaw-upgraded-to-critical-rce-now-exploited-in-the-wild/",
-      "source": "SecurityWeek",
-      "published": "2026-03-30T07:07:09+00:00",
+      "title": "CISA orders feds to patch actively exploited Citrix flaw by Thursday",
+      "link": "https://www.bleepingcomputer.com/news/security/cisa-orders-feds-to-patch-actively-exploited-citrix-flaw-by-thursday/",
+      "source": "BleepingComputer",
+      "published": "2026-03-31T07:05:25+00:00",
       "smart_groups": [
         "Curated",
         "Exploit / PoC",
@@ -55,96 +37,105 @@
       "curated": true
     },
     {
-      "title": "Three China-Linked Clusters Target Southeast Asian Government in 2025 Cyber Campaign",
-      "link": "https://thehackernews.com/2026/03/three-china-linked-clusters-target.html",
-      "source": "The Hacker News",
-      "published": "2026-03-30T07:00:00+00:00",
-      "smart_groups": [
-        "Malware / Payloads",
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "CanisterWorm Targets Docker, Kubernetes, and Redis to Steal Secrets",
-      "link": "https://gbhackers.com/canisterworm-targets-docker/",
-      "source": "GBHackers News",
-      "published": "2026-03-30T06:50:42+00:00",
-      "smart_groups": [
-        "Cloud / SaaS",
-        "Curated",
-        "Exploit / PoC",
-        "Malware / Payloads",
-        "Vulnerabilities / CVEs",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Compromised account - killed sessions in Entra but user still had active access in AWS and Slack",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1s7ijfv/compromised_account_killed_sessions_in_entra_but/",
+      "title": "Axios just got hit by a supply chain attack. Attacks are increasing daily. What are the best practices to stay safe?",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1s8g7o5/axios_just_got_hit_by_a_supply_chain_attack/",
       "source": "/r/cybersecurity",
-      "published": "2026-03-30T06:09:05+00:00",
+      "published": "2026-03-31T07:01:20+00:00",
       "smart_groups": [
-        "Identity / Access",
-        "Cloud / SaaS",
         "Curated",
-        "Vulnerabilities / CVEs",
+        "Supply Chain / Software",
         "OSINT / Community"
       ],
       "curated": true
     },
     {
-      "title": "Hackers Probe Citrix NetScaler Systems Ahead of Suspected CVE-2026-3055 Exploitation",
-      "link": "https://gbhackers.com/hackers-probe-citrix-netscaler-systems-cve-2026-3055-exploitation/",
-      "source": "GBHackers News",
-      "published": "2026-03-30T05:41:24+00:00",
+      "title": "Am I overthinking this, or are mobile devices actually harder to investigate than computers ?",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1s8g66s/am_i_overthinking_this_or_are_mobile_devices/",
+      "source": "/r/cybersecurity",
+      "published": "2026-03-31T06:59:08+00:00",
       "smart_groups": [
         "Curated",
+        "Network / OT / ICS",
         "Vulnerabilities / CVEs",
+        "Mobile Security",
+        "OSINT / Community"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Critical Vulnerability in OpenAI Codex Allowed GitHub Token Compromise",
+      "link": "https://www.securityweek.com/critical-vulnerability-in-openai-codex-allowed-github-token-compromise/",
+      "source": "SecurityWeek",
+      "published": "2026-03-31T06:35:48+00:00",
+      "smart_groups": [
+        "Curated",
+        "Crypto / Web3",
+        "Exploit / PoC",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "ChatGPT Vulnerability Enabled Silent Leakage of Prompts and Sensitive Information",
+      "link": "https://gbhackers.com/chatgpt-vulnerability-enabled-silent-leakage-of-prompts/",
+      "source": "GBHackers News",
+      "published": "2026-03-31T06:27:29+00:00",
+      "smart_groups": [
         "Data Protection / Privacy",
+        "Curated",
         "Exploit / PoC",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Open-Source Security Operations Workflow Orchestration with ShipSec Studio",
-      "link": "https://www.news4hackers.com/open-source-security-operations-workflow-orchestration-with-shipsec-studio/",
-      "source": "News4Hackers",
-      "published": "2026-03-30T05:01:54+00:00",
-      "smart_groups": [
-        "Curated",
         "Vulnerabilities / CVEs",
         "General Security"
       ],
       "curated": true
     },
     {
-      "title": "ShipSec Studio brings open-source workflow orchestration to security operations",
-      "link": "https://www.helpnetsecurity.com/2026/03/30/shipsec-studio-security-workflow-automation-platform/",
-      "source": "Help Net Security",
-      "published": "2026-03-30T05:00:50+00:00",
+      "title": "Quantum computers need far less qubits to crack crypto than thought: Google",
+      "link": "https://cointelegraph.com/news/quantum-computers-need-far-less-power-crack-crypto-says-google?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound",
+      "source": "Cointelegraph.com News",
+      "published": "2026-03-31T06:27:02+00:00",
       "smart_groups": [
-        "Vulnerabilities / CVEs",
         "Curated",
+        "Vulnerabilities / CVEs",
+        "Crypto / Web3"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Axios Supply Chain Attack Pushes Cross-Platform RAT via Compromised npm Account",
+      "link": "https://thehackernews.com/2026/03/axios-supply-chain-attack-pushes-cross.html",
+      "source": "The Hacker News",
+      "published": "2026-03-31T06:08:00+00:00",
+      "smart_groups": [
+        "Curated",
+        "Supply Chain / Software",
         "General Security"
       ],
       "curated": true
     },
     {
-      "title": "CISA Warns of Actively Exploited F5 BIG-IP Vulnerability in Ongoing Attacks",
-      "link": "https://gbhackers.com/cisa-warns-of-actively-exploited-f5-big-ip-vulnerability/",
+      "title": "Claude AI Uncovers Zero-Day RCE Vulnerabilities in Vim and Emacs",
+      "link": "https://gbhackers.com/claude-ai-zero-day-rce-vulnerabilities-in-vim-and-emacs/",
       "source": "GBHackers News",
-      "published": "2026-03-30T04:55:49+00:00",
+      "published": "2026-03-31T05:41:26+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Threat Actors / APT",
         "Curated",
-        "Exploit / PoC",
+        "Cloud / SaaS",
         "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Your Agent Runs Code You Never Wrote - Why agent isolation is a different problem",
+      "link": "https://www.reddit.com/r/netsec/comments/1s8ebcc/your_agent_runs_code_you_never_wrote_why_agent/",
+      "source": "/r/netsec",
+      "published": "2026-03-31T05:11:54+00:00",
+      "smart_groups": [
+        "Curated",
+        "Cloud / SaaS",
+        "OSINT / Community"
       ],
       "curated": true
     }
