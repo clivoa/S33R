@@ -1,0 +1,143 @@
+{
+  "generated_at": "2026-04-01T07:53:26.089559+00:00",
+  "analysis_date": "2026-04-01",
+  "model": "gpt-5.2",
+  "window_hours": 24,
+  "source_file": "data/news_recent.json",
+  "source_generated_at": "2026-04-01T07:31:24.761845+00:00",
+  "source_days_back": 30,
+  "source_total_items": 9543,
+  "total_items_in_window_all": 395,
+  "total_items_in_window_curated": 155,
+  "morning_call_markdown": "### Executive Summary\n- **Major software supply-chain activity**: widely used npm packages (notably **axios**) and other OSS ecosystems (npm/PyPI) reported compromised/backdoored; attribution in reporting links at least one case to **North Korea–nexus** activity.  \n- **Multiple “exploited-in-the-wild” enterprise edge/application vulns** surfaced (F5 BIG-IP, Fortinet FortiClient EMS, WebLogic, Citrix NetScaler, TrueConf) with active exploitation claims—treat as **internet-facing risk**.  \n- **Malware delivery trends**: Microsoft reports **WhatsApp-delivered** VBS/MSI payload chain; combine with stolen credential abuse and ransomware monetization reporting = elevated intrusion likelihood.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) OSS supply-chain compromises (npm/PyPI) — axios + related package trojans**\n- **What happened:** Reports indicate **axios npm** was hijacked and used to distribute malware/RAT; additional npm/PyPI packages also reported malicious (e.g., **undicy-http**, **Telnyx Python SDK** backdoor) and “Claude Code” forks/trojans circulating.  \n- **Why it matters operationally:** Financial environments run extensive CI/CD and internal apps; poisoned dependencies can lead to **developer workstation + build pipeline compromise** and downstream production impact (ATT&CK: T1195 Supply Chain Compromise).  \n- **Recommended immediate actions for the SOC today:** **Identify exposure** (SBOM/dependency scans, grep lockfiles for affected package versions; inventory CI runners/dev endpoints running Node/Python builds) and **hunt for post-install execution** from package scripts on dev/build hosts.\n\n**2) Internet-facing appliance/app exploitation (treat as active): F5 BIG-IP / Fortinet EMS / WebLogic / Citrix NetScaler / TrueConf**\n- **What happened:** Multiple sources flag **critical RCE/known-exploited** issues and active exploitation for common enterprise platforms (F5 BIG-IP APM; Fortinet FortiClient EMS; Oracle WebLogic RCE; Citrix NetScaler ADC added to known exploited list; TrueConf zero-day exploited in SE Asia gov targeting).  \n- **Why it matters operationally:** These are typical **perimeter/management plane** targets that can yield fast foothold, credential theft, and lateral movement into sensitive segments (ATT&CK: T1190 Exploit Public-Facing Application).  \n- **Recommended immediate actions for the SOC today:** **Verify external exposure + patch level** (ASM scans, WAF/LB inventories, VPN/perimeter owners) and **increase detection** for exploitation artifacts (new webshells, suspicious admin logins, abnormal process spawns on appliances where available).\n\n**3) WhatsApp malware delivery chain (VBS + MSI backdoors)**\n- **What happened:** Microsoft reports a campaign delivering **VBS payloads and MSI backdoors via WhatsApp** (social engineering / file delivery).  \n- **Why it matters operationally:** High risk for **employee endpoints** (especially BYOD or unmanaged mobile-to-desktop transfer), leading to initial access and persistence; relevant to fraud and account takeover adjacent workflows.  \n- **Recommended immediate actions for the SOC today:** **Hunt endpoints** for suspicious `wscript/cscript` execution and MSI installs from user download paths, and **reinforce controls** (block/limit script hosts where feasible; review MDM/DLP controls for chat-to-email/file transfers).\n\n**4) Cloud/SaaS data access risk: Google Cloud Vertex AI “over-privileged” / sensitive data access issue (details still developing)**\n- **What happened:** Reporting claims a Google Cloud **Vertex AI** issue enabling sensitive data access tied to **over-privileged** configurations; specifics/affected conditions are not fully clear from headlines alone.  \n- **Why it matters operationally:** If your org uses Vertex AI/agentic workflows, mis-scoped IAM/service accounts can expose regulated data and secrets (ATT&CK: T1098 Account Manipulation / cloud permission abuse).  \n- **Recommended immediate actions for the SOC today:** **Confirm whether Vertex AI is in use** (projects, service accounts, connectors) and **review IAM** for overly broad roles + unexpected principals; monitor for anomalous access to model artifacts/datasets.\n\n---\n\n### Monitoring & detection recommendations\n- **Supply-chain execution on dev/build hosts:** EDR telemetry for unusual child processes spawned by package managers (`npm/yarn/pnpm/pip/python setup`) and postinstall scripts; focus on **new outbound connections** from CI runners (ATT&CK T1195, T1059).  \n- **Perimeter exploit attempts:** WAF/reverse-proxy logs for spikes in 4xx/5xx, suspicious URI patterns, and unusual HTTP methods to management paths on **F5/Fortinet/WebLogic/Citrix/TrueConf**; correlate with threat intel “known exploited” notices (ATT&CK T1190).  \n- **Suspicious admin authentication:** IdP/VPN/appliance auth logs for **new geos, impossible travel, off-hours**, and repeated failures followed by success on admin portals; prioritize privileged groups (ATT&CK T1078).  \n- **Webshell / post-exploitation behaviors:** EDR on servers for abnormal interpreter usage (`cmd`, `powershell`, `bash`, `python`) launched by web service accounts; file integrity monitoring on web roots for new/changed scripts (ATT&CK T1505.003).  \n- **WhatsApp-to-endpoint malware chain:** Endpoint logs for `wscript.exe`/`cscript.exe` executing from user profile/downloads and `msiexec.exe` installing from user-writable locations; email/web proxy logs for follow-on payload retrieval (ATT&CK T1204, T1059).  \n- **Credential abuse early signals:** Cloud/SaaS audit logs (O365/GWS/Okta/AzureAD) for new OAuth consents, token abuse, mailbox rule creation, and mass download patterns—aligns with “stolen logins fueling attacks” theme (ATT&CK T1528, T1114).  \n- **Ransomware staging indicators:** Watch for bulk file modifications, shadow copy deletion attempts, and lateral admin tooling (PsExec/SMB/WMI) especially originating from dev/build networks if supply-chain compromise suspected (ATT&CK T1486, T1021).\n\n---\n\n### Medium-term follow-ups\n- **Dependency governance hardening:** Enforce provenance controls (lockfile pinning, private registries, package signing/attestation where available) and CI policies to block unexpected `postinstall` scripts.  \n- **Patch/mitigation sprint for edge systems:** Validate ownership and SLAs for F5/Fortinet/WebLogic/Citrix/TrueConf; where patching lags, apply compensating controls (WAF rules, IP allowlists, admin interface isolation).  \n- **Cloud IAM least privilege review:** For AI/agent workflows, baseline service accounts, reduce broad roles, and add detective controls for sensitive dataset/model access.  \n- **User comms + policy:** Re-issue guidance on receiving files via chat apps (WhatsApp/Telegram), and ensure reporting path for suspicious messages is frictionless.  \n- **Tabletop: supply-chain to prod scenario:** Run a short IR exercise covering “malicious npm package in CI” including containment of runners, secret rotation, and redeploy validation.",
+  "highlights": [
+    {
+      "title": "Workshop Resources: OWASP Threat and Safeguard Matrix (TaSM)",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1s9d4rf/workshop_resources_owasp_threat_and_safeguard/",
+      "source": "/r/cybersecurity",
+      "published": "2026-04-01T06:59:15+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "OSINT / Community"
+      ],
+      "curated": true
+    },
+    {
+      "title": "PyPI Telnyx Python SDK Backdoored to Steal Credentials on Windows, macOS, and Linux",
+      "link": "https://gbhackers.com/pypi-telnyx-python-sdk/",
+      "source": "GBHackers News",
+      "published": "2026-04-01T06:43:49+00:00",
+      "smart_groups": [
+        "Supply Chain / Software",
+        "Curated",
+        "Linux / Unix",
+        "Malware / Payloads",
+        "Windows / Microsoft",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Google Drive ransomware detection now on by default for paying users",
+      "link": "https://www.bleepingcomputer.com/news/security/google-drive-ransomware-detection-now-on-by-default-for-paying-users/",
+      "source": "BleepingComputer",
+      "published": "2026-04-01T06:35:34+00:00",
+      "smart_groups": [
+        "Curated",
+        "Ransomware",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Claude Code source leak: 1 of 5 forks audited is a trojan distributing a 108MB Windows binary (1,239 downloads)",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1s9cp1m/claude_code_source_leak_1_of_5_forks_audited_is_a/",
+      "source": "/r/cybersecurity",
+      "published": "2026-04-01T06:33:11+00:00",
+      "smart_groups": [
+        "Curated",
+        "Malware / Payloads",
+        "Vulnerabilities / CVEs",
+        "Windows / Microsoft",
+        "OSINT / Community"
+      ],
+      "curated": true
+    },
+    {
+      "title": "TrueConf Vulnerability Under Active Exploitation in Southeast Asia Government Attacks",
+      "link": "https://gbhackers.com/trueconf-vulnerability-under-active-exploitation/",
+      "source": "GBHackers News",
+      "published": "2026-04-01T06:12:29+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Claude Code Source Leaked via npm Packaging Error, Anthropic Confirms",
+      "link": "https://thehackernews.com/2026/04/claude-code-tleaked-via-npm-packaging.html",
+      "source": "The Hacker News",
+      "published": "2026-04-01T06:12:00+00:00",
+      "smart_groups": [
+        "Supply Chain / Software",
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "NPM Supply Chain Attack Uses undicy-http to Deploy RAT",
+      "link": "https://gbhackers.com/npm-supply-chain-attack/",
+      "source": "GBHackers News",
+      "published": "2026-04-01T05:58:09+00:00",
+      "smart_groups": [
+        "Supply Chain / Software",
+        "Curated",
+        "Malware / Payloads",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "CFTC’s top enforcer puts prediction market insider traders on notice",
+      "link": "https://cointelegraph.com/news/cftc-enforcement-chief-warns-insider-traders-on-prediction-markets-will-be-prosecuted?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound",
+      "source": "Cointelegraph.com News",
+      "published": "2026-04-01T05:34:38+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Crypto / Web3"
+      ],
+      "curated": true
+    },
+    {
+      "title": "69-Year-Old Woman Loses ₹1.54 Crore in Elderly Scam, Auto Driver Held by Police",
+      "link": "https://www.news4hackers.com/69-year-old-woman-loses-%e2%82%b91-54-crore-in-elderly-scam-auto-driver-held-by-police/",
+      "source": "News4Hackers",
+      "published": "2026-04-01T05:30:12+00:00",
+      "smart_groups": [
+        "Curated",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Critical AI Security Breach at Anthropic Sparks Concerns",
+      "link": "https://www.news4hackers.com/critical-ai-security-breach-at-anthropic-sparks-concerns/",
+      "source": "News4Hackers",
+      "published": "2026-04-01T05:28:02+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    }
+  ]
+}
