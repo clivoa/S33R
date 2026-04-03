@@ -1,0 +1,145 @@
+{
+  "generated_at": "2026-04-03T07:37:20.381580+00:00",
+  "analysis_date": "2026-04-03",
+  "model": "gpt-5.2",
+  "window_hours": 24,
+  "source_file": "data/news_recent.json",
+  "source_generated_at": "2026-04-03T07:20:21.321141+00:00",
+  "source_days_back": 30,
+  "source_total_items": 9480,
+  "total_items_in_window_all": 376,
+  "total_items_in_window_curated": 135,
+  "morning_call_markdown": "### Executive Summary\n- **Active exploitation + widely exposed apps:** Chrome **0-day** is confirmed exploited; and attackers are actively exploiting **Next.js “React2Shell” (CVE-2025-55182)** at scale—treat both as high-risk if present in our estate.\n- **Supply-chain noise is actionable:** Multiple reports of **trojanized developer artifacts** (Axios npm compromise; Claude Code leak used to distribute infostealers) and a **scanner/supply-chain angle** tied to a major org cloud breach—assume dev pipelines and CI runners are in scope for attackers.\n- **Ransomware tradecraft is trending toward defense evasion:** Reports highlight ransomware (e.g., **Qilin**) using **malicious DLLs to disable EDR** and continued abuse of legitimate admin tools—reinforce EDR tamper detections and “dual-use tool” monitoring.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Chrome zero-day under active exploitation (CVE-2026-5281)**\n- **What happened:** Google patched an **actively exploited Chrome 0-day**; multiple outlets + CISA-style warnings indicate in-the-wild exploitation.\n- **Why it matters operationally:** Browser 0-days are a common **initial access** vector; high likelihood of commodity and targeted follow-on payloads in finance.\n- **Recommended immediate actions for the SOC today:** **Verify Chrome auto-update compliance** on endpoints/VDI; **hunt for post-browser exploitation chains** (new persistence, credential access) on machines running outdated Chrome.\n\n**2) Next.js “React2Shell” exploitation at scale (CVE-2025-55182)**\n- **What happened:** Reports indicate **700–766+ Next.js hosts** compromised via “React2Shell,” with credential theft activity.\n- **Why it matters operationally:** If we run internet-facing Next.js apps, this is **direct RCE / compromise risk**; could enable webshells, credential theft, and lateral movement into internal services.\n- **Recommended immediate actions for the SOC today:** **Identify all internet-facing Next.js** (WAF/app inventory) and **validate patch/mitigation status**; **review WAF/app logs for exploit patterns and abnormal server-side child processes** from node runtimes.\n\n**3) Progress ShareFile: multiple vulns chainable to pre-auth RCE**\n- **What happened:** CERT-style advisory + reporting indicates **multiple ShareFile vulnerabilities** that can be **chained for pre-auth RCE**.\n- **Why it matters operationally:** File transfer platforms are high-value in finance (PII, customer docs); pre-auth RCE often becomes **rapid ransomware/data theft**.\n- **Recommended immediate actions for the SOC today:** **Confirm whether ShareFile is in use (on-prem/hosted connectors)** and **prioritize patching/mitigations**; **increase monitoring for suspicious access to ShareFile endpoints** and unusual service account activity.\n\n**4) Supply-chain compromise cluster: Axios npm + “Claude Code leak” trojanized repos**\n- **What happened:** Reporting claims **Axios npm** was hit in a supply-chain event (attributed to NK-linked actors in some coverage); separate reporting shows **Claude Code source leak used to push infostealers** on GitHub plus a newly reported Claude Code issue (details vary by source).\n- **Why it matters operationally:** Our dev endpoints/CI runners can become **initial access** into production; dependency poisoning can bypass perimeter controls and land inside trusted builds.\n- **Recommended immediate actions for the SOC today:** **Alert DevOps to freeze/verify impacted dependencies** (dependency lockfiles, registry integrity, signed releases) and **scan build runners/dev workstations for infostealers**; **review recent package updates** and new outbound connections from CI networks.\n\n**5) Ransomware evasion: Qilin “EDR-killer” DLL + legitimate tool abuse**\n- **What happened:** Multiple reports describe **Qilin ransomware** deploying a **malicious DLL to disable many EDRs**; broader reporting notes ransomware crews increasing **living-off-the-land** to bypass AV.\n- **Why it matters operationally:** Raises the chance of **silent endpoint degradation** before encryption/exfiltration; SOC may see “gaps” rather than clean detections.\n- **Recommended immediate actions for the SOC today:** **Hunt for EDR tamper/disable events** and sudden sensor silence; **tighten detections on LOLBins/remote admin tools** in user subnets and servers (where not expected).\n\n---\n\n### Monitoring & detection recommendations\n- **Browser 0-day follow-on (T1203, T1059):** EDR for **browser-to-shell** pivots (chrome.exe spawning cmd/powershell/mshta/rundll32), plus Sysmon/Windows Security logs for **new scheduled tasks/services** immediately after browser crashes.\n- **Next.js exploitation (T1190):** WAF/reverse-proxy + app logs for **unusual POSTs to Next.js routes**, spikes in 4xx/5xx, and **node process spawning child binaries**; Linux auditd/EDR for new files in web roots and unexpected outbound connections from web servers.\n- **ShareFile pre-auth RCE patterns (T1190):** Web gateway/WAF logs for **anomalous requests to ShareFile endpoints**, authentication bypass indicators, and **new process execution by ShareFile services**; monitor privileged account use following ShareFile access.\n- **Supply-chain/dev compromise (T1195, T1552):** CI/CD logs (GitHub/GitLab/Azure DevOps), artifact registry logs, and EDR on build runners for **new packages introduced**, unsigned artifacts, secrets access anomalies, and **new outbound traffic** to uncommon hosts from CI networks.\n- **EDR tampering / defense impairment (T1562.001):** EDR platform console + endpoint event logs for **agent stop/uninstall attempts**, kernel driver load anomalies, and security tool process termination; alert on “sensor heartbeat lost” clustered by subnet.\n- **Device code / token phishing (EvilTokens theme) (T1566, T1528):** IdP (Entra ID/Azure AD) sign-in logs for **Device Code flow usage**, unusual device_code authentications, impossible travel, and new OAuth app consents; correlate with email gateway for lure campaigns.\n- **Banking trojan campaigns (Casbaneiro/Horabot) (T1566.001, T1059):** Email security + EDR for **malicious attachments**, user-launched script interpreters, and outbound C2-like traffic shortly after mail delivery; prioritize finance/treasury user groups.\n\n---\n\n### Medium-term follow-ups\n- **Patch/hardening cadence:** Add **Chrome emergency patch SLAs** (including VDI/contractor pools) and validate update coverage reporting.\n- **Internet app risk review:** Inventory and vulnerability management check for **Next.js and other JS runtimes** exposed to the internet; ensure WAF virtual patching rules exist and are tested.\n- **File transfer platform governance:** Re-validate **ShareFile configuration**, MFA/SSO enforcement, least-privilege service accounts, and external sharing controls; ensure centralized logging is enabled and retained.\n- **Supply-chain controls:** Expand **dependency allowlisting, lockfile enforcement, SBOM ingestion**, and artifact signing/verification; implement stricter egress controls for CI runners.\n- **Ransomware readiness:** Validate **EDR tamper protection settings**, backup immutability, and segmentation; tabletop a scenario where **EDR is partially disabled** before encryption.\n- **Mobile/security updates:** Track Apple “DarkSword” patch coverage in fleet management (if iOS in corporate scope) and ensure **rapid mobile OS update compliance** for high-risk groups.",
+  "highlights": [
+    {
+      "title": "Introducing Gemma 4 on Google Cloud: Our most capable open models yet",
+      "link": "https://cloud.google.com/blog/products/ai-machine-learning/gemma-4-available-on-google-cloud/",
+      "source": "Google Cloud Blog",
+      "published": "2026-04-03T16:00:00+00:00",
+      "smart_groups": [
+        "Cloud / SaaS",
+        "Threat Actors / APT",
+        "Curated",
+        "Network / OT / ICS",
+        "Vulnerabilities / CVEs",
+        "Windows / Microsoft",
+        "Vendors / Product Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "APERION releases SmartFlow SDK for secure, on-prem AI governance without cloud reliance",
+      "link": "https://www.helpnetsecurity.com/2026/04/03/aperion-smartflow-sdk-ai-governance/",
+      "source": "Help Net Security",
+      "published": "2026-04-03T07:06:01+00:00",
+      "smart_groups": [
+        "Curated",
+        "Threat Actors / APT",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "EU Data Leak Exposed: European Commission Suffers Major Cyber Attack",
+      "link": "https://www.news4hackers.com/eu-data-leak-exposed-european-commission-suffers-major-cyber-attack/",
+      "source": "News4Hackers",
+      "published": "2026-04-03T07:01:52+00:00",
+      "smart_groups": [
+        "Curated",
+        "Data Breaches / Leaks",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Phorpiex Botnet Fuels Ransomware, Sextortion, and Crypto-Theft Attacks",
+      "link": "https://gbhackers.com/phorpiex-botnet/",
+      "source": "GBHackers News",
+      "published": "2026-04-03T06:53:37+00:00",
+      "smart_groups": [
+        "Curated",
+        "Malware / Payloads",
+        "Ransomware",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Attackers Abuse React2Shell Flaw to Compromise 700+ Next.js Hosts",
+      "link": "https://gbhackers.com/attackers-abuse-react2shell-flaw/",
+      "source": "GBHackers News",
+      "published": "2026-04-03T06:49:02+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Phishing / Social Engineering",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Trivy supply chain attack enabled European Commission cloud breach",
+      "link": "https://www.helpnetsecurity.com/2026/04/03/european-commission-cloud-breach/",
+      "source": "Help Net Security",
+      "published": "2026-04-03T06:34:00+00:00",
+      "smart_groups": [
+        "Curated",
+        "Data Protection / Privacy",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "North Korea-Linked Hackers Hit Axios npm in Supply Chain Attack",
+      "link": "https://gbhackers.com/axios-npm-in-supply-chain/",
+      "source": "GBHackers News",
+      "published": "2026-04-03T06:07:49+00:00",
+      "smart_groups": [
+        "Curated",
+        "Supply Chain / Software",
+        "Threat Actors / APT",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Microsoft Releases Open-Source Toolkit for Autonomous AI Governance",
+      "link": "https://www.news4hackers.com/microsoft-releases-open-source-toolkit-for-autonomous-ai-governance/",
+      "source": "News4Hackers",
+      "published": "2026-04-03T06:01:41+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Microsoft releases open-source toolkit to govern autonomous AI agents",
+      "link": "https://www.helpnetsecurity.com/2026/04/03/microsoft-ai-agent-governance-toolkit/",
+      "source": "Help Net Security",
+      "published": "2026-04-03T05:30:38+00:00",
+      "smart_groups": [
+        "Cloud / SaaS",
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Qilin Ransomware Deploys Malicious DLL to Disable Most EDR Defenses",
+      "link": "https://gbhackers.com/qilin-ransomware-deploys-malicious-dll/",
+      "source": "GBHackers News",
+      "published": "2026-04-03T05:11:53+00:00",
+      "smart_groups": [
+        "Detection Engineering",
+        "Curated",
+        "Ransomware",
+        "General Security"
+      ],
+      "curated": true
+    }
+  ]
+}
