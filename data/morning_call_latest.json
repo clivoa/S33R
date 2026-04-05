@@ -1,23 +1,48 @@
 {
-  "generated_at": "2026-04-04T07:16:32.101285+00:00",
-  "analysis_date": "2026-04-04",
+  "generated_at": "2026-04-05T07:22:46.840822+00:00",
+  "analysis_date": "2026-04-05",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-04-04T06:05:02.693327+00:00",
+  "source_generated_at": "2026-04-05T07:18:17.082240+00:00",
   "source_days_back": 30,
-  "source_total_items": 9381,
-  "total_items_in_window_all": 281,
-  "total_items_in_window_curated": 104,
-  "morning_call_markdown": "### Executive Summary\n- Actively exploited enterprise software flaws are in focus: TrueConf video conferencing bug added to CISA KEV; reports of active exploitation against internet-exposed F5 BIG-IP APM and critical Progress ShareFile unauthenticated RCE/exfil paths.\n- Supply-chain + developer tooling attacks continue: Axios/npm maintainer compromise via targeted social engineering (UNC1069) and a separate “Claude Code” source leak being abused to distribute malware; plus multiple newly identified malicious npm packages.\n- Ransomware/commodity malware tempo remains high (Akira acceleration; Play/Qilin leaks; bogus installers distributing RAT/cryptominer), reinforcing the need to tighten initial-access and lateral-movement monitoring.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) TrueConf video conferencing vulnerability (CISA KEV; exploited in the wild, attributed to China-linked activity)**\n- **What happened:** CISA issued a 2-week patch deadline for a TrueConf bug reportedly exploited in real-world intrusions.\n- **Why it matters operationally:** Video-conferencing services are often internet-reachable and can provide a fast foothold into corporate networks (high blast radius if exposed).\n- **Recommended immediate actions for the SOC today:** Identify any TrueConf instances (asset inventory + external scan), confirm patch level/exposure; add temporary perimeter blocks/ACLs for admin interfaces until patched.\n\n**2) Internet-exposed edge/app appliances under active exploitation pressure (F5 BIG-IP APM + Progress ShareFile critical flaws)**\n- **What happened:** Reporting highlights ~14k exposed F5 BIG-IP APM devices amid active RCE exploitation; Progress ShareFile flaws reported enabling unauthenticated file exfiltration and/or unauthenticated RCE.\n- **Why it matters operationally:** These sit on the boundary (VPN/app access/file transfer) and are common initial-access targets for ransomware and data theft—direct risk to financial services availability and confidentiality.\n- **Recommended immediate actions for the SOC today:** Validate whether we run/host affected products (including vendor-managed); prioritize emergency patching/mitigations for any internet-facing nodes and review WAF/IPS blocks and access logs for suspicious requests.\n\n**3) Software supply-chain compromise wave (Axios/npm incident + malicious npm packages + Trivy supply-chain angle)**\n- **What happened:** Axios maintainer post-mortem confirms targeted social engineering (UNC1069) leading to npm supply-chain compromise; community reporting flags a burst of malicious npm packages; CERT-EU discussed a Trivy supply-chain-related incident impacting EU entities (details may still be emerging).\n- **Why it matters operationally:** Dev tooling compromise can push backdoors into internal apps/CI pipelines—harder to detect and can bypass perimeter controls.\n- **Recommended immediate actions for the SOC today:** Query CI/CD and build logs for new/unapproved dependency versions and unusual package install behavior; increase monitoring for new tokens/keys created or used from CI runners and rotate exposed secrets if any anomalies are found.\n\n**4) “Claude Code” source leak abused for malware distribution (developer-targeting)**\n- **What happened:** Multiple sources report a Claude Code leak and that attackers are leveraging it to distribute malware; some reports mention shell injection patterns in leaked code (exact exploitability may vary—assume developer-targeting lures are active).\n- **Why it matters operationally:** Developers and IT automation accounts are privileged; malware delivery via “legit” tools/repos increases the chance of execution on engineering/admin endpoints.\n- **Recommended immediate actions for the SOC today:** Alert engineering to avoid installing “leaked/forked” tooling and verify checksums/sources; hunt for new developer tool executions spawning shells or unsigned binaries on dev workstations and CI runners.\n\n**5) Ransomware + commodity loader activity uptick (Akira acceleration; Play/Qilin leaks; bogus installers → RAT/cryptominer; Phorpiex)**\n- **What happened:** Reporting covers faster Akira intrusions, Play/Qilin-related leaks, and long-running campaigns using bogus installers/botnets to drop RATs/cryptominers and ransomware-related payloads.\n- **Why it matters operationally:** This maps to the most common financial-sector incident pattern: initial access → credential theft → lateral movement → ransomware/data theft.\n- **Recommended immediate actions for the SOC today:** Tighten monitoring for credential dumping + remote admin tool abuse; review EDR detections around installer execution from user download paths and block known risky tooling where feasible.\n\n---\n\n### Monitoring & detection recommendations\n- **Edge appliance exploitation (F5/ShareFile/TrueConf):** Monitor **WAF/Reverse proxy**, **VPN/app access logs**, **NGFW**, and **IDS/IPS** for spikes in 4xx/5xx, unusual URIs, large POSTs, and new admin logins from atypical geos (ATT&CK **T1190** Exploit Public-Facing Application).\n- **Post-exploitation on Linux servers (web shells via cron persistence):** From the Microsoft report on cookie-controlled PHP web shells persisting via cron, hunt in **Linux auditd/syslog**, **web server logs**, and **EDR for Linux** for new cron entries, unexpected `php` from web roots, and anomalous outbound from web servers (ATT&CK **T1053.003** Scheduled Task/Cron, **T1505.003** Web Shell).\n- **Supply-chain/CI abuse:** In **CI/CD platform logs** (GitHub/GitLab/Azure DevOps/Jenkins) and **cloud audit logs**, alert on new runner registrations, unusual package install steps, dependency changes outside approved PRs, and token creation/usage from new IPs (ATT&CK **T1552** Unsecured Credentials, **T1078** Valid Accounts).\n- **npm/package manager anomalies:** On build hosts/dev endpoints, monitor **process creation** for `npm/yarn/pnpm` executing `postinstall` scripts that spawn `bash/sh/powershell/curl/wget` or create persistence; correlate with **EDR** and **proxy/DNS** (ATT&CK **T1059** Command and Scripting Interpreter).\n- **Targeted social engineering of maintainers/admins:** Increase scrutiny in **email security gateway**, **IdP (Okta/Entra) sign-in logs**, and **MFA events** for targeted phishing, device enrollment, impossible travel, and MFA fatigue patterns (ATT&CK **T1566** Phishing, **T1621** Multi-Factor Authentication Request Generation).\n- **Windows LNK-based delivery (Kimsuky reporting):** Hunt in **EDR**, **Sysmon** (if available), and **file telemetry** for `.lnk` execution from user-writable locations leading to `python`, `powershell`, or LOLBins; watch for new scheduled tasks/services shortly after (ATT&CK **T1204.002** Malicious File, **T1059.001** PowerShell).\n- **Ransomware early indicators (Akira/Play/Qilin themes):** Monitor **EDR** for mass file rename/encrypt behaviors, `vssadmin/wbadmin/bcdedit` usage, remote exec tools (PsExec/WMI), and abnormal SMB/RDP lateral movement (ATT&CK **T1486** Data Encrypted for Impact, **T1021** Remote Services).\n- **Mobile malware risk (SparkCat / Android RAT themes):** If BYOD/MDM exists, review **MDM/app telemetry** for sideloading, risky permissions, and newly installed apps outside store policy; correlate with **CASB** for suspicious token use from mobile clients (ATT&CK **T1476** Deliver Malicious App).\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** Confirm remediation timelines and compensating controls for TrueConf (KEV 2-week clock), F5 BIG-IP APM, Progress ShareFile, Cisco IMC (auth bypass CVE-2026-20093) across all environments (prod/dev/DR).\n- **External exposure reduction:** Re-validate that file transfer portals, conferencing services, and VPN/admin panels are not internet-exposed unless required; enforce IP allowlists and admin access via PAM/jump hosts.\n- **Supply-chain controls:** Implement/strengthen dependency allowlisting, lockfiles, artifact signing/verification, and SLSA-style build provenance where feasible; require MFA + phishing-resistant methods for maintainers and CI admins.\n- **Secrets hygiene:** Review developer credential handling (tokens in CI, long-lived API keys); expand secret scanning and rotate high-risk credentials on a schedule (and immediately when build anomalies are detected).\n- **Ransomware readiness:** Validate offline/immutable backups, test restore paths, and ensure EDR tamper protection is enabled; confirm privileged account tiering and reduce lateral movement paths.\n- **Awareness (targeted):** Brief engineering and IT admins on ongoing social-engineering patterns (maintainer targeting, “leaked tool” lures) and require out-of-band verification for dependency or tooling change requests.",
+  "source_total_items": 9094,
+  "total_items_in_window_all": 92,
+  "total_items_in_window_curated": 33,
+  "morning_call_markdown": "### Executive Summary\n- Active exploitation reported for a Fortinet FortiClient EMS zero-day/RCE (CVE-2026-35616): treat any exposed/Internet-reachable EMS as potentially compromised until patched and validated.\n- Multiple software supply-chain threats: malicious npm packages targeting Redis/PostgreSQL for persistence + ongoing campaigns abusing developer trust (fake LinkedIn/Slack personas; GitHub “Claude code leak” repackaged with malware).\n- Supply-chain incident blast radius is real: EU Commission confirmed a breach linked to the Trivy/TeamTNT-style supply-chain activity—assume CI/CD and artifact integrity are in scope for attackers.\n\n### High-priority items (immediate attention)\n\n**1) Fortinet FortiClient EMS actively exploited zero-day/RCE (CVE-2026-35616)**\n- What happened: Fortinet issued emergency fixes for FortiClient EMS; reporting indicates active in-the-wild exploitation as a zero-day.\n- Why it matters operationally: EMS is a management plane—compromise can enable endpoint control/push configs, credential access, and lateral movement (high impact in financial environments).\n- Recommended immediate actions for the SOC today: Identify all EMS instances + exposure; apply hotfix ASAP and review EMS/admin auth logs + EDR for suspicious installer/task/service creation originating from EMS.\n\n**2) Critical Cisco IMC auth bypass (community reports of 9.8 “one request” full admin)**\n- What happened: Reports indicate Cisco patched a critical authentication bypass in IMC enabling admin access via a single HTTP request (details/PoC discussion circulating).\n- Why it matters operationally: Management interfaces are commonly reachable internally; fast weaponization risk + attractive for ransomware operators to seize infra control.\n- Recommended immediate actions for the SOC today: Confirm whether Cisco IMC is deployed; if yes, prioritize patching and temporarily restrict management access (ACL/VPN-only) and monitor for anomalous admin creation/config changes.\n\n**3) Malicious npm packages abusing Redis/PostgreSQL to deploy persistent implants**\n- What happened: Dozens of malicious npm packages were reported installing implants and leveraging Redis/PostgreSQL access paths for persistence and data access.\n- Why it matters operationally: Developer workstations/CI runners are a high-leverage entry; DB-backed persistence can evade typical endpoint-only detections and lead to data theft.\n- Recommended immediate actions for the SOC today: Hunt in CI/developer endpoints for recent npm installs from untrusted packages; review DB audit logs for new extensions/functions/users, unusual scheduled jobs, or outbound connections from DB hosts.\n\n**4) Developer-targeted social engineering + “code leak” malware repacks (GitHub/Claude leak used to spread infostealers)**\n- What happened: Campaigns are using fake LinkedIn/Slack identities to target Node.js maintainers; separately, “Claude code leak” content is being reposted with malware (Vidar/GhostSocks reported by sources).\n- Why it matters operationally: High likelihood of credential theft (browser/SSO tokens), repo compromise, and downstream supply-chain impact; finance dev teams are prime targets.\n- Recommended immediate actions for the SOC today: Alert dev teams to avoid “leak” repos/tools and unsolicited recruiter/dev outreach; monitor for infostealer behaviors on dev endpoints (new browser credential access, unusual Git/SSH key access) and enforce MFA/session controls.\n\n**5) Trivy-related supply-chain incident confirmed (European Commission breach)**\n- What happened: A breach was confirmed and linked in reporting to a Trivy supply-chain attack chain (TeamPCP/Trivy ecosystem referenced).\n- Why it matters operationally: Raises probability of poisoned security tooling/artifacts in CI/CD; security scanners run with broad access and can become an attacker distribution point.\n- Recommended immediate actions for the SOC today: Inventory where Trivy (and similar scanners) run; validate image/tool provenance (pin versions/check signatures where available) and review CI logs for unexpected network egress or runner token use.\n\n### Monitoring & detection recommendations\n- **FortiClient EMS exploitation validation:** Monitor Fortinet/EMS logs + Windows/Linux host logs for new admin accounts, service/task creation, and unusual process spawning from EMS components (ATT&CK T1059, T1543, T1569).\n- **Mgmt-plane abuse (Cisco IMC / infra controllers):** From firewall/VPN/proxy logs, alert on new or unusual HTTP(S) access to management ports/paths, especially from non-admin subnets; correlate with config change/audit logs (T1078).\n- **npm supply-chain on endpoints/CI:** EDR + CI logs: detect `npm install`/`node` spawning shell, writing to startup locations, or contacting new external destinations post-install (T1105, T1059); flag installs in non-standard build steps.\n- **Database-layer persistence:** PostgreSQL/Redis audit logs: watch for new users/roles, `CREATE EXTENSION`, `COPY ... PROGRAM`, cron-like job creation, suspicious Redis config changes (e.g., save dir/replication), and unexpected outbound from DB servers (T1505).\n- **Infostealer/GitHub lure activity:** Proxy/DNS logs: spikes to GitHub raw/paste-like content followed by downloads of executables/archives; EDR: browser credential store access, LSASS access attempts, new unsigned binaries in user profiles (T1555, T1003).\n- **CI/CD token and repo abuse:** IdP + Git platform audit logs: new PAT creation, SSH key additions, unusual cloning from new geos/ASNs, and workflow file modifications (e.g., GitHub Actions) (T1550, T1098).\n- **Data exfil early warning:** DLP/egress + EDR: large outbound transfers from dev/CI networks, compression utilities execution, and cloud storage uploads from non-standard hosts (T1560, T1041).\n\n### Medium-term follow-ups\n- Patch/hardening program: ensure FortiClient EMS and Cisco IMC are in the “critical mgmt plane” patch SLA; implement network segmentation and explicit allowlists to management UIs.\n- CI/CD guardrails: enforce dependency pinning/lockfiles, private registries/proxying for npm, automated malware scanning of new dependencies, and least-privilege runner tokens.\n- Database security baseline: enable/retain DB audit logs, restrict DB outbound internet access, and review role hygiene/service accounts for Redis/PostgreSQL.\n- Developer protection: tighten browser/credential protections on dev endpoints (EDR policies, block credential dump behaviors), and roll out targeted awareness for “leak” repos and recruiter/social-engineering lures.\n- Supply-chain integrity: validate provenance/signing for security tooling (e.g., Trivy) and container images; document an internal process for rapid tool rollback/quarantine when upstream compromise is suspected.\n- Ransomware readiness (context: ongoing multi-extortion trend + Qilin claims): re-validate offline backups, credential tiering, and rapid containment playbooks for management plane compromise leading to enterprise-wide impact.",
   "highlights": [
     {
-      "title": "Top 10 Best Identity And Access Management (IAM) Companies 2026",
-      "link": "https://gbhackers.com/best-iam-companies/",
-      "source": "GBHackers News",
-      "published": "2026-04-04T05:57:20+00:00",
+      "title": "The Visible Key — A New Way to Verify Source",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1scwnd9/the_visible_key_a_new_way_to_verify_source/",
+      "source": "/r/cybersecurity",
+      "published": "2026-04-05T06:45:42+00:00",
       "smart_groups": [
-        "Cloud / SaaS",
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "OSINT / Community"
+      ],
+      "curated": true
+    },
+    {
+      "title": "36 Malicious npm Packages Exploited Redis, PostgreSQL to Deploy Persistent Implants",
+      "link": "https://thehackernews.com/2026/04/36-malicious-npm-packages-exploited.html",
+      "source": "The Hacker News",
+      "published": "2026-04-05T05:07:00+00:00",
+      "smart_groups": [
+        "Supply Chain / Software",
+        "Crypto / Web3",
+        "Curated",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "India’s Multi-Million Rupee Crown Pay Scam Uncovered on Telegram, ₹67 Crores Stolen",
+      "link": "https://www.news4hackers.com/indias-multi-million-rupee-crown-pay-scam-uncovered-on-telegram-%e2%82%b967-crores-stolen/",
+      "source": "News4Hackers",
+      "published": "2026-04-05T05:04:45+00:00",
+      "smart_groups": [
         "Curated",
         "Vulnerabilities / CVEs",
         "General Security"
@@ -25,10 +50,62 @@
       "curated": true
     },
     {
-      "title": "Is increasing VRAM finally worth it? I ran the numbers on my Windows 11 PC",
+      "title": "Fortinet Patches Actively Exploited CVE-2026-35616 in FortiClient EMS",
+      "link": "https://thehackernews.com/2026/04/fortinet-patches-actively-exploited-cve.html",
+      "source": "The Hacker News",
+      "published": "2026-04-05T04:32:00+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "After the Mercor breach, I built a local secret scanner for AI-generated code",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1scphzz/after_the_mercor_breach_i_built_a_local_secret/",
+      "source": "/r/cybersecurity",
+      "published": "2026-04-05T00:35:24+00:00",
+      "smart_groups": [
+        "Curated",
+        "OSINT / Community"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Fortinet CVE-2026-35616 Actively Exploited as Zero Day",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1scm5bc/fortinet_cve202635616_actively_exploited_as_zero/",
+      "source": "/r/cybersecurity",
+      "published": "2026-04-04T22:04:19+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "OSINT / Community"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Cisco patched a 9.8/10 CVE yesterday — authentication bypass on IMC that gives full admin access with one HTTP request, no credentials needed",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1sck4e3/cisco_patched_a_9810_cve_yesterday_authentication/",
+      "source": "/r/cybersecurity",
+      "published": "2026-04-04T20:41:34+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Detection Engineering",
+        "Exploit / PoC",
+        "Ransomware",
+        "OSINT / Community"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Is virtual RAM more valuable with rising memory prices? I did the math on my Windows PC",
       "link": "https://www.zdnet.com/article/is-virtual-ram-good-alternative-rising-ram-prices/",
       "source": "ZDNet – Security",
-      "published": "2026-04-04T02:00:58+00:00",
+      "published": "2026-04-04T19:31:00+00:00",
       "smart_groups": [
         "Curated",
         "Vulnerabilities / CVEs",
@@ -38,108 +115,28 @@
       "curated": true
     },
     {
-      "title": "SongTrivia2 - 291,739 breached accounts",
-      "link": "https://haveibeenpwned.com/Breach/SongTrivia2",
-      "source": "Have I Been Pwned – Latest Breaches",
-      "published": "2026-04-04T01:59:01+00:00",
-      "smart_groups": [
-        "Identity / Access",
-        "Data Breaches / Leaks",
-        "Curated",
-        "Vulnerabilities / CVEs"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Architecture Review: Preventing \"Shadow AI\" data leaks with a stateless PII firewall",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1sbsohg/architecture_review_preventing_shadow_ai_data/",
+      "title": "Open source tool for supply chain malware detection: CTWall",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1scg2ml/open_source_tool_for_supply_chain_malware/",
       "source": "/r/cybersecurity",
-      "published": "2026-04-03T23:01:49+00:00",
+      "published": "2026-04-04T18:01:15+00:00",
       "smart_groups": [
+        "Supply Chain / Software",
         "Curated",
-        "Data Protection / Privacy",
-        "Data Breaches / Leaks",
+        "Malware / Payloads",
         "Vulnerabilities / CVEs",
         "OSINT / Community"
       ],
       "curated": true
     },
     {
-      "title": "For EU companies' Is \"Zero Data Liability\" actually a budget priority?",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1sbpkx6/for_eu_companies_is_zero_data_liability_actually/",
-      "source": "/r/cybersecurity",
-      "published": "2026-04-03T20:56:33+00:00",
+      "title": "Jimmy Song explains why Bitcoin needs a 'conservative' node client",
+      "link": "https://cointelegraph.com/news/jimmy-song-bitcoin-conservative-node-client?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound",
+      "source": "Cointelegraph.com News",
+      "published": "2026-04-04T17:59:25+00:00",
       "smart_groups": [
-        "Data Protection / Privacy",
         "Curated",
-        "Data Breaches / Leaks",
-        "Cloud / SaaS",
-        "Network / OT / ICS",
         "Vulnerabilities / CVEs",
-        "OSINT / Community"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Brokk purportedly hacked by Play ransomware, data leaked",
-      "link": "https://www.scworld.com/brief/brokk-purportedly-hacked-by-play-ransomware-data-leaked",
-      "source": "SCM feed for Latest",
-      "published": "2026-04-03T20:22:27+00:00",
-      "smart_groups": [
-        "Curated",
-        "Ransomware",
-        "Data Breaches / Leaks",
-        "Web / API Security",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Bogus installers facilitate RAT, cryptominer spread in long-running operation",
-      "link": "https://www.scworld.com/brief/bogus-installers-facilitate-rat-cryptominer-spread-in-long-running-operation",
-      "source": "SCM feed for Latest",
-      "published": "2026-04-03T20:19:25+00:00",
-      "smart_groups": [
-        "Malware / Payloads",
-        "Crypto / Web3",
-        "Curated",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Accelerated Akira ransomware intrusions examined",
-      "link": "https://www.scworld.com/brief/accelerated-akira-ransomware-intrusions-examined",
-      "source": "SCM feed for Latest",
-      "published": "2026-04-03T20:17:50+00:00",
-      "smart_groups": [
-        "Curated",
-        "Ransomware",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Multiple EU entities impacted by European Commission breach, CERT-EU says",
-      "link": "https://www.scworld.com/brief/multiple-eu-entities-impacted-by-european-commission-breach-cert-eu-says",
-      "source": "SCM feed for Latest",
-      "published": "2026-04-03T20:17:33+00:00",
-      "smart_groups": [
-        "Curated",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Axios maintainer’s post mortem confirms social engineering by UNC1069",
-      "link": "https://www.scworld.com/news/axios-maintainers-post-mortem-confirms-social-engineering-by-unc1069",
-      "source": "SCM feed for Latest",
-      "published": "2026-04-03T20:07:50+00:00",
-      "smart_groups": [
-        "Malware / Payloads",
-        "Phishing / Social Engineering",
-        "Curated",
-        "General Security"
+        "Crypto / Web3"
       ],
       "curated": true
     }
