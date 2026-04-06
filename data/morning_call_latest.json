@@ -1,142 +1,150 @@
 {
-  "generated_at": "2026-04-05T07:22:46.840822+00:00",
-  "analysis_date": "2026-04-05",
+  "generated_at": "2026-04-06T08:02:18.502934+00:00",
+  "analysis_date": "2026-04-06",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-04-05T07:18:17.082240+00:00",
+  "source_generated_at": "2026-04-06T07:52:48.552639+00:00",
   "source_days_back": 30,
-  "source_total_items": 9094,
-  "total_items_in_window_all": 92,
-  "total_items_in_window_curated": 33,
-  "morning_call_markdown": "### Executive Summary\n- Active exploitation reported for a Fortinet FortiClient EMS zero-day/RCE (CVE-2026-35616): treat any exposed/Internet-reachable EMS as potentially compromised until patched and validated.\n- Multiple software supply-chain threats: malicious npm packages targeting Redis/PostgreSQL for persistence + ongoing campaigns abusing developer trust (fake LinkedIn/Slack personas; GitHub “Claude code leak” repackaged with malware).\n- Supply-chain incident blast radius is real: EU Commission confirmed a breach linked to the Trivy/TeamTNT-style supply-chain activity—assume CI/CD and artifact integrity are in scope for attackers.\n\n### High-priority items (immediate attention)\n\n**1) Fortinet FortiClient EMS actively exploited zero-day/RCE (CVE-2026-35616)**\n- What happened: Fortinet issued emergency fixes for FortiClient EMS; reporting indicates active in-the-wild exploitation as a zero-day.\n- Why it matters operationally: EMS is a management plane—compromise can enable endpoint control/push configs, credential access, and lateral movement (high impact in financial environments).\n- Recommended immediate actions for the SOC today: Identify all EMS instances + exposure; apply hotfix ASAP and review EMS/admin auth logs + EDR for suspicious installer/task/service creation originating from EMS.\n\n**2) Critical Cisco IMC auth bypass (community reports of 9.8 “one request” full admin)**\n- What happened: Reports indicate Cisco patched a critical authentication bypass in IMC enabling admin access via a single HTTP request (details/PoC discussion circulating).\n- Why it matters operationally: Management interfaces are commonly reachable internally; fast weaponization risk + attractive for ransomware operators to seize infra control.\n- Recommended immediate actions for the SOC today: Confirm whether Cisco IMC is deployed; if yes, prioritize patching and temporarily restrict management access (ACL/VPN-only) and monitor for anomalous admin creation/config changes.\n\n**3) Malicious npm packages abusing Redis/PostgreSQL to deploy persistent implants**\n- What happened: Dozens of malicious npm packages were reported installing implants and leveraging Redis/PostgreSQL access paths for persistence and data access.\n- Why it matters operationally: Developer workstations/CI runners are a high-leverage entry; DB-backed persistence can evade typical endpoint-only detections and lead to data theft.\n- Recommended immediate actions for the SOC today: Hunt in CI/developer endpoints for recent npm installs from untrusted packages; review DB audit logs for new extensions/functions/users, unusual scheduled jobs, or outbound connections from DB hosts.\n\n**4) Developer-targeted social engineering + “code leak” malware repacks (GitHub/Claude leak used to spread infostealers)**\n- What happened: Campaigns are using fake LinkedIn/Slack identities to target Node.js maintainers; separately, “Claude code leak” content is being reposted with malware (Vidar/GhostSocks reported by sources).\n- Why it matters operationally: High likelihood of credential theft (browser/SSO tokens), repo compromise, and downstream supply-chain impact; finance dev teams are prime targets.\n- Recommended immediate actions for the SOC today: Alert dev teams to avoid “leak” repos/tools and unsolicited recruiter/dev outreach; monitor for infostealer behaviors on dev endpoints (new browser credential access, unusual Git/SSH key access) and enforce MFA/session controls.\n\n**5) Trivy-related supply-chain incident confirmed (European Commission breach)**\n- What happened: A breach was confirmed and linked in reporting to a Trivy supply-chain attack chain (TeamPCP/Trivy ecosystem referenced).\n- Why it matters operationally: Raises probability of poisoned security tooling/artifacts in CI/CD; security scanners run with broad access and can become an attacker distribution point.\n- Recommended immediate actions for the SOC today: Inventory where Trivy (and similar scanners) run; validate image/tool provenance (pin versions/check signatures where available) and review CI logs for unexpected network egress or runner token use.\n\n### Monitoring & detection recommendations\n- **FortiClient EMS exploitation validation:** Monitor Fortinet/EMS logs + Windows/Linux host logs for new admin accounts, service/task creation, and unusual process spawning from EMS components (ATT&CK T1059, T1543, T1569).\n- **Mgmt-plane abuse (Cisco IMC / infra controllers):** From firewall/VPN/proxy logs, alert on new or unusual HTTP(S) access to management ports/paths, especially from non-admin subnets; correlate with config change/audit logs (T1078).\n- **npm supply-chain on endpoints/CI:** EDR + CI logs: detect `npm install`/`node` spawning shell, writing to startup locations, or contacting new external destinations post-install (T1105, T1059); flag installs in non-standard build steps.\n- **Database-layer persistence:** PostgreSQL/Redis audit logs: watch for new users/roles, `CREATE EXTENSION`, `COPY ... PROGRAM`, cron-like job creation, suspicious Redis config changes (e.g., save dir/replication), and unexpected outbound from DB servers (T1505).\n- **Infostealer/GitHub lure activity:** Proxy/DNS logs: spikes to GitHub raw/paste-like content followed by downloads of executables/archives; EDR: browser credential store access, LSASS access attempts, new unsigned binaries in user profiles (T1555, T1003).\n- **CI/CD token and repo abuse:** IdP + Git platform audit logs: new PAT creation, SSH key additions, unusual cloning from new geos/ASNs, and workflow file modifications (e.g., GitHub Actions) (T1550, T1098).\n- **Data exfil early warning:** DLP/egress + EDR: large outbound transfers from dev/CI networks, compression utilities execution, and cloud storage uploads from non-standard hosts (T1560, T1041).\n\n### Medium-term follow-ups\n- Patch/hardening program: ensure FortiClient EMS and Cisco IMC are in the “critical mgmt plane” patch SLA; implement network segmentation and explicit allowlists to management UIs.\n- CI/CD guardrails: enforce dependency pinning/lockfiles, private registries/proxying for npm, automated malware scanning of new dependencies, and least-privilege runner tokens.\n- Database security baseline: enable/retain DB audit logs, restrict DB outbound internet access, and review role hygiene/service accounts for Redis/PostgreSQL.\n- Developer protection: tighten browser/credential protections on dev endpoints (EDR policies, block credential dump behaviors), and roll out targeted awareness for “leak” repos and recruiter/social-engineering lures.\n- Supply-chain integrity: validate provenance/signing for security tooling (e.g., Trivy) and container images; document an internal process for rapid tool rollback/quarantine when upstream compromise is suspected.\n- Ransomware readiness (context: ongoing multi-extortion trend + Qilin claims): re-validate offline backups, credential tiering, and rapid containment playbooks for management plane compromise leading to enterprise-wide impact.",
+  "source_total_items": 8896,
+  "total_items_in_window_all": 112,
+  "total_items_in_window_curated": 41,
+  "morning_call_markdown": "### Executive Summary\n- Active exploitation reported for a Fortinet FortiClient EMS RCE (CVE-2026-35616) with thousands of exposed instances—treat as **internet-edge emergency**.\n- Multiple **software supply-chain** events (poisoned npm packages incl. “axios” phantom dependency + malicious Strapi-related npm packages) delivering persistent malware—watch CI/CD and developer endpoints.\n- Ongoing **commodity malware** activity: new Windows RAT using Telegram Bot API for C2; plus compromised legitimate web properties used for malware delivery.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Fortinet FortiClient EMS – actively exploited RCE (CVE-2026-35616)**\n- What happened: Fortinet released an emergency fix for a high-severity FortiClient EMS flaw reported as exploited in the wild; many EMS instances are exposed online.\n- Why it matters operationally: Internet-facing management/RMM-style platforms are frequent initial access → rapid credential theft, lateral movement, ransomware staging (financial sector impact high).\n- Recommended immediate actions for the SOC today: Confirm exposure (external attack surface scan + CMDB), **patch/mitigate immediately**; hunt for post-exploitation on EMS host(s) (new admin accounts, new services/tasks, unusual outbound connections).\n\n**2) CISA KEV add: TrueConf vulnerability under active exploitation (details may vary by deployment)**\n- What happened: CISA added a TrueConf vulnerability to the Known Exploited Vulnerabilities (KEV) catalog due to active exploitation.\n- Why it matters operationally: KEV-listed vulns are commonly leveraged for initial access; videoconf/collab servers are often externally reachable and overlooked in patch cycles.\n- Recommended immediate actions for the SOC today: Identify any TrueConf presence (on-prem/cloud images) and verify patch level; if internet-facing, consider temporary access restriction/allowlisting until patched and reviewed.\n\n**3) Software supply-chain: malicious npm packages (axios “phantom dependency” + Strapi-related packages)**\n- What happened: Reports of a poisoned “axios” package scenario using phantom dependency behavior, and ~36 malicious npm packages masquerading as Strapi-related tooling delivering malware/persistence and attempts at Redis RCE.\n- Why it matters operationally: Compromised dependencies can infect developer workstations and CI runners → credential/token theft (Git, cloud, artifact repos), then rapid pivot into production.\n- Recommended immediate actions for the SOC today: Alert DevOps/appsec to **freeze/verify npm dependency changes** (especially axios/Strapi ecosystem) and review recent pipeline runs; hunt CI/CD and dev endpoints for anomalous npm install activity and new outbound connections from build agents.\n\n**4) Malware delivery via compromised/impersonated trusted sources (WordPress domain breach; “Claude Code” source leak lure)**\n- What happened: A breached WordPress domain and fake “source download” lures were used to distribute malware; chatter indicates users sought leaked code and got infected.\n- Why it matters operationally: Infections often start with “legit-looking” downloads; high risk to dev/IT users who pull tools/source zips, leading to initial foothold and credential harvesting.\n- Recommended immediate actions for the SOC today: Monitor web proxy/DNS for downloads of developer tools/zips from newly-seen or low-reputation domains; remind IT/dev teams to use official vendor repos and checksum verification for tooling.\n\n**5) Windows commodity RAT: ResokerRAT using Telegram Bot API for C2**\n- What happened: New RAT variant reported using Telegram Bot API as its command-and-control channel on Windows.\n- Why it matters operationally: “Living-on-popular-platforms” C2 can blend into normal traffic; common follow-on is data theft, browser credential harvesting, and persistence.\n- Recommended immediate actions for the SOC today: Hunt endpoints for suspicious Telegram-related network calls/process activity (not just the Telegram desktop app); prioritize any detections on privileged users and jump hosts.\n\n---\n\n### Monitoring & detection recommendations\n- **FortiClient EMS exploitation / post-exploitation:** EDR + Windows event logs on EMS server(s): new local admins, service creation, scheduled tasks, unusual PowerShell (T1059.001), remote exec (T1021), and new inbound management sessions from non-admin subnets.\n- **Edge exposure & scanning:** Firewall/WAF/VPN logs for spikes in requests to EMS/TrueConf endpoints, repeated 4xx/5xx patterns, and new geos/ASNs; correlate with threat intel “newly seen scanner” behavior (T1595).\n- **Supply-chain on CI/CD:** CI runner logs (GitHub Actions/GitLab/Jenkins), artifact registry, and EDR on build agents for unexpected `npm install` during non-build windows, new/unsigned Node scripts, and outbound to rare domains (T1195).\n- **Developer token/secret theft:** IdP (Entra/Okta), PAM, and Git audit logs for new PATs/SSH keys, abnormal token use from build agents, new OAuth app consents (T1528/T1550); prioritize any correlation after npm activity.\n- **Redis exposure abuse (from Strapi-themed packages):** Network telemetry for unexpected connections to Redis (6379) from app servers/build agents; Redis logs for CONFIG changes, module loads, or new cron-like persistence attempts (T1543).\n- **Telegram Bot API C2:** Proxy/DNS + EDR for non-standard processes contacting Telegram API endpoints, periodic beaconing, or TLS SNI patterns inconsistent with approved apps; treat on servers as high severity (T1071.001).\n- **Malware via “tool/source” downloads:** Web proxy + EDR for execution from Downloads/Temp paths, archive extraction followed by LOLBins (rundll32/regsvr32/mshta) (T1204, T1218); focus on dev/IT endpoints.\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** Add FortiClient EMS and TrueConf to “48-hour” patch SLA for internet-facing systems; validate compensating controls (restrict management interfaces, MFA, admin IP allowlists).\n- **Software supply-chain controls:** Enforce dependency pinning/lockfiles, provenance (Sigstore where possible), and private npm proxy with allowlisting; review “phantom dependency” risks with Node build standards.\n- **CI/CD hardening:** Separate build runner credentials, rotate tokens, restrict egress from runners, and enable secret scanning + short-lived credentials for cloud and Git.\n- **User/process guidance:** Update internal guidance for downloading tools/source code (official repos only, verify signatures/checksums); brief dev leads on current lure patterns.\n- **Ransomware readiness check (context: REvil leadership attribution/doxing):** Expect opportunistic copycats and extortion activity; validate backups, EDR tamper protection, and privileged account monitoring (no immediate indicator of new campaign from these items—assumption).",
   "highlights": [
     {
-      "title": "The Visible Key — A New Way to Verify Source",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1scwnd9/the_visible_key_a_new_way_to_verify_source/",
-      "source": "/r/cybersecurity",
-      "published": "2026-04-05T06:45:42+00:00",
+      "title": "Hackers Breach ILSpy WordPress Domain to Deliver Malware",
+      "link": "https://gbhackers.com/hackers-breach-ilspy-wordpress-domain/",
+      "source": "GBHackers News",
+      "published": "2026-04-06T07:46:03+00:00",
       "smart_groups": [
         "Curated",
+        "Malware / Payloads",
         "Vulnerabilities / CVEs",
-        "OSINT / Community"
+        "General Security"
       ],
       "curated": true
     },
     {
-      "title": "36 Malicious npm Packages Exploited Redis, PostgreSQL to Deploy Persistent Implants",
-      "link": "https://thehackernews.com/2026/04/36-malicious-npm-packages-exploited.html",
-      "source": "The Hacker News",
-      "published": "2026-04-05T05:07:00+00:00",
+      "title": "Poisoned Axios Package Spreads Cross-Platform Malware via Phantom Dependency",
+      "link": "https://gbhackers.com/poisoned-axios-package/",
+      "source": "GBHackers News",
+      "published": "2026-04-06T07:39:27+00:00",
       "smart_groups": [
+        "Malware / Payloads",
         "Supply Chain / Software",
-        "Crypto / Web3",
         "Curated",
-        "Exploit / PoC",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "India’s Multi-Million Rupee Crown Pay Scam Uncovered on Telegram, ₹67 Crores Stolen",
-      "link": "https://www.news4hackers.com/indias-multi-million-rupee-crown-pay-scam-uncovered-on-telegram-%e2%82%b967-crores-stolen/",
-      "source": "News4Hackers",
-      "published": "2026-04-05T05:04:45+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Fortinet Patches Actively Exploited CVE-2026-35616 in FortiClient EMS",
-      "link": "https://thehackernews.com/2026/04/fortinet-patches-actively-exploited-cve.html",
-      "source": "The Hacker News",
-      "published": "2026-04-05T04:32:00+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "After the Mercor breach, I built a local secret scanner for AI-generated code",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1scphzz/after_the_mercor_breach_i_built_a_local_secret/",
-      "source": "/r/cybersecurity",
-      "published": "2026-04-05T00:35:24+00:00",
-      "smart_groups": [
-        "Curated",
-        "OSINT / Community"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Fortinet CVE-2026-35616 Actively Exploited as Zero Day",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1scm5bc/fortinet_cve202635616_actively_exploited_as_zero/",
-      "source": "/r/cybersecurity",
-      "published": "2026-04-04T22:04:19+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "OSINT / Community"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Cisco patched a 9.8/10 CVE yesterday — authentication bypass on IMC that gives full admin access with one HTTP request, no credentials needed",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1sck4e3/cisco_patched_a_9810_cve_yesterday_authentication/",
-      "source": "/r/cybersecurity",
-      "published": "2026-04-04T20:41:34+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "Detection Engineering",
-        "Exploit / PoC",
-        "Ransomware",
-        "OSINT / Community"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Is virtual RAM more valuable with rising memory prices? I did the math on my Windows PC",
-      "link": "https://www.zdnet.com/article/is-virtual-ram-good-alternative-rising-ram-prices/",
-      "source": "ZDNet – Security",
-      "published": "2026-04-04T19:31:00+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
+        "Linux / Unix",
         "Windows / Microsoft",
         "General Security"
       ],
       "curated": true
     },
     {
-      "title": "Open source tool for supply chain malware detection: CTWall",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1scg2ml/open_source_tool_for_supply_chain_malware/",
+      "title": "Is one-man CISO role worth it?",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1sds2bv/is_oneman_ciso_role_worth_it/",
       "source": "/r/cybersecurity",
-      "published": "2026-04-04T18:01:15+00:00",
+      "published": "2026-04-06T07:28:21+00:00",
       "smart_groups": [
-        "Supply Chain / Software",
+        "Cloud / SaaS",
         "Curated",
-        "Malware / Payloads",
         "Vulnerabilities / CVEs",
         "OSINT / Community"
       ],
       "curated": true
     },
     {
-      "title": "Jimmy Song explains why Bitcoin needs a 'conservative' node client",
-      "link": "https://cointelegraph.com/news/jimmy-song-bitcoin-conservative-node-client?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound",
-      "source": "Cointelegraph.com News",
-      "published": "2026-04-04T17:59:25+00:00",
+      "title": "New ResokerRAT Uses Telegram Bot API to Control Infected Windows Systems",
+      "link": "https://cybersecuritynews.com/new-resokerrat-uses-telegram-bot/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-04-06T07:12:12+00:00",
+      "smart_groups": [
+        "Malware / Payloads",
+        "Curated",
+        "Windows / Microsoft",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "BKA Identifies REvil Leaders Behind 130 German Ransomware Attacks",
+      "link": "https://thehackernews.com/2026/04/bka-identifies-revil-leaders-behind-130.html",
+      "source": "The Hacker News",
+      "published": "2026-04-06T06:59:00+00:00",
+      "smart_groups": [
+        "Ransomware",
+        "Threat Actors / APT",
+        "Curated",
+        "Identity / Access",
+        "Web / API Security",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "HTB Media Machine Walkthrough",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1sdrh2y/htb_media_machine_walkthrough/",
+      "source": "/r/cybersecurity",
+      "published": "2026-04-06T06:53:13+00:00",
       "smart_groups": [
         "Curated",
         "Vulnerabilities / CVEs",
-        "Crypto / Web3"
+        "Windows / Microsoft",
+        "OSINT / Community"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Built a tool to find which of your GCP API keys now have Gemini access",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1sdr9ip/built_a_tool_to_find_which_of_your_gcp_api_keys/",
+      "source": "/r/cybersecurity",
+      "published": "2026-04-06T06:40:26+00:00",
+      "smart_groups": [
+        "Cloud / SaaS",
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "OSINT / Community"
+      ],
+      "curated": true
+    },
+    {
+      "title": "METATRON – Open-Source AI Penetration Testing Assistant Brings Local LLM Analysis to Linux",
+      "link": "https://cybersecuritynews.com/metatron-ai-penetration-testing/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-04-06T06:38:13+00:00",
+      "smart_groups": [
+        "Linux / Unix",
+        "Vulnerabilities / CVEs",
+        "Curated",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "36 Malicious npm Strapi Packages Used to Deploy Redis RCE and Persistent C2 Malware",
+      "link": "https://cybersecuritynews.com/36-malicious-npm-strapi-packages/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-04-06T05:45:36+00:00",
+      "smart_groups": [
+        "Curated",
+        "Supply Chain / Software",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Malware / Payloads",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "2,000+ FortiClient EMS Instances Exposed Online as Attackers Exploit Active RCE Flaw",
+      "link": "https://gbhackers.com/2000-forticlient-ems-instances-exposed-online/",
+      "source": "GBHackers News",
+      "published": "2026-04-06T05:18:04+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Threat Actors / APT",
+        "Exploit / PoC",
+        "General Security"
       ],
       "curated": true
     }
