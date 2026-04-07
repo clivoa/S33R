@@ -1,0 +1,152 @@
+{
+  "generated_at": "2026-04-06T08:02:18.502934+00:00",
+  "analysis_date": "2026-04-06",
+  "model": "gpt-5.2",
+  "window_hours": 24,
+  "source_file": "data/news_recent.json",
+  "source_generated_at": "2026-04-06T07:52:48.552639+00:00",
+  "source_days_back": 30,
+  "source_total_items": 8896,
+  "total_items_in_window_all": 112,
+  "total_items_in_window_curated": 41,
+  "morning_call_markdown": "### Executive Summary\n- Active exploitation reported for a Fortinet FortiClient EMS RCE (CVE-2026-35616) with thousands of exposed instances—treat as **internet-edge emergency**.\n- Multiple **software supply-chain** events (poisoned npm packages incl. “axios” phantom dependency + malicious Strapi-related npm packages) delivering persistent malware—watch CI/CD and developer endpoints.\n- Ongoing **commodity malware** activity: new Windows RAT using Telegram Bot API for C2; plus compromised legitimate web properties used for malware delivery.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Fortinet FortiClient EMS – actively exploited RCE (CVE-2026-35616)**\n- What happened: Fortinet released an emergency fix for a high-severity FortiClient EMS flaw reported as exploited in the wild; many EMS instances are exposed online.\n- Why it matters operationally: Internet-facing management/RMM-style platforms are frequent initial access → rapid credential theft, lateral movement, ransomware staging (financial sector impact high).\n- Recommended immediate actions for the SOC today: Confirm exposure (external attack surface scan + CMDB), **patch/mitigate immediately**; hunt for post-exploitation on EMS host(s) (new admin accounts, new services/tasks, unusual outbound connections).\n\n**2) CISA KEV add: TrueConf vulnerability under active exploitation (details may vary by deployment)**\n- What happened: CISA added a TrueConf vulnerability to the Known Exploited Vulnerabilities (KEV) catalog due to active exploitation.\n- Why it matters operationally: KEV-listed vulns are commonly leveraged for initial access; videoconf/collab servers are often externally reachable and overlooked in patch cycles.\n- Recommended immediate actions for the SOC today: Identify any TrueConf presence (on-prem/cloud images) and verify patch level; if internet-facing, consider temporary access restriction/allowlisting until patched and reviewed.\n\n**3) Software supply-chain: malicious npm packages (axios “phantom dependency” + Strapi-related packages)**\n- What happened: Reports of a poisoned “axios” package scenario using phantom dependency behavior, and ~36 malicious npm packages masquerading as Strapi-related tooling delivering malware/persistence and attempts at Redis RCE.\n- Why it matters operationally: Compromised dependencies can infect developer workstations and CI runners → credential/token theft (Git, cloud, artifact repos), then rapid pivot into production.\n- Recommended immediate actions for the SOC today: Alert DevOps/appsec to **freeze/verify npm dependency changes** (especially axios/Strapi ecosystem) and review recent pipeline runs; hunt CI/CD and dev endpoints for anomalous npm install activity and new outbound connections from build agents.\n\n**4) Malware delivery via compromised/impersonated trusted sources (WordPress domain breach; “Claude Code” source leak lure)**\n- What happened: A breached WordPress domain and fake “source download” lures were used to distribute malware; chatter indicates users sought leaked code and got infected.\n- Why it matters operationally: Infections often start with “legit-looking” downloads; high risk to dev/IT users who pull tools/source zips, leading to initial foothold and credential harvesting.\n- Recommended immediate actions for the SOC today: Monitor web proxy/DNS for downloads of developer tools/zips from newly-seen or low-reputation domains; remind IT/dev teams to use official vendor repos and checksum verification for tooling.\n\n**5) Windows commodity RAT: ResokerRAT using Telegram Bot API for C2**\n- What happened: New RAT variant reported using Telegram Bot API as its command-and-control channel on Windows.\n- Why it matters operationally: “Living-on-popular-platforms” C2 can blend into normal traffic; common follow-on is data theft, browser credential harvesting, and persistence.\n- Recommended immediate actions for the SOC today: Hunt endpoints for suspicious Telegram-related network calls/process activity (not just the Telegram desktop app); prioritize any detections on privileged users and jump hosts.\n\n---\n\n### Monitoring & detection recommendations\n- **FortiClient EMS exploitation / post-exploitation:** EDR + Windows event logs on EMS server(s): new local admins, service creation, scheduled tasks, unusual PowerShell (T1059.001), remote exec (T1021), and new inbound management sessions from non-admin subnets.\n- **Edge exposure & scanning:** Firewall/WAF/VPN logs for spikes in requests to EMS/TrueConf endpoints, repeated 4xx/5xx patterns, and new geos/ASNs; correlate with threat intel “newly seen scanner” behavior (T1595).\n- **Supply-chain on CI/CD:** CI runner logs (GitHub Actions/GitLab/Jenkins), artifact registry, and EDR on build agents for unexpected `npm install` during non-build windows, new/unsigned Node scripts, and outbound to rare domains (T1195).\n- **Developer token/secret theft:** IdP (Entra/Okta), PAM, and Git audit logs for new PATs/SSH keys, abnormal token use from build agents, new OAuth app consents (T1528/T1550); prioritize any correlation after npm activity.\n- **Redis exposure abuse (from Strapi-themed packages):** Network telemetry for unexpected connections to Redis (6379) from app servers/build agents; Redis logs for CONFIG changes, module loads, or new cron-like persistence attempts (T1543).\n- **Telegram Bot API C2:** Proxy/DNS + EDR for non-standard processes contacting Telegram API endpoints, periodic beaconing, or TLS SNI patterns inconsistent with approved apps; treat on servers as high severity (T1071.001).\n- **Malware via “tool/source” downloads:** Web proxy + EDR for execution from Downloads/Temp paths, archive extraction followed by LOLBins (rundll32/regsvr32/mshta) (T1204, T1218); focus on dev/IT endpoints.\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** Add FortiClient EMS and TrueConf to “48-hour” patch SLA for internet-facing systems; validate compensating controls (restrict management interfaces, MFA, admin IP allowlists).\n- **Software supply-chain controls:** Enforce dependency pinning/lockfiles, provenance (Sigstore where possible), and private npm proxy with allowlisting; review “phantom dependency” risks with Node build standards.\n- **CI/CD hardening:** Separate build runner credentials, rotate tokens, restrict egress from runners, and enable secret scanning + short-lived credentials for cloud and Git.\n- **User/process guidance:** Update internal guidance for downloading tools/source code (official repos only, verify signatures/checksums); brief dev leads on current lure patterns.\n- **Ransomware readiness check (context: REvil leadership attribution/doxing):** Expect opportunistic copycats and extortion activity; validate backups, EDR tamper protection, and privileged account monitoring (no immediate indicator of new campaign from these items—assumption).",
+  "highlights": [
+    {
+      "title": "Hackers Breach ILSpy WordPress Domain to Deliver Malware",
+      "link": "https://gbhackers.com/hackers-breach-ilspy-wordpress-domain/",
+      "source": "GBHackers News",
+      "published": "2026-04-06T07:46:03+00:00",
+      "smart_groups": [
+        "Curated",
+        "Malware / Payloads",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Poisoned Axios Package Spreads Cross-Platform Malware via Phantom Dependency",
+      "link": "https://gbhackers.com/poisoned-axios-package/",
+      "source": "GBHackers News",
+      "published": "2026-04-06T07:39:27+00:00",
+      "smart_groups": [
+        "Malware / Payloads",
+        "Supply Chain / Software",
+        "Curated",
+        "Linux / Unix",
+        "Windows / Microsoft",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Is one-man CISO role worth it?",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1sds2bv/is_oneman_ciso_role_worth_it/",
+      "source": "/r/cybersecurity",
+      "published": "2026-04-06T07:28:21+00:00",
+      "smart_groups": [
+        "Cloud / SaaS",
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "OSINT / Community"
+      ],
+      "curated": true
+    },
+    {
+      "title": "New ResokerRAT Uses Telegram Bot API to Control Infected Windows Systems",
+      "link": "https://cybersecuritynews.com/new-resokerrat-uses-telegram-bot/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-04-06T07:12:12+00:00",
+      "smart_groups": [
+        "Malware / Payloads",
+        "Curated",
+        "Windows / Microsoft",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "BKA Identifies REvil Leaders Behind 130 German Ransomware Attacks",
+      "link": "https://thehackernews.com/2026/04/bka-identifies-revil-leaders-behind-130.html",
+      "source": "The Hacker News",
+      "published": "2026-04-06T06:59:00+00:00",
+      "smart_groups": [
+        "Ransomware",
+        "Threat Actors / APT",
+        "Curated",
+        "Identity / Access",
+        "Web / API Security",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "HTB Media Machine Walkthrough",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1sdrh2y/htb_media_machine_walkthrough/",
+      "source": "/r/cybersecurity",
+      "published": "2026-04-06T06:53:13+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Windows / Microsoft",
+        "OSINT / Community"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Built a tool to find which of your GCP API keys now have Gemini access",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1sdr9ip/built_a_tool_to_find_which_of_your_gcp_api_keys/",
+      "source": "/r/cybersecurity",
+      "published": "2026-04-06T06:40:26+00:00",
+      "smart_groups": [
+        "Cloud / SaaS",
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "OSINT / Community"
+      ],
+      "curated": true
+    },
+    {
+      "title": "METATRON – Open-Source AI Penetration Testing Assistant Brings Local LLM Analysis to Linux",
+      "link": "https://cybersecuritynews.com/metatron-ai-penetration-testing/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-04-06T06:38:13+00:00",
+      "smart_groups": [
+        "Linux / Unix",
+        "Vulnerabilities / CVEs",
+        "Curated",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "36 Malicious npm Strapi Packages Used to Deploy Redis RCE and Persistent C2 Malware",
+      "link": "https://cybersecuritynews.com/36-malicious-npm-strapi-packages/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-04-06T05:45:36+00:00",
+      "smart_groups": [
+        "Curated",
+        "Supply Chain / Software",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Malware / Payloads",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "2,000+ FortiClient EMS Instances Exposed Online as Attackers Exploit Active RCE Flaw",
+      "link": "https://gbhackers.com/2000-forticlient-ems-instances-exposed-online/",
+      "source": "GBHackers News",
+      "published": "2026-04-06T05:18:04+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Threat Actors / APT",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true
+    }
+  ]
+}
