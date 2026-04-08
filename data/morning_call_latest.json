@@ -1,150 +1,147 @@
 {
-  "generated_at": "2026-04-07T07:49:54.243979+00:00",
-  "analysis_date": "2026-04-07",
+  "generated_at": "2026-04-08T07:54:15.623027+00:00",
+  "analysis_date": "2026-04-08",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-04-07T07:26:59.485752+00:00",
+  "source_generated_at": "2026-04-08T07:30:58.063640+00:00",
   "source_days_back": 30,
-  "source_total_items": 9075,
-  "total_items_in_window_all": 273,
-  "total_items_in_window_curated": 89,
-  "morning_call_markdown": "### Executive Summary\n- Active exploitation wave: Fortinet FortiClient EMS “zero-day” / KEV-style advisory activity—treat any exposed EMS as potentially compromised until proven otherwise.\n- Ransomware tradecraft accelerating: Microsoft reports Storm-1175 rapidly exploiting web-facing vulns to deploy Medusa ransomware (high-tempo, “within 24 hours” post-breach).\n- High-risk exploit/PoC noise: CVSS 10 RCE in Flowise with large exposed footprint, plus leaked Windows Defender/“BlueHammer” zero-day PoC—expect scanning, opportunistic intrusion, and follow-on credential theft.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Fortinet FortiClient EMS actively exploited (reported as zero-day / emergency fix)**\n- What happened: Multiple sources report active in-the-wild exploitation of a FortiClient EMS improper access control flaw (CVE referenced as CVE-2026-35616) and emergency patches/hotfix guidance.\n- Why it matters operationally: FortiClient EMS is often internet-reachable and manages endpoint posture; compromise can enable endpoint control pivoting, credential access, and broad enterprise impact.\n- Recommended immediate actions for the SOC today: Confirm EMS exposure + version/patch state; hunt for new/unknown admin accounts, suspicious config changes, and unusual authentication to EMS; isolate/disable external access until patched and validated.\n\n**2) Medusa ransomware operations (Storm-1175) abusing web-facing vulnerabilities**\n- What happened: Microsoft warns Storm-1175 is exploiting vulnerable internet-facing assets and moving fast to deploy Medusa ransomware; reporting notes “zero-days used within 24 hours.”\n- Why it matters operationally: Financial orgs with legacy perimeter apps/VPN/remote access are at elevated risk of rapid breach-to-encrypt timelines and high-impact business disruption.\n- Recommended immediate actions for the SOC today: Raise alerting thresholds for exploitation → remote execution → lateral movement chains; prioritize triage of any perimeter exploit alerts + suspicious admin activity; ensure IR-ready steps (gold images, containment playbooks, backup integrity checks) are current.\n\n**3) Flowise AI agent builder CVSS 10 RCE under active exploitation (large exposed population)**\n- What happened: Reporting indicates Flowise has an actively exploited CVSS 10.0 RCE with thousands of exposed instances.\n- Why it matters operationally: If used internally (labs, dev, “shadow AI,” PoCs), it can be an easy initial foothold and a path to secrets (API keys, tokens) and internal pivoting.\n- Recommended immediate actions for the SOC today: Asset-hunt for Flowise (DNS, container inventory, SaaS discovery, repo/docker usage); block/limit external exposure and patch/upgrade immediately; review outbound connections and secret access from any Flowise host/container.\n\n**4) Windows Defender / “BlueHammer” Windows zero-day exploit code publicly leaked (PoC)**\n- What happened: Multiple posts claim public release of exploit code targeting Windows Defender / a Windows “BlueHammer” zero-day.\n- Why it matters operationally: Even if details are incomplete, public PoC typically drives rapid commoditization (mass scanning, malware loaders, defense evasion attempts) against Windows fleets.\n- Recommended immediate actions for the SOC today: Watch for Defender tamper events, service stoppage attempts, and unusual driver loads/process injections; confirm Defender platform/engine updates are current across endpoints; be ready to contain hosts showing AV disablement + suspicious child processes.\n\n**5) Phishing campaigns abusing remote support tooling (LogMeIn Resolve, ScreenConnect)**\n- What happened: Threat actors are using themed phishing to deliver payloads or social-engineer remote access via common remote support products.\n- Why it matters operationally: Remote tooling abuse can bypass some controls, enable hands-on-keyboard activity, and speed ransomware staging.\n- Recommended immediate actions for the SOC today: Tighten monitoring for new installs/executions of remote support agents and unexpected session creation; quarantine and review emails impersonating IT/support vendors; confirm allowlists and MFA/SSO controls for sanctioned remote tools.\n\n---\n\n### Monitoring & detection recommendations\n- **FortiClient EMS compromise hunts**: Fortinet EMS audit/admin logs + firewall/WAF logs for unusual endpoints/URIs and new admin sessions; look for privilege changes and config exports (ATT&CK: T1078 Valid Accounts).\n- **Ransomware early-warning (Storm-1175/Medusa patterns)**: EDR for rapid execution chains (web server process → cmd/powershell → downloaders), plus lateral movement (PsExec/WMI/remote services) and mass file ops (ATT&CK: T1059, T1021, T1486).\n- **Perimeter exploitation telemetry**: VPN/ADC/WAF logs for spikes in 4xx/5xx, suspicious request patterns, new user-agent strings, and post-exploit callbacks; correlate with new privileged logons in AD/Entra.\n- **Windows Defender health & tamper monitoring**: EDR + Windows Event Logs (Security/System) for Defender service changes, policy changes, and AV exclusions added; alert on “AV disabled” plus suspicious process trees (ATT&CK: T1562 Impair Defenses).\n- **Remote support tool abuse**: Endpoint software inventory + EDR process events for ScreenConnect/LogMeIn binaries spawning shells, creating persistence, or initiating RDP; monitor for first-seen binaries signed by those vendors in non-IT user contexts.\n- **GitHub/CI secret theft & supply-chain signals**: SIEM ingest from GitHub audit logs/Actions + secrets manager logs; alert on new/modified workflows, unexpected outbound network from runners, and token use from new geos (ATT&CK: T1552 Unsecured Credentials).\n- **Credential-harvest/phishing surge**: Email security + IdP (Entra/Okta) for new malicious OAuth consent, repeated failed logins, “impossible travel,” and MFA fatigue patterns (ATT&CK: T1566, T1110).\n\n---\n\n### Medium-term follow-ups\n- **Patch governance for internet-facing estate**: Re-validate SLA for perimeter and management-plane systems (VPN/EMS/ADC/WAF) given “24-hour” ransomware tempo; ensure emergency patch path is tested.\n- **AI/agent & developer tool exposure review**: Inventory “shadow AI” services (Flowise/LiteLLM-like tooling) and enforce baseline controls: no public exposure, secrets in vaults, least privilege tokens.\n- **Driver/BYOVD resilience**: Given ransomware groups using vulnerable drivers to disable EDR, review WDAC/Device Control policies and block known risky driver categories where feasible; strengthen alerting for unsigned/unusual driver loads.\n- **Remote support standardization**: Reduce tool sprawl; enforce SSO/MFA, approved installer sources, and just-in-time access for remote support sessions; document detection playbooks for “new remote tool seen.”\n- **Supply-chain hardening for CI/CD**: Require code-owner approval for workflow changes, pin third-party actions by commit SHA, and rotate high-value tokens; expand runner egress controls.\n- **Breach readiness checks**: Confirm offline/immutable backups, restore testing cadence, and segmented admin tiers; run a quick tabletop for “perimeter exploit → ransomware within 24 hours.”",
+  "source_total_items": 9340,
+  "total_items_in_window_all": 394,
+  "total_items_in_window_curated": 139,
+  "morning_call_markdown": "### Executive Summary\n- Multiple **actively exploited RCEs** are in play (Flowise AI agent builder, Ninja Forms WordPress; plus a likely high-impact **CUPS remote unauth RCE-to-root chain** emerging) → prioritize exposure checks and rapid patch/mitigation.\n- **Fortinet FortiClient EMS zero-day/hotfix** is being pushed by agencies/CISA-style guidance → treat as urgent if we run EMS anywhere (internet-facing risk).\n- **Identity theft + ransomware initial access acceleration**: APT28-style **router/DNS hijacking to steal M365 credentials**, plus high-velocity **Medusa ransomware** activity → tighten identity telemetry and watch for rapid privilege escalation/lateral movement.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Active exploitation: Flowise (CVE-2025-59528) + other internet-exposed app RCEs**\n- What happened: Reporting indicates **active exploitation** of a **max-severity Flowise RCE**; separate reporting shows **Ninja Forms WordPress plugin** flaw exploited in the wild.\n- Why it matters operationally: These are common “edge app” footholds that lead to **webshells, credential theft, and ransomware staging**—especially if any instances are internet-facing or poorly segmented.\n- Recommended immediate actions for the SOC today: **Identify any Flowise/Ninja Forms exposure (ASM scans/WAF logs/cloud inventory)**; if present **coordinate emergency patch/disable/ACL/WAF rules** and **hunt for new webshells + suspicious process spawns from web roots**.\n\n**2) Fortinet FortiClient EMS (CVE-2026-35616) emergency hotfix / mandated remediation**\n- What happened: Fortinet released an **emergency hotfix** for **FortiClient EMS**; advisories call for **immediate remediation**.\n- Why it matters operationally: EMS often has **high privilege and broad endpoint reach**; compromise can enable **fleet-wide endpoint manipulation** and credential access.\n- Recommended immediate actions for the SOC today: **Confirm whether we operate FortiClient EMS and whether it is reachable from untrusted networks**; if yes, **apply hotfix/mitigations ASAP** and **review EMS/admin auth logs for anomalous admin sessions and config/task pushes**.\n\n**3) Linux/Unix print stack risk: CUPS remote unauth RCE-to-root chain (emerging)**\n- What happened: Community and media reports describe a **CUPS vulnerability chain** enabling **remote unauthenticated code execution leading to root** (details may still be evolving).\n- Why it matters operationally: CUPS is present on many **Linux servers, VDI images, and developer workstations**; exploitation would be a stealthy path to **root on internal segments** (assumption: attacker can reach IPP/printing ports).\n- Recommended immediate actions for the SOC today: **Inventory Linux assets running CUPS + identify any exposure of IPP/631 (and related printing services) across network zones**; **restrict inbound access to printing ports** and **monitor for cupsd spawning unusual children / unexpected outbound connections**.\n\n**4) Credential theft campaigns: router/DNS hijacking targeting Microsoft 365 logins (APT28-linked)**\n- What happened: Reporting indicates **SOHO/router exploitation leading to DNS hijacking** and **credential theft for Microsoft 365**, with law enforcement disruption noted but ongoing risk.\n- Why it matters operationally: This bypasses endpoint controls by **redirecting users to lookalike login flows**, feeding downstream **account takeover, token abuse, and BEC**—high impact in financial services.\n- Recommended immediate actions for the SOC today: **Increase scrutiny on IdP sign-ins (impossible travel, new device, atypical ASN/geo, MFA fatigue patterns)**; **validate DNS security posture (protective DNS, resolver logs) and ensure conditional access is enforced for high-risk sign-ins**.\n\n**5) Ransomware acceleration: Storm-1175 “high velocity” Medusa deployments**\n- What happened: Threat intel reporting highlights **rapid intrusion-to-ransomware** activity attributed to **Storm-1175** deploying **Medusa** at scale/high speed.\n- Why it matters operationally: Short dwell time reduces chances to contain—SOC must catch **initial access + privilege escalation** quickly (often via exploited edge services or stolen creds).\n- Recommended immediate actions for the SOC today: **Run a focused hunt for early ransomware tradecraft** (new local admins, remote service creation, mass encryption precursors); **verify backups/restore readiness signals and ensure ransomware canary alerts + EDR tamper protections are active**.\n\n---\n\n### Monitoring & detection recommendations\n- **Web app exploitation (Flowise/WordPress)**: WAF/reverse proxy logs + web server logs (nginx/apache/IIS) for **POST to admin/install endpoints, suspicious user agents, command injection patterns**; EDR for **web server spawning shells** (ATT&CK T1190).\n- **FortiClient EMS**: Fortinet/EMS application logs + Windows Event Logs for **new admin accounts, auth from unusual IPs, scheduled tasks/service installs**; watch for **remote command/task distribution to many endpoints** (T1078, T1569.002).\n- **Linux CUPS**: Network telemetry for **inbound to TCP/631** across unexpected segments; Linux auditd/EDR for **cupsd → sh/bash/python/perl** child processes and **new setuid binaries** (T1068, T1059).\n- **Router/DNS hijack → M365 phishing**: IdP logs (Azure AD/Entra) for **new device registration, atypical OAuth consent, token refresh anomalies**; DNS resolver logs for **sudden spikes in NXDOMAIN/typosquats and unusual auth domains** (T1566.002, T1583).\n- **“Fake Zoom/Teams calls” / social engineering lures**: Email security + endpoint telemetry for **meeting-invite themed attachments/links**, execution from **Downloads/Temp**, and **browser-to-LOLBIN** patterns (mshta/rundll32/powershell) (T1204, T1059.001).\n- **Supply chain via GitHub Releases / malicious npm packages**: Proxy + EDR for **dev endpoints downloading unsigned binaries from GitHub releases** and **new npm installs from non-corporate registries**; alert on **credential/token access from developer tools** (T1195, T1552).\n- **Kubernetes/container-to-cloud pivots**: Cloud audit logs (AWS CloudTrail/Azure Activity/GCP Audit) for **service account token misuse, new access keys, role assignments**; Kubernetes audit for **exec into pods, secrets reads** (T1610, T1552.007).\n- **BPFDoor/stateless C2 + ICMP relays (Linux)**: NDR for **unusual ICMP patterns and long-lived low-and-slow beacons**; host telemetry for **unexpected BPF-related activity and persistence artifacts** (T1095, T1547).\n\n---\n\n### Medium-term follow-ups\n- **Patch hygiene**: Plan upgrades for **OpenSSL 3.6.2** across server fleets where applicable; validate crypto library dependencies in core apps (avoid emergency upgrades during incident windows).\n- **Browser/client hardening**: Review **Mozilla product advisories** and ensure enterprise browsers are on current versions; prioritize high-risk user groups (trading, treasury, IT admins).\n- **Exposure management**: Add recurring checks for **AI/dev platforms exposed to the internet** (Flowise, ComfyUI, Windmill) and enforce “no-internet-by-default” for admin panels.\n- **Identity resilience**: Tighten **conditional access** (device compliance, phishing-resistant MFA for admins), and ensure rapid response playbooks for **token theft / session hijack**.\n- **Ransomware readiness**: Reconfirm segmentation around management planes (EDR, config mgmt, virtualization) and run a **tabletop for rapid intrusion-to-encryption** scenarios.\n- **AI agent/tool governance** (emerging theme): If the org uses agentic tooling, define controls for **tool permissions, secrets handling, and prompt-injection resilience** (assumption: limited current deployment; coordinate with appsec).",
   "highlights": [
     {
-      "title": "Pluralistic: Switzerland's Goldilocks fiber (07 Apr 2026)",
-      "link": "https://pluralistic.net/2026/04/07/swisscom/",
-      "source": "https://pluralistic.net/feed/",
-      "published": "2026-04-07T07:20:37+00:00",
+      "title": "Spooler Alert: Remote Unauth'd RCE-to-root Chain in CUPS",
+      "link": "https://www.reddit.com/r/netsec/comments/1sflk3t/spooler_alert_remote_unauthd_rcetoroot_chain_in/",
+      "source": "/r/netsec",
+      "published": "2026-04-08T07:01:17+00:00",
       "smart_groups": [
-        "Data Protection / Privacy",
         "Curated",
-        "Identity / Access",
-        "Linux / Unix",
-        "Phishing / Social Engineering",
-        "Ransomware",
         "Vulnerabilities / CVEs",
-        "Mobile Security",
-        "General Security"
+        "OSINT / Community"
       ],
       "curated": true
     },
     {
-      "title": "Threat Actors Exploit LogMeIn Resolve, ScreenConnect in Phishing Campaigns",
-      "link": "https://gbhackers.com/phishing-campaigns-3/",
+      "title": "Claude Code Leak Exploited to Spread Vidar and GhostSocks via GitHub Releases",
+      "link": "https://gbhackers.com/claude-code-leak/",
       "source": "GBHackers News",
-      "published": "2026-04-07T07:11:39+00:00",
+      "published": "2026-04-08T06:58:51+00:00",
       "smart_groups": [
-        "Phishing / Social Engineering",
-        "Threat Actors / APT",
         "Curated",
-        "Exploit / PoC",
         "Malware / Payloads",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Wynn Resorts Says 21,000 Employees Affected by ShinyHunters Hack",
-      "link": "https://www.securityweek.com/wynn-resorts-says-21000-employees-affected-by-shinyhunters-hack/",
-      "source": "SecurityWeek",
-      "published": "2026-04-07T06:05:54+00:00",
-      "smart_groups": [
-        "Curated",
-        "Data Breaches / Leaks",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Flowise AI Agent Builder Under Active CVSS 10.0 RCE Exploitation; 12,000+ Instances Exposed",
-      "link": "https://thehackernews.com/2026/04/flowise-ai-agent-builder-under-active.html",
-      "source": "The Hacker News",
-      "published": "2026-04-07T05:56:00+00:00",
-      "smart_groups": [
-        "Curated",
+        "Exploit / PoC",
         "Vulnerabilities / CVEs",
-        "Threat Actors / APT",
-        "Exploit / PoC",
         "General Security"
       ],
       "curated": true
     },
     {
-      "title": "Microsoft Warns Storm-1175 Exploiting Web-Facing Vulnerabilities to Deploy Medusa Ransomware",
-      "link": "https://gbhackers.com/microsoft-warns-storm-1175/",
+      "title": "Cybercriminals Use Fake Zoom, Teams Calls to Deliver Malware",
+      "link": "https://gbhackers.com/fake-zoom-teams-calls/",
       "source": "GBHackers News",
-      "published": "2026-04-07T05:54:20+00:00",
+      "published": "2026-04-08T06:22:05+00:00",
       "smart_groups": [
+        "Crypto / Web3",
         "Curated",
-        "Threat Actors / APT",
+        "Malware / Payloads",
+        "Network / OT / ICS",
+        "Phishing / Social Engineering",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Stay Ahead of Ransomware - Initial Access via Evolving Social Engineering",
+      "link": "https://www.youtube.com/watch?v=1IFeGVyny2c",
+      "source": "SANS DFIR (YouTube)",
+      "published": "2026-04-08T06:11:21+00:00",
+      "smart_groups": [
+        "Phishing / Social Engineering",
+        "Curated",
         "Exploit / PoC",
+        "Network / OT / ICS",
         "Ransomware",
         "Vulnerabilities / CVEs",
+        "Detection Engineering"
+      ],
+      "curated": true
+    },
+    {
+      "title": "What managing partners should ask AI vendors before signing any contract",
+      "link": "https://www.helpnetsecurity.com/2026/04/08/kumar-ravi-tmf-group-professional-services-cybersecurity-risk/",
+      "source": "Help Net Security",
+      "published": "2026-04-08T05:30:45+00:00",
+      "smart_groups": [
+        "Curated",
+        "Ransomware",
         "General Security"
       ],
       "curated": true
     },
     {
-      "title": "50,000 WordPress Sites Running Ninja Forms Vulnerable to Critical File Upload RCE",
-      "link": "https://gbhackers.com/50000-sites-running-ninja-forms-vulnerable/",
+      "title": "Claude Identifies Critical 13-Year-Old RCE Vulnerability in Apache ActiveMQ",
+      "link": "https://gbhackers.com/claude-identifies-critical-13-year-old-rce-vulnerability-in-apache-activemq/",
       "source": "GBHackers News",
-      "published": "2026-04-07T05:43:37+00:00",
+      "published": "2026-04-08T05:13:38+00:00",
       "smart_groups": [
-        "Vulnerabilities / CVEs",
         "Curated",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "CISA Alerts Defenders to Actively Exploited Fortinet Zero-Day Vulnerability",
-      "link": "https://gbhackers.com/cisa-alerts-exploited-fortinet-zero-day-vulnerability/",
-      "source": "GBHackers News",
-      "published": "2026-04-07T05:24:51+00:00",
-      "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Curated",
-        "Threat Actors / APT",
         "Exploit / PoC",
         "General Security"
       ],
       "curated": true
     },
     {
-      "title": "Windows Defender 0-Day Published Online, Giving Attackers Potential Full Access",
-      "link": "https://gbhackers.com/windows-defender-0-day-published-online/",
-      "source": "GBHackers News",
-      "published": "2026-04-07T05:02:26+00:00",
+      "title": "Artificial Intelligence Discovers Zero-Day Vulnerabilities in Major Operating Systems and Browsers",
+      "link": "https://www.news4hackers.com/artificial-intelligence-discovers-zero-day-vulnerabilities-in-major-operating-systems-and-browsers/",
+      "source": "News4Hackers",
+      "published": "2026-04-08T05:06:37+00:00",
       "smart_groups": [
-        "Vulnerabilities / CVEs",
         "Curated",
-        "Windows / Microsoft",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
         "General Security"
       ],
       "curated": true
     },
     {
-      "title": "The case for fixing CWE weakness patterns instead of patching one bug at a time",
-      "link": "https://www.helpnetsecurity.com/2026/04/07/alec-summers-mitre-cwe-vulnerability-mapping/",
+      "title": "OpenSSL 3.6.2 lands with eight CVE fixes",
+      "link": "https://www.helpnetsecurity.com/2026/04/08/openssl-3-6-2-security-patch/",
       "source": "Help Net Security",
-      "published": "2026-04-07T05:00:51+00:00",
+      "published": "2026-04-08T04:43:43+00:00",
       "smart_groups": [
-        "Vulnerabilities / CVEs",
         "Curated",
+        "Vulnerabilities / CVEs",
         "General Security"
       ],
       "curated": true
     },
     {
-      "title": "Metatron -AI PENETRATION TESTING ASSISTANT (open source)",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1selt3a/metatron_ai_penetration_testing_assistant_open/",
-      "source": "/r/cybersecurity",
-      "published": "2026-04-07T04:22:28+00:00",
+      "title": "Anthropic limits access to AI model, fearing future of cyberattacks",
+      "link": "https://cointelegraph.com/news/claude-mythos-finds-thousands-of-zero-day-os-and-browser-vulnerabilities?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound",
+      "source": "Cointelegraph.com News",
+      "published": "2026-04-08T04:30:59+00:00",
       "smart_groups": [
         "Curated",
-        "Linux / Unix",
+        "Exploit / PoC",
         "Vulnerabilities / CVEs",
+        "Crypto / Web3"
+      ],
+      "curated": true
+    },
+    {
+      "title": "40 companies were given access to Claude Mythos to \"secure both first-party and open-source systems\" at a time when hackers/APTs have practically infiltrated most organizations",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1sfitgn/40_companies_were_given_access_to_claude_mythos/",
+      "source": "/r/cybersecurity",
+      "published": "2026-04-08T04:26:03+00:00",
+      "smart_groups": [
+        "Threat Actors / APT",
+        "Vulnerabilities / CVEs",
+        "Curated",
+        "Malware / Payloads",
         "OSINT / Community"
       ],
       "curated": true
