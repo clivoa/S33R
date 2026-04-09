@@ -1,0 +1,142 @@
+{
+  "generated_at": "2026-04-09T07:55:38.504832+00:00",
+  "analysis_date": "2026-04-09",
+  "model": "gpt-5.2",
+  "window_hours": 24,
+  "source_file": "data/news_recent.json",
+  "source_generated_at": "2026-04-09T07:33:33.458622+00:00",
+  "source_days_back": 30,
+  "source_total_items": 9339,
+  "total_items_in_window_all": 376,
+  "total_items_in_window_curated": 105,
+  "morning_call_markdown": "### Executive Summary\n- Active exploitation pressure is high: **Ivanti EPMM is now in CISA KEV** and campaigns are rapidly weaponizing newly disclosed flaws (notably in cloud/SaaS and common server software).\n- Multiple **high-risk “internet edge / workflow” exposures** surfaced (Flowise, Docker authz bypass, GitLab vulns, legacy ActiveMQ RCE) — likely to be scanned and opportunistically exploited.\n- **Phishing/social engineering is getting more evasive** (abuse of legitimate Meta Business Manager notifications; GitHub/Jira mail delivery weaknesses; SVG “pixel” trick hiding card-stealer), raising the chance of credential theft and initial access.\n\n### High-priority items (immediate attention)\n\n**1) Ivanti EPMM vulnerability added to CISA KEV (active exploitation)**\n- What happened: CISA added an **Ivanti EPMM flaw** to the **Known Exploited Vulnerabilities** catalog with an urgent federal patch deadline.\n- Why it matters operationally: EPMM is often **internet-facing MDM**; compromise can enable device/user pivot, credential access, and broad enterprise reach.\n- Recommended immediate actions for the SOC today: **Confirm if we run Ivanti EPMM** and its exposure; **prioritize emergency patch/mitigation** and **hunt for suspicious EPMM admin/API activity** and new remote sessions.\n\n**2) Ransomware campaigns accelerating post-disclosure (Medusa / “Storm-1175” reporting)**\n- What happened: Reporting indicates **Medusa ransomware deployments within ~24 hours** of vulnerability disclosure (exact vuln not fully clear from summaries; assume edge/remote service exploitation).\n- Why it matters operationally: This matches a pattern of **rapid exploit-to-ransom**; financial orgs are high-value targets for double-extortion and downtime pressure.\n- Recommended immediate actions for the SOC today: **Tighten monitoring on external-facing services** (VPN, web apps, remote mgmt); **increase alerting for lateral movement + mass encryption precursors** (new admin accounts, PsExec/WMIC, shadow copy deletion).\n\n**3) Critical/exploitable application & platform vulns likely to be scanned (Flowise, ActiveMQ, Docker, GitLab)**\n- What happened: Multiple reports highlight **actively exploited / high-severity flaws**: Flowise (AI workflow platform), **Apache ActiveMQ Classic RCE**, **Docker authorization bypass**, and **GitLab DoS/code injection** issues.\n- Why it matters operationally: These products appear in dev/ops and integration stacks; exploitation can lead to **RCE, credential theft, CI/CD compromise, or container host access**.\n- Recommended immediate actions for the SOC today: **Inventory & confirm exposure** (internet-facing, CI runners, k8s nodes, integration servers); **apply vendor patches/mitigations** or isolate/disable vulnerable components until patched.\n\n**4) Phishing/social engineering using trusted channels + evasive web payloads (Meta notifications, GitHub/Jira mail, SVG stealer)**\n- What happened: Attackers are **abusing legitimate notification workflows** (Meta Business Manager) and email delivery quirks (GitHub/Jira) plus **pixel-sized SVG tricks** to hide web-based credit card stealers.\n- Why it matters operationally: Increased likelihood of **credential theft** and **session hijack** leading to BEC-style fraud, SaaS takeover, and initial access.\n- Recommended immediate actions for the SOC today: **Tune email security to flag “legit-platform” lures** and unusual notification-driven login prompts; **monitor for new OAuth grants / unusual sign-ins** and rapid MFA fatigue/AiTM patterns.\n\n**5) Microsoft suspensions affecting high-profile open-source developer accounts (supply chain / update risk)**\n- What happened: Microsoft reportedly **suspended/locked developer accounts** for well-known open-source projects, impacting ability to ship updates (e.g., VPN/encryption tooling mentioned in coverage).\n- Why it matters operationally: Disrupted maintainer pipelines increase risk of **typosquats, malicious mirrors, rushed/unverified update paths**, and supply-chain confusion.\n- Recommended immediate actions for the SOC today: **Pause “out-of-band” manual updates** for impacted tooling; **validate update provenance** (signed releases, official repos) and monitor for **new/unfamiliar package sources** in build logs.\n\n### Monitoring & detection recommendations\n- **Ivanti EPMM**: Monitor **WAF/reverse proxy, EPMM app logs, VPN/firewall** for spikes in requests to admin/API endpoints, auth failures, new device enrollments (ATT&CK: Exploit Public-Facing Application **T1190**).\n- **Ransomware early signals (Medusa-style)**: From **EDR + Windows Security logs**, hunt for `vssadmin delete shadows`, `wbadmin`, `bcdedit`, mass file rename/write bursts, and unusual service creation (ATT&CK: Inhibit System Recovery **T1490**, Service Creation **T1543**).\n- **ActiveMQ / Java service exploitation**: Use **NDR/IDS + server logs** to detect unusual inbound to broker ports and unexpected child processes from Java (e.g., `java` spawning `cmd/powershell/bash`) (ATT&CK: Command and Scripting Interpreter **T1059**).\n- **Docker authz bypass / container-to-host**: From **container runtime logs (dockerd), k8s audit, EDR on hosts**, alert on privileged container runs, new mounts to `/var/run/docker.sock`, or host filesystem mounts (ATT&CK: Escape to Host **T1611**, Container Admin Command **T1609**).\n- **GitLab / CI compromise**: Monitor **GitLab audit logs + runner logs** for new tokens, runner registration changes, unusual pipeline edits, and downloads from new external domains (ATT&CK: Modify Cloud Compute Infrastructure **T1578** / valid accounts **T1078** as applicable).\n- **Phishing via trusted notifications (Meta/GitHub/Jira)**: From **email gateway + IdP logs (Entra/Okta) + CASB**, hunt for first-time sender patterns that are “platform notifications,” followed by immediate OAuth consent or impossible travel sign-ins (ATT&CK: Phishing **T1566**, OAuth abuse/consent grant often maps to Valid Accounts **T1078**).\n- **Web card-stealer evasion (SVG trick)**: From **proxy/DNS + browser telemetry/EDR**, flag suspicious SVG loads from checkout/payment pages, unexpected inline SVG scripts, and new third-party script domains on web properties (ATT&CK: Web Injection **T1059.007** conceptually; treat as web skimming).\n\n### Medium-term follow-ups\n- **Patch governance**: Validate timelines and ownership for **Ivanti EPMM, GitLab, Docker, ActiveMQ, WordPress plugin exposure (Ninja Forms)**; ensure externally exposed instances have an accelerated SLA.\n- **SaaS integration risk review**: Reassess third-party **SaaS connectors/integrations** (token scope, least privilege, rotation, anomaly alerts) given “integration breach → data theft” theme.\n- **Supply chain controls**: Enforce **signed artifacts**, pinned dependencies, and allowlisted package registries; add detections for **typosquatted packages** in CI/CD.\n- **Credential/session hardening**: Expand **phishing-resistant MFA** for admin roles, tighten conditional access, and reduce token lifetime for sensitive apps; ensure rapid response playbooks for OAuth-consent abuse.\n- **Tabletop (ransomware rapid exploitation)**: Run a short drill on “newly disclosed vuln exploited within 24h” including containment steps for edge services and CI systems.\n- **Cloud/IAM exposure review**: Track the AWS “IAM god mode / agentcore” style report as a reminder to audit **over-privileged roles** and monitor for unusual `iam:*` changes (assumption: relevance depends on whether we use the referenced AWS service).",
+  "highlights": [
+    {
+      "title": "Microsoft Suspends Dev Accounts for Popular Open Source Projects",
+      "link": "https://www.news4hackers.com/microsoft-suspends-dev-accounts-for-popular-open-source-projects/",
+      "source": "News4Hackers",
+      "published": "2026-04-09T07:02:50+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Microsoft suspends dev accounts for high-profile open source projects",
+      "link": "https://www.bleepingcomputer.com/news/microsoft/microsoft-suspends-dev-accounts-for-high-profile-open-source-projects/",
+      "source": "BleepingComputer",
+      "published": "2026-04-09T06:46:26+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Windows / Microsoft",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Hackers Abuse Legitimate Meta Business Manager Notifications to Deliver Phishing Emails",
+      "link": "https://cybersecuritynews.com/hackers-abuse-legitimate-meta-business-manager-notifications/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-04-09T05:56:53+00:00",
+      "smart_groups": [
+        "Curated",
+        "Exploit / PoC",
+        "Phishing / Social Engineering",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "SOC analysts - what helped you connect SIEM, EDR, and threat hunting in real scenarios?",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1sggxcp/soc_analysts_what_helped_you_connect_siem_edr_and/",
+      "source": "/r/cybersecurity",
+      "published": "2026-04-09T05:40:19+00:00",
+      "smart_groups": [
+        "Detection Engineering",
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "OSINT / Community"
+      ],
+      "curated": true
+    },
+    {
+      "title": "GitLab Addresses Multiple Vulnerabilities Linked to DoS and Code Injection",
+      "link": "https://gbhackers.com/gitlab-addresses-multiple-vulnerabilities/",
+      "source": "GBHackers News",
+      "published": "2026-04-09T05:05:49+00:00",
+      "smart_groups": [
+        "Curated",
+        "Exploit / PoC",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Phishers Exploit GitHub and Jira Email Delivery System Vulnerabilities",
+      "link": "https://www.news4hackers.com/phishers-exploit-github-and-jira-email-delivery-system-vulnerabilities/",
+      "source": "News4Hackers",
+      "published": "2026-04-09T05:05:22+00:00",
+      "smart_groups": [
+        "Cloud / SaaS",
+        "Curated",
+        "Exploit / PoC",
+        "Phishing / Social Engineering",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Open Source Software Development Kit for AI Governance",
+      "link": "https://www.news4hackers.com/open-source-software-development-kit-for-ai-governance/",
+      "source": "News4Hackers",
+      "published": "2026-04-09T05:04:08+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Asqav: Open-source SDK for AI agent governance",
+      "link": "https://www.helpnetsecurity.com/2026/04/09/asqav-ai-agent-audit-trail/",
+      "source": "Help Net Security",
+      "published": "2026-04-09T05:00:12+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Visa unveils commerce platform enabling autonomous AI shopping",
+      "link": "https://cointelegraph.com/news/visa-launches-ai-commerce-platform-to-power-autonomous-agent-payments?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound",
+      "source": "Cointelegraph.com News",
+      "published": "2026-04-09T04:18:27+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Crypto / Web3"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Gujarat Police Crack Down on Massive Cybercrime Ring Worth Crores",
+      "link": "https://www.news4hackers.com/gujarat-police-crack-down-on-massive-cybercrime-ring-worth-crores/",
+      "source": "News4Hackers",
+      "published": "2026-04-09T04:01:40+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    }
+  ]
+}
