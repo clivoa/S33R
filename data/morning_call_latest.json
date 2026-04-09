@@ -1,22 +1,61 @@
 {
-  "generated_at": "2026-04-08T07:54:15.623027+00:00",
-  "analysis_date": "2026-04-08",
+  "generated_at": "2026-04-09T07:55:38.504832+00:00",
+  "analysis_date": "2026-04-09",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-04-08T07:30:58.063640+00:00",
+  "source_generated_at": "2026-04-09T07:33:33.458622+00:00",
   "source_days_back": 30,
-  "source_total_items": 9340,
-  "total_items_in_window_all": 394,
-  "total_items_in_window_curated": 139,
-  "morning_call_markdown": "### Executive Summary\n- Multiple **actively exploited RCEs** are in play (Flowise AI agent builder, Ninja Forms WordPress; plus a likely high-impact **CUPS remote unauth RCE-to-root chain** emerging) → prioritize exposure checks and rapid patch/mitigation.\n- **Fortinet FortiClient EMS zero-day/hotfix** is being pushed by agencies/CISA-style guidance → treat as urgent if we run EMS anywhere (internet-facing risk).\n- **Identity theft + ransomware initial access acceleration**: APT28-style **router/DNS hijacking to steal M365 credentials**, plus high-velocity **Medusa ransomware** activity → tighten identity telemetry and watch for rapid privilege escalation/lateral movement.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Active exploitation: Flowise (CVE-2025-59528) + other internet-exposed app RCEs**\n- What happened: Reporting indicates **active exploitation** of a **max-severity Flowise RCE**; separate reporting shows **Ninja Forms WordPress plugin** flaw exploited in the wild.\n- Why it matters operationally: These are common “edge app” footholds that lead to **webshells, credential theft, and ransomware staging**—especially if any instances are internet-facing or poorly segmented.\n- Recommended immediate actions for the SOC today: **Identify any Flowise/Ninja Forms exposure (ASM scans/WAF logs/cloud inventory)**; if present **coordinate emergency patch/disable/ACL/WAF rules** and **hunt for new webshells + suspicious process spawns from web roots**.\n\n**2) Fortinet FortiClient EMS (CVE-2026-35616) emergency hotfix / mandated remediation**\n- What happened: Fortinet released an **emergency hotfix** for **FortiClient EMS**; advisories call for **immediate remediation**.\n- Why it matters operationally: EMS often has **high privilege and broad endpoint reach**; compromise can enable **fleet-wide endpoint manipulation** and credential access.\n- Recommended immediate actions for the SOC today: **Confirm whether we operate FortiClient EMS and whether it is reachable from untrusted networks**; if yes, **apply hotfix/mitigations ASAP** and **review EMS/admin auth logs for anomalous admin sessions and config/task pushes**.\n\n**3) Linux/Unix print stack risk: CUPS remote unauth RCE-to-root chain (emerging)**\n- What happened: Community and media reports describe a **CUPS vulnerability chain** enabling **remote unauthenticated code execution leading to root** (details may still be evolving).\n- Why it matters operationally: CUPS is present on many **Linux servers, VDI images, and developer workstations**; exploitation would be a stealthy path to **root on internal segments** (assumption: attacker can reach IPP/printing ports).\n- Recommended immediate actions for the SOC today: **Inventory Linux assets running CUPS + identify any exposure of IPP/631 (and related printing services) across network zones**; **restrict inbound access to printing ports** and **monitor for cupsd spawning unusual children / unexpected outbound connections**.\n\n**4) Credential theft campaigns: router/DNS hijacking targeting Microsoft 365 logins (APT28-linked)**\n- What happened: Reporting indicates **SOHO/router exploitation leading to DNS hijacking** and **credential theft for Microsoft 365**, with law enforcement disruption noted but ongoing risk.\n- Why it matters operationally: This bypasses endpoint controls by **redirecting users to lookalike login flows**, feeding downstream **account takeover, token abuse, and BEC**—high impact in financial services.\n- Recommended immediate actions for the SOC today: **Increase scrutiny on IdP sign-ins (impossible travel, new device, atypical ASN/geo, MFA fatigue patterns)**; **validate DNS security posture (protective DNS, resolver logs) and ensure conditional access is enforced for high-risk sign-ins**.\n\n**5) Ransomware acceleration: Storm-1175 “high velocity” Medusa deployments**\n- What happened: Threat intel reporting highlights **rapid intrusion-to-ransomware** activity attributed to **Storm-1175** deploying **Medusa** at scale/high speed.\n- Why it matters operationally: Short dwell time reduces chances to contain—SOC must catch **initial access + privilege escalation** quickly (often via exploited edge services or stolen creds).\n- Recommended immediate actions for the SOC today: **Run a focused hunt for early ransomware tradecraft** (new local admins, remote service creation, mass encryption precursors); **verify backups/restore readiness signals and ensure ransomware canary alerts + EDR tamper protections are active**.\n\n---\n\n### Monitoring & detection recommendations\n- **Web app exploitation (Flowise/WordPress)**: WAF/reverse proxy logs + web server logs (nginx/apache/IIS) for **POST to admin/install endpoints, suspicious user agents, command injection patterns**; EDR for **web server spawning shells** (ATT&CK T1190).\n- **FortiClient EMS**: Fortinet/EMS application logs + Windows Event Logs for **new admin accounts, auth from unusual IPs, scheduled tasks/service installs**; watch for **remote command/task distribution to many endpoints** (T1078, T1569.002).\n- **Linux CUPS**: Network telemetry for **inbound to TCP/631** across unexpected segments; Linux auditd/EDR for **cupsd → sh/bash/python/perl** child processes and **new setuid binaries** (T1068, T1059).\n- **Router/DNS hijack → M365 phishing**: IdP logs (Azure AD/Entra) for **new device registration, atypical OAuth consent, token refresh anomalies**; DNS resolver logs for **sudden spikes in NXDOMAIN/typosquats and unusual auth domains** (T1566.002, T1583).\n- **“Fake Zoom/Teams calls” / social engineering lures**: Email security + endpoint telemetry for **meeting-invite themed attachments/links**, execution from **Downloads/Temp**, and **browser-to-LOLBIN** patterns (mshta/rundll32/powershell) (T1204, T1059.001).\n- **Supply chain via GitHub Releases / malicious npm packages**: Proxy + EDR for **dev endpoints downloading unsigned binaries from GitHub releases** and **new npm installs from non-corporate registries**; alert on **credential/token access from developer tools** (T1195, T1552).\n- **Kubernetes/container-to-cloud pivots**: Cloud audit logs (AWS CloudTrail/Azure Activity/GCP Audit) for **service account token misuse, new access keys, role assignments**; Kubernetes audit for **exec into pods, secrets reads** (T1610, T1552.007).\n- **BPFDoor/stateless C2 + ICMP relays (Linux)**: NDR for **unusual ICMP patterns and long-lived low-and-slow beacons**; host telemetry for **unexpected BPF-related activity and persistence artifacts** (T1095, T1547).\n\n---\n\n### Medium-term follow-ups\n- **Patch hygiene**: Plan upgrades for **OpenSSL 3.6.2** across server fleets where applicable; validate crypto library dependencies in core apps (avoid emergency upgrades during incident windows).\n- **Browser/client hardening**: Review **Mozilla product advisories** and ensure enterprise browsers are on current versions; prioritize high-risk user groups (trading, treasury, IT admins).\n- **Exposure management**: Add recurring checks for **AI/dev platforms exposed to the internet** (Flowise, ComfyUI, Windmill) and enforce “no-internet-by-default” for admin panels.\n- **Identity resilience**: Tighten **conditional access** (device compliance, phishing-resistant MFA for admins), and ensure rapid response playbooks for **token theft / session hijack**.\n- **Ransomware readiness**: Reconfirm segmentation around management planes (EDR, config mgmt, virtualization) and run a **tabletop for rapid intrusion-to-encryption** scenarios.\n- **AI agent/tool governance** (emerging theme): If the org uses agentic tooling, define controls for **tool permissions, secrets handling, and prompt-injection resilience** (assumption: limited current deployment; coordinate with appsec).",
+  "source_total_items": 9339,
+  "total_items_in_window_all": 376,
+  "total_items_in_window_curated": 105,
+  "morning_call_markdown": "### Executive Summary\n- Active exploitation pressure is high: **Ivanti EPMM is now in CISA KEV** and campaigns are rapidly weaponizing newly disclosed flaws (notably in cloud/SaaS and common server software).\n- Multiple **high-risk “internet edge / workflow” exposures** surfaced (Flowise, Docker authz bypass, GitLab vulns, legacy ActiveMQ RCE) — likely to be scanned and opportunistically exploited.\n- **Phishing/social engineering is getting more evasive** (abuse of legitimate Meta Business Manager notifications; GitHub/Jira mail delivery weaknesses; SVG “pixel” trick hiding card-stealer), raising the chance of credential theft and initial access.\n\n### High-priority items (immediate attention)\n\n**1) Ivanti EPMM vulnerability added to CISA KEV (active exploitation)**\n- What happened: CISA added an **Ivanti EPMM flaw** to the **Known Exploited Vulnerabilities** catalog with an urgent federal patch deadline.\n- Why it matters operationally: EPMM is often **internet-facing MDM**; compromise can enable device/user pivot, credential access, and broad enterprise reach.\n- Recommended immediate actions for the SOC today: **Confirm if we run Ivanti EPMM** and its exposure; **prioritize emergency patch/mitigation** and **hunt for suspicious EPMM admin/API activity** and new remote sessions.\n\n**2) Ransomware campaigns accelerating post-disclosure (Medusa / “Storm-1175” reporting)**\n- What happened: Reporting indicates **Medusa ransomware deployments within ~24 hours** of vulnerability disclosure (exact vuln not fully clear from summaries; assume edge/remote service exploitation).\n- Why it matters operationally: This matches a pattern of **rapid exploit-to-ransom**; financial orgs are high-value targets for double-extortion and downtime pressure.\n- Recommended immediate actions for the SOC today: **Tighten monitoring on external-facing services** (VPN, web apps, remote mgmt); **increase alerting for lateral movement + mass encryption precursors** (new admin accounts, PsExec/WMIC, shadow copy deletion).\n\n**3) Critical/exploitable application & platform vulns likely to be scanned (Flowise, ActiveMQ, Docker, GitLab)**\n- What happened: Multiple reports highlight **actively exploited / high-severity flaws**: Flowise (AI workflow platform), **Apache ActiveMQ Classic RCE**, **Docker authorization bypass**, and **GitLab DoS/code injection** issues.\n- Why it matters operationally: These products appear in dev/ops and integration stacks; exploitation can lead to **RCE, credential theft, CI/CD compromise, or container host access**.\n- Recommended immediate actions for the SOC today: **Inventory & confirm exposure** (internet-facing, CI runners, k8s nodes, integration servers); **apply vendor patches/mitigations** or isolate/disable vulnerable components until patched.\n\n**4) Phishing/social engineering using trusted channels + evasive web payloads (Meta notifications, GitHub/Jira mail, SVG stealer)**\n- What happened: Attackers are **abusing legitimate notification workflows** (Meta Business Manager) and email delivery quirks (GitHub/Jira) plus **pixel-sized SVG tricks** to hide web-based credit card stealers.\n- Why it matters operationally: Increased likelihood of **credential theft** and **session hijack** leading to BEC-style fraud, SaaS takeover, and initial access.\n- Recommended immediate actions for the SOC today: **Tune email security to flag “legit-platform” lures** and unusual notification-driven login prompts; **monitor for new OAuth grants / unusual sign-ins** and rapid MFA fatigue/AiTM patterns.\n\n**5) Microsoft suspensions affecting high-profile open-source developer accounts (supply chain / update risk)**\n- What happened: Microsoft reportedly **suspended/locked developer accounts** for well-known open-source projects, impacting ability to ship updates (e.g., VPN/encryption tooling mentioned in coverage).\n- Why it matters operationally: Disrupted maintainer pipelines increase risk of **typosquats, malicious mirrors, rushed/unverified update paths**, and supply-chain confusion.\n- Recommended immediate actions for the SOC today: **Pause “out-of-band” manual updates** for impacted tooling; **validate update provenance** (signed releases, official repos) and monitor for **new/unfamiliar package sources** in build logs.\n\n### Monitoring & detection recommendations\n- **Ivanti EPMM**: Monitor **WAF/reverse proxy, EPMM app logs, VPN/firewall** for spikes in requests to admin/API endpoints, auth failures, new device enrollments (ATT&CK: Exploit Public-Facing Application **T1190**).\n- **Ransomware early signals (Medusa-style)**: From **EDR + Windows Security logs**, hunt for `vssadmin delete shadows`, `wbadmin`, `bcdedit`, mass file rename/write bursts, and unusual service creation (ATT&CK: Inhibit System Recovery **T1490**, Service Creation **T1543**).\n- **ActiveMQ / Java service exploitation**: Use **NDR/IDS + server logs** to detect unusual inbound to broker ports and unexpected child processes from Java (e.g., `java` spawning `cmd/powershell/bash`) (ATT&CK: Command and Scripting Interpreter **T1059**).\n- **Docker authz bypass / container-to-host**: From **container runtime logs (dockerd), k8s audit, EDR on hosts**, alert on privileged container runs, new mounts to `/var/run/docker.sock`, or host filesystem mounts (ATT&CK: Escape to Host **T1611**, Container Admin Command **T1609**).\n- **GitLab / CI compromise**: Monitor **GitLab audit logs + runner logs** for new tokens, runner registration changes, unusual pipeline edits, and downloads from new external domains (ATT&CK: Modify Cloud Compute Infrastructure **T1578** / valid accounts **T1078** as applicable).\n- **Phishing via trusted notifications (Meta/GitHub/Jira)**: From **email gateway + IdP logs (Entra/Okta) + CASB**, hunt for first-time sender patterns that are “platform notifications,” followed by immediate OAuth consent or impossible travel sign-ins (ATT&CK: Phishing **T1566**, OAuth abuse/consent grant often maps to Valid Accounts **T1078**).\n- **Web card-stealer evasion (SVG trick)**: From **proxy/DNS + browser telemetry/EDR**, flag suspicious SVG loads from checkout/payment pages, unexpected inline SVG scripts, and new third-party script domains on web properties (ATT&CK: Web Injection **T1059.007** conceptually; treat as web skimming).\n\n### Medium-term follow-ups\n- **Patch governance**: Validate timelines and ownership for **Ivanti EPMM, GitLab, Docker, ActiveMQ, WordPress plugin exposure (Ninja Forms)**; ensure externally exposed instances have an accelerated SLA.\n- **SaaS integration risk review**: Reassess third-party **SaaS connectors/integrations** (token scope, least privilege, rotation, anomaly alerts) given “integration breach → data theft” theme.\n- **Supply chain controls**: Enforce **signed artifacts**, pinned dependencies, and allowlisted package registries; add detections for **typosquatted packages** in CI/CD.\n- **Credential/session hardening**: Expand **phishing-resistant MFA** for admin roles, tighten conditional access, and reduce token lifetime for sensitive apps; ensure rapid response playbooks for OAuth-consent abuse.\n- **Tabletop (ransomware rapid exploitation)**: Run a short drill on “newly disclosed vuln exploited within 24h” including containment steps for edge services and CI systems.\n- **Cloud/IAM exposure review**: Track the AWS “IAM god mode / agentcore” style report as a reminder to audit **over-privileged roles** and monitor for unusual `iam:*` changes (assumption: relevance depends on whether we use the referenced AWS service).",
   "highlights": [
     {
-      "title": "Spooler Alert: Remote Unauth'd RCE-to-root Chain in CUPS",
-      "link": "https://www.reddit.com/r/netsec/comments/1sflk3t/spooler_alert_remote_unauthd_rcetoroot_chain_in/",
-      "source": "/r/netsec",
-      "published": "2026-04-08T07:01:17+00:00",
+      "title": "Microsoft Suspends Dev Accounts for Popular Open Source Projects",
+      "link": "https://www.news4hackers.com/microsoft-suspends-dev-accounts-for-popular-open-source-projects/",
+      "source": "News4Hackers",
+      "published": "2026-04-09T07:02:50+00:00",
       "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Microsoft suspends dev accounts for high-profile open source projects",
+      "link": "https://www.bleepingcomputer.com/news/microsoft/microsoft-suspends-dev-accounts-for-high-profile-open-source-projects/",
+      "source": "BleepingComputer",
+      "published": "2026-04-09T06:46:26+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Windows / Microsoft",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Hackers Abuse Legitimate Meta Business Manager Notifications to Deliver Phishing Emails",
+      "link": "https://cybersecuritynews.com/hackers-abuse-legitimate-meta-business-manager-notifications/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-04-09T05:56:53+00:00",
+      "smart_groups": [
+        "Curated",
+        "Exploit / PoC",
+        "Phishing / Social Engineering",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "SOC analysts - what helped you connect SIEM, EDR, and threat hunting in real scenarios?",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1sggxcp/soc_analysts_what_helped_you_connect_siem_edr_and/",
+      "source": "/r/cybersecurity",
+      "published": "2026-04-09T05:40:19+00:00",
+      "smart_groups": [
+        "Detection Engineering",
         "Curated",
         "Vulnerabilities / CVEs",
         "OSINT / Community"
@@ -24,13 +63,12 @@
       "curated": true
     },
     {
-      "title": "Claude Code Leak Exploited to Spread Vidar and GhostSocks via GitHub Releases",
-      "link": "https://gbhackers.com/claude-code-leak/",
+      "title": "GitLab Addresses Multiple Vulnerabilities Linked to DoS and Code Injection",
+      "link": "https://gbhackers.com/gitlab-addresses-multiple-vulnerabilities/",
       "source": "GBHackers News",
-      "published": "2026-04-08T06:58:51+00:00",
+      "published": "2026-04-09T05:05:49+00:00",
       "smart_groups": [
         "Curated",
-        "Malware / Payloads",
         "Exploit / PoC",
         "Vulnerabilities / CVEs",
         "General Security"
@@ -38,80 +76,37 @@
       "curated": true
     },
     {
-      "title": "Cybercriminals Use Fake Zoom, Teams Calls to Deliver Malware",
-      "link": "https://gbhackers.com/fake-zoom-teams-calls/",
-      "source": "GBHackers News",
-      "published": "2026-04-08T06:22:05+00:00",
-      "smart_groups": [
-        "Crypto / Web3",
-        "Curated",
-        "Malware / Payloads",
-        "Network / OT / ICS",
-        "Phishing / Social Engineering",
-        "Vulnerabilities / CVEs",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Stay Ahead of Ransomware - Initial Access via Evolving Social Engineering",
-      "link": "https://www.youtube.com/watch?v=1IFeGVyny2c",
-      "source": "SANS DFIR (YouTube)",
-      "published": "2026-04-08T06:11:21+00:00",
-      "smart_groups": [
-        "Phishing / Social Engineering",
-        "Curated",
-        "Exploit / PoC",
-        "Network / OT / ICS",
-        "Ransomware",
-        "Vulnerabilities / CVEs",
-        "Detection Engineering"
-      ],
-      "curated": true
-    },
-    {
-      "title": "What managing partners should ask AI vendors before signing any contract",
-      "link": "https://www.helpnetsecurity.com/2026/04/08/kumar-ravi-tmf-group-professional-services-cybersecurity-risk/",
-      "source": "Help Net Security",
-      "published": "2026-04-08T05:30:45+00:00",
-      "smart_groups": [
-        "Curated",
-        "Ransomware",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Claude Identifies Critical 13-Year-Old RCE Vulnerability in Apache ActiveMQ",
-      "link": "https://gbhackers.com/claude-identifies-critical-13-year-old-rce-vulnerability-in-apache-activemq/",
-      "source": "GBHackers News",
-      "published": "2026-04-08T05:13:38+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Artificial Intelligence Discovers Zero-Day Vulnerabilities in Major Operating Systems and Browsers",
-      "link": "https://www.news4hackers.com/artificial-intelligence-discovers-zero-day-vulnerabilities-in-major-operating-systems-and-browsers/",
+      "title": "Phishers Exploit GitHub and Jira Email Delivery System Vulnerabilities",
+      "link": "https://www.news4hackers.com/phishers-exploit-github-and-jira-email-delivery-system-vulnerabilities/",
       "source": "News4Hackers",
-      "published": "2026-04-08T05:06:37+00:00",
+      "published": "2026-04-09T05:05:22+00:00",
       "smart_groups": [
+        "Cloud / SaaS",
         "Curated",
-        "Vulnerabilities / CVEs",
         "Exploit / PoC",
+        "Phishing / Social Engineering",
+        "Vulnerabilities / CVEs",
         "General Security"
       ],
       "curated": true
     },
     {
-      "title": "OpenSSL 3.6.2 lands with eight CVE fixes",
-      "link": "https://www.helpnetsecurity.com/2026/04/08/openssl-3-6-2-security-patch/",
+      "title": "Open Source Software Development Kit for AI Governance",
+      "link": "https://www.news4hackers.com/open-source-software-development-kit-for-ai-governance/",
+      "source": "News4Hackers",
+      "published": "2026-04-09T05:04:08+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Asqav: Open-source SDK for AI agent governance",
+      "link": "https://www.helpnetsecurity.com/2026/04/09/asqav-ai-agent-audit-trail/",
       "source": "Help Net Security",
-      "published": "2026-04-08T04:43:43+00:00",
+      "published": "2026-04-09T05:00:12+00:00",
       "smart_groups": [
         "Curated",
         "Vulnerabilities / CVEs",
@@ -120,29 +115,26 @@
       "curated": true
     },
     {
-      "title": "Anthropic limits access to AI model, fearing future of cyberattacks",
-      "link": "https://cointelegraph.com/news/claude-mythos-finds-thousands-of-zero-day-os-and-browser-vulnerabilities?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound",
+      "title": "Visa unveils commerce platform enabling autonomous AI shopping",
+      "link": "https://cointelegraph.com/news/visa-launches-ai-commerce-platform-to-power-autonomous-agent-payments?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound",
       "source": "Cointelegraph.com News",
-      "published": "2026-04-08T04:30:59+00:00",
+      "published": "2026-04-09T04:18:27+00:00",
       "smart_groups": [
         "Curated",
-        "Exploit / PoC",
         "Vulnerabilities / CVEs",
         "Crypto / Web3"
       ],
       "curated": true
     },
     {
-      "title": "40 companies were given access to Claude Mythos to \"secure both first-party and open-source systems\" at a time when hackers/APTs have practically infiltrated most organizations",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1sfitgn/40_companies_were_given_access_to_claude_mythos/",
-      "source": "/r/cybersecurity",
-      "published": "2026-04-08T04:26:03+00:00",
+      "title": "Gujarat Police Crack Down on Massive Cybercrime Ring Worth Crores",
+      "link": "https://www.news4hackers.com/gujarat-police-crack-down-on-massive-cybercrime-ring-worth-crores/",
+      "source": "News4Hackers",
+      "published": "2026-04-09T04:01:40+00:00",
       "smart_groups": [
-        "Threat Actors / APT",
-        "Vulnerabilities / CVEs",
         "Curated",
-        "Malware / Payloads",
-        "OSINT / Community"
+        "Vulnerabilities / CVEs",
+        "General Security"
       ],
       "curated": true
     }
