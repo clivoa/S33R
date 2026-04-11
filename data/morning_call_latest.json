@@ -1,143 +1,149 @@
 {
-  "generated_at": "2026-04-10T08:00:13.533744+00:00",
-  "analysis_date": "2026-04-10",
+  "generated_at": "2026-04-11T07:18:10.241707+00:00",
+  "analysis_date": "2026-04-11",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-04-10T07:51:38.622567+00:00",
+  "source_generated_at": "2026-04-11T06:11:09.774448+00:00",
   "source_days_back": 30,
-  "source_total_items": 9274,
-  "total_items_in_window_all": 362,
-  "total_items_in_window_curated": 98,
-  "morning_call_markdown": "### Executive Summary\n- **Active exploitation with no immediate patch:** Ongoing **Adobe Reader/Acrobat PDF zero-day** exploitation reported across multiple sources; prioritize containment and user-impact controls today.  \n- **Exploited enterprise/mobile management risk:** **CISA warning for an Ivanti EPMM critical code-injection** being exploited; treat as an internet-facing/high-value control-plane risk.  \n- **Supply-chain and dev-tool compromise wave:** **Backdoored CMS plugin update (Smart Slider/Nextend)** and **malicious IDE extension (OpenVSX “GlassWorm”)**—focus on web estate and developer endpoints.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Adobe Reader/Acrobat zero-day exploited in the wild (malicious PDFs, months-long)**\n- **What happened:** Multiple reports indicate an **unpatched Adobe Reader/Acrobat vulnerability actively exploited since Dec 2025** via crafted PDFs.  \n- **Why it matters operationally:** High-likelihood initial access for finance via email/web downloads; enables **code execution/data theft** and fast pivot to credential access.  \n- **Recommended immediate actions for the SOC today:** **Add/raise detections for PDF→child-process** (Reader spawning cmd/powershell/wscript/mshta) and **quarantine suspicious PDFs at email/web gateway**; if feasible, **temporarily harden/limit Acrobat features** (e.g., disable JavaScript, protected view enforcement) until patch guidance exists.\n\n**2) Ivanti EPMM critical code-injection (CISA: exploited in attacks)**\n- **What happened:** CISA warning highlights a **critical Ivanti EPMM code injection** being exploited (details in reporting; exact CVE not confirmed in the provided feed).  \n- **Why it matters operationally:** EPMM is a **privileged management plane**; compromise can lead to **fleet-wide device control, credential theft, and persistence**.  \n- **Recommended immediate actions for the SOC today:** **Identify all EPMM instances + exposure** (internet-facing, VPN-reachable, admin portals) and **prioritize patch/mitigation**; **hunt for unusual admin/API actions and new accounts/tokens** originating from atypical IPs/ASNs.\n\n**3) Supply-chain compromise: Smart Slider 3 Pro update backdoored via compromised vendor servers**\n- **What happened:** A **malicious update** for Smart Slider 3 Pro reportedly distributed after **Nextend infrastructure compromise**, impacting WordPress/Joomla sites.  \n- **Why it matters operationally:** Direct risk to **public web properties/marketing sites** (often adjacent to SSO/analytics) and potential webshell foothold leading to lateral movement.  \n- **Recommended immediate actions for the SOC today:** **Inventory websites using Smart Slider/Nextend** and **isolate/maintenance-mode** if suspicious; **review web server logs for new admin users, plugin file changes, and outbound connections** from web hosts.\n\n**4) Developer ecosystem malware: “GlassWorm” trojan via OpenVSX IDE extension (VS Code/Cursor/Windsurf)**\n- **What happened:** Reports of a trojanized extension delivered through **OpenVSX**, affecting popular developer editors.  \n- **Why it matters operationally:** Compromised dev endpoints can leak **source, secrets, build credentials**, and introduce **CI/CD pipeline compromise** (high impact for financial apps).  \n- **Recommended immediate actions for the SOC today:** **Query EDR/software inventory for the named extension/artifacts** (assumption: details are in the article; validate internally) and **temporarily restrict non-approved extensions**; **hunt for unusual outbound traffic from dev workstations** (especially to pastebins, code hosts, unknown APIs).\n\n**5) Edge/perimeter patching: Palo Alto Networks & SonicWall high-severity vulns + Cisco SSM critical command execution details released**\n- **What happened:** Vendor patches/advisories highlight **high-severity issues in perimeter/security products** (Palo Alto, SonicWall) and **technical details** for a **critical Cisco SSM command execution** flaw.  \n- **Why it matters operationally:** Public exploit details accelerate time-to-exploit; perimeter devices are common entry points for ransomware/initial access brokers.  \n- **Recommended immediate actions for the SOC today:** **Confirm versions/patch status** for Palo Alto/SonicWall/Cisco SSM in asset inventory; **increase monitoring for auth anomalies, config changes, and management-plane access** on these devices.\n\n---\n\n### Monitoring & detection recommendations\n- **Adobe PDF exploitation hunts (T1204 / T1566):** EDR + Windows Security logs for **AcroRd32.exe/Acrobat.exe spawning** `cmd.exe`, `powershell.exe`, `wscript.exe`, `mshta.exe`, `rundll32.exe`; correlate with **email gateway attachment events** and **web proxy downloads** of PDFs.  \n- **Ivanti EPMM control-plane abuse (T1190 / T1078):** EPMM app logs + reverse proxy/WAF + IdP logs for **new admin creation, token issuance, unusual API calls**, and **login spikes** from new geos; alert on **post-auth config export** or mass device actions.  \n- **Web plugin supply-chain compromise (T1505.003):** Web server + CMS audit logs for **plugin/theme file writes**, new `.php` in upload dirs, unexpected `wp-admin` activity; network logs for **outbound connections from web servers** to unfamiliar hosts.  \n- **IDE extension / dev endpoint compromise (T1552 / T1105):** EDR + DNS/Proxy for **new extension installs**, editor processes making **unusual outbound requests**, and access to **credential stores**; monitor for **new SSH keys** or changes in `.npmrc`, `.pypirc`, cloud CLI config.  \n- **Perimeter device exploitation attempts (T1190):** Firewall/VPN/IPS logs for **management interface access**, repeated 401/403 patterns, suspicious URL paths, and **config commit events** outside maintenance windows; ensure syslog is centralized and time-synced.  \n- **BPO/helpdesk social engineering (T1566 / T1098):** IdP (Azure AD/Entra/Okta) + ITSM/helpdesk audit logs for **password resets, MFA reset events, new recovery methods**, and **impossible travel** immediately after helpdesk actions.  \n- **Finance-sector RAT activity (STX RAT / Remcos) (T1059 / T1021):** EDR for **persistence via Run keys/scheduled tasks**, RDP enablement, and **credential dumping signals**; email gateway for **Google Storage-hosted payload links** (theme: cloud-hosted delivery).\n\n---\n\n### Medium-term follow-ups\n- **Patch & exposure management sprint:** Validate patch timelines and compensating controls for **Palo Alto/SonicWall/Cisco SSM**; add to “internet-edge” risk register with enforced SLAs.  \n- **Adobe zero-day mitigations:** If no patch is available, formalize **temporary enterprise controls** (ASR rules, application control for Acrobat child processes, stricter attachment sandboxing) and targeted user comms for high-risk teams.  \n- **Supply-chain governance:** Tighten **plugin/extension allowlisting** (CMS + IDE), require **signed updates/verified sources**, and review third-party vendor update channels used in the environment.  \n- **Developer security hardening:** Review controls for **secrets scanning, least-privilege CI/CD tokens, and egress filtering** on build agents; ensure rapid revoke/rotate process for exposed credentials.  \n- **Helpdesk/BPO verification controls:** Reassess **identity proofing** for resets (step-up auth, call-backs, manager approval) and add detections for “reset → new device enrollment → token creation” sequences.  \n- **Threat intel validation:** The “purported Colombian banks breach” is unverified from this feed—track for **data-leak relevance** to your institution (brand/credential reuse) but avoid operational changes until corroborated.",
+  "source_total_items": 9191,
+  "total_items_in_window_all": 286,
+  "total_items_in_window_curated": 89,
+  "morning_call_markdown": "### Executive Summary\n- Active exploitation reported for a **critical Marimo RCE (CVE-2026-39987)** within hours of disclosure; treat any exposed instances as high-risk.\n- Multiple **initial-access + persistence enablers** trending: **Adobe Reader zero-day campaign**, **Okta-themed phishing**, and **supply-chain trojanized tooling/extensions** (CPUID tools, OpenVSX).\n- Ransomware tradecraft continues to harden: **EDR-killer techniques expanding beyond vulnerable drivers**; expect more defense evasion during hands-on-keyboard intrusions.\n\n### High-priority items (immediate attention)\n**1) Marimo RCE exploited quickly (CVE-2026-39987)**\n- What happened: Reports indicate **Marimo RCE** is being **exploited in the wild within ~10 hours** of public disclosure.\n- Why it matters operationally: Internet-exposed dev/data apps are common footholds; fast exploitation suggests **opportunistic scanning → code execution → lateral movement/ransomware**.\n- Recommended immediate actions for the SOC today: **Identify any Marimo exposures (internet-facing + internal) and isolate/patch ASAP;** add a **24h hunt** for new processes spawned by the Marimo service account and unusual outbound connections from those hosts.\n\n**2) Document/email-driven initial access: Adobe Reader zero-day + “fake Claude” malware lures**\n- What happened: Multiple sources cite a **months-long Adobe Reader zero-day exploitation campaign**; Malwarebytes also reports a **fake Claude site delivering malware**.\n- Why it matters operationally: Financial orgs remain high-volume targets for **phishing + weaponized documents/sites**, leading to **credential theft and endpoint takeover**.\n- Recommended immediate actions for the SOC today: **Tighten email/web triage on PDF attachments and newly-seen AI-tool domains;** prioritize investigation of **Reader-initiated child processes** (e.g., cmd/powershell/mshta/rundll32) and endpoints with recent visits to AI tool lookalikes.\n\n**3) Supply-chain & developer-tool compromise: CPUID (CPU‑Z/HWMonitor) + trojanized OpenVSX extensions**\n- What happened: Reports of a **CPUID website compromise** distributing weaponized CPU‑Z/HWMonitor, and a **trojanized OpenVSX extension** spreading malware across VS Code/Cursor/Windsurf ecosystems.\n- Why it matters operationally: These hit **admin/workstation tooling and dev environments**—high privilege, high trust, and often able to reach production credentials/secrets.\n- Recommended immediate actions for the SOC today: **Query software inventory/EDR for recent installs/updates of CPU‑Z/HWMonitor and suspicious editor extensions;** isolate any endpoints where these appeared recently and perform rapid credential exposure assessment (tokens/SSH keys/browser creds).\n\n**4) Ransomware defense evasion: EDR killers expanding beyond vulnerable drivers**\n- What happened: ESET warns ransomware actors are **broadening EDR-killer approaches** (not relying only on known vulnerable drivers).\n- Why it matters operationally: Expect intrusions where defenders lose visibility mid-incident; increased likelihood of **tamper attempts, service stops, and tool disablement** before encryption/exfiltration.\n- Recommended immediate actions for the SOC today: **Alert on security tool disable events** (EDR agent/service stop, kernel driver load anomalies, signed-but-unusual binaries) and **treat any telemetry gaps as incident triggers** for immediate containment review.\n\n**5) Identity targeting: Okta-themed phishing + Slack/impersonation lures**\n- What happened: Reporting highlights **Okta phishing with fake company pages** and **Slack impersonation** campaigns (Linux Foundation leader lure pattern).\n- Why it matters operationally: For financial services, **IdP compromise** is a direct path to cloud/email takeover, persistence, and data access without malware.\n- Recommended immediate actions for the SOC today: **Increase scrutiny on IdP sign-ins** (new device, new geo, impossible travel, new MFA method enrollment) and **block/report brand-impersonation pages** seen in user submissions; fast-track suspicious MFA push/registration cases to IR.\n\n### Monitoring & detection recommendations\n- **Marimo RCE hunting:** EDR + app server logs for Marimo hosts; look for **web request spikes → new process spawn** (ATT&CK *T1190 Exploit Public-Facing Application*, *T1059 Command and Scripting Interpreter*).\n- **Adobe Reader exploitation:** EDR process tree detections: `AcroRd32.exe` / Reader spawning **cmd/powershell/wscript/mshta/rundll32**; correlate with email gateway “PDF attachment delivered” events (ATT&CK *T1566 Phishing*, *T1204 User Execution*).\n- **Supply-chain tooling installs:** Endpoint management/software inventory + EDR for **newly installed CPU‑Z/HWMonitor** and unsigned/suspicious binaries in their install paths; flag first-seen executions and network beacons post-install (ATT&CK *T1195 Supply Chain Compromise*).\n- **Malicious IDE extensions:** Dev endpoint telemetry (EDR + proxy/DNS) for **new extension installs** and extension processes making outbound connections to rare domains; review VS Code/Cursor/Windsurf extension logs where available.\n- **EDR/AV tampering:** EDR console audit logs + Windows Event Logs for **service stop/disable**, driver loads, and tamper alerts; also watch for sudden endpoint “offline” transitions during active sessions (ATT&CK *T1562 Impair Defenses*).\n- **IdP/Okta phishing fallout:** IdP logs for **new OAuth app consents, new MFA enrollments, sign-ins from atypical ASN/geo**, and bursts of failed logins followed by success; pair with email security “credential harvest” URL clicks (ATT&CK *T1078 Valid Accounts*).\n- **Router/edge exposure (FBI/Russian actor warning theme):** Firewall/VPN logs for **management interface access attempts**, spikes in auth failures, and unexpected config changes; ensure external scanning noise is baselined and escalated if targeting admin ports.\n\n### Medium-term follow-ups\n- **Patch/mitigation planning:** Confirm whether **Marimo** and **Adobe Reader** mitigations/patches are available; if patch status is unclear, apply compensating controls (WAF rules, restrict exposure, application allowlisting).\n- **Developer environment hardening:** Enforce **approved extension marketplaces**, disable sideloading where feasible, and implement **extension allowlists** for VS Code-like tools.\n- **EDR resilience review:** Validate **tamper protection**, local admin restrictions, and “break glass” containment playbooks for when endpoints go dark (EDR-killer scenario).\n- **Third-party/SaaS governance:** If using AI/SIEM connectors (e.g., new Sentinel connector ecosystem items), ensure **least privilege**, audit logging, and vendor risk review before enabling in production.\n- **Mobile risk posture:** Given Android banking-trojan activity and third-party SDK flaws, reaffirm **MDM compliance**, Play Protect status, and monitoring for **high-risk app installs** on BYOD/corporate devices.\n- **Awareness / reporting loop:** Push a short advisory to staff on **Okta/Slack impersonation + fake AI tool sites**; ensure the “report phish” workflow is fast and SOC-triaged within SLA.",
   "highlights": [
     {
-      "title": "New React Server Components Flaw Could Let Attackers Trigger DoS",
-      "link": "https://gbhackers.com/new-react-server-components-flaw/",
-      "source": "GBHackers News",
-      "published": "2026-04-10T07:30:33+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "Threat Actors / APT",
-        "Exploit / PoC",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Juniper Networks Default Credential Vulnerability Allows Unauthorized Full Access",
-      "link": "https://gbhackers.com/juniper-networks-default-credential-vulnerability/",
-      "source": "GBHackers News",
-      "published": "2026-04-10T06:48:17+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Curated",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Backdoored Smart Slider 3 Pro Update Distributed via Compromised Nextend Servers",
-      "link": "https://thehackernews.com/2026/04/backdoored-smart-slider-3-pro-update.html",
-      "source": "The Hacker News",
-      "published": "2026-04-10T06:28:00+00:00",
-      "smart_groups": [
-        "Threat Actors / APT",
-        "Curated",
-        "Malware / Payloads",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "ChatGPT, Claude, and Gemini Among 11 AI Models Vulnerable to One-Line Jailbreak",
-      "link": "https://gbhackers.com/11-ai-models-vulnerable-to-one-line-jailbreak/",
-      "source": "GBHackers News",
-      "published": "2026-04-10T06:18:10+00:00",
-      "smart_groups": [
-        "Curated",
-        "Exploit / PoC",
-        "Vulnerabilities / CVEs",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "AWS Patches Critical RCE and Escalate Privileges in Research and Engineering Studio",
-      "link": "https://cybersecuritynews.com/aws-patches/",
+      "title": "Ransomware Gangs Expand Use of EDR Killers Beyond Vulnerable Drivers, ESET Warns",
+      "link": "https://cybersecuritynews.com/ransomware-gangs-expand-use-of-edr-killers/",
       "source": "Cyber Security News (FeedBurner)",
-      "published": "2026-04-10T06:16:36+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Cloud / SaaS",
-        "Curated",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Japan approves bill to classify crypto as financial instruments",
-      "link": "https://cointelegraph.com/news/japan-approves-bill-classify-cryptocurrencies-financial-instruments?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound",
-      "source": "Cointelegraph.com News",
-      "published": "2026-04-10T06:13:12+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "Crypto / Web3"
-      ],
-      "curated": true
-    },
-    {
-      "title": "GlassWorm Trojan Hits VS Code, Cursor, Windsurf via OpenVSX Extension",
-      "link": "https://gbhackers.com/glassworm-malware-4/",
-      "source": "GBHackers News",
-      "published": "2026-04-10T06:01:33+00:00",
-      "smart_groups": [
-        "Curated",
-        "Malware / Payloads",
-        "Supply Chain / Software",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "What vibe hunting gets right about AI threat hunting, and where it breaks down",
-      "link": "https://www.helpnetsecurity.com/2026/04/10/aqsa-taylor-exaforce-vibe-hunting/",
-      "source": "Help Net Security",
-      "published": "2026-04-10T05:30:50+00:00",
+      "published": "2026-04-11T05:13:11+00:00",
       "smart_groups": [
         "Detection Engineering",
-        "Cloud / SaaS",
-        "Crypto / Web3",
         "Curated",
-        "Vulnerabilities / CVEs",
+        "Malware / Payloads",
+        "Ransomware",
         "General Security"
       ],
       "curated": true
     },
     {
-      "title": "AWS Fixes Severe RCE, Privilege Escalation Flaws in Research and Engineering Studio",
-      "link": "https://gbhackers.com/aws-fixes-severe-rce-privilege-escalation-flaws/",
-      "source": "GBHackers News",
-      "published": "2026-04-10T05:20:12+00:00",
+      "title": "Global Vulnerability Alert: Sophisticated Adobe Reader Exploit Identified",
+      "link": "https://www.news4hackers.com/global-vulnerability-alert-sophisticated-adobe-reader-exploit-identified/",
+      "source": "News4Hackers",
+      "published": "2026-04-11T04:01:28+00:00",
       "smart_groups": [
-        "Vulnerabilities / CVEs",
         "Curated",
-        "Cloud / SaaS",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
         "General Security"
       ],
       "curated": true
     },
     {
-      "title": "Elon Musk’s xAI sues Colorado arguing its AI rules restrict speech",
-      "link": "https://cointelegraph.com/news/xai-sues-colorado-over-ai-law-restricting-free-speech?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound",
+      "title": "Claude and ChatGPT Exploited in Sweeping Cyber Campaign Against Government Agencies",
+      "link": "https://gbhackers.com/claude-and-chatgpt-exploited/",
+      "source": "GBHackers News",
+      "published": "2026-04-11T03:49:27+00:00",
+      "smart_groups": [
+        "Threat Actors / APT",
+        "Curated",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "CFTC unveils innovation task force members in crypto clarity push",
+      "link": "https://cointelegraph.com/news/cftc-unveils-members-of-innovation-task-force?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound",
       "source": "Cointelegraph.com News",
-      "published": "2026-04-10T04:50:28+00:00",
+      "published": "2026-04-11T03:13:56+00:00",
       "smart_groups": [
         "Curated",
         "Vulnerabilities / CVEs",
         "Crypto / Web3"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Rockstar Games Experiences Data Breach via ShinyHunters on Anodot",
+      "link": "https://www.news4hackers.com/rockstar-games-experiences-data-breach-via-shinyhunters-on-anodot/",
+      "source": "News4Hackers",
+      "published": "2026-04-11T02:01:26+00:00",
+      "smart_groups": [
+        "Data Breaches / Leaks",
+        "Curated",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "ShinyHunters Claims Rockstar Games Snowflake Breach via Anodot",
+      "link": "https://hackread.com/shinyhunters-rockstar-games-snowflake-breach-anodot/",
+      "source": "HackRead",
+      "published": "2026-04-11T01:34:24+00:00",
+      "smart_groups": [
+        "Curated",
+        "Data Breaches / Leaks",
+        "Ransomware",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Google adds end-to-end Gmail encryption to Android, iOS devices for enterprises",
+      "link": "https://www.csoonline.com/article/4157458/google-adds-end-to-end-gmail-encryption-to-android-ios-devices-for-enterprises-3.html",
+      "source": "CSO Online",
+      "published": "2026-04-10T22:23:37+00:00",
+      "smart_groups": [
+        "Data Protection / Privacy",
+        "Cloud / SaaS",
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Mobile Security",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Breaking the Patch Sound Barrier: Your Vulnerability Remediation Will Not Keep Up With AI Exploit…",
+      "link": "https://medium.com/anton-on-security/breaking-the-patch-sound-barrier-your-vulnerability-remediation-will-not-keep-up-ai-exploit-speed-b41116c4e92b?source=rss----8e8c3ed26c4c---4",
+      "source": "Anton on Security",
+      "published": "2026-04-10T21:44:13+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Curated",
+        "Ransomware",
+        "Cloud / SaaS",
+        "Crypto / Web3",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Android Banking Trojan Linked to Cambodia Scam Compounds Hits 21 Countries",
+      "link": "https://hackread.com/android-banking-trojan-cambodia-scam-compounds/",
+      "source": "HackRead",
+      "published": "2026-04-10T20:32:33+00:00",
+      "smart_groups": [
+        "Curated",
+        "Malware / Payloads",
+        "Vulnerabilities / CVEs",
+        "Mobile Security",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "EngageLab SDK bug threatened expansive Android crypto wallet compromise",
+      "link": "https://www.scworld.com/brief/engagelab-sdk-bug-threatened-expansive-android-crypto-wallet-compromise",
+      "source": "SCM feed for Latest",
+      "published": "2026-04-10T20:30:32+00:00",
+      "smart_groups": [
+        "Crypto / Web3",
+        "Curated",
+        "Exploit / PoC",
+        "Mobile Security",
+        "General Security"
       ],
       "curated": true
     }
