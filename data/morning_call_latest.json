@@ -1,35 +1,46 @@
 {
-  "generated_at": "2026-04-11T07:18:10.241707+00:00",
-  "analysis_date": "2026-04-11",
+  "generated_at": "2026-04-12T07:45:25.203860+00:00",
+  "analysis_date": "2026-04-12",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-04-11T06:11:09.774448+00:00",
+  "source_generated_at": "2026-04-12T07:24:19.742832+00:00",
   "source_days_back": 30,
-  "source_total_items": 9191,
-  "total_items_in_window_all": 286,
-  "total_items_in_window_curated": 89,
-  "morning_call_markdown": "### Executive Summary\n- Active exploitation reported for a **critical Marimo RCE (CVE-2026-39987)** within hours of disclosure; treat any exposed instances as high-risk.\n- Multiple **initial-access + persistence enablers** trending: **Adobe Reader zero-day campaign**, **Okta-themed phishing**, and **supply-chain trojanized tooling/extensions** (CPUID tools, OpenVSX).\n- Ransomware tradecraft continues to harden: **EDR-killer techniques expanding beyond vulnerable drivers**; expect more defense evasion during hands-on-keyboard intrusions.\n\n### High-priority items (immediate attention)\n**1) Marimo RCE exploited quickly (CVE-2026-39987)**\n- What happened: Reports indicate **Marimo RCE** is being **exploited in the wild within ~10 hours** of public disclosure.\n- Why it matters operationally: Internet-exposed dev/data apps are common footholds; fast exploitation suggests **opportunistic scanning → code execution → lateral movement/ransomware**.\n- Recommended immediate actions for the SOC today: **Identify any Marimo exposures (internet-facing + internal) and isolate/patch ASAP;** add a **24h hunt** for new processes spawned by the Marimo service account and unusual outbound connections from those hosts.\n\n**2) Document/email-driven initial access: Adobe Reader zero-day + “fake Claude” malware lures**\n- What happened: Multiple sources cite a **months-long Adobe Reader zero-day exploitation campaign**; Malwarebytes also reports a **fake Claude site delivering malware**.\n- Why it matters operationally: Financial orgs remain high-volume targets for **phishing + weaponized documents/sites**, leading to **credential theft and endpoint takeover**.\n- Recommended immediate actions for the SOC today: **Tighten email/web triage on PDF attachments and newly-seen AI-tool domains;** prioritize investigation of **Reader-initiated child processes** (e.g., cmd/powershell/mshta/rundll32) and endpoints with recent visits to AI tool lookalikes.\n\n**3) Supply-chain & developer-tool compromise: CPUID (CPU‑Z/HWMonitor) + trojanized OpenVSX extensions**\n- What happened: Reports of a **CPUID website compromise** distributing weaponized CPU‑Z/HWMonitor, and a **trojanized OpenVSX extension** spreading malware across VS Code/Cursor/Windsurf ecosystems.\n- Why it matters operationally: These hit **admin/workstation tooling and dev environments**—high privilege, high trust, and often able to reach production credentials/secrets.\n- Recommended immediate actions for the SOC today: **Query software inventory/EDR for recent installs/updates of CPU‑Z/HWMonitor and suspicious editor extensions;** isolate any endpoints where these appeared recently and perform rapid credential exposure assessment (tokens/SSH keys/browser creds).\n\n**4) Ransomware defense evasion: EDR killers expanding beyond vulnerable drivers**\n- What happened: ESET warns ransomware actors are **broadening EDR-killer approaches** (not relying only on known vulnerable drivers).\n- Why it matters operationally: Expect intrusions where defenders lose visibility mid-incident; increased likelihood of **tamper attempts, service stops, and tool disablement** before encryption/exfiltration.\n- Recommended immediate actions for the SOC today: **Alert on security tool disable events** (EDR agent/service stop, kernel driver load anomalies, signed-but-unusual binaries) and **treat any telemetry gaps as incident triggers** for immediate containment review.\n\n**5) Identity targeting: Okta-themed phishing + Slack/impersonation lures**\n- What happened: Reporting highlights **Okta phishing with fake company pages** and **Slack impersonation** campaigns (Linux Foundation leader lure pattern).\n- Why it matters operationally: For financial services, **IdP compromise** is a direct path to cloud/email takeover, persistence, and data access without malware.\n- Recommended immediate actions for the SOC today: **Increase scrutiny on IdP sign-ins** (new device, new geo, impossible travel, new MFA method enrollment) and **block/report brand-impersonation pages** seen in user submissions; fast-track suspicious MFA push/registration cases to IR.\n\n### Monitoring & detection recommendations\n- **Marimo RCE hunting:** EDR + app server logs for Marimo hosts; look for **web request spikes → new process spawn** (ATT&CK *T1190 Exploit Public-Facing Application*, *T1059 Command and Scripting Interpreter*).\n- **Adobe Reader exploitation:** EDR process tree detections: `AcroRd32.exe` / Reader spawning **cmd/powershell/wscript/mshta/rundll32**; correlate with email gateway “PDF attachment delivered” events (ATT&CK *T1566 Phishing*, *T1204 User Execution*).\n- **Supply-chain tooling installs:** Endpoint management/software inventory + EDR for **newly installed CPU‑Z/HWMonitor** and unsigned/suspicious binaries in their install paths; flag first-seen executions and network beacons post-install (ATT&CK *T1195 Supply Chain Compromise*).\n- **Malicious IDE extensions:** Dev endpoint telemetry (EDR + proxy/DNS) for **new extension installs** and extension processes making outbound connections to rare domains; review VS Code/Cursor/Windsurf extension logs where available.\n- **EDR/AV tampering:** EDR console audit logs + Windows Event Logs for **service stop/disable**, driver loads, and tamper alerts; also watch for sudden endpoint “offline” transitions during active sessions (ATT&CK *T1562 Impair Defenses*).\n- **IdP/Okta phishing fallout:** IdP logs for **new OAuth app consents, new MFA enrollments, sign-ins from atypical ASN/geo**, and bursts of failed logins followed by success; pair with email security “credential harvest” URL clicks (ATT&CK *T1078 Valid Accounts*).\n- **Router/edge exposure (FBI/Russian actor warning theme):** Firewall/VPN logs for **management interface access attempts**, spikes in auth failures, and unexpected config changes; ensure external scanning noise is baselined and escalated if targeting admin ports.\n\n### Medium-term follow-ups\n- **Patch/mitigation planning:** Confirm whether **Marimo** and **Adobe Reader** mitigations/patches are available; if patch status is unclear, apply compensating controls (WAF rules, restrict exposure, application allowlisting).\n- **Developer environment hardening:** Enforce **approved extension marketplaces**, disable sideloading where feasible, and implement **extension allowlists** for VS Code-like tools.\n- **EDR resilience review:** Validate **tamper protection**, local admin restrictions, and “break glass” containment playbooks for when endpoints go dark (EDR-killer scenario).\n- **Third-party/SaaS governance:** If using AI/SIEM connectors (e.g., new Sentinel connector ecosystem items), ensure **least privilege**, audit logging, and vendor risk review before enabling in production.\n- **Mobile risk posture:** Given Android banking-trojan activity and third-party SDK flaws, reaffirm **MDM compliance**, Play Protect status, and monitoring for **high-risk app installs** on BYOD/corporate devices.\n- **Awareness / reporting loop:** Push a short advisory to staff on **Okta/Slack impersonation + fake AI tool sites**; ensure the “report phish” workflow is fast and SOC-triaged within SLA.",
+  "source_total_items": 8915,
+  "total_items_in_window_all": 80,
+  "total_items_in_window_curated": 19,
+  "morning_call_markdown": "### Executive Summary\n- Actively exploited **Adobe Acrobat/Reader RCE (CVE-2026-34621)**: prioritize rapid patching and watch for PDF-driven execution chains.\n- **Software/supply-chain risk spiking**: trojanized downloads (CPUID CPU‑Z/HWMonitor) and poisoning of popular open-source tools; assume developer/admin workstations are at elevated risk.\n- **Fast weaponization trend continues**: **Marimo RCE (CVE-2026-39987)** reportedly exploited within hours of disclosure—verify exposure and patch/contain quickly.\n\n### High-priority items (immediate attention)\n\n**1) Adobe Acrobat/Reader actively exploited (CVE-2026-34621)**\n- What happened: Adobe released patches for an Acrobat/Reader flaw reported as **actively exploited**.\n- Why it matters operationally: PDFs remain a high-success entry vector; likely leads to initial access + code execution on user endpoints (finance/ops users are prime targets).\n- Recommended immediate actions for the SOC today: Push/verify patch compliance on Windows/macOS endpoints; tighten email/web controls for PDF attachments/links and escalate any Acrobat child-process execution alerts.\n\n**2) Trojanized “trusted” tooling & installer compromise (CPUID + broader supply-chain poisoning)**\n- What happened: A breach of **CPUID** distribution reportedly delivered **STX RAT** via trojanized **CPU‑Z/HWMonitor** downloads; separate reporting highlights **poisoned open-source tooling** as an emerging pattern.\n- Why it matters operationally: High-trust software updates/installers bypass user suspicion and can land on admin/dev endpoints, enabling credential theft and lateral movement.\n- Recommended immediate actions for the SOC today: Identify endpoints that recently installed/updated CPU‑Z/HWMonitor (software inventory/EDR); block/quarantine suspicious installers from untrusted mirrors and alert on new unsigned/unexpected binaries in software deployment paths.\n\n**3) Marimo RCE (CVE-2026-39987) reportedly exploited shortly after disclosure**\n- What happened: Security reporting indicates **CVE-2026-39987 (Marimo RCE)** saw exploitation “within hours” after public disclosure.\n- Why it matters operationally: Rapid exploitation suggests opportunistic scanning—if any internet-facing or dev/test instances exist, compromise window is short.\n- Recommended immediate actions for the SOC today: Confirm whether Marimo is present (asset inventory, container/K8s manifests, package lists); if exposed, patch/disable external access immediately and review web/app logs for suspicious requests since disclosure.\n\n**4) GlassWorm malware using Zig dropper affecting developer tools (supply chain/dev tooling)**\n- What happened: GlassWorm reportedly evolved to use a **Zig-based dropper** and targets/infects multiple **developer tools**.\n- Why it matters operationally: Dev tool compromise can become a pivot into CI/CD, signing keys, secrets, and production access—high impact for financial institutions.\n- Recommended immediate actions for the SOC today: Increase scrutiny of developer workstation telemetry (EDR) for new toolchain binaries and suspicious child processes; validate CI/CD secrets access patterns and alert on anomalous token use.\n\n**5) Exposed devices at scale targeted by Iranian APTs (internet-facing exposure risk)**\n- What happened: External research claims thousands of exposed devices are vulnerable/visible to attack activity attributed to **Iranian APTs** (broad “exposed services” theme; details may vary).\n- Why it matters operationally: Financial services are frequent geopolitical targets; exposed management interfaces/VPN/remote services raise immediate intrusion risk.\n- Recommended immediate actions for the SOC today: Reconfirm external attack surface (ASM/EASM, firewall allowlists) for remote admin services; prioritize blocking/geo-fencing where policy allows and escalate unusual auth attempts against edge services.\n\n### Monitoring & detection recommendations\n- **PDF exploitation chain monitoring** (Adobe): EDR for `AcroRd32.exe/Acrobat.exe` spawning `cmd.exe`, `powershell.exe`, `wscript.exe`, `mshta.exe` (MITRE: T1204, T1059).\n- **Installer/supply-chain anomalies** (CPUID + OSS poisoning): EDR + Windows event logs for new executables in `Downloads/Temp` followed by persistence creation (Run keys, services, scheduled tasks) (T1036, T1547, T1053).\n- **RAT-like behavior post-install** (STX RAT theme; no IOCs provided): Proxy/DNS + EDR for uncommon outbound beacons from user endpoints shortly after new software install; flag long-lived connections to rare domains (T1071.001).\n- **Marimo / web-app RCE probing**: WAF/reverse-proxy/app logs for spikes in 4xx/5xx, suspicious URL patterns, and unusual HTTP methods/large payloads to Marimo endpoints (T1190).\n- **Developer tools/CI/CD abuse** (GlassWorm theme): IdP + CI logs for atypical token creation/usage, new SSH keys, unusual repo access from non-dev hosts (T1552, T1078).\n- **Edge exposure & APT-style credential access**: VPN/SSO logs for password spraying, impossible travel, new device enrollments, and MFA push fatigue patterns (T1110, T1621).\n- **Data breach follow-through** (Hallmark accounts in HIBP): SIEM correlation for credential stuffing attempts using employee email patterns; monitor auth failures + subsequent success from new IPs (T1110.004).\n\n### Medium-term follow-ups\n- **Patch governance**: Enforce SLAs for “actively exploited” client software (Adobe) and add automated compliance reporting for Reader/Acrobat across managed + BYOD where applicable.\n- **Supply-chain controls**: Require verified vendor download sources, code-signing validation, and internal software repository use (especially for admin/dev tools).\n- **Dev environment hardening**: Review endpoint allowlisting for developer workstations; restrict local admin, tighten secrets management, and add detection for tampering with build tools.\n- **External attack surface review**: Quarterly validation of exposed services (VPNs, RDP, admin consoles, dev/test apps) with ownership mapping and rapid takedown workflow.\n- **Credential risk actions**: Expand monitoring for credential stuffing and reset guidance where employee emails appear in new breach datasets; reinforce phishing + “trusted software download” awareness.\n- **LLM/prompt-injection readiness (if applicable internally)**: If SOC or business uses multimodal/LLM tooling, evaluate prompt-injection test suites in a lab and define logging/guardrails (assumption: only relevant if LLMs are in production use).",
   "highlights": [
     {
-      "title": "Ransomware Gangs Expand Use of EDR Killers Beyond Vulnerable Drivers, ESET Warns",
-      "link": "https://cybersecuritynews.com/ransomware-gangs-expand-use-of-edr-killers/",
-      "source": "Cyber Security News (FeedBurner)",
-      "published": "2026-04-11T05:13:11+00:00",
+      "title": "Investigating Cybercrime with Virtual Private Networks",
+      "link": "https://www.news4hackers.com/investigating-cybercrime-with-virtual-private-networks/",
+      "source": "News4Hackers",
+      "published": "2026-04-12T06:01:32+00:00",
       "smart_groups": [
-        "Detection Engineering",
         "Curated",
-        "Malware / Payloads",
-        "Ransomware",
+        "Vulnerabilities / CVEs",
         "General Security"
       ],
       "curated": true
     },
     {
-      "title": "Global Vulnerability Alert: Sophisticated Adobe Reader Exploit Identified",
-      "link": "https://www.news4hackers.com/global-vulnerability-alert-sophisticated-adobe-reader-exploit-identified/",
-      "source": "News4Hackers",
-      "published": "2026-04-11T04:01:28+00:00",
+      "title": "CPUID Breach Distributes STX RAT via Trojanized CPU-Z and HWMonitor Downloads",
+      "link": "https://thehackernews.com/2026/04/cpuid-breach-distributes-stx-rat-via.html",
+      "source": "The Hacker News",
+      "published": "2026-04-12T05:54:00+00:00",
+      "smart_groups": [
+        "Malware / Payloads",
+        "Curated",
+        "Threat Actors / APT",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Adobe Patches Actively Exploited Acrobat Reader Flaw CVE-2026-34621",
+      "link": "https://thehackernews.com/2026/04/adobe-patches-actively-exploited.html",
+      "source": "The Hacker News",
+      "published": "2026-04-12T04:25:00+00:00",
       "smart_groups": [
         "Curated",
         "Vulnerabilities / CVEs",
@@ -39,11 +50,36 @@
       "curated": true
     },
     {
-      "title": "Claude and ChatGPT Exploited in Sweeping Cyber Campaign Against Government Agencies",
-      "link": "https://gbhackers.com/claude-and-chatgpt-exploited/",
-      "source": "GBHackers News",
-      "published": "2026-04-11T03:49:27+00:00",
+      "title": "Hallmark - 1,736,520 breached accounts",
+      "link": "https://haveibeenpwned.com/Breach/Hallmark",
+      "source": "Have I Been Pwned – Latest Breaches",
+      "published": "2026-04-12T02:01:11+00:00",
       "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Data Breaches / Leaks"
+      ],
+      "curated": true
+    },
+    {
+      "title": "need urgent advice - being approached by suspicious individuals regarding my researches",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1siwx3o/need_urgent_advice_being_approached_by_suspicious/",
+      "source": "/r/cybersecurity",
+      "published": "2026-04-11T22:28:14+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Curated",
+        "OSINT / Community"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Censys finds 5,219 devices exposed to attacks by Iranian APTs, majority in U.S.",
+      "link": "https://securityaffairs.com/190646/ics-scada/censys-finds-5219-devices-exposed-to-attacks-by-iranian-apts-majority-in-u-s.html",
+      "source": "Security Affairs",
+      "published": "2026-04-11T20:39:37+00:00",
+      "smart_groups": [
+        "Network / OT / ICS",
         "Threat Actors / APT",
         "Curated",
         "Exploit / PoC",
@@ -52,11 +88,12 @@
       "curated": true
     },
     {
-      "title": "CFTC unveils innovation task force members in crypto clarity push",
-      "link": "https://cointelegraph.com/news/cftc-unveils-members-of-innovation-task-force?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound",
+      "title": "Messaging push notifications are a privacy attack surface, says Durov",
+      "link": "https://cointelegraph.com/news/messaging-notifications-privacy-attack-durov?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound",
       "source": "Cointelegraph.com News",
-      "published": "2026-04-11T03:13:56+00:00",
+      "published": "2026-04-11T17:57:57+00:00",
       "smart_groups": [
+        "Data Protection / Privacy",
         "Curated",
         "Vulnerabilities / CVEs",
         "Crypto / Web3"
@@ -64,85 +101,40 @@
       "curated": true
     },
     {
-      "title": "Rockstar Games Experiences Data Breach via ShinyHunters on Anodot",
-      "link": "https://www.news4hackers.com/rockstar-games-experiences-data-breach-via-shinyhunters-on-anodot/",
-      "source": "News4Hackers",
-      "published": "2026-04-11T02:01:26+00:00",
-      "smart_groups": [
-        "Data Breaches / Leaks",
-        "Curated",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "ShinyHunters Claims Rockstar Games Snowflake Breach via Anodot",
-      "link": "https://hackread.com/shinyhunters-rockstar-games-snowflake-breach-anodot/",
-      "source": "HackRead",
-      "published": "2026-04-11T01:34:24+00:00",
+      "title": "OpenAI Warns macOS Users to Update ChatGPT and Codex Immediately",
+      "link": "https://cybersecuritynews.com/openai-macos-users/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-04-11T16:56:52+00:00",
       "smart_groups": [
         "Curated",
-        "Data Breaches / Leaks",
-        "Ransomware",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Google adds end-to-end Gmail encryption to Android, iOS devices for enterprises",
-      "link": "https://www.csoonline.com/article/4157458/google-adds-end-to-end-gmail-encryption-to-android-ios-devices-for-enterprises-3.html",
-      "source": "CSO Online",
-      "published": "2026-04-10T22:23:37+00:00",
-      "smart_groups": [
-        "Data Protection / Privacy",
-        "Cloud / SaaS",
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "Mobile Security",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Breaking the Patch Sound Barrier: Your Vulnerability Remediation Will Not Keep Up With AI Exploit…",
-      "link": "https://medium.com/anton-on-security/breaking-the-patch-sound-barrier-your-vulnerability-remediation-will-not-keep-up-ai-exploit-speed-b41116c4e92b?source=rss----8e8c3ed26c4c---4",
-      "source": "Anton on Security",
-      "published": "2026-04-10T21:44:13+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Curated",
-        "Ransomware",
-        "Cloud / SaaS",
+        "Supply Chain / Software",
         "Crypto / Web3",
-        "Exploit / PoC",
         "General Security"
       ],
       "curated": true
     },
     {
-      "title": "Android Banking Trojan Linked to Cambodia Scam Compounds Hits 21 Countries",
-      "link": "https://hackread.com/android-banking-trojan-cambodia-scam-compounds/",
-      "source": "HackRead",
-      "published": "2026-04-10T20:32:33+00:00",
+      "title": "GlassWorm evolves with Zig dropper to infect multiple developer tools",
+      "link": "https://securityaffairs.com/190638/malware/glassworm-evolves-with-zig-dropper-to-infect-multiple-developer-tools.html",
+      "source": "Security Affairs",
+      "published": "2026-04-11T16:27:02+00:00",
       "smart_groups": [
+        "Supply Chain / Software",
         "Curated",
         "Malware / Payloads",
-        "Vulnerabilities / CVEs",
-        "Mobile Security",
         "General Security"
       ],
       "curated": true
     },
     {
-      "title": "EngageLab SDK bug threatened expansive Android crypto wallet compromise",
-      "link": "https://www.scworld.com/brief/engagelab-sdk-bug-threatened-expansive-android-crypto-wallet-compromise",
-      "source": "SCM feed for Latest",
-      "published": "2026-04-10T20:30:32+00:00",
+      "title": "Global Crypto Scam Crackdown Unveils Over 20,000 Victims",
+      "link": "https://www.news4hackers.com/global-crypto-scam-crackdown-unveils-over-20000-victims/",
+      "source": "News4Hackers",
+      "published": "2026-04-11T15:02:03+00:00",
       "smart_groups": [
         "Crypto / Web3",
         "Curated",
-        "Exploit / PoC",
-        "Mobile Security",
+        "Vulnerabilities / CVEs",
         "General Security"
       ],
       "curated": true
