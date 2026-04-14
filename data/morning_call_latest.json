@@ -1,158 +1,150 @@
 {
-  "generated_at": "2026-04-13T08:23:47.821269+00:00",
-  "analysis_date": "2026-04-13",
+  "generated_at": "2026-04-14T08:05:38.334260+00:00",
+  "analysis_date": "2026-04-14",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-04-13T08:13:33.148148+00:00",
+  "source_generated_at": "2026-04-14T07:57:58.142073+00:00",
   "source_days_back": 30,
-  "source_total_items": 8742,
-  "total_items_in_window_all": 116,
-  "total_items_in_window_curated": 31,
-  "morning_call_markdown": "### Executive Summary\n- **Actively exploited client-side and server-side vulns:** Adobe Acrobat Reader **CVE-2026-34621** and a **Marimo pre-auth RCE** are reported under **active exploitation** → prioritize patch/mitigation + telemetry review.\n- **Ransomware tradecraft trending: “EDR killers”** expanding (per ESET coverage) → expect more **defense evasion** and failed telemetry; validate tamper protection and add hunts for EDR disablement attempts.\n- **Microsoft Defender for Endpoint ops:** Guidance on **custom MDE role for Troubleshooting Mode-only access** → reduce blast radius while enabling IR; implement to avoid over-privileged access during incidents.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Adobe Acrobat Reader zero-day exploited in the wild (CVE-2026-34621)**\n- **What happened:** Adobe patched an **actively exploited** Acrobat Reader flaw (CVE-2026-34621).\n- **Why it matters operationally:** High-likelihood initial access via **phishing/weaponized PDFs**; common in financial-sector lures and can bypass user judgment.\n- **Recommended immediate actions for the SOC today:** Confirm patch deployment/auto-update compliance; hunt last 7 days for **AcroRd32.exe/Acrobat.exe spawning child processes** (cmd/powershell/mshta/rundll32) and quarantine suspicious PDF/email threads.\n\n**2) Critical Marimo pre-auth RCE under active exploitation**\n- **What happened:** A **critical pre-auth RCE** in Marimo is reported as **actively exploited** (details in the source; CVE not provided in the summary).\n- **Why it matters operationally:** Internet-exposed instances can lead to **rapid server compromise** → webshells, credential theft, lateral movement.\n- **Recommended immediate actions for the SOC today:** Identify any Marimo exposure (asset inventory + external scanning) and **remove from internet / restrict to VPN** until patched; review WAF/reverse-proxy logs for suspicious requests to Marimo endpoints and escalate any anomalies to IR.\n\n**3) Ransomware operators increasing “EDR killer” / defense-evasion techniques**\n- **What happened:** Reporting highlights **broader use of EDR killers** as part of ransomware operations.\n- **Why it matters operationally:** Increased probability of **sensor blind spots** during intrusion; faster progression from initial access to encryption if defenses are degraded.\n- **Recommended immediate actions for the SOC today:** Verify **EDR tamper protection** and admin controls on endpoints/servers; hunt for attempts to **stop security services**, unload drivers, or disable logging—treat as high-severity precursor activity.\n\n**4) Windows “zero-day/leaked exploit” chatter (unconfirmed specifics)**\n- **What happened:** A report claims a **Windows zero-day exploit leaked around Patch Tuesday** (insufficient detail provided; treat as unconfirmed).\n- **Why it matters operationally:** Even if details are incomplete, exploit chatter often correlates with **spray-and-pray scanning** and quick weaponization against unpatched fleets.\n- **Recommended immediate actions for the SOC today:** Tighten monitoring for **newly emerging exploit patterns** on internet-facing Windows services; confirm April patch deployment status for critical Windows tiers (DMZ, jump hosts, Citrix/RDS if present).\n\n---\n\n### Monitoring & detection recommendations\n- **Email + EDR (Acrobat exploitation):** Monitor email gateway for PDF-heavy campaigns; in EDR, alert on **AcroRd32.exe/Acrobat.exe → powershell/cmd/wscript/mshta/rundll32** (MITRE **T1204**, **T1059**).\n- **Web/WAF + server EDR (Marimo RCE):** Review WAF/reverse-proxy logs for anomalous POSTs, auth-bypass patterns, and high-entropy parameters; on hosts, watch for **new webshell-like files**, unusual interpreter launches, and persistence creation (MITRE **T1190**, **T1505**).\n- **Endpoint security posture (EDR killer activity):** Alert on **Service Control Manager** events / EDR console events indicating sensor stoppage, tamper attempts, driver installs/unloads (MITRE **T1562.001 Impair Defenses**).\n- **Privileged activity (defense evasion + ransomware prep):** Correlate spikes in **local admin group changes**, new scheduled tasks, and remote execution tooling (PsExec/WinRM) (MITRE **T1078**, **T1053**, **T1021**).\n- **Network egress (post-compromise):** Watch for endpoints/servers with **new outbound connections** to rare ASNs/countries shortly after PDF open or web exploit indicators; prioritize TLS fingerprint anomalies in proxy logs (MITRE **T1071**).\n- **MDE operational telemetry:** Track any use of **MDE Troubleshooting Mode** and ensure it’s limited to approved roles; alert on troubleshooting mode enabled outside change window (MITRE **T1078** misuse signal).\n- **Exploit “chatter” validation:** Increase detection sensitivity on DMZ Windows systems for **process injection, suspicious parent-child chains**, and crash-to-shell patterns; triage with sandboxing where possible (MITRE **T1055**).\n\n---\n\n### Medium-term follow-ups\n- **Patching governance:** Add Adobe Reader and any Marimo-hosting teams to a **48–72h critical patch SLA** playbook; validate coverage on VDI pools and shared workstations (common PDF handling points).\n- **Hardening against EDR killers:** Enforce least privilege on endpoints, restrict local admin, block unsigned driver installs where feasible; validate backups and ransomware containment controls (segmentation, immutable storage).\n- **MDE RBAC improvement:** Implement the proposed **custom MDE role** for “Troubleshooting Mode-only” access to reduce over-privileged IR actions; document approval workflow.\n- **Supply-chain hygiene (community discussion themes):** Reassess package manager controls for dev environments (lockfiles, provenance, allowlists, dependency pinning) even though no single new incident is confirmed here.\n- **Browser/identity defensive validation:** Consider periodic checks of browser security controls and IdP policies (MFA enforcement, session controls) as part of ongoing anti-phishing posture.\n- **Threat intel tracking:** Keep an eye on follow-up reporting for **specifics/IOCs** on the Windows zero-day leak claim; update detections once vendor or reputable sources confirm details.",
+  "source_total_items": 8930,
+  "total_items_in_window_all": 274,
+  "total_items_in_window_curated": 81,
+  "morning_call_markdown": "### Executive Summary\n- Multiple **CISA KEV additions** (Fortinet, Microsoft Exchange/Windows, Adobe) indicate **in-the-wild exploitation**—treat as “patch/mitigate now” for any exposed assets.\n- **Actively exploited web/app RCEs** (e.g., ShowDoc; fast exploitation of newly disclosed notebook/app flaws) increase risk of **internet-facing footholds** and rapid ransomware follow-on.\n- Several **malware delivery/supply-chain style lures** (fake AI installer → PlugX, trojanized downloads, GitHub fake installers) reinforce need for **tight application control + user download telemetry**.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) CISA KEV: Fortinet + Microsoft Exchange/Windows + Adobe (known exploited)**\n- What happened: CISA added multiple flaws affecting **Fortinet**, **Microsoft Exchange/Windows**, and **Adobe** products to the **Known Exploited Vulnerabilities (KEV)** catalog.  \n- Why it matters operationally: These are **confirmed exploited** and commonly used for **initial access / privilege escalation**, often preceding **ransomware** and data theft in financial orgs.  \n- Recommended immediate actions for the SOC today: **Validate exposure + patch/mitigate** (internet-facing first); **prioritize hunting** for exploitation artifacts on affected stacks and **raise severity** for any related alerts.\n\n**2) Adobe Acrobat/Reader zero-day (CVE-2026-34621) actively exploited**\n- What happened: Adobe issued an **emergency fix** for an Acrobat/Reader **0-day** reportedly exploitable via **opening a PDF** (in-the-wild activity reported).  \n- Why it matters operationally: High likelihood of **phish-delivered payloads** → endpoint compromise; finance users frequently process PDFs from external parties.  \n- Recommended immediate actions for the SOC today: **Confirm patch deployment coverage** (VDI, jump hosts, back-office, high-risk user groups); **tighten email/PDF handling** (sandboxing, block suspicious attachments) and escalate any Acrobat spawning unusual child processes.\n\n**3) Internet-facing RCEs being actively exploited (ShowDoc + “rapid exploitation after disclosure” class)**\n- What happened: **ShowDoc RCE (CVE-2025-0520)** is reported **actively exploited**; other newly disclosed app/server flaws are being exploited very quickly after disclosure (assumption: opportunistic scanning).  \n- Why it matters operationally: Any **externally accessible** doc/dev tooling can become a **webshell foothold** leading to credential theft, lateral movement, and ransomware staging.  \n- Recommended immediate actions for the SOC today: **Identify instances** (CMDB + vuln scans + WAF inventory) and **remove from internet / patch**; **hunt** on web servers for new processes, suspicious admin logins, and unknown file drops.\n\n**4) Cloud/Linux targeting: APT41 “Winnti” backdoor for Linux cloud + credential theft focus**\n- What happened: Reporting indicates **APT41** targeting **Linux cloud servers** with a **new Winnti-family backdoor** and emphasis on **harvesting cloud credentials**.  \n- Why it matters operationally: Direct risk to **cloud control planes** (token/key theft), persistence in Linux workloads, and stealthy exfiltration—high impact for financial services with hybrid cloud.  \n- Recommended immediate actions for the SOC today: **Review cloud credential events** (new keys, unusual token use, new OAuth app consents) and **audit Linux fleet telemetry** (new services/cron, outbound C2); **scope any suspicious access** to CI/CD runners and bastions.\n\n**5) Malware via trusted-brand installers / repos (fake “Claude AI” installer → PlugX; fake GitHub installers; trojanized legitimate downloads)**\n- What happened: Multiple campaigns use **fake installers** and **trojanized downloads** (including DLL sideloading) to deploy commodity/advanced payloads (e.g., **PlugX**, crypto stealers).  \n- Why it matters operationally: Bypasses traditional email-only controls; impacts developers/power users; increases chance of **initial access via user execution**.  \n- Recommended immediate actions for the SOC today: **Enforce/monitor application allowlisting** for installer execution paths; **hunt for DLL sideloading patterns** (signed binary loading unsigned DLL from user-writable directories) and triage new “first-seen” binaries from Downloads/Temp.\n\n---\n\n### Monitoring & detection recommendations\n- **Fortinet / perimeter exploitation:** Monitor **VPN/WAF/firewall** logs for spikes in 4xx/5xx, abnormal POSTs, SQLi patterns, and new admin sessions; map to **T1190 (Exploit Public-Facing Application)**.\n- **Microsoft Exchange/Windows KEV hunt:** In **EDR + Windows Event Logs** (Security, Sysmon), prioritize alerts for suspicious service creation, LSASS access, and new scheduled tasks; map to **T1053 (Scheduled Task), T1569 (Service Execution)**.\n- **Adobe 0-day via email:** In **email gateway + sandbox + EDR**, flag PDFs from new senders leading to Acrobat spawning cmd/powershell/mshta/rundll32 or network beacons; map to **T1204 (User Execution)**.\n- **Web app RCE/webshells:** In **web server logs (IIS/Apache/Nginx) + EDR**, hunt for new/modified script files, unexpected outbound connections from web tiers, and suspicious process trees from web worker processes; map to **T1505.003 (Web Shell)**.\n- **APT41/Linux cloud backdoor behaviors:** In **cloud audit logs (AWS CloudTrail/Azure/GCP) + Kubernetes audit + Linux EDR**, look for new access keys, unusual STS role assumptions, new DaemonSets/cronjobs, and outbound to rare ASNs; map to **T1078 (Valid Accounts), T1552 (Unsecured Credentials)**.\n- **DLL sideloading / trojanized installers:** In **EDR** monitor signed binaries executed from **user-writable paths** loading unsigned DLLs adjacent to the executable; map to **T1574.002 (DLL Search Order Hijacking)**.\n- **Credential leakage theme (AI agents/secrets exposure):** In **DLP/SSPM/CASB + Git/CI logs**, watch for new public repos, secrets scanning hits, and unusual API token creation/usage bursts; map to **T1552.001 (Credentials in Files)**.\n\n---\n\n### Medium-term follow-ups\n- **Accelerate KEV remediation governance:** Ensure all KEV-listed products are covered by **SLA-based patching** with internet-facing systems measured daily (exceptions require compensating controls).\n- **Reduce “shadow IT” web tooling exposure:** Inventory and restrict external access to **documentation/dev tools** (ShowDoc-like apps, notebooks) behind VPN/SSO, and add them to continuous vuln scanning.\n- **Harden PDF attack surface:** Standardize Acrobat/Reader versions, enforce **Protected View/sandboxing**, and consider isolating PDF handling for high-risk roles (payments, treasury ops).\n- **Cloud credential hygiene:** Rotate long-lived keys, enforce **MFA + conditional access**, minimize standing privileges, and review CI/CD secret storage (align with “secrets leakage” trend).\n- **Software supply-chain/download controls:** Tighten controls on downloading/installing tools (developer workstations included): approved software catalogs, code signing enforcement, and repository provenance checks.\n- **Phishing ecosystem change (W3LL takedown):** Expect short-term **fragmentation/respawn**—keep BEC/phish detections tuned (new sender domains, MFA push fatigue patterns) and refresh user reporting playbooks.",
   "highlights": [
     {
-      "title": "Microsoft Defender for Endpoint (MDE) — Custom Role Design for Troubleshooting Mode–Only Access",
-      "link": "https://techcommunity.microsoft.com/t5/core-infrastructure-and-security/microsoft-defender-for-endpoint-mde-custom-role-design-for/ba-p/4510646",
-      "source": "Core Infrastructure and Security Blog",
-      "published": "2026-04-13T05:43:59+00:00",
+      "title": "U.S. CISA adds Adobe, Fortinet, Microsoft Exchange Server, and Microsoft Windows flaws to its Known Exploited Vulnerabilities catalog",
+      "link": "https://securityaffairs.com/190775/security/u-s-cisa-adds-adobe-fortinet-microsoft-windows-microsoft-exchange-server-and-microsoft-windows-flaws-to-its-known-exploited-vulnerabilities-catalog.html",
+      "source": "Security Affairs",
+      "published": "2026-04-14T07:38:20+00:00",
       "smart_groups": [
         "Windows / Microsoft",
-        "Identity / Access",
-        "Detection Engineering",
-        "Crypto / Web3",
+        "Cloud / SaaS",
+        "Curated",
+        "Exploit / PoC",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Fake Claude AI installer abuses DLL sideloading to deploy PlugX",
+      "link": "https://securityaffairs.com/190754/malware/fake-claude-ai-installer-abuses-dll-sideloading-to-deploy-plugx.html",
+      "source": "Security Affairs",
+      "published": "2026-04-14T07:19:57+00:00",
+      "smart_groups": [
+        "Malware / Payloads",
         "Curated",
         "Ransomware",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "India Wide Fake BSA Scam Exposed: Thieves Target Teachers with Threats of Transfer",
+      "link": "https://www.news4hackers.com/india-wide-fake-bsa-scam-exposed-thieves-target-teachers-with-threats-of-transfer/",
+      "source": "News4Hackers",
+      "published": "2026-04-14T06:01:45+00:00",
+      "smart_groups": [
+        "Curated",
         "Vulnerabilities / CVEs",
-        "Web / API Security",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Spring Lake Park Schools Suffers Ransomware Attack | UpGuard",
+      "link": "https://www.upguard.comnews/spring-lake-park-schools-data-breach-2026-04-13",
+      "source": "UpGuard – News",
+      "published": "2026-04-14T05:57:14+00:00",
+      "smart_groups": [
+        "Data Breaches / Leaks",
+        "Curated",
+        "Ransomware",
         "Vendors / Product Security"
       ],
       "curated": true
     },
     {
-      "title": "EDR Killers Broaden Ransomware Tactics, ESET Warns",
-      "link": "https://gbhackers.com/edr-killers/",
+      "title": "Synology SSL VPN Client Vulnerability Enabled Remote Access to Sensitive Files",
+      "link": "https://gbhackers.com/synology-ssl-vpn-client-vulnerability/",
       "source": "GBHackers News",
-      "published": "2026-04-13T05:35:18+00:00",
+      "published": "2026-04-14T05:51:35+00:00",
       "smart_groups": [
-        "Detection Engineering",
-        "Curated",
-        "Malware / Payloads",
-        "Network / OT / ICS",
-        "Ransomware",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "ZeroID: Open-source identity platform for autonomous AI agents",
-      "link": "https://www.helpnetsecurity.com/2026/04/13/zeroid-open-source-identity-platform-autonomous-ai-agents/",
-      "source": "Help Net Security",
-      "published": "2026-04-13T05:30:40+00:00",
-      "smart_groups": [
-        "Identity / Access",
-        "Curated",
         "Vulnerabilities / CVEs",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Pluralistic: Austerity creates fascism (13 Apr 2026)",
-      "link": "https://pluralistic.net/2026/04/12/always-great/",
-      "source": "https://pluralistic.net/feed/",
-      "published": "2026-04-13T05:29:27+00:00",
-      "smart_groups": [
-        "Data Breaches / Leaks",
-        "Data Protection / Privacy",
         "Cloud / SaaS",
-        "Crypto / Web3",
         "Curated",
-        "Identity / Access",
-        "Linux / Unix",
-        "Network / OT / ICS",
-        "Ransomware",
-        "Vulnerabilities / CVEs",
-        "Windows / Microsoft",
         "General Security"
       ],
       "curated": true
     },
     {
-      "title": "Tool to automatically harden package managers (npm, pnpm, uv, yarn, bun) against software supply chain attacks (such as the axios or LiteLLM attacks)?",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1sk1k6i/tool_to_automatically_harden_package_managers_npm/",
-      "source": "/r/cybersecurity",
-      "published": "2026-04-13T05:21:38+00:00",
-      "smart_groups": [
-        "Curated",
-        "Supply Chain / Software",
-        "OSINT / Community"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Adobe Fixes Actively Exploited Zero-Day in Acrobat Reader",
-      "link": "https://gbhackers.com/adobe-fixes-exploited-zero-day-in-acrobat-reader/",
-      "source": "GBHackers News",
-      "published": "2026-04-13T04:41:57+00:00",
+      "title": "ShowDoc RCE Flaw CVE-2025-0520 Actively Exploited on Unpatched Servers",
+      "link": "https://thehackernews.com/2026/04/showdoc-rce-flaw-cve-2025-0520-actively.html",
+      "source": "The Hacker News",
+      "published": "2026-04-14T05:50:00+00:00",
       "smart_groups": [
         "Curated",
         "Vulnerabilities / CVEs",
         "Exploit / PoC",
-        "Windows / Microsoft",
         "General Security"
       ],
       "curated": true
     },
     {
-      "title": "Was ist Federated Identity Management?",
-      "link": "https://www.csoonline.com/article/3494300/was-ist-federated-identity-management.html",
-      "source": "CSO Online",
-      "published": "2026-04-13T04:14:00+00:00",
+      "title": "APT41 Targets Linux Cloud Servers With New Winnti Backdoor",
+      "link": "https://gbhackers.com/new-winnti-backdoor/",
+      "source": "GBHackers News",
+      "published": "2026-04-14T05:45:48+00:00",
       "smart_groups": [
-        "Identity / Access",
         "Cloud / SaaS",
-        "Windows / Microsoft",
-        "Crypto / Web3",
         "Curated",
-        "Vulnerabilities / CVEs",
+        "Linux / Unix",
+        "Malware / Payloads",
         "General Security"
       ],
       "curated": true
     },
     {
-      "title": "Mysterious link on a financial site's login page",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1sk0683/mysterious_link_on_a_financial_sites_login_page/",
-      "source": "/r/cybersecurity",
-      "published": "2026-04-13T04:08:43+00:00",
+      "title": "CISA Adds 6 Known Exploited Flaws in Fortinet, Microsoft, and Adobe Software",
+      "link": "https://thehackernews.com/2026/04/cisa-adds-6-known-exploited-flaws-in.html",
+      "source": "The Hacker News",
+      "published": "2026-04-14T05:39:00+00:00",
       "smart_groups": [
-        "Curated",
         "Vulnerabilities / CVEs",
-        "OSINT / Community"
+        "Curated",
+        "Web / API Security",
+        "Cloud / SaaS",
+        "Exploit / PoC",
+        "General Security"
       ],
       "curated": true
     },
     {
-      "title": "ORBIQ in public - a domain intelligence tool research",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1sjybgq/orbiq_in_public_a_domain_intelligence_tool/",
-      "source": "/r/cybersecurity",
-      "published": "2026-04-13T02:39:32+00:00",
+      "title": "CISA Warns Fortinet SQL Injection Flaw Is Being Actively Exploited",
+      "link": "https://gbhackers.com/cisa-warns-fortinet-sql-injection-flaw/",
+      "source": "GBHackers News",
+      "published": "2026-04-14T05:32:09+00:00",
       "smart_groups": [
         "Curated",
         "Vulnerabilities / CVEs",
-        "OSINT / Community"
+        "Threat Actors / APT",
+        "Web / API Security",
+        "Exploit / PoC",
+        "General Security"
       ],
       "curated": true
     },
     {
-      "title": "Iran's forced nationwide internet blackout becomes second-longest on record as it passes 1,000 hours offline — possessing Starlink terminals punishable by death, country using 'military-grade jamming' against service",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1sjxffw/irans_forced_nationwide_internet_blackout_becomes/",
-      "source": "/r/cybersecurity",
-      "published": "2026-04-13T01:58:22+00:00",
+      "title": "Rockstar’s GTA Game Hacked, 78.6 Million Records Published Online",
+      "link": "https://gbhackers.com/rockstars-gta-game-hacked/",
+      "source": "GBHackers News",
+      "published": "2026-04-14T05:05:11+00:00",
       "smart_groups": [
         "Curated",
-        "Vulnerabilities / CVEs",
-        "OSINT / Community"
+        "Data Breaches / Leaks",
+        "Network / OT / ICS",
+        "Supply Chain / Software",
+        "General Security"
       ],
       "curated": true
     }
