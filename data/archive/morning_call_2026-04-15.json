@@ -1,0 +1,153 @@
+{
+  "generated_at": "2026-04-15T08:06:00.447854+00:00",
+  "analysis_date": "2026-04-15",
+  "model": "gpt-5.2",
+  "window_hours": 24,
+  "source_file": "data/news_recent.json",
+  "source_generated_at": "2026-04-15T07:56:55.751055+00:00",
+  "source_days_back": 30,
+  "source_total_items": 9130,
+  "total_items_in_window_all": 348,
+  "total_items_in_window_curated": 126,
+  "morning_call_markdown": "### Executive Summary\n- Microsoft April Patch Tuesday includes an **actively exploited SharePoint Server zero-day** plus a very large volume of fixes; treat **internet-facing Microsoft server patching** as today’s top priority.\n- **Perimeter/app-layer exposures** are in focus: advisories include **Fortinet flaws (incl. SQLi flagged as exploited)** plus reports of **etcd auth bypass** and other commonly deployed platform bugs with potential remote access impact.\n- Multiple **user-assisted initial access** themes continue: ransomware delivery via **phishing/RAT**, **weaponized “legit” notifications** (GitHub/Jira), and **malicious Chrome extensions** targeting credentials/data.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Microsoft SharePoint Server actively exploited zero-day + April Patch Tuesday surge**\n- What happened: Microsoft released April updates fixing an **actively exploited SharePoint Server 0-day** alongside ~160+ additional Windows/Office/SharePoint issues (multiple sources).\n- Why it matters operationally: SharePoint is frequently **internet-facing** in enterprises; exploitation can be a fast path to **foothold → lateral movement → ransomware** in financial networks.\n- Recommended immediate actions for the SOC today: **Confirm patch status** for all SharePoint farms and exposed IIS hosts; **raise alerting** on SharePoint/IIS anomalies (new web shells, suspicious POSTs, unusual child processes) and **accelerate containment playbooks** for suspected server compromise.\n\n**2) Fortinet products: multiple vulnerabilities + CISA “actively exploited” SQL injection warning (perimeter risk)**\n- What happened: CIS advisory highlights **multiple Fortinet vulnerabilities** that could enable code execution; separate reporting notes **CISA warning of an actively exploited Fortinet SQLi**.\n- Why it matters operationally: Fortinet devices often sit at the edge (VPN/web portals); exploitation can yield **credential theft, device takeover, and network pivoting** with limited endpoint visibility.\n- Recommended immediate actions for the SOC today: **Inventory & verify versions/exposure** of all Fortinet appliances (especially internet-facing admin/user portals); **tighten monitoring** on VPN/auth logs for new admin creation/config changes and suspicious inbound requests, and **apply mitigations/patches** per vendor guidance ASAP.\n\n**3) “Common platform” exploited/critical bugs: ShowDoc RCE (reported exploited) + etcd auth bypass (cloud/K8s control plane risk)**\n- What happened: Reporting claims a **ShowDoc RCE is actively exploited**; separate reporting flags a **critical etcd authentication bypass** impacting access to sensitive cluster APIs.\n- Why it matters operationally: These sit in **documentation/dev** and **cluster control plane** layers—often under-monitored—and can provide **rapid privilege escalation to secrets, service accounts, and CI/CD tokens**.\n- Recommended immediate actions for the SOC today: **Find exposed instances** (internet-facing ShowDoc, externally reachable etcd/K8s endpoints) and restrict access; **hunt for abnormal API access** (etcd/K8s) and new binaries/cron/systemd tasks on affected hosts.\n\n**4) Phishing-to-ransomware & notification-abuse campaigns (JanaWare/Adwind RAT + GitHub/Jira notification phishing)**\n- What happened: Reports describe **JanaWare ransomware** delivered via **customized Adwind RAT** and ongoing abuse of **GitHub/Jira notification systems** for phishing.\n- Why it matters operationally: Financial users are high-value; these lures bypass basic controls by using **trusted workflows** and lead to **credential capture and malware execution** (often “user-assisted”).\n- Recommended immediate actions for the SOC today: **Heighten email/security portal triage** for GitHub/Jira-themed messages and “invoice/IT update” lures; **monitor for Adwind/RAT behaviors** (scripted Java/process injection patterns, unusual outbound C2) and fast-track endpoint isolation on first signs.\n\n**5) Client-side credential/data theft: malicious Chrome extensions at scale**\n- What happened: Reporting indicates **100+ Chrome extensions** in the Web Store targeting account/data theft.\n- Why it matters operationally: Extensions can steal **session cookies, credentials, and web data**—high impact for **trading, payment ops, and admin portals** even when endpoints are otherwise “clean.”\n- Recommended immediate actions for the SOC today: **Query browser/MDM telemetry** for new/rare extensions and high-risk permissions; **block/install-control** via enterprise Chrome policies and initiate user outreach for any confirmed risky extensions.\n\n---\n\n### Monitoring & detection recommendations\n- **SharePoint/IIS compromise hunts**: IIS logs + Windows Security + EDR on SharePoint servers; look for web shell patterns, unusual POSTs, and suspicious child processes of `w3wp.exe` (MITRE **T1505.003 Web Shell**, **T1190 Exploit Public-Facing App**).\n- **Fortinet edge monitoring**: FortiGate/FortiProxy logs + firewall WAF logs; alert on spikes in 4xx/5xx to portal endpoints, auth failures/successes from new geos, config changes, and new admin accounts (MITRE **T1190**, **T1078 Valid Accounts**).\n- **K8s/etcd control plane access**: Kubernetes audit logs + etcd logs + cloud load balancer logs; hunt for unusual list/watch of secrets, new service accounts/clusterroles, and access from non-control-plane IPs (MITRE **T1552 Unsecured Credentials**, **T1098 Account Manipulation**).\n- **RAT/ransomware precursor signals**: EDR + Sysmon + DNS/Proxy; watch for suspicious execution chains (Office/Browser → script host → downloader), new persistence (Run keys, scheduled tasks) and rapid file encryption behaviors (MITRE **T1059 Command and Scripting**, **T1547 Boot or Logon Autostart**, **T1486 Data Encrypted for Impact**).\n- **Notification-themed phishing**: Email gateway + collaboration tool logs; detections for GitHub/Jira “notification” subject/body patterns, newly registered sender domains, and URLs leading to credential prompts (MITRE **T1566 Phishing**, **T1204 User Execution**).\n- **Chrome extension risk**: Endpoint management/Chrome enterprise reporting + EDR browser telemetry; alert on new extension installs, extensions requesting broad permissions, and suspicious outbound traffic from browser processes to rare domains (MITRE **T1555 Credentials from Password Stores** / session theft patterns—exact mapping may vary).\n- **Supply-chain/website backdoors (WordPress plugins + “update domain” compromise report)**: WAF + web server logs; monitor admin logins, plugin/theme changes, new PHP files in web roots, and outbound connections from web servers (MITRE **T1195 Supply Chain Compromise**, **T1505.003**).\n\n---\n\n### Medium-term follow-ups\n- **Patch governance sprint (48–72h plan)**: Prioritize Microsoft server patches (SharePoint/IIS, Exchange/Windows per CISA notes) and validate post-patch service health; ensure rollback plans for critical apps.\n- **Perimeter exposure reduction**: Review all internet-facing admin interfaces (Fortinet, VPNs, SharePoint, documentation tools); enforce IP allowlisting/MFA where feasible and disable legacy/unused portals.\n- **Browser security posture**: Implement/strengthen Chrome extension allowlist, block sideloading, and set policy-based reporting to central logging; add user guidance for extension hygiene.\n- **K8s hardening**: Ensure etcd is not internet-exposed, require mutual TLS, rotate cluster secrets/service account tokens if any suspicious access is detected, and validate audit logging retention.\n- **Phishing resilience refresh**: Update detections/runbooks for “trusted notification” phishing (GitHub/Jira) and tighten DMARC/SPF/DKIM enforcement where business workflows allow.\n- **Third-party/supply-chain checks**: For any web properties using WordPress or third-party update channels, schedule integrity scans and review vendor update trust paths (signing, pinned repos, controlled CI/CD).",
+  "highlights": [
+    {
+      "title": "Pluralistic: Rights for robots (15 Apr 2026)",
+      "link": "https://pluralistic.net/2026/04/15/artificial-lifeforms/",
+      "source": "https://pluralistic.net/feed/",
+      "published": "2026-04-15T07:06:28+00:00",
+      "smart_groups": [
+        "Crypto / Web3",
+        "Data Protection / Privacy",
+        "Curated",
+        "Identity / Access",
+        "Linux / Unix",
+        "Malware / Payloads",
+        "Network / OT / ICS",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Closing Exploit Gap Requires Faster Patch Cycles",
+      "link": "https://www.news4hackers.com/closing-exploit-gap-requires-faster-patch-cycles/",
+      "source": "News4Hackers",
+      "published": "2026-04-15T07:05:00+00:00",
+      "smart_groups": [
+        "Curated",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Microsoft Warns of Actively Exploited SharePoint Server Zero-Day",
+      "link": "https://gbhackers.com/microsoft-warns-sharepoint-server-zero-day/",
+      "source": "GBHackers News",
+      "published": "2026-04-15T07:03:27+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Threat Actors / APT",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Amravati Police Detain Youth for Child Abuse and Extortion Charges",
+      "link": "https://www.news4hackers.com/amravati-police-detain-youth-for-child-abuse-and-extortion-charges/",
+      "source": "News4Hackers",
+      "published": "2026-04-15T07:01:30+00:00",
+      "smart_groups": [
+        "Curated",
+        "Exploit / PoC",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "North Korean hackers used AI-enabled social engineering in Zerion attack",
+      "link": "https://cointelegraph.com/news/north-korean-hackers-use-ai-enabled-social-engineering-latest-attack?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound",
+      "source": "Cointelegraph.com News",
+      "published": "2026-04-15T06:31:17+00:00",
+      "smart_groups": [
+        "Phishing / Social Engineering",
+        "Curated",
+        "Exploit / PoC",
+        "Crypto / Web3"
+      ],
+      "curated": true
+    },
+    {
+      "title": "OpenAI expands its cyber defense program with GPT-5.4-Cyber for vetted researchers",
+      "link": "https://www.helpnetsecurity.com/2026/04/15/openai-gpt-5-4-cyber/",
+      "source": "Help Net Security",
+      "published": "2026-04-15T06:24:41+00:00",
+      "smart_groups": [
+        "Curated",
+        "Exploit / PoC",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Mallory Launches AI-Native Threat Intelligence Platform, Turning Global Threat Data Into Prioritized Action",
+      "link": "https://www.csoonline.com/article/4158944/mallory-launches-ai-native-threat-intelligence-platform-turning-global-threat-data-into-prioritized-action.html",
+      "source": "CSO Online",
+      "published": "2026-04-15T06:08:35+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Cloud / SaaS",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Discover and Fix Security Misconfigurations with Open-Source Scanners on GitHub & GitLab",
+      "link": "https://www.news4hackers.com/discover-and-fix-security-misconfigurations-with-open-source-scanners-on-github-gitlab/",
+      "source": "News4Hackers",
+      "published": "2026-04-15T06:03:54+00:00",
+      "smart_groups": [
+        "Curated",
+        "Supply Chain / Software",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "The exploit gap is closing, and your patch cycle wasn’t built for this",
+      "link": "https://www.helpnetsecurity.com/2026/04/15/anthropic-claude-mythos-ai-vulnerability-discovery/",
+      "source": "Help Net Security",
+      "published": "2026-04-15T06:00:34+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Curated",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "JanaWare Ransomware Hits Turkish Users via Customized Adwind RAT",
+      "link": "https://gbhackers.com/janaware-ransomware/",
+      "source": "GBHackers News",
+      "published": "2026-04-15T05:39:11+00:00",
+      "smart_groups": [
+        "Malware / Payloads",
+        "Curated",
+        "Ransomware",
+        "Phishing / Social Engineering",
+        "General Security"
+      ],
+      "curated": true
+    }
+  ]
+}
