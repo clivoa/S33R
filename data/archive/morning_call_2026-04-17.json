@@ -1,0 +1,146 @@
+{
+  "generated_at": "2026-04-17T08:06:02.238286+00:00",
+  "analysis_date": "2026-04-17",
+  "model": "gpt-5.2",
+  "window_hours": 24,
+  "source_file": "data/news_recent.json",
+  "source_generated_at": "2026-04-17T07:57:32.992391+00:00",
+  "source_days_back": 30,
+  "source_total_items": 8957,
+  "total_items_in_window_all": 298,
+  "total_items_in_window_curated": 86,
+  "morning_call_markdown": "### Executive Summary\n- **Active exploitation watch:** CISA added an **Apache ActiveMQ** flaw (**CVE-2026-34197**) to KEV → treat as *internet-exposed RCE risk* and verify no exposed brokers/console paths.\n- **Windows endpoint risk rising:** **Leaked Windows “zero-days” now exploited** + a **Microsoft Defender “RedSun” local privesc PoC** → prioritize endpoint hunting for post-compromise privilege escalation and tampering attempts.\n- **Targeting patterns relevant to finance:** Multiple **phishing-to-RAT** themes (fake shipping notices, fake Slack/ProtonVPN, plugin abuse delivering RATs) → tighten email/web controls and watch for remote access tooling execution.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Apache ActiveMQ CVE-2026-34197 added to CISA KEV (active exploitation)**\n- **What happened:** CISA added **Apache ActiveMQ CVE-2026-34197** to the **Known Exploited Vulnerabilities** catalog amid active exploitation reporting.\n- **Why it matters operationally:** ActiveMQ is often **internally trusted**; compromise can become a **pivot point** into core app networks and enable credential theft/lateral movement.\n- **Recommended immediate actions for the SOC today:** Confirm **asset inventory** for ActiveMQ (including vendor-embedded instances) + **block/limit** internet exposure; fast-track **patch/mitigation** and alert on **unexpected ActiveMQ web/admin access**.\n\n**2) Windows exploitation uptick: leaked “zero-days” exploited + Defender “RedSun” SYSTEM privesc PoC**\n- **What happened:** Reporting indicates **recently leaked Windows zero-days are now exploited in the wild**, and a **Microsoft Defender “RedSun”** PoC enables **SYSTEM** privileges (details/cve naming unclear in sources).\n- **Why it matters operationally:** In-the-wild exploitation + public PoC increases likelihood of **commodity attacker adoption**; privesc is a common step after initial access to disable defenses and deploy ransomware.\n- **Recommended immediate actions for the SOC today:** Increase hunting for **post-exploitation** behaviors (token theft, service creation, LSASS access) + validate **Defender/EDR tamper protection** and ensure **rapid patch rings** for Windows/Defender components.\n\n**3) Cisco critical advisories (Webex, ISE)**\n- **What happened:** Cisco issued advisories for **critical vulnerabilities** in **Webex** and **Identity Services Engine (ISE)** (some enabling code execution / impersonation per reporting).\n- **Why it matters operationally:** ISE is identity/network-control infrastructure; compromise can enable **network-wide access manipulation**. Webex exposure can be a **user impersonation / foothold** risk.\n- **Recommended immediate actions for the SOC today:** Identify any **externally reachable** Webex services/ISE portals; prioritize **patching and compensating controls** (restrict management interfaces, enforce MFA/admin IP allowlists).\n\n**4) Active abuse of web/app ecosystem for delivery: n8n webhook abuse + actively exploited WordPress Ninja Forms + nginx-ui auth bypass reports**\n- **What happened:** Multiple reports of **active exploitation/abuse** in common web tooling (n8n phishing/malware delivery, critical Ninja Forms file upload exploitation, nginx-ui/MCP missing auth exploited).\n- **Why it matters operationally:** These paths are often in **DMZ/dev** environments and can become **staging** for phishing, malware hosting, or direct server takeover leading to credential theft.\n- **Recommended immediate actions for the SOC today:** Sweep for **internet-exposed** instances (n8n, WordPress with Ninja Forms, nginx-ui) + review WAF/reverse-proxy logs for **upload/webhook/unauth admin** patterns; accelerate patching/disable vulnerable plugins.\n\n**5) Phishing-to-remote-access tooling and RAT delivery (shipping lures, fake Slack/ProtonVPN, Obsidian plugin RAT targeting finance/crypto)**\n- **What happened:** Multiple campaigns use **brand impersonation** (shipping notification, collaboration tools, VPN installers) and **plugin abuse** to deploy **remote access/RATs** (finance/crypto targeting noted).\n- **Why it matters operationally:** High likelihood of reaching staff; remote access tooling blends into legitimate admin activity and can precede **fraud, data theft, or ransomware**.\n- **Recommended immediate actions for the SOC today:** Tighten monitoring for **new remote admin tools** execution and unusual persistence; coordinate with email/web teams to **block lookalike download themes** and flag inbound “shipment/Slack/VPN” lures.\n\n---\n\n### Monitoring & detection recommendations\n- **ActiveMQ exploitation:** Monitor **reverse proxy/WAF + server logs** for unexpected requests to ActiveMQ web/admin endpoints and sudden **new process spawns** from the broker service (ATT&CK **T1190** Exploit Public-Facing Application).\n- **Windows privesc / Defender “RedSun” theme:** From **EDR + Windows Security logs**, hunt for **service creation**, scheduled tasks, and privilege escalation artifacts (ATT&CK **T1543**, **T1053**, **T1068**); alert on **Defender setting changes** / security product disable attempts.\n- **Post-compromise credential access:** Watch **EDR** for LSASS access/dumps, unusual handle opens, and credential theft tooling (ATT&CK **T1003**); correlate with new local admin group membership changes in **Windows event logs**.\n- **Cisco ISE/Webex:** Monitor **VPN/firewall + ISE admin/auth logs** for anomalous admin logins, config changes, or spikes in auth failures; alert on **new/rare source IPs** hitting management interfaces (ATT&CK **T1078** Valid Accounts).\n- **n8n/Ninja Forms/nginx-ui abuse:** Use **WAF/app logs** to detect suspicious **file upload**, webhook triggers, and unauthenticated access attempts; watch outbound connections from these hosts in **proxy/DNS logs** (ATT&CK **T1105** Ingress Tool Transfer).\n- **Phishing delivery + remote access tools:** From **email security gateway + EDR**, alert on messages with “shipment arrived”/software download lures and subsequent execution of **newly dropped binaries** from user download paths (ATT&CK **T1566**, **T1204**).\n- **Supply-chain/plugin abuse (Obsidian/WordPress):** Monitor **software installation events** and **browser extension/plugin directories** via EDR; flag unsigned/unexpected plugin installs (ATT&CK **T1554** Compromise Client Software Binary).\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** Given NVD enrichment reductions reported, ensure internal vuln management isn’t dependent on NVD-only context; lean on **vendor advisories + KEV** and threat intel prioritization.\n- **Cisco hardening:** Review long-term controls for **ISE/Webex**: admin portal segmentation, **MFA everywhere**, config backup integrity, and routine detection for unauthorized policy changes.\n- **Web exposure hygiene:** Formalize periodic scanning for **internet-exposed “ops tooling”** (n8n, nginx-ui, CI/CD dashboards, WordPress admin) and enforce **default-deny** inbound to management ports.\n- **Endpoint resilience:** Validate **BitLocker recovery key** processes (Windows update behavior noted) to reduce helpdesk disruption while maintaining encryption compliance; ensure keys are accessible via approved secure workflows.\n- **Ransomware readiness:** Reports of new ransomware operations tied to known actors reinforce: verify **immutable backups**, test restore SLAs, and confirm **EDR isolation + IR playbooks** are current.\n- **User/application controls:** Consider tightening **application allowlisting**/controlled folder access for common “fake installer” vectors (Slack/VPN tools), and enforce least privilege for plugin installation where feasible.\n\nAssumptions/notes: Some items (e.g., “RedSun” and “leaked Windows zero-days”) lack definitive CVE identifiers in the provided summaries; treat as **high-confidence exploitation/PoC risk themes** and prioritize behavioral detections over specific IOCs.",
+  "highlights": [
+    {
+      "title": "“Your shipment has arrived” email hides remote access software",
+      "link": "https://www.malwarebytes.com/blog/news/2026/04/your-shipment-has-arrived-email-hides-remote-access-software",
+      "source": "Malwarebytes Labs",
+      "published": "2026-04-17T07:40:03+00:00",
+      "smart_groups": [
+        "Curated",
+        "Malware / Payloads",
+        "Ransomware",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "U.S. CISA adds a flaw in Apache ActiveMQ to its Known Exploited Vulnerabilities catalog",
+      "link": "https://securityaffairs.com/190917/security/u-s-cisa-adds-a-flaw-in-apache-activemq-to-its-known-exploited-vulnerabilities-catalog.html",
+      "source": "Security Affairs",
+      "published": "2026-04-17T07:39:39+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Claude Opus wrote a Chrome exploit for $2,283",
+      "link": "https://go.theregister.com/feed/www.theregister.com/2026/04/17/claude_opus_wrote_chrome_exploit/",
+      "source": "The Register - Security",
+      "published": "2026-04-17T07:02:09+00:00",
+      "smart_groups": [
+        "Curated",
+        "Exploit / PoC",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "53 DDoS Domains Taken Down by Law Enforcement",
+      "link": "https://www.securityweek.com/53-ddos-domains-taken-down-by-law-enforcement/",
+      "source": "SecurityWeek",
+      "published": "2026-04-17T06:40:21+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Payouts King Emerges: New Ransomware Operation Tied to Ex-BlackBasta Members",
+      "link": "https://gbhackers.com/payouts-king-emerges/",
+      "source": "GBHackers News",
+      "published": "2026-04-17T06:35:06+00:00",
+      "smart_groups": [
+        "Detection Engineering",
+        "Curated",
+        "Ransomware",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Recently leaked Windows zero-days now exploited in attacks",
+      "link": "https://www.bleepingcomputer.com/news/security/recently-leaked-windows-zero-days-now-exploited-in-attacks/",
+      "source": "BleepingComputer",
+      "published": "2026-04-17T06:14:52+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Threat Actors / APT",
+        "Exploit / PoC",
+        "Windows / Microsoft",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Google Deploys Gemini AI to Stop Threat Actors, Blocking 8.3 Billion Ads",
+      "link": "https://gbhackers.com/google-deploys-gemini-ai-to-stop-threat-actors/",
+      "source": "GBHackers News",
+      "published": "2026-04-17T05:47:11+00:00",
+      "smart_groups": [
+        "Threat Actors / APT",
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Operation PowerOFF Seizes 53 DDoS Domains, Exposes 3 Million Criminal Accounts",
+      "link": "https://thehackernews.com/2026/04/operation-poweroff-seizes-53-ddos.html",
+      "source": "The Hacker News",
+      "published": "2026-04-17T05:46:00+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Microsoft Confirms Windows 11 Updates May Force Users to Enter BitLocker Recovery Key",
+      "link": "https://cybersecuritynews.com/windows-11-update-bitlocker/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-04-17T05:23:25+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Windows / Microsoft",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Microsoft Defender 0-Day Vulnerability “RedSun” Enables Full SYSTEM Access",
+      "link": "https://cybersecuritynews.com/defender-0-day-redsun/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-04-17T05:08:02+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Windows / Microsoft",
+        "General Security"
+      ],
+      "curated": true
+    }
+  ]
+}
