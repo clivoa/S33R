@@ -1,85 +1,34 @@
 {
-  "generated_at": "2026-04-16T08:05:26.473399+00:00",
-  "analysis_date": "2026-04-16",
+  "generated_at": "2026-04-17T08:06:02.238286+00:00",
+  "analysis_date": "2026-04-17",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-04-16T07:57:18.841289+00:00",
+  "source_generated_at": "2026-04-17T07:57:32.992391+00:00",
   "source_days_back": 30,
-  "source_total_items": 9088,
-  "total_items_in_window_all": 311,
-  "total_items_in_window_curated": 90,
-  "morning_call_markdown": "### Executive Summary\n- Multiple **actively exploited** items surfaced: **nginx-ui auth bypass (CVE-2026-33032)** and **Microsoft KEV additions (SharePoint/Excel + Windows Task Host)** → treat as **internet-edge + user-entry** priorities today.\n- **Cisco & Fortinet** advisories (ISE/Webex/FMC mentions + FortiSandbox auth bypass/command execution) increase risk to **network security tooling** commonly deployed in financial environments.\n- Several **initial access + persistence** themes are trending: **fake software installers delivering remote admin tooling (ScreenConnect)**, **malicious Chrome extensions**, and **M365 hidden mailbox rules** used for BEC-style interception.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Actively exploited nginx-ui auth bypass → full server takeover (CVE-2026-33032)**\n- What happened: Multiple outlets report **in-the-wild exploitation** of a critical **nginx-ui authentication bypass** enabling **unauthenticated admin access/server takeover**.\n- Why it matters operationally: If any nginx-ui is exposed (even unintentionally), this is a **fast compromise path** to web tier control, credential theft, and lateral movement.\n- Recommended immediate actions for the SOC today: **Inventory + confirm exposure** (CMDB/ASM scans, internet-facing checks); **block/limit access** (WAF/ACL/VPN only) and **escalate for emergency patch/disable** where found.\n\n**2) Microsoft KEV/0-days & Patch Tuesday (SharePoint/Excel + Windows Task Host exploited)**\n- What happened: CISA added **SharePoint Server + Office Excel flaws** to KEV; separate reporting flags a **Windows Task Host vulnerability exploited in attacks**, alongside April Patch Tuesday volume.\n- Why it matters operationally: This hits two common compromise lanes in finance—**server-side exploitation (SharePoint)** and **user-driven document exploitation (Excel)**—plus a Windows exploited bug that may aid execution/persistence.\n- Recommended immediate actions for the SOC today: **Prioritize patch verification** for SharePoint/Office/Windows on Tier-0/Tier-1 assets; **tighten controls** (ASR rules, MOTW enforcement, attachment sandboxing) and **hunt for exploitation signals** on SharePoint + Office process trees.\n\n**3) Network/security appliance risk cluster (Cisco ISE/Webex/FMC mentions + FortiSandbox critical bugs)**\n- What happened: Reports highlight **critical Cisco ISE flaws (RCE)**, a **Webex impersonation issue**, and mention of a **Cisco FMC zero-day exploited** (context: “high-impact vulns exploited in March”); Fortinet issued patches for **FortiSandbox login bypass/command execution**.\n- Why it matters operationally: These products often sit on **privileged network segments**; compromise can yield **credential access, traffic manipulation, and broad internal reach**.\n- Recommended immediate actions for the SOC today: **Confirm which of these products/versions we run** and whether management interfaces are internet-reachable; **review last 7 days** of admin logins/config changes and **restrict management planes** to jump hosts/VPN only pending patch validation.\n\n**4) Initial access via “legit software” lures + remote control tooling (fake Adobe Reader → ScreenConnect)**\n- What happened: A campaign uses **fake Adobe Reader downloads** to deliver **ScreenConnect** via an **in-memory loader** (stealthy execution chain).\n- Why it matters operationally: ScreenConnect is frequently abused for **hands-on-keyboard intrusions** and rapid ransomware staging; in-memory loaders reduce disk artifacts and can slip through weak controls.\n- Recommended immediate actions for the SOC today: **Hunt for new/rare ScreenConnect installs/executions** and abnormal child processes; **block software download lures** via web filtering and ensure EDR policies alert on remote tool execution from user-writable paths.\n\n**5) Email & identity persistence: M365 hidden mailbox rules + token theft via malicious Chrome extensions**\n- What happened: Reporting highlights attackers creating **hidden mailbox rules in Microsoft 365** to intercept business emails; separate items describe **100+ malicious Chrome extensions** stealing tokens and deploying backdoors.\n- Why it matters operationally: These are **quiet persistence mechanisms** that enable **payment diversion/BEC**, session hijacking, and long-dwell access without malware on endpoints.\n- Recommended immediate actions for the SOC today: **Audit mailbox rule creation/updates** (especially “hidden”/forwarding/redirect rules) and **disable external auto-forwarding** where possible; **review extension allowlists** and investigate endpoints with newly installed high-risk extensions.\n\n---\n\n### Monitoring & detection recommendations\n- **Internet-facing web/admin panels (nginx-ui, device management UIs):** monitor **WAF/reverse-proxy + firewall** for unusual POSTs/rapid 401→200 transitions, new admin sessions, and config export actions (ATT&CK: **T1190**).\n- **SharePoint exploitation & post-exploitation:** use **IIS/SharePoint ULS + EDR** to alert on `w3wp.exe` spawning shells (`cmd.exe/powershell.exe`) or writing unusual files in web directories (ATT&CK: **T1505**, **T1059**).\n- **Office/Excel exploitation path:** monitor **EDR + email gateway** for Excel spawning LOLBins (`powershell.exe`, `mshta.exe`, `rundll32.exe`) and high-risk attachment patterns; enforce/alert on **MOTW** bypass attempts (ATT&CK: **T1204**, **T1059**).\n- **Windows Task Host abuse signals (assumption: exploited bug enables execution/persistence):** watch **Security logs + EDR** for suspicious `taskhostw.exe` parent/child anomalies, scheduled task creation, and persistence chains (ATT&CK: **T1053**).\n- **Remote admin tooling (ScreenConnect) + in-memory loaders:** alert on ScreenConnect service creation, unsigned binaries in user-writable paths, and suspicious network beacons from endpoints to newly observed remote-control infra (ATT&CK: **T1219**, **T1105**).\n- **M365 mailbox rule persistence / BEC:** monitor **M365 Unified Audit Log / Entra ID sign-ins** for `New-InboxRule/Set-InboxRule`, creation of forwarding/redirect rules, and impossible travel + new device sign-ins (ATT&CK: **T1114.003**, **T1078**).\n- **Malicious Chrome extensions / token theft:** from **EDR + browser management logs**, hunt for new extensions outside allowlist, unusual browser profile modifications, and outbound connections after extension install (ATT&CK: **T1555**, **T1550**).\n\n---\n\n### Medium-term follow-ups\n- **Patch/hardening backlog:** schedule accelerated remediation for **Cisco ISE/Webex/FMC (if applicable), FortiSandbox, Drupal core advisories, Adobe Reader/Acrobat**, and validate compensating controls where patch windows are constrained.\n- **Reduce management-plane exposure:** enforce **no direct internet access** to appliance/admin UIs; require **VPN + MFA + jump host** and log all admin actions centrally.\n- **M365 anti-BEC baselines:** implement recurring audits for **mailbox rules, OAuth app consents, external forwarding, and anomalous sign-ins**; ensure alerting thresholds are tuned for finance VIP mailboxes.\n- **Browser extension governance:** move to **enterprise extension allowlisting** (Chrome/Edge), and create an IR playbook for suspected **token/session theft** (revoke sessions, rotate creds, re-enroll devices).\n- **Remote tool controls:** formalize detection/approval for tools like **ScreenConnect/AnyDesk/etc.** (application control, monitored installers, EDR “remote control” policy).\n- **Threat hunting enablement:** operationalize “Shadow Admins / hidden privilege paths” reviews in AD (as time allows) to reduce blast radius if any of the above initial access vectors land.",
+  "source_total_items": 8957,
+  "total_items_in_window_all": 298,
+  "total_items_in_window_curated": 86,
+  "morning_call_markdown": "### Executive Summary\n- **Active exploitation watch:** CISA added an **Apache ActiveMQ** flaw (**CVE-2026-34197**) to KEV → treat as *internet-exposed RCE risk* and verify no exposed brokers/console paths.\n- **Windows endpoint risk rising:** **Leaked Windows “zero-days” now exploited** + a **Microsoft Defender “RedSun” local privesc PoC** → prioritize endpoint hunting for post-compromise privilege escalation and tampering attempts.\n- **Targeting patterns relevant to finance:** Multiple **phishing-to-RAT** themes (fake shipping notices, fake Slack/ProtonVPN, plugin abuse delivering RATs) → tighten email/web controls and watch for remote access tooling execution.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Apache ActiveMQ CVE-2026-34197 added to CISA KEV (active exploitation)**\n- **What happened:** CISA added **Apache ActiveMQ CVE-2026-34197** to the **Known Exploited Vulnerabilities** catalog amid active exploitation reporting.\n- **Why it matters operationally:** ActiveMQ is often **internally trusted**; compromise can become a **pivot point** into core app networks and enable credential theft/lateral movement.\n- **Recommended immediate actions for the SOC today:** Confirm **asset inventory** for ActiveMQ (including vendor-embedded instances) + **block/limit** internet exposure; fast-track **patch/mitigation** and alert on **unexpected ActiveMQ web/admin access**.\n\n**2) Windows exploitation uptick: leaked “zero-days” exploited + Defender “RedSun” SYSTEM privesc PoC**\n- **What happened:** Reporting indicates **recently leaked Windows zero-days are now exploited in the wild**, and a **Microsoft Defender “RedSun”** PoC enables **SYSTEM** privileges (details/cve naming unclear in sources).\n- **Why it matters operationally:** In-the-wild exploitation + public PoC increases likelihood of **commodity attacker adoption**; privesc is a common step after initial access to disable defenses and deploy ransomware.\n- **Recommended immediate actions for the SOC today:** Increase hunting for **post-exploitation** behaviors (token theft, service creation, LSASS access) + validate **Defender/EDR tamper protection** and ensure **rapid patch rings** for Windows/Defender components.\n\n**3) Cisco critical advisories (Webex, ISE)**\n- **What happened:** Cisco issued advisories for **critical vulnerabilities** in **Webex** and **Identity Services Engine (ISE)** (some enabling code execution / impersonation per reporting).\n- **Why it matters operationally:** ISE is identity/network-control infrastructure; compromise can enable **network-wide access manipulation**. Webex exposure can be a **user impersonation / foothold** risk.\n- **Recommended immediate actions for the SOC today:** Identify any **externally reachable** Webex services/ISE portals; prioritize **patching and compensating controls** (restrict management interfaces, enforce MFA/admin IP allowlists).\n\n**4) Active abuse of web/app ecosystem for delivery: n8n webhook abuse + actively exploited WordPress Ninja Forms + nginx-ui auth bypass reports**\n- **What happened:** Multiple reports of **active exploitation/abuse** in common web tooling (n8n phishing/malware delivery, critical Ninja Forms file upload exploitation, nginx-ui/MCP missing auth exploited).\n- **Why it matters operationally:** These paths are often in **DMZ/dev** environments and can become **staging** for phishing, malware hosting, or direct server takeover leading to credential theft.\n- **Recommended immediate actions for the SOC today:** Sweep for **internet-exposed** instances (n8n, WordPress with Ninja Forms, nginx-ui) + review WAF/reverse-proxy logs for **upload/webhook/unauth admin** patterns; accelerate patching/disable vulnerable plugins.\n\n**5) Phishing-to-remote-access tooling and RAT delivery (shipping lures, fake Slack/ProtonVPN, Obsidian plugin RAT targeting finance/crypto)**\n- **What happened:** Multiple campaigns use **brand impersonation** (shipping notification, collaboration tools, VPN installers) and **plugin abuse** to deploy **remote access/RATs** (finance/crypto targeting noted).\n- **Why it matters operationally:** High likelihood of reaching staff; remote access tooling blends into legitimate admin activity and can precede **fraud, data theft, or ransomware**.\n- **Recommended immediate actions for the SOC today:** Tighten monitoring for **new remote admin tools** execution and unusual persistence; coordinate with email/web teams to **block lookalike download themes** and flag inbound “shipment/Slack/VPN” lures.\n\n---\n\n### Monitoring & detection recommendations\n- **ActiveMQ exploitation:** Monitor **reverse proxy/WAF + server logs** for unexpected requests to ActiveMQ web/admin endpoints and sudden **new process spawns** from the broker service (ATT&CK **T1190** Exploit Public-Facing Application).\n- **Windows privesc / Defender “RedSun” theme:** From **EDR + Windows Security logs**, hunt for **service creation**, scheduled tasks, and privilege escalation artifacts (ATT&CK **T1543**, **T1053**, **T1068**); alert on **Defender setting changes** / security product disable attempts.\n- **Post-compromise credential access:** Watch **EDR** for LSASS access/dumps, unusual handle opens, and credential theft tooling (ATT&CK **T1003**); correlate with new local admin group membership changes in **Windows event logs**.\n- **Cisco ISE/Webex:** Monitor **VPN/firewall + ISE admin/auth logs** for anomalous admin logins, config changes, or spikes in auth failures; alert on **new/rare source IPs** hitting management interfaces (ATT&CK **T1078** Valid Accounts).\n- **n8n/Ninja Forms/nginx-ui abuse:** Use **WAF/app logs** to detect suspicious **file upload**, webhook triggers, and unauthenticated access attempts; watch outbound connections from these hosts in **proxy/DNS logs** (ATT&CK **T1105** Ingress Tool Transfer).\n- **Phishing delivery + remote access tools:** From **email security gateway + EDR**, alert on messages with “shipment arrived”/software download lures and subsequent execution of **newly dropped binaries** from user download paths (ATT&CK **T1566**, **T1204**).\n- **Supply-chain/plugin abuse (Obsidian/WordPress):** Monitor **software installation events** and **browser extension/plugin directories** via EDR; flag unsigned/unexpected plugin installs (ATT&CK **T1554** Compromise Client Software Binary).\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** Given NVD enrichment reductions reported, ensure internal vuln management isn’t dependent on NVD-only context; lean on **vendor advisories + KEV** and threat intel prioritization.\n- **Cisco hardening:** Review long-term controls for **ISE/Webex**: admin portal segmentation, **MFA everywhere**, config backup integrity, and routine detection for unauthorized policy changes.\n- **Web exposure hygiene:** Formalize periodic scanning for **internet-exposed “ops tooling”** (n8n, nginx-ui, CI/CD dashboards, WordPress admin) and enforce **default-deny** inbound to management ports.\n- **Endpoint resilience:** Validate **BitLocker recovery key** processes (Windows update behavior noted) to reduce helpdesk disruption while maintaining encryption compliance; ensure keys are accessible via approved secure workflows.\n- **Ransomware readiness:** Reports of new ransomware operations tied to known actors reinforce: verify **immutable backups**, test restore SLAs, and confirm **EDR isolation + IR playbooks** are current.\n- **User/application controls:** Consider tightening **application allowlisting**/controlled folder access for common “fake installer” vectors (Slack/VPN tools), and enforce least privilege for plugin installation where feasible.\n\nAssumptions/notes: Some items (e.g., “RedSun” and “leaked Windows zero-days”) lack definitive CVE identifiers in the provided summaries; treat as **high-confidence exploitation/PoC risk themes** and prioritize behavioral detections over specific IOCs.",
   "highlights": [
     {
-      "title": "Cisco FMC Zero-Day Among 31 High-Impact Vulnerabilities Exploited in March",
-      "link": "https://gbhackers.com/cisco-fmc-zero-day/",
-      "source": "GBHackers News",
-      "published": "2026-04-16T07:38:17+00:00",
+      "title": "“Your shipment has arrived” email hides remote access software",
+      "link": "https://www.malwarebytes.com/blog/news/2026/04/your-shipment-has-arrived-email-hides-remote-access-software",
+      "source": "Malwarebytes Labs",
+      "published": "2026-04-17T07:40:03+00:00",
       "smart_groups": [
         "Curated",
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "Ransomware",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Fake Adobe Reader Download Delivers ScreenConnect Through Stealthy In-Memory Loader",
-      "link": "https://cybersecuritynews.com/fake-adobe-reader-download-delivers-screenconnect/",
-      "source": "Cyber Security News (FeedBurner)",
-      "published": "2026-04-16T07:17:48+00:00",
-      "smart_groups": [
         "Malware / Payloads",
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Critical Cisco ISE Flaws Let Remote Attackers Execute Malicious Code",
-      "link": "https://gbhackers.com/critical-cisco-ise-flaws/",
-      "source": "GBHackers News",
-      "published": "2026-04-16T07:04:45+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Cloud / SaaS",
-        "Curated",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Cisco Webex Vulnerability Allows User Impersonation Attacks",
-      "link": "https://gbhackers.com/cisco-webex-vulnerability-2/",
-      "source": "GBHackers News",
-      "published": "2026-04-16T06:49:27+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "6-Year Ransomware Campaign Targets Turkish Homes &amp; SMBs",
-      "link": "https://www.darkreading.com/cyberattacks-data-breaches/6-year-ransomware-campaign-turkish-homes-smbs",
-      "source": "darkreading",
-      "published": "2026-04-16T06:00:00+00:00",
-      "smart_groups": [
-        "Curated",
         "Ransomware",
         "General Security"
       ],
       "curated": true
     },
     {
-      "title": "Nginx-UI Flaw Actively Exploited to Enable Full Server Takeover",
-      "link": "https://gbhackers.com/nginx-ui-flaw-actively-exploited/",
-      "source": "GBHackers News",
-      "published": "2026-04-16T05:38:15+00:00",
+      "title": "U.S. CISA adds a flaw in Apache ActiveMQ to its Known Exploited Vulnerabilities catalog",
+      "link": "https://securityaffairs.com/190917/security/u-s-cisa-adds-a-flaw-in-apache-activemq-to-its-known-exploited-vulnerabilities-catalog.html",
+      "source": "Security Affairs",
+      "published": "2026-04-17T07:39:39+00:00",
       "smart_groups": [
         "Curated",
         "Vulnerabilities / CVEs",
@@ -89,53 +38,106 @@
       "curated": true
     },
     {
-      "title": "Splunk Enterprise and Cloud Platform Exposed to Dangerous RCE Vulnerability",
-      "link": "https://gbhackers.com/splunk-enterprise-and-cloud-platform-rce-vulnerability/",
-      "source": "GBHackers News",
-      "published": "2026-04-16T05:03:02+00:00",
+      "title": "Claude Opus wrote a Chrome exploit for $2,283",
+      "link": "https://go.theregister.com/feed/www.theregister.com/2026/04/17/claude_opus_wrote_chrome_exploit/",
+      "source": "The Register - Security",
+      "published": "2026-04-17T07:02:09+00:00",
       "smart_groups": [
-        "Vulnerabilities / CVEs",
         "Curated",
+        "Exploit / PoC",
+        "Vulnerabilities / CVEs",
         "General Security"
       ],
       "curated": true
     },
     {
-      "title": "AI Content Hijacks Google Discover to Deliver Malicious Alerts",
-      "link": "https://gbhackers.com/ai-content-hijacks-google/",
+      "title": "53 DDoS Domains Taken Down by Law Enforcement",
+      "link": "https://www.securityweek.com/53-ddos-domains-taken-down-by-law-enforcement/",
+      "source": "SecurityWeek",
+      "published": "2026-04-17T06:40:21+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Payouts King Emerges: New Ransomware Operation Tied to Ex-BlackBasta Members",
+      "link": "https://gbhackers.com/payouts-king-emerges/",
       "source": "GBHackers News",
-      "published": "2026-04-16T05:02:22+00:00",
+      "published": "2026-04-17T06:35:06+00:00",
+      "smart_groups": [
+        "Detection Engineering",
+        "Curated",
+        "Ransomware",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Recently leaked Windows zero-days now exploited in attacks",
+      "link": "https://www.bleepingcomputer.com/news/security/recently-leaked-windows-zero-days-now-exploited-in-attacks/",
+      "source": "BleepingComputer",
+      "published": "2026-04-17T06:14:52+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Threat Actors / APT",
+        "Exploit / PoC",
+        "Windows / Microsoft",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Google Deploys Gemini AI to Stop Threat Actors, Blocking 8.3 Billion Ads",
+      "link": "https://gbhackers.com/google-deploys-gemini-ai-to-stop-threat-actors/",
+      "source": "GBHackers News",
+      "published": "2026-04-17T05:47:11+00:00",
       "smart_groups": [
         "Threat Actors / APT",
         "Curated",
-        "Exploit / PoC",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Product showcase: Ente Auth encrypts, backs up, and syncs 2FA",
-      "link": "https://www.helpnetsecurity.com/2026/04/16/product-showcase-ente-auth-authenticator-app/",
-      "source": "Help Net Security",
-      "published": "2026-04-16T05:00:26+00:00",
-      "smart_groups": [
-        "Curated",
-        "Identity / Access",
         "Vulnerabilities / CVEs",
         "General Security"
       ],
       "curated": true
     },
     {
-      "title": "Hackers Abuse Google Discover With AI-Generated Content to Push Malicious Notifications",
-      "link": "https://cybersecuritynews.com/hackers-abuse-google-discover-with-ai-generated-content/",
-      "source": "Cyber Security News (FeedBurner)",
-      "published": "2026-04-16T04:34:27+00:00",
+      "title": "Operation PowerOFF Seizes 53 DDoS Domains, Exposes 3 Million Criminal Accounts",
+      "link": "https://thehackernews.com/2026/04/operation-poweroff-seizes-53-ddos.html",
+      "source": "The Hacker News",
+      "published": "2026-04-17T05:46:00+00:00",
       "smart_groups": [
-        "Phishing / Social Engineering",
         "Curated",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Microsoft Confirms Windows 11 Updates May Force Users to Enter BitLocker Recovery Key",
+      "link": "https://cybersecuritynews.com/windows-11-update-bitlocker/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-04-17T05:23:25+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Windows / Microsoft",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Microsoft Defender 0-Day Vulnerability “RedSun” Enables Full SYSTEM Access",
+      "link": "https://cybersecuritynews.com/defender-0-day-redsun/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-04-17T05:08:02+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
         "Exploit / PoC",
-        "Mobile Security",
+        "Windows / Microsoft",
         "General Security"
       ],
       "curated": true
