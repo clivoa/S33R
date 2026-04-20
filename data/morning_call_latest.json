@@ -1,140 +1,151 @@
 {
-  "generated_at": "2026-04-19T07:45:43.425048+00:00",
-  "analysis_date": "2026-04-19",
+  "generated_at": "2026-04-20T08:27:28.906575+00:00",
+  "analysis_date": "2026-04-20",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-04-19T07:28:34.399398+00:00",
+  "source_generated_at": "2026-04-20T08:18:17.287516+00:00",
   "source_days_back": 30,
-  "source_total_items": 8419,
-  "total_items_in_window_all": 67,
-  "total_items_in_window_curated": 20,
-  "morning_call_markdown": "### Executive Summary\n- Active exploitation reported against **ShowDoc servers (old but weaponized)** and a **critical Protobuf library flaw enabling JavaScript code execution**—treat as high-risk if present in our stack.\n- Ransomware tradecraft update: actors are using **“hidden VMs” (QEMU/VM-based evasion)** to stage tooling, exfiltrate, and hinder EDR visibility—hunt for virtualization artifacts on endpoints/servers.\n- **Mirai/Nexcorium IoT botnet activity** leveraging a **TBK DVR exploit** increases DDoS risk (esp. for external-facing services and third parties); confirm DDoS readiness and outbound scanning controls.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Active server takeovers via ShowDoc vulnerability (patched in 2020, now exploited)**\n- **What happened:** Multiple reports indicate **ongoing exploitation of a ShowDoc flaw** for **server takeover** (patch existed since 2020).\n- **Why it matters operationally:** Internet-exposed doc/wiki apps are common “forgotten assets”; compromise often leads to **webshells → credential theft → lateral movement** into core environments.\n- **Recommended immediate actions for the SOC today:** **Identify any ShowDoc instances** (CMDB + external attack surface scans) and verify patch level; **monitor for webshell indicators** on those hosts and isolate any anomalous instances.\n\n**2) Critical Protobuf library flaw enabling JavaScript code execution (supply-chain / app-layer risk)**\n- **What happened:** A **critical vulnerability in a Protobuf library** was disclosed with potential **JavaScript code execution** (details/PoC referenced in reporting).\n- **Why it matters operationally:** Protobuf is widely embedded across **microservices, API gateways, web apps, and client bundles**; exploitation may occur via **malicious serialized inputs** or dependency-chain exposure.\n- **Recommended immediate actions for the SOC today:** **Task AppSec/DevOps to locate Protobuf usage** (package inventories/SBOM, repo search, build pipelines) and prioritize upgrades; SOC to **flag unusual crashes/spawns** in Node/web service runtimes tied to protobuf parsing paths.\n\n**3) Ransomware evasion via “hidden VMs” (QEMU-based stealth)**\n- **What happened:** Research and reporting highlight ransomware/malware using **QEMU/hidden VMs** to run payloads and steal data while attempting to **evade endpoint controls**.\n- **Why it matters operationally:** VM-based staging can reduce visibility (payload executes “inside” VM), and often precedes **exfiltration + encryption**; financial org endpoints/servers with virtualization tooling are higher risk.\n- **Recommended immediate actions for the SOC today:** Hunt for **unexpected QEMU/virtualization binaries, drivers, and processes** on user endpoints and non-virtualization servers; **tighten allowlisting** (where feasible) for virtualization tooling and alert on new installs/execution.\n\n**4) Mirai/Nexcorium botnet exploiting TBK DVR flaw (DDoS capacity growth)**\n- **What happened:** Multiple sources report a **Mirai variant associated with “Nexcorium”** exploiting a **TBK DVR vulnerability** to expand botnet operations.\n- **Why it matters operationally:** Increased botnet size raises probability of **DDoS against financial services** and can also create noise that masks intrusions; IoT exposure may exist in vendor/branch environments.\n- **Recommended immediate actions for the SOC today:** Validate **DDoS playbooks and escalation paths** (ISP/CDN/WAF contacts, scrubbing enablement); monitor for **DDoS precursor scanning** and confirm we are not exposing/manage-accessing vulnerable IoT from corporate networks.\n\n**5) Crypto/Web3 platform exploited ($293M drained) — fraud/brand and customer-risk signal**\n- **What happened:** A **restaking platform (“Kelp”)** reportedly suffered a major exploit with **large-scale fund drain**.\n- **Why it matters operationally:** While not directly our environment, these events routinely trigger **customer scams, phishing, and social engineering** against financial users and support teams.\n- **Recommended immediate actions for the SOC today:** Raise alerting for **crypto-themed phishing lures** to employees/customers (where applicable) and ensure SOC triage tags likely **fraud/social-engineering** attempts for rapid comms routing.\n\n---\n\n### Monitoring & detection recommendations\n- **Web/app servers (ShowDoc theme):** WAF + web server logs (Nginx/Apache/IIS) for **new admin creation, unusual POSTs to app endpoints, file writes in web roots**; map to **T1505.003 (Web Shell)** and **T1190 (Exploit Public-Facing Application)**.\n- **Endpoints/servers (hidden VM/QEMU):** EDR telemetry for **qemu-system\\***, **VirtualBox/VMware CLI tools**, unexpected **T1059 (Command and Scripting Interpreter)** spawned by virtualization processes; alert on **new service installs** and **driver loads**.\n- **Process & module anomalies (Protobuf parsing paths):** EDR + application logs for **service crashes/restarts**, **unexpected child processes** from Node/JS runtimes, and spikes in **500 errors** on API endpoints handling binary payloads; map to **T1203 (Exploitation for Client Execution)** / **T1068 (Privilege Escalation)** only if local escalation observed.\n- **Network egress / exfil readiness (ransomware tradecraft):** Proxy/firewall logs for **large outbound transfers**, new/rare destinations, and **unencrypted outbound** from servers that don’t normally browse; map to **T1041 (Exfiltration Over C2 Channel)** / **T1567 (Exfiltration Over Web Service)**.\n- **DDoS early warning (Mirai expansion):** Edge firewall/IDS for **inbound scanning bursts**, TCP/UDP floods, and amplification signatures; NetFlow for **unusual outbound scanning** from internal ranges (should be none).\n- **Identity signals (post-compromise):** IdP/AAD/Okta logs for **impossible travel, MFA fatigue patterns, new OAuth app consents**, and unusual service principal activity; map to **T1078 (Valid Accounts)** and **T1528 (Steal Application Access Token)** (if applicable).\n- **Email security (crypto exploit → phishing):** SEG + mailbox audit for **crypto recovery/airdrop/“funds drained”** lures, lookalike domains, and QR-based credential phishing; track helpdesk tickets as leading indicator.\n\n---\n\n### Medium-term follow-ups\n- **Asset discovery & hygiene:** Confirm we have continuous discovery for **internet-exposed apps** (wiki/doc tools, admin panels); add ShowDoc and similar tooling to **“must-inventory/must-patch”** list.\n- **Dependency governance:** Strengthen SBOM/dependency scanning for **Protobuf and serialization libraries**; enforce **rapid patch SLAs** for critical parsing/code-exec classes of bugs.\n- **Anti-evasion hardening:** Review endpoint policies to **restrict/alert on virtualization tooling** on non-approved hosts; document exceptions for dev/engineering so alerts remain actionable.\n- **DDoS resilience:** Re-test **DDoS runbooks**, WAF/CDN protections, and rate-limiting for customer-facing portals/APIs; ensure NOC/SOC joint procedures for volumetric attacks.\n- **Backup/DR posture (ransomware context):** Validate backup solution hardening and restore drills (noting vendor updates in the backup ecosystem); ensure backups are **immutable/offline** where possible.\n- **Awareness / fraud coordination:** Coordinate with Fraud/Comms teams on likely **crypto-incident-themed scams**; prepare quick templates for customer/support guidance if lure volume increases.\n\nAssumptions/unknowns to validate today: whether we run **ShowDoc** anywhere (including subsidiaries) and whether Protobuf exposure is in **server-side services vs. client bundles**—both should be confirmed via inventory/SBOM within the shift.",
+  "source_total_items": 8214,
+  "total_items_in_window_all": 82,
+  "total_items_in_window_curated": 23,
+  "morning_call_markdown": "### Executive Summary\n- Vercel reported a breach with potential customer credential exposure; treat as a **third‑party identity/supply-chain risk** for any teams using Vercel/Next.js pipelines.\n- Multiple reports of **critical RCE/remote takeover** issues in widely deployed self-hosted apps/AI tooling (e.g., Flowise, ShowDoc); assume opportunistic exploitation risk if internet-facing.\n- Ransomware/malware activity continues (Adwind RAT → ransomware; “QEMU hijacked” stealth backdoor claims); focus on **credential theft + lateral movement** detections.\n\n### High-priority items (immediate attention)\n\n**1) Vercel breach / potential customer credential exposure (third-party risk)**\n- What happened: Multiple outlets report Vercel confirmed a limited breach tied to another vendor incident; some customer credentials/user info may be impacted.\n- Why it matters operationally: Any SOC-integrated pipelines using Vercel tokens/SSO/API keys could be abused for code access, CI/CD tampering, or cloud pivoting (supply-chain angle).\n- Recommended immediate actions for the SOC today: Identify all org usage of Vercel (SSO, OAuth apps, API tokens) and force-rotate/revoke tokens where feasible; increase alerting on anomalous logins/API usage for related accounts.\n\n**2) Critical RCE / remote takeover in self-hosted web apps & AI tooling (Flowise, ShowDoc)**\n- What happened: Reports highlight critical vulnerabilities allowing remote command execution/remote access in Flowise (via MCP adapters) and ShowDoc (unpatched servers at risk).\n- Why it matters operationally: These are typical internet-facing admin/dev tools; exploitation can lead to initial access, webshells, credential theft, and ransomware staging.\n- Recommended immediate actions for the SOC today: Run an exposure sweep for public-facing Flowise/ShowDoc (and similar dev wiki/AI workflow tools) and prioritize patch/disable external access; add WAF/edge blocks and alert on suspicious POSTs to admin/API endpoints (assumption: exact exploit paths not fully confirmed in the summaries).\n\n**3) Ransomware delivery chain: Adwind RAT leading to ransomware (JanaWare)**\n- What happened: Campaign reported targeting Turkish users using tailored Adwind RAT as an entry point, followed by ransomware deployment.\n- Why it matters operationally: Adwind is a well-known commodity RAT used for credential theft and remote execution; the chain matches common financial-sector intrusion patterns (email/social engineering → RAT → lateral movement → ransomware).\n- Recommended immediate actions for the SOC today: Tighten email triage for executable/archived payloads and macro-lures; hunt for Adwind-like behaviors (new persistence, suspicious Java processes, unusual outbound C2) and isolate endpoints with RAT indicators immediately.\n\n**4) “QEMU hijacked” as stealth backdoor/credential theft + ransomware (reporting quality mixed)**\n- What happened: Article claims QEMU is being abused/hijacked as a stealth backdoor to support credential theft and ransomware operations.\n- Why it matters operationally: If true, it suggests attacker tradecraft to hide within virtualization tooling on servers; even if details are thin, **server-side credential access + persistence** is the key risk.\n- Recommended immediate actions for the SOC today: On critical Linux/virtualization hosts, validate QEMU package integrity/binaries and review recent changes (file mods, new services); raise detections for unexpected QEMU execution on non-virtualization assets and unusual child processes spawned by qemu-system-*.\n\n### Monitoring & detection recommendations\n- **Vercel / CI-CD access**: Monitor IdP (SSO), Vercel audit logs (if available), Git provider logs for new OAuth grants, token creation, unusual geo/device logins (ATT&CK: Valid Accounts T1078).\n- **Suspicious CI/CD pipeline behavior**: On build runners and repos, alert on new secrets access, sudden workflow edits, and outbound connections during builds (ATT&CK: Modify Cloud Compute Infrastructure T1578 / Supply Chain compromise patterns).\n- **Internet-facing RCE attempts (Flowise/ShowDoc-like apps)**: WAF/reverse-proxy + web server logs—spikes in 4xx/5xx, unusual POSTs to admin/API routes, command injection strings; correlate with EDR process spawns from web server parents (ATT&CK: Exploit Public-Facing Application T1190).\n- **RAT-to-ransomware chain**: EDR—new persistence (Run keys/cron/systemd), suspicious remote tooling, privilege escalation attempts; network—rare outbound to dynamic DNS/VPS patterns (ATT&CK: Command and Control T1071).\n- **Credential theft focus**: DC/AD + endpoint logs—LSASS access attempts, unusual Kerberos/NTLM patterns, anomalous password spray from single hosts; prioritize service accounts tied to dev tooling (ATT&CK: OS Credential Dumping T1003).\n- **Virtualization abuse signal**: Linux auditd/EDR—unexpected qemu-system-* execution, QEMU spawning shells, downloads, or encryption tools; file integrity monitoring for /usr/bin/qemu* and related libs (ATT&CK: Masquerading T1036).\n- **Email hunting via InternetMessageId**: Use email security gateway + M365/Exchange logs to pivot on InternetMessageId for clusters of similar lures, then trace delivered messages to endpoint executions (ATT&CK: Phishing T1566).\n\n### Medium-term follow-ups\n- Confirm with AppSec/DevOps whether any production workloads rely on Vercel; formalize a **third-party compromise playbook** (token rotation, audit log retention, vendor comms).\n- Patch/harden dev-facing tools: enforce VPN/SSO access only, disable public admin panels, and add asset inventory tags for “developer wiki/AI workflow/CI tools.”\n- Review Windows crypto posture per Microsoft RC4 update note: validate legacy RC4 dependencies (Kerberos/LDAP/older apps) and plan deprecation/testing to avoid auth breakages and weak crypto fallback.\n- Expand CI/CD monitoring using tools/processes that surface insider/pipeline abuse (e.g., “SmokedMeat” concept): add detections for secret exfil and workflow tampering in your pipeline telemetry.\n- Ransomware readiness: validate immutable backups + restore tests; ensure EDR ransomware rollback controls are enabled and that server segmentation limits blast radius.\n- For IoT/edge devices (e.g., consumer routers/smart devices noted in news): confirm they are **not** present in corporate networks; if any exist in branches/labs, isolate and plan replacement (end-of-life devices remain a chronic foothold risk).",
   "highlights": [
     {
-      "title": "OpenAI Expands Cyber Defense Program With GPT-5.4-Cyber Access for Trusted Organizations",
-      "link": "https://cybersecuritynews.com/gpt-5-4-cyber-defense-program/",
-      "source": "Cyber Security News (FeedBurner)",
-      "published": "2026-04-19T06:35:21+00:00",
-      "smart_groups": [
-        "Network / OT / ICS",
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Pakistan-Linked Cyber Crime Ring Uncovered in Kota, Four Suspects Arrested",
-      "link": "https://www.news4hackers.com/pakistan-linked-cyber-crime-ring-uncovered-in-kota-four-suspects-arrested/",
-      "source": "News4Hackers",
-      "published": "2026-04-19T05:02:34+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Warren claims SEC’s Atkins likely misled Congress over enforcement data",
-      "link": "https://cointelegraph.com/news/warren-claims-sec-atkins-likely-misled-congress-over-enforcement-data?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound",
-      "source": "Cointelegraph.com News",
-      "published": "2026-04-19T00:50:04+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "Crypto / Web3"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Kelp restaking platform exploited, $293M drained in attack",
-      "link": "https://cointelegraph.com/news/restaking-platform-kelp-exploited-293-million?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound",
-      "source": "Cointelegraph.com News",
-      "published": "2026-04-18T22:06:39+00:00",
+      "title": "Hackers Fail to Exploit Flaw in Discontinued TP-Link Routers",
+      "link": "https://www.securityweek.com/hackers-fail-to-exploit-flaw-in-discontinued-tp-link-routers/",
+      "source": "SecurityWeek",
+      "published": "2026-04-20T07:50:01+00:00",
       "smart_groups": [
         "Curated",
         "Exploit / PoC",
-        "Crypto / Web3"
+        "Ransomware",
+        "General Security"
       ],
       "curated": true
     },
     {
-      "title": "Hidden VMs: how hackers leverage QEMU to stealthily steal data and spread malware",
-      "link": "https://securityaffairs.com/190982/security/hidden-vms-how-hackers-leverage-qemu-to-stealthily-steal-data-and-spread-malware.html",
-      "source": "Security Affairs",
-      "published": "2026-04-18T15:20:06+00:00",
+      "title": "Next.js developer Vercel warns of customer credential compromise",
+      "link": "https://go.theregister.com/feed/www.theregister.com/2026/04/20/vercel_context_ai_security_incident/",
+      "source": "The Register - Security",
+      "published": "2026-04-20T07:31:13+00:00",
       "smart_groups": [
+        "Identity / Access",
         "Curated",
+        "Data Breaches / Leaks",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "JanaWare Ransomware Hits Turkish Users via Tailored Adwind RAT",
+      "link": "https://gbhackers.com/janaware-ransomware-attack/",
+      "source": "GBHackers News",
+      "published": "2026-04-20T07:08:09+00:00",
+      "smart_groups": [
         "Malware / Payloads",
-        "Ransomware",
-        "Vulnerabilities / CVEs",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Critical flaw in Protobuf library enables JavaScript code execution",
-      "link": "https://www.bleepingcomputer.com/news/security/critical-flaw-in-protobuf-library-enables-javascript-code-execution/",
-      "source": "BleepingComputer",
-      "published": "2026-04-18T15:09:44+00:00",
-      "smart_groups": [
-        "Exploit / PoC",
         "Curated",
-        "Vulnerabilities / CVEs",
+        "Ransomware",
         "General Security"
       ],
       "curated": true
     },
     {
-      "title": "ShowDoc Vulnerability Exploited in Recent Server Attacks, patch released in 2020",
-      "link": "https://www.news4hackers.com/showdoc-vulnerability-exploited-in-recent-server-attacks-patch-released-in-2020/",
+      "title": "Exposing Insider Threats: Open-Source Tool Uncovers CI/CD Pipeline Attacks",
+      "link": "https://www.news4hackers.com/exposing-insider-threats-open-source-tool-uncovers-ci-cd-pipeline-attacks/",
       "source": "News4Hackers",
-      "published": "2026-04-18T15:01:55+00:00",
+      "published": "2026-04-20T07:04:47+00:00",
       "smart_groups": [
+        "Supply Chain / Software",
         "Curated",
-        "Exploit / PoC",
         "Vulnerabilities / CVEs",
         "General Security"
       ],
       "curated": true
     },
     {
-      "title": "ShowDoc Vulnerability Patched in 2020 Now Used in Active Server Takeovers",
-      "link": "https://hackread.com/showdoc-vulnerability-patch-2020-server-takeover/",
-      "source": "HackRead",
-      "published": "2026-04-18T14:25:37+00:00",
+      "title": "Threat Hunting via InternetMessageId (+ KQL Queries)",
+      "link": "https://detect.fyi/threat-hunting-via-internetmessageid-kql-queries-240d32e6f330?source=rss----d5fd8f494f6a---4",
+      "source": "Detect.fyi",
+      "published": "2026-04-20T07:01:39+00:00",
       "smart_groups": [
+        "Crypto / Web3",
+        "Detection Engineering",
         "Curated",
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "SQLite prefixes its temp files with `etilqs_`",
-      "link": "https://avi.im/blag/2026/etilqs/",
-      "source": "https://avi.im/blag/index.xml",
-      "published": "2026-04-18T14:10:33+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "Web / API Security",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "NAKIVO v11.2: Ransomware Defense, Faster Replication, vSphere 9, and Proxmox VE 9.0 Support",
-      "link": "https://www.bleepingcomputer.com/news/security/nakivo-v112-ransomware-defense-faster-replication-vsphere-9-and-proxmox-ve-90-support/",
-      "source": "BleepingComputer",
-      "published": "2026-04-18T13:45:54+00:00",
-      "smart_groups": [
-        "Data Protection / Privacy",
-        "Curated",
+        "Identity / Access",
+        "Malware / Payloads",
+        "Network / OT / ICS",
+        "Phishing / Social Engineering",
         "Ransomware",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Cloud hosting firm Vercel confirms ‘limited’ hack of user info",
+      "link": "https://cointelegraph.com/news/cloud-hosting-vercel-confirms-limited-hack-user-info?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound",
+      "source": "Cointelegraph.com News",
+      "published": "2026-04-20T06:05:56+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Crypto / Web3"
+      ],
+      "curated": true
+    },
+    {
+      "title": "QEMU Hijacked as Stealth Backdoor for Credential Theft, Ransomware",
+      "link": "https://gbhackers.com/qemu-hijacked-as-stealth-backdoor/",
+      "source": "GBHackers News",
+      "published": "2026-04-20T05:43:23+00:00",
+      "smart_groups": [
+        "Curated",
+        "Threat Actors / APT",
+        "Malware / Payloads",
+        "Network / OT / ICS",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "SmokedMeat: Open-source tool shows what attackers do inside CI/CD pipelines",
+      "link": "https://www.helpnetsecurity.com/2026/04/20/smokedmeat-ci-cd-pipeline-attacks/",
+      "source": "Help Net Security",
+      "published": "2026-04-20T05:30:15+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Supply Chain / Software",
+        "Curated",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Critical Gardyn Flaws Open Smart Garden Devices to Remote Hijacking",
+      "link": "https://gbhackers.com/critical-gardyn-flaws-remote-hijacking/",
+      "source": "GBHackers News",
+      "published": "2026-04-20T05:18:46+00:00",
+      "smart_groups": [
+        "Cloud / SaaS",
+        "Curated",
+        "Exploit / PoC",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Hyderabad Police Uncover Extortion Ring Utilizing Fake Social Media Accounts",
+      "link": "https://www.news4hackers.com/hyderabad-police-uncover-extortion-ring-utilizing-fake-social-media-accounts/",
+      "source": "News4Hackers",
+      "published": "2026-04-20T05:01:18+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
         "General Security"
       ],
       "curated": true
