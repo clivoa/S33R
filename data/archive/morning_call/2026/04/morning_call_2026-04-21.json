@@ -1,0 +1,147 @@
+{
+  "generated_at": "2026-04-21T08:09:04.418462+00:00",
+  "analysis_date": "2026-04-21",
+  "model": "gpt-5.2",
+  "window_hours": 24,
+  "source_file": "data/news_recent.json",
+  "source_generated_at": "2026-04-21T08:00:30.710318+00:00",
+  "source_days_back": 30,
+  "source_total_items": 8442,
+  "total_items_in_window_all": 317,
+  "total_items_in_window_curated": 100,
+  "morning_call_markdown": "### Executive Summary\n- **Exploit/supply-chain risk is elevated**: CISA flagged exploited flaws (incl. Cisco SD‑WAN Manager), plus an **axios npm supply-chain compromise**—both can lead to rapid enterprise compromise via trusted tooling.\n- **Ransomware tradecraft is expanding**: “Gentlemen” RaaS now leverages **SystemBC** (bot/proxy) and targets **Windows/Linux/ESXi**; separate reporting highlights stealthy **QEMU/hidden VM** abuse for evasion/backdoors.\n- **Multiple high-impact app/AI ecosystem RCE vectors** surfaced (e.g., **SGLang GGUF model RCE**, **Anthropic MCP RCE/design issue**, plus Windows NTLM hash leak PoC), tightening patch/mitigation windows.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Known-exploited vulnerabilities / Cisco SD‑WAN Manager focus (CISA KEV)**\n- **What happened:** CISA added **8 exploited vulnerabilities** to KEV; reporting highlights **exploited Cisco Catalyst SD‑WAN Manager flaws**.\n- **Why it matters operationally:** Internet-facing network management/edge platforms are common initial-access paths; exploitation can yield admin control and lateral movement (finance sector is routinely targeted).\n- **Recommended immediate actions for the SOC today:** Verify exposure and patch level for SD‑WAN Manager/other KEV items; **block/monitor inbound to management interfaces** and hunt for new admin sessions/config changes.\n\n**2) Software supply-chain compromise: axios npm package**\n- **What happened:** CISA/US‑CERT warned of a **supply-chain compromise impacting the axios npm package**.\n- **Why it matters operationally:** Dev/build pipelines and internal apps may pull compromised dependencies; downstream compromise can bypass perimeter controls and land inside trusted networks.\n- **Recommended immediate actions for the SOC today:** Identify builds/services using axios (SBOM, lockfiles, artifact repos) and **freeze/validate dependency versions**; hunt for unusual CI runner activity and new outbound connections from build agents.\n\n**3) Ransomware evolution: Gentlemen RaaS + SystemBC; multi-platform targeting (Windows/Linux/ESXi)**\n- **What happened:** “Gentlemen” ransomware reported targeting **Windows, Linux, ESXi** and using **SystemBC** for bot-powered/proxy-enabled operations.\n- **Why it matters operationally:** Cross-platform encryptors + proxy tooling increases resilience, complicates attribution, and supports hands-on-keyboard intrusions (credential theft → lateral movement → encryption).\n- **Recommended immediate actions for the SOC today:** Prioritize monitoring for **SystemBC-like tunneling/proxy behavior** and unusual remote admin tooling; validate ransomware-ready controls (EDR tamper protection, immutable backups, ESXi management segmentation).\n\n**4) Stealth/defense evasion: QEMU/hidden VM abuse for backdoors & credential theft**\n- **What happened:** Multiple reports describe attackers **abusing QEMU to run hidden VMs** for stealthy backdoors/credential theft and to stage ransomware activity.\n- **Why it matters operationally:** “Living-under-the-host” VMs can evade some EDR visibility and provide persistent staging on servers/virtualization-capable endpoints.\n- **Recommended immediate actions for the SOC today:** Hunt for **unexpected QEMU processes/drivers/binaries** on servers/workstations; review hypervisor-capable hosts for anomalous CPU spikes, new TAP/TUN interfaces, and suspicious VM images.\n\n**5) AI/Dev platform RCE & data exposure: SGLang GGUF RCE + Anthropic MCP RCE/design issue + Vercel/Context.ai OAuth token compromise**\n- **What happened:** **SGLang CVE-2026-5760 (RCE via malicious GGUF models)** and **Anthropic MCP RCE/design weakness** were reported; separately, **Context.ai OAuth token compromise** contributed to a **Vercel incident**.\n- **Why it matters operationally:** If the org uses AI tooling/model-serving, these are direct RCE paths via “data/model files”; OAuth token theft in SaaS integrations enables account takeover and data access.\n- **Recommended immediate actions for the SOC today:** Identify any internal use of SGLang/MCP or similar model-serving; restrict model ingestion sources and sandbox; **review SaaS OAuth app grants** (Vercel/Context.ai or equivalents) and rotate tokens where exposure is plausible.\n\n---\n\n### Monitoring & detection recommendations\n- **Cisco/edge & KEV exploitation:** Firewall/WAF/VPN logs + device audit logs—alert on **new admin logins, config changes, and management-plane access from new geos/IPs** (ATT&CK: T1190).\n- **Supply-chain (axios/npm):** CI/CD logs (GitHub/GitLab/Jenkins), artifact repo logs, EDR on runners—hunt for **new packages/versions pulled unexpectedly**, post-install scripts, and **runner outbound to rare destinations** (T1195, T1059).\n- **OAuth phishing/dev targeting (GitHub issue alerts/OAuth scams):** Email security + IdP (Entra/Okta) + CASB—monitor **new OAuth consents**, risky app grants, and impossible travel after consent events (T1566, T1528).\n- **SystemBC / proxy tunneling signals:** EDR + proxy + DNS—look for **long-lived TLS sessions**, periodic beaconing, and endpoints acting as **unexpected proxies**; correlate with new local admin creation (T1090, T1071).\n- **QEMU/hidden VM abuse:** EDR process creation + Sysmon—alert on **qemu-system\\*** execution, creation of **.qcow2/.img** files in unusual paths, new **TAP/TUN** adapters, and suspicious service installs (T1564, T1055).\n- **Windows NTLM hash leak / coercion-like behavior (Snipping Tool PoC mentioned):** Windows Security logs + SMB/NTLM auditing—flag **unexpected outbound NTLM auth** to non-corporate hosts and new saved credentials usage (T1557, T1003.001).\n- **Android PIN-stealing/banking malware themes:** MDM/Mobile Threat Defense—watch for **overlay/accessibility abuse**, new sideloaded apps, and anomalous app permissions on corporate-managed devices (T1476, T1407).\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** Map CISA KEV additions to internal asset inventory; enforce **SLA-based remediation** for internet-facing and privileged management systems first.\n- **Dependency hygiene:** Expand SBOM coverage and enforce **lockfile pinning + provenance checks** for npm/PyPI; add CI policy gates for high-risk package changes (e.g., axios/protobuf.js ecosystem mentions).\n- **SaaS/OAuth hardening:** Tighten **OAuth app allow-listing**, require admin approval for third-party integrations, and review token scopes/rotation schedules (lessons from Vercel/Context.ai).\n- **Ransomware resilience:** Validate **ESXi/vCenter hardening**, segregate management networks, test restore paths; confirm immutable/offline backups (don’t assume “backup = recoverable”).\n- **AI/model-serving controls:** Treat models/prompts/plugins as untrusted input; require **sandboxing and signed model sources** for any internal LLM serving (SGLang/MCP-class risks).\n- **Security awareness update (targeted):** Brief devs/IT on **OAuth consent phishing**, Teams impersonation/social engineering patterns, and safe handling of external model files—focus on “approve/consent” and “run this file” failure modes.",
+  "highlights": [
+    {
+      "title": "Microsoft GitHub Repository Windows-driver-samples Workflow Remote Code Execution",
+      "link": "https://www.tenable.com/security/research/tra-2026-30",
+      "source": "Tenable Research Advisories",
+      "published": "2026-04-21T13:43:39+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Windows / Microsoft",
+        "Vendors / Product Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Bluesky hit by 24-hour DDoS attack as pro-Iran group claims responsibility",
+      "link": "https://securityaffairs.com/191059/security/bluesky-hit-by-24-hour-ddos-attack-as-pro-iran-group-claims-responsibility.html",
+      "source": "Security Affairs",
+      "published": "2026-04-21T07:45:20+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "GitHub Issue Alerts Exploited in OAuth Phishing Scam Targeting Developers",
+      "link": "https://gbhackers.com/oauth-phishing-scam/",
+      "source": "GBHackers News",
+      "published": "2026-04-21T07:14:08+00:00",
+      "smart_groups": [
+        "Curated",
+        "Identity / Access",
+        "Supply Chain / Software",
+        "Exploit / PoC",
+        "Phishing / Social Engineering",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "CISA Alerts Defenders to Exploited Cisco Catalyst SD-WAN Manager Security Flaws",
+      "link": "https://gbhackers.com/cisa-alerts-cisco-catalyst-sd-wan-manager-security-flaws/",
+      "source": "GBHackers News",
+      "published": "2026-04-21T07:11:29+00:00",
+      "smart_groups": [
+        "Cloud / SaaS",
+        "Curated",
+        "Exploit / PoC",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Bareilly Cyber Fraudsters Use Digital Arrest Scam to Swindle Millions",
+      "link": "https://www.news4hackers.com/bareilly-cyber-fraudsters-use-digital-arrest-scam-to-swindle-millions/",
+      "source": "News4Hackers",
+      "published": "2026-04-21T07:01:35+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Inside the 'fake police raid' that forced a $1M Bitcoin transfer",
+      "link": "https://cointelegraph.com/news/crypto-coercion-attack-fake-police-raid?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound",
+      "source": "Cointelegraph.com News",
+      "published": "2026-04-21T06:59:51+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Crypto / Web3"
+      ],
+      "curated": true
+    },
+    {
+      "title": "6,000+ Publicly Exposed Apache ActiveMQ Instances Found Vulnerable to CVE-2026-34197",
+      "link": "https://gbhackers.com/6000-publicly-exposed-apache-activemq-instances-found-vulnerable/",
+      "source": "GBHackers News",
+      "published": "2026-04-21T06:58:24+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Curated",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "TD data leak exposes Social Security numbers and personal details | UpGuard",
+      "link": "https://www.upguard.comnews/td-data-breach-2026-04-20",
+      "source": "UpGuard – News",
+      "published": "2026-04-21T06:51:00+00:00",
+      "smart_groups": [
+        "Curated",
+        "Data Breaches / Leaks",
+        "Vendors / Product Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Gentlemen RaaS Hits Windows, Linux, and ESXi With New C-Based Locker",
+      "link": "https://gbhackers.com/gentlemen-raas-hits-windows/",
+      "source": "GBHackers News",
+      "published": "2026-04-21T06:40:18+00:00",
+      "smart_groups": [
+        "Ransomware",
+        "Curated",
+        "Linux / Unix",
+        "Windows / Microsoft",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "CISA Adds 8 Exploited Flaws to KEV, Sets April-May 2026 Federal Deadlines",
+      "link": "https://thehackernews.com/2026/04/cisa-adds-8-exploited-flaws-to-kev-sets.html",
+      "source": "The Hacker News",
+      "published": "2026-04-21T06:23:00+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Curated",
+        "Cloud / SaaS",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true
+    }
+  ]
+}
