@@ -1,0 +1,144 @@
+{
+  "generated_at": "2026-04-22T08:05:50.835181+00:00",
+  "analysis_date": "2026-04-22",
+  "model": "gpt-5.2",
+  "window_hours": 24,
+  "source_file": "data/news_recent.json",
+  "source_generated_at": "2026-04-22T07:58:08.268063+00:00",
+  "source_days_back": 30,
+  "source_total_items": 8628,
+  "total_items_in_window_all": 334,
+  "total_items_in_window_curated": 129,
+  "morning_call_markdown": "### Executive Summary\n- Active exploitation signals remain high: CISA flagged **Cisco Catalyst SD‑WAN Manager** bugs as exploited, and there’s renewed attention on **internet-exposed SharePoint spoofing** risk—treat externally reachable management/collab surfaces as hot.\n- Ransomware tradecraft update: reporting links **SystemBC** infrastructure to the **Gentlemen** RaaS ecosystem; expect common initial access + commodity C2 patterns and cross-platform targeting (Windows/Linux/ESXi).\n- Supply-chain / identity risk theme: **Vercel breach via third-party AI tool + OAuth abuse** and reports of **Teams/Quick Assist helpdesk spoofing** reinforce focus on OAuth app governance and remote-assistance controls.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Cisco Catalyst SD‑WAN Manager — CISA KEV / active exploitation**\n- What happened: New/another **Cisco Catalyst SD‑WAN Manager** vulnerability added to CISA known-exploited list; reporting indicates in-the-wild abuse.\n- Why it matters operationally: SD‑WAN Manager is a high-value control plane; compromise can enable **network takeover, traffic manipulation, and downstream credential access**.\n- Recommended immediate actions for the SOC today: Verify exposure/ownership and **prioritize patch/mitigation**; review last 7 days for unusual admin logins/config pushes and **block/limit management access** (IP allowlisting/VPN, MFA where supported).\n\n**2) Microsoft SharePoint spoofing risk — internet-exposed servers observed**\n- What happened: Multiple reports highlight **1,300+ SharePoint servers** exposed and vulnerable to **spoofing attacks** (ongoing activity reported; exact CVE not clear from the summary—assume patch/config gap).\n- Why it matters operationally: SharePoint is frequently leveraged for **initial access, phishing staging, and internal lateral movement**; spoofing can enable credential capture or trust abuse.\n- Recommended immediate actions for the SOC today: Confirm whether any SharePoint is **internet-facing**; fast-track vendor guidance/patching and **increase monitoring for auth anomalies** and suspicious web requests on SharePoint front ends.\n\n**3) Remote access “helpdesk spoofing” intrusions — Teams + Quick Assist**\n- What happened: Threat actors are weaponizing **Microsoft Teams** and **Quick Assist** in social-engineering intrusions (impersonated helpdesk / support flows).\n- Why it matters operationally: This bypasses many perimeter controls by driving **user-approved remote control** and can lead directly to **malware deployment/ransomware**.\n- Recommended immediate actions for the SOC today: Tune detections for **Quick Assist launches and remote-control session starts**; remind Service Desk to enforce **out-of-band verification** and restrict who can initiate remote assistance.\n\n**4) Gentlemen RaaS + SystemBC linkage (commodity C2, large victim set)**\n- What happened: Check Point / THN report ties **SystemBC** C2 infrastructure to **Gentlemen** ransomware operations; affiliate growth and multi-platform lockers (Windows/Linux/ESXi) noted.\n- Why it matters operationally: SystemBC is a common **proxy/C2 layer** used post-compromise; expect **fast hands-on-keyboard** activity and ransomware deployment once foothold established.\n- Recommended immediate actions for the SOC today: Hunt for **SystemBC-like network patterns** (unusual encrypted outbound from servers) and precursors to ransomware (mass service stops, shadow copy deletion); ensure IR playbooks are ready for **ESXi/Linux** impact as well as Windows.\n\n**5) Cloud/identity supply-chain signal — Vercel breach via OAuth/third-party AI tooling**\n- What happened: Vercel reports breach involving **third-party AI tool exposure + OAuth abuse** and a compromised employee account (details evolving).\n- Why it matters operationally: This is a direct reminder that **OAuth apps/tokens and third-party SaaS tooling** can become an attack path into code, CI/CD, secrets, and production environments.\n- Recommended immediate actions for the SOC today: Review recent **OAuth app grants/consents** and high-risk scopes in your IdP; rotate/validate **CI/CD secrets** where third-party tools have access and alert on anomalous token use.\n\n---\n\n### Monitoring & detection recommendations\n- **SD‑WAN Manager exploitation hunting**: VPN/Firewall + SD‑WAN Manager audit logs; look for new admin users, config template pushes, and management-plane access from new geos/IPs (MITRE: T1190, T1078).\n- **SharePoint web + auth anomalies**: IIS/SharePoint ULS + WAF logs; watch for abnormal auth flows, suspicious redirects, repeated 401/403 bursts, and unusual POSTs to SharePoint endpoints (MITRE: T1190, T1556).\n- **Quick Assist / remote control telemetry**: EDR (process creation) + Windows event logs; alert on `quickassist.exe` execution, remote control session establishment, and follow-on tooling (PowerShell, cmd, LOLBins) (MITRE: T1059, T1219).\n- **SystemBC / proxy C2 behavior**: NetFlow/Proxy/DNS logs; hunt for rare outbound TLS from servers to low-reputation ASN/regions, long-lived connections, and new beacons after interactive logons (MITRE: T1071.001, T1090).\n- **Ransomware precursor detections (Gentlemen ecosystem)**: EDR + Windows Security logs; watch for `vssadmin delete shadows`, `wbadmin delete catalog`, массовый service stops, and rapid file renames/encryption-like I/O spikes (MITRE: T1486, T1490).\n- **OAuth abuse / token misuse**: IdP (Entra/Okta) sign-in + audit logs; monitor new app consents, privilege scope changes, refresh-token use from new device fingerprints, and impossible travel (MITRE: T1528, T1550).\n- **Phishing-to-malware via messaging (WhatsApp theme) & helpdesk lures**: Email/SMS security + user-reported phishing; correlate initial lure → endpoint execution; prioritize finance/VIP users and service desk targets (MITRE: T1566).\n\n---\n\n### Medium-term follow-ups\n- **Patch management**: Track **Oracle CPU (241 CVEs)** and **Progress MOVEit WAF/LoadMaster** updates; prioritize internet-facing and auth-adjacent components first.\n- **Apache ActiveMQ (actively exploited per reporting)**: Validate if any instances exist internally or in vendor-managed environments; enforce rapid patching and segment broker networks.\n- **Remote assistance hardening**: Restrict Quick Assist/remote tools via policy, require ticket linkage + manager approval for privileged endpoints, and maintain allowlists for support staff.\n- **OAuth governance**: Implement/strengthen app consent workflow, periodic review of high-privilege OAuth apps, and automated disablement of stale tokens; ensure logging retention supports investigations.\n- **Third-party/SaaS risk**: Reassess AI developer tools and CI/CD integrations; require least-privilege tokens, secret scanning, and SBOM/asset inventory where feasible (assumption: some SaaS tooling is in use).\n- **OT/edge device exposure** (BridgeBreak/serial-to-IP + ICS advisories): Confirm no unapproved serial-to-IP converters or exposed management interfaces exist in branch/ATM/infra networks; isolate and patch where applicable.",
+  "highlights": [
+    {
+      "title": "Check Point Uncovers Link Between SystemBC Malware and Gentlemen Ransomware Operation",
+      "link": "https://www.news4hackers.com/check-point-uncovers-link-between-systembc-malware-and-gentlemen-ransomware-operation/",
+      "source": "News4Hackers",
+      "published": "2026-04-22T07:04:38+00:00",
+      "smart_groups": [
+        "Threat Actors / APT",
+        "Curated",
+        "Malware / Payloads",
+        "Ransomware",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Microsoft-Signed Binary Used to Sneak LOTUSLITE Into India-Focused Espionage Campaign",
+      "link": "https://cybersecuritynews.com/microsoft-signed-binary-used-to-sneak-lotuslite/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-04-22T06:57:18+00:00",
+      "smart_groups": [
+        "Curated",
+        "Malware / Payloads",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Anatomy of a Fraud Operation: Mule Account Creation on B2B Fintech Platforms in France",
+      "link": "https://www.group-ib.com/blog/french-fintech-mule-accounts/",
+      "source": "Group-IB Blog",
+      "published": "2026-04-22T06:53:46+00:00",
+      "smart_groups": [
+        "Curated",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Over 1,300 Microsoft SharePoint servers vulnerable to spoofing attacks",
+      "link": "https://www.bleepingcomputer.com/news/security/over-1-300-microsoft-sharepoint-servers-vulnerable-to-ongoing-attacks/",
+      "source": "BleepingComputer",
+      "published": "2026-04-22T06:53:02+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "1,370+ Microsoft SharePoint Servers at Risk of Spoofing Attacks Found Exposed Online",
+      "link": "https://gbhackers.com/1370-microsoft-sharepoint-servers-at-risk-of-spoofing-attacks/",
+      "source": "GBHackers News",
+      "published": "2026-04-22T06:44:12+00:00",
+      "smart_groups": [
+        "Curated",
+        "Exploit / PoC",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Privacy protocol Umbra shuts front end to stifle Kelp exploiters",
+      "link": "https://cointelegraph.com/news/privacy-protocol-umbra-shuts-front-end-in-attempt-to-stifle-kelp-exploiters?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound",
+      "source": "Cointelegraph.com News",
+      "published": "2026-04-22T06:11:20+00:00",
+      "smart_groups": [
+        "Curated",
+        "Crypto / Web3",
+        "Data Protection / Privacy",
+        "Exploit / PoC",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "French Authorities Confirm Data Breach Amid Hackers’ Data Leak Allegations",
+      "link": "https://gbhackers.com/french-authorities-confirm-data-breach/",
+      "source": "GBHackers News",
+      "published": "2026-04-22T06:05:50+00:00",
+      "smart_groups": [
+        "Data Breaches / Leaks",
+        "Curated",
+        "Network / OT / ICS",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "₹53.85 Lakhs Cyber Scam Uncovered: Nationwide Bank Account Hacking Exposed",
+      "link": "https://www.news4hackers.com/%e2%82%b953-85-lakhs-cyber-scam-uncovered-nationwide-bank-account-hacking-exposed/",
+      "source": "News4Hackers",
+      "published": "2026-04-22T06:01:12+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Microsoft-Signed Binary Helps Deliver LOTUSLITE in India Spy Campaign",
+      "link": "https://gbhackers.com/lotuslite-in-india-spy-campaign/",
+      "source": "GBHackers News",
+      "published": "2026-04-22T05:33:39+00:00",
+      "smart_groups": [
+        "Curated",
+        "Malware / Payloads",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Vercel data breach: ShinyHunters claims theft of internal database and secrets | UpGuard",
+      "link": "https://www.upguard.comnews/vercel-data-breach-2026-04-21",
+      "source": "UpGuard – News",
+      "published": "2026-04-22T05:22:38+00:00",
+      "smart_groups": [
+        "Data Breaches / Leaks",
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Vendors / Product Security"
+      ],
+      "curated": true
+    }
+  ]
+}
