@@ -1,113 +1,62 @@
 {
-  "generated_at": "2026-04-22T08:05:50.835181+00:00",
-  "analysis_date": "2026-04-22",
+  "generated_at": "2026-04-23T08:10:44.940953+00:00",
+  "analysis_date": "2026-04-23",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-04-22T07:58:08.268063+00:00",
+  "source_generated_at": "2026-04-23T08:03:28.005639+00:00",
   "source_days_back": 30,
-  "source_total_items": 8628,
-  "total_items_in_window_all": 334,
-  "total_items_in_window_curated": 129,
-  "morning_call_markdown": "### Executive Summary\n- Active exploitation signals remain high: CISA flagged **Cisco Catalyst SD‑WAN Manager** bugs as exploited, and there’s renewed attention on **internet-exposed SharePoint spoofing** risk—treat externally reachable management/collab surfaces as hot.\n- Ransomware tradecraft update: reporting links **SystemBC** infrastructure to the **Gentlemen** RaaS ecosystem; expect common initial access + commodity C2 patterns and cross-platform targeting (Windows/Linux/ESXi).\n- Supply-chain / identity risk theme: **Vercel breach via third-party AI tool + OAuth abuse** and reports of **Teams/Quick Assist helpdesk spoofing** reinforce focus on OAuth app governance and remote-assistance controls.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Cisco Catalyst SD‑WAN Manager — CISA KEV / active exploitation**\n- What happened: New/another **Cisco Catalyst SD‑WAN Manager** vulnerability added to CISA known-exploited list; reporting indicates in-the-wild abuse.\n- Why it matters operationally: SD‑WAN Manager is a high-value control plane; compromise can enable **network takeover, traffic manipulation, and downstream credential access**.\n- Recommended immediate actions for the SOC today: Verify exposure/ownership and **prioritize patch/mitigation**; review last 7 days for unusual admin logins/config pushes and **block/limit management access** (IP allowlisting/VPN, MFA where supported).\n\n**2) Microsoft SharePoint spoofing risk — internet-exposed servers observed**\n- What happened: Multiple reports highlight **1,300+ SharePoint servers** exposed and vulnerable to **spoofing attacks** (ongoing activity reported; exact CVE not clear from the summary—assume patch/config gap).\n- Why it matters operationally: SharePoint is frequently leveraged for **initial access, phishing staging, and internal lateral movement**; spoofing can enable credential capture or trust abuse.\n- Recommended immediate actions for the SOC today: Confirm whether any SharePoint is **internet-facing**; fast-track vendor guidance/patching and **increase monitoring for auth anomalies** and suspicious web requests on SharePoint front ends.\n\n**3) Remote access “helpdesk spoofing” intrusions — Teams + Quick Assist**\n- What happened: Threat actors are weaponizing **Microsoft Teams** and **Quick Assist** in social-engineering intrusions (impersonated helpdesk / support flows).\n- Why it matters operationally: This bypasses many perimeter controls by driving **user-approved remote control** and can lead directly to **malware deployment/ransomware**.\n- Recommended immediate actions for the SOC today: Tune detections for **Quick Assist launches and remote-control session starts**; remind Service Desk to enforce **out-of-band verification** and restrict who can initiate remote assistance.\n\n**4) Gentlemen RaaS + SystemBC linkage (commodity C2, large victim set)**\n- What happened: Check Point / THN report ties **SystemBC** C2 infrastructure to **Gentlemen** ransomware operations; affiliate growth and multi-platform lockers (Windows/Linux/ESXi) noted.\n- Why it matters operationally: SystemBC is a common **proxy/C2 layer** used post-compromise; expect **fast hands-on-keyboard** activity and ransomware deployment once foothold established.\n- Recommended immediate actions for the SOC today: Hunt for **SystemBC-like network patterns** (unusual encrypted outbound from servers) and precursors to ransomware (mass service stops, shadow copy deletion); ensure IR playbooks are ready for **ESXi/Linux** impact as well as Windows.\n\n**5) Cloud/identity supply-chain signal — Vercel breach via OAuth/third-party AI tooling**\n- What happened: Vercel reports breach involving **third-party AI tool exposure + OAuth abuse** and a compromised employee account (details evolving).\n- Why it matters operationally: This is a direct reminder that **OAuth apps/tokens and third-party SaaS tooling** can become an attack path into code, CI/CD, secrets, and production environments.\n- Recommended immediate actions for the SOC today: Review recent **OAuth app grants/consents** and high-risk scopes in your IdP; rotate/validate **CI/CD secrets** where third-party tools have access and alert on anomalous token use.\n\n---\n\n### Monitoring & detection recommendations\n- **SD‑WAN Manager exploitation hunting**: VPN/Firewall + SD‑WAN Manager audit logs; look for new admin users, config template pushes, and management-plane access from new geos/IPs (MITRE: T1190, T1078).\n- **SharePoint web + auth anomalies**: IIS/SharePoint ULS + WAF logs; watch for abnormal auth flows, suspicious redirects, repeated 401/403 bursts, and unusual POSTs to SharePoint endpoints (MITRE: T1190, T1556).\n- **Quick Assist / remote control telemetry**: EDR (process creation) + Windows event logs; alert on `quickassist.exe` execution, remote control session establishment, and follow-on tooling (PowerShell, cmd, LOLBins) (MITRE: T1059, T1219).\n- **SystemBC / proxy C2 behavior**: NetFlow/Proxy/DNS logs; hunt for rare outbound TLS from servers to low-reputation ASN/regions, long-lived connections, and new beacons after interactive logons (MITRE: T1071.001, T1090).\n- **Ransomware precursor detections (Gentlemen ecosystem)**: EDR + Windows Security logs; watch for `vssadmin delete shadows`, `wbadmin delete catalog`, массовый service stops, and rapid file renames/encryption-like I/O spikes (MITRE: T1486, T1490).\n- **OAuth abuse / token misuse**: IdP (Entra/Okta) sign-in + audit logs; monitor new app consents, privilege scope changes, refresh-token use from new device fingerprints, and impossible travel (MITRE: T1528, T1550).\n- **Phishing-to-malware via messaging (WhatsApp theme) & helpdesk lures**: Email/SMS security + user-reported phishing; correlate initial lure → endpoint execution; prioritize finance/VIP users and service desk targets (MITRE: T1566).\n\n---\n\n### Medium-term follow-ups\n- **Patch management**: Track **Oracle CPU (241 CVEs)** and **Progress MOVEit WAF/LoadMaster** updates; prioritize internet-facing and auth-adjacent components first.\n- **Apache ActiveMQ (actively exploited per reporting)**: Validate if any instances exist internally or in vendor-managed environments; enforce rapid patching and segment broker networks.\n- **Remote assistance hardening**: Restrict Quick Assist/remote tools via policy, require ticket linkage + manager approval for privileged endpoints, and maintain allowlists for support staff.\n- **OAuth governance**: Implement/strengthen app consent workflow, periodic review of high-privilege OAuth apps, and automated disablement of stale tokens; ensure logging retention supports investigations.\n- **Third-party/SaaS risk**: Reassess AI developer tools and CI/CD integrations; require least-privilege tokens, secret scanning, and SBOM/asset inventory where feasible (assumption: some SaaS tooling is in use).\n- **OT/edge device exposure** (BridgeBreak/serial-to-IP + ICS advisories): Confirm no unapproved serial-to-IP converters or exposed management interfaces exist in branch/ATM/infra networks; isolate and patch where applicable.",
+  "source_total_items": 8522,
+  "total_items_in_window_all": 318,
+  "total_items_in_window_curated": 114,
+  "morning_call_markdown": "### Executive Summary\n- Active exploitation reported for a recent **Microsoft Defender** vulnerability (described as a zero-day in the wild) — validate coverage/mitigations and hunt for suspicious Defender/AMSI tampering.\n- Multiple **software supply-chain compromises** (npm/PyPI/Docker/GitHub repos) are trending; treat developer tooling/build agents as high-risk endpoints and watch for token/secrets theft.\n- Elevated **ransomware + destructive malware** activity and claims impacting financial orgs (e.g., Everest claims; new/rapidly rising ransomware brands) — tighten exposure controls and monitor for extortion TTPs.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Microsoft Defender “zero-day” exploitation / RedSun risk (reports + vendor guidance)**\n- **What happened:** Reporting indicates a recent **Microsoft Defender** vulnerability is being **exploited as a zero-day**, with mitigation guidance circulating (e.g., Qualys).\n- **Why it matters operationally:** Defender is ubiquitous in enterprise endpoints/servers; exploitation could enable **EoP/disablement/bypass** leading to broader compromise and ransomware staging.\n- **Recommended immediate actions for the SOC today:** Confirm Defender platform/signature currency + any recommended mitigations are applied; hunt for Defender service/config tampering and suspicious exclusions added.\n\n**2) Microsoft out-of-band patch: critical ASP.NET Core security flaw**\n- **What happened:** Microsoft issued an **out-of-band update** for a **critical ASP.NET Core** flaw (reported as privilege escalation/critical impact).\n- **Why it matters operationally:** Affects internet-facing or internal app stacks; exploitation could enable **app-to-host escalation** and rapid lateral movement from web tiers.\n- **Recommended immediate actions for the SOC today:** Identify all hosts/images running affected ASP.NET Core runtime; prioritize emergency patching on internet-facing services and validate post-patch app health.\n\n**3) Supply-chain compromise wave: npm/PyPI/Docker/VS Code + fake GitHub repos**\n- **What happened:** Reports of **malicious npm packages/self-propagating worm behavior**, **PyPI package breach** aimed at cloud credential theft, **compromised Docker images/VS Code extensions** (Checkmarx KICS), and **fake GitHub repos** distributing loaders/stealers.\n- **Why it matters operationally:** Direct risk to build agents/dev workstations and CI/CD; common outcome is **token/session/cookie theft** → cloud takeover → data access and ransomware.\n- **Recommended immediate actions for the SOC today:** Alert dev/CI owners to freeze/verify impacted packages/images/extensions and rotate exposed tokens; monitor egress from build networks for anomalous auth to GitHub/npm registries and cloud IdPs.\n\n**4) Exploitation-at-scale infrastructure: ActiveMQ exposure + widespread misconfig services**\n- **What happened:** Reporting highlights **thousands of Apache ActiveMQ servers** at risk amid ongoing attacks; separate reporting flags **misconfigured Perforce** servers exposing sensitive data.\n- **Why it matters operationally:** Messaging brokers and dev infra are high-value pivots; compromise often leads to **credential harvesting**, internal recon, and ransomware deployment.\n- **Recommended immediate actions for the SOC today:** Verify we have **zero** internet-exposed ActiveMQ/Perforce (or enforce strict allowlists/VPN); review recent auth failures/successes to these services and isolate any newly exposed instances.\n\n**5) Ransomware/destructive activity with financial-sector relevance**\n- **What happened:** Everest ransomware claims breaches of financial orgs; additional reporting on rapidly rising ransomware crews and destructive tooling (e.g., “Lotus wiper” activity in the wild).\n- **Why it matters operationally:** Increases likelihood of extortion attempts and “smash-and-grab” credential-led intrusions; destructive payloads raise recovery time and integrity risks.\n- **Recommended immediate actions for the SOC today:** Heighten monitoring for ransomware pre-encryption behaviors (mass file ops, shadow copy deletion) and enforce rapid containment playbooks; validate backups/immutability monitoring and privileged account alerts.\n\n---\n\n### Monitoring & detection recommendations\n- **Defender tampering / AV evasion**: EDR + Microsoft Defender for Endpoint (MDE) alerts for security tool disablement, new exclusions, service stop attempts (ATT&CK **T1562.001**).\n- **ASP.NET Core web tier to host escalation**: Windows Event Logs (Security 4688/4697), IIS logs, EDR process ancestry for `w3wp.exe` spawning shells/utilities or dumping creds (ATT&CK **T1059**, **T1003**).\n- **Supply-chain token theft from dev endpoints/CI**: Proxy/DNS + EDR for unusual access to GitHub/npm/PyPI plus sudden outbound to cloud APIs; alert on new PAT/OAuth token creation and high-volume repo/package reads (ATT&CK **T1552**, **T1528**).\n- **Docker/CI build agent compromise**: Container runtime logs (Docker daemon/Kubernetes audit if applicable) for unexpected image pulls/tags, exec into build containers, or new privileged containers (ATT&CK **T1610**, **T1609**).\n- **Microsoft Graph API abuse for C2 (Linux GoGra malware theme)**: Cloud logs (Entra ID sign-ins, Graph API audit where available) + endpoint netflow for anomalous Graph usage from non-standard hosts/service principals (ATT&CK **T1071.001**).\n- **ActiveMQ/Perforce exposure and brute force**: Firewall/WAF + service logs for external hits, auth spraying, and new admin sessions; prioritize any access from unfamiliar geos/ASNs (ATT&CK **T1110**).\n- **Ransomware staging signals**: EDR for rapid encryption-like file rename/write bursts, use of `vssadmin`, `wbadmin`, `bcdedit`, PsExec/remote service creation (ATT&CK **T1486**, **T1569.002**).\n- **Phishing/fraud lures (Apple purchase alert / job scam trend)**: Email security logs for lookalike purchase invoices and “interview” themed attachments; endpoint for new unsigned installers/MSI execution and unusual browser credential access (ATT&CK **T1566.001**, **T1204**).\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** Track emergency deployment status for the ASP.NET Core out-of-band update; add a control to flag drift in golden images/containers using outdated runtimes.\n- **Secure SDLC hardening:** Enforce package allowlisting, provenance checks (signed commits/images), and restricted egress from build networks; require periodic rotation of CI/CD secrets and short-lived tokens.\n- **External exposure reduction:** Continuous scanning for internet-facing middleware/dev tooling (ActiveMQ, Perforce, artifact registries) and validate they sit behind VPN/allowlists with MFA.\n- **Ransomware resilience:** Re-validate immutable backups, restore testing cadence, and privileged access workflows (JIT/JEA, PAM); confirm EDR isolation works on server tiers.\n- **Cloud audit readiness:** Ensure Graph/API audit logging is enabled where possible; baseline normal Graph usage by apps/service principals to reduce false positives before enforcing alerts.\n- **Awareness & playbooks:** Refresh analyst runbooks for supply-chain incident triage (token rotation, CI isolation, artifact revocation) and for destructive malware response (rapid segmentation + integrity checks).",
   "highlights": [
     {
-      "title": "Check Point Uncovers Link Between SystemBC Malware and Gentlemen Ransomware Operation",
-      "link": "https://www.news4hackers.com/check-point-uncovers-link-between-systembc-malware-and-gentlemen-ransomware-operation/",
-      "source": "News4Hackers",
-      "published": "2026-04-22T07:04:38+00:00",
+      "title": "Recent Microsoft Defender Vulnerability Exploited as Zero-Day",
+      "link": "https://www.securityweek.com/recent-microsoft-defender-vulnerability-exploited-as-zero-day/",
+      "source": "SecurityWeek",
+      "published": "2026-04-23T08:00:36+00:00",
       "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Microsoft Graph API misused by new GoGra Linux malware for hidden communication",
+      "link": "https://securityaffairs.com/191153/uncategorized/microsoft-graph-api-misused-by-new-gogra-linux-malware-for-hidden-communication.html",
+      "source": "Security Affairs",
+      "published": "2026-04-23T07:49:13+00:00",
+      "smart_groups": [
+        "Linux / Unix",
+        "Malware / Payloads",
+        "Curated",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Xinference PyPI Breach Exposes Developers to Cloud Credential Theft",
+      "link": "https://gbhackers.com/xinference-pypi-breach-exposes-developers/",
+      "source": "GBHackers News",
+      "published": "2026-04-23T07:42:23+00:00",
+      "smart_groups": [
+        "Malware / Payloads",
+        "Curated",
         "Threat Actors / APT",
-        "Curated",
-        "Malware / Payloads",
-        "Ransomware",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Microsoft-Signed Binary Used to Sneak LOTUSLITE Into India-Focused Espionage Campaign",
-      "link": "https://cybersecuritynews.com/microsoft-signed-binary-used-to-sneak-lotuslite/",
-      "source": "Cyber Security News (FeedBurner)",
-      "published": "2026-04-22T06:57:18+00:00",
-      "smart_groups": [
-        "Curated",
-        "Malware / Payloads",
-        "Exploit / PoC",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Anatomy of a Fraud Operation: Mule Account Creation on B2B Fintech Platforms in France",
-      "link": "https://www.group-ib.com/blog/french-fintech-mule-accounts/",
-      "source": "Group-IB Blog",
-      "published": "2026-04-22T06:53:46+00:00",
-      "smart_groups": [
-        "Curated",
-        "Exploit / PoC",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Over 1,300 Microsoft SharePoint servers vulnerable to spoofing attacks",
-      "link": "https://www.bleepingcomputer.com/news/security/over-1-300-microsoft-sharepoint-servers-vulnerable-to-ongoing-attacks/",
-      "source": "BleepingComputer",
-      "published": "2026-04-22T06:53:02+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "1,370+ Microsoft SharePoint Servers at Risk of Spoofing Attacks Found Exposed Online",
-      "link": "https://gbhackers.com/1370-microsoft-sharepoint-servers-at-risk-of-spoofing-attacks/",
-      "source": "GBHackers News",
-      "published": "2026-04-22T06:44:12+00:00",
-      "smart_groups": [
-        "Curated",
-        "Exploit / PoC",
-        "Vulnerabilities / CVEs",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Privacy protocol Umbra shuts front end to stifle Kelp exploiters",
-      "link": "https://cointelegraph.com/news/privacy-protocol-umbra-shuts-front-end-in-attempt-to-stifle-kelp-exploiters?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound",
-      "source": "Cointelegraph.com News",
-      "published": "2026-04-22T06:11:20+00:00",
-      "smart_groups": [
-        "Curated",
+        "Supply Chain / Software",
         "Crypto / Web3",
-        "Data Protection / Privacy",
-        "Exploit / PoC",
-        "Vulnerabilities / CVEs"
-      ],
-      "curated": true
-    },
-    {
-      "title": "French Authorities Confirm Data Breach Amid Hackers’ Data Leak Allegations",
-      "link": "https://gbhackers.com/french-authorities-confirm-data-breach/",
-      "source": "GBHackers News",
-      "published": "2026-04-22T06:05:50+00:00",
-      "smart_groups": [
-        "Data Breaches / Leaks",
-        "Curated",
-        "Network / OT / ICS",
         "General Security"
       ],
       "curated": true
     },
     {
-      "title": "₹53.85 Lakhs Cyber Scam Uncovered: Nationwide Bank Account Hacking Exposed",
-      "link": "https://www.news4hackers.com/%e2%82%b953-85-lakhs-cyber-scam-uncovered-nationwide-bank-account-hacking-exposed/",
+      "title": "Police Crack Down on Mule Accounts Used by Cyber Scammers",
+      "link": "https://www.news4hackers.com/police-crack-down-on-mule-accounts-used-by-cyber-scammers/",
       "source": "News4Hackers",
-      "published": "2026-04-22T06:01:12+00:00",
+      "published": "2026-04-23T07:09:31+00:00",
       "smart_groups": [
         "Curated",
         "Vulnerabilities / CVEs",
@@ -116,13 +65,25 @@
       "curated": true
     },
     {
-      "title": "Microsoft-Signed Binary Helps Deliver LOTUSLITE in India Spy Campaign",
-      "link": "https://gbhackers.com/lotuslite-in-india-spy-campaign/",
-      "source": "GBHackers News",
-      "published": "2026-04-22T05:33:39+00:00",
+      "title": "Cyber Fraudsters Exploit Mule Accounts and Weak Know Your Customer Rules",
+      "link": "https://www.news4hackers.com/cyber-fraudsters-exploit-mule-accounts-and-weak-know-your-customer-rules/",
+      "source": "News4Hackers",
+      "published": "2026-04-23T07:03:16+00:00",
       "smart_groups": [
         "Curated",
-        "Malware / Payloads",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Cyber Sex Trafficking Ring Busted at Chennai Airport, Victims Rescued",
+      "link": "https://www.news4hackers.com/cyber-sex-trafficking-ring-busted-at-chennai-airport-victims-rescued/",
+      "source": "News4Hackers",
+      "published": "2026-04-23T07:02:12+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
         "General Security"
       ],
       "curated": true
@@ -131,12 +92,52 @@
       "title": "Vercel data breach: ShinyHunters claims theft of internal database and secrets | UpGuard",
       "link": "https://www.upguard.comnews/vercel-data-breach-2026-04-21",
       "source": "UpGuard – News",
-      "published": "2026-04-22T05:22:38+00:00",
+      "published": "2026-04-23T06:54:57+00:00",
       "smart_groups": [
         "Data Breaches / Leaks",
         "Curated",
         "Vulnerabilities / CVEs",
         "Vendors / Product Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Checkmarx KICS Docker Repo Hijacked in Malicious Code Injection Attack",
+      "link": "https://gbhackers.com/checkmarx-kics-docker-repo-hijacked/",
+      "source": "GBHackers News",
+      "published": "2026-04-23T06:36:25+00:00",
+      "smart_groups": [
+        "Curated",
+        "Supply Chain / Software",
+        "Threat Actors / APT",
+        "Malware / Payloads",
+        "Network / OT / ICS",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Tropic Trooper Uses Custom Beacon and VS Code Tunnels for Stealthy Remote Access",
+      "link": "https://gbhackers.com/tropic-trooper-uses-custom-beacon/",
+      "source": "GBHackers News",
+      "published": "2026-04-23T06:10:03+00:00",
+      "smart_groups": [
+        "Curated",
+        "Malware / Payloads",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Claude Mythos Exposes 271 Zero-Day Security Flaws in Firefox",
+      "link": "https://gbhackers.com/claude-mythos-exposes-271-zero-day-firefox/",
+      "source": "GBHackers News",
+      "published": "2026-04-23T06:04:17+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Curated",
+        "Cloud / SaaS",
+        "General Security"
       ],
       "curated": true
     }
