@@ -1,126 +1,71 @@
 {
-  "generated_at": "2026-04-26T07:55:28.481793+00:00",
-  "analysis_date": "2026-04-26",
+  "generated_at": "2026-04-27T08:42:34.852712+00:00",
+  "analysis_date": "2026-04-27",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-04-26T07:49:41.704861+00:00",
+  "source_generated_at": "2026-04-27T08:37:30.135469+00:00",
   "source_days_back": 30,
-  "source_total_items": 7904,
-  "total_items_in_window_all": 48,
-  "total_items_in_window_curated": 16,
-  "morning_call_markdown": "### Executive Summary\n- Active exploitation is the main theme: CISA added **SimpleHelp + Samsung + D‑Link** issues to KEV, and a widely deployed **WordPress Breeze Cache** flaw is being mass-exploited—treat internet-facing exposure as urgent.\n- Social engineering delivery is evolving: threat actor reported using **Microsoft Teams** to deliver new “Snow” malware—assume more org-to-org chat abuse and user-assisted execution.\n- Supply chain/dev tooling risk: **dozens of “sleeper” Open VSX extensions** reportedly activated into a new malware campaign—watch developer endpoints and extension inventories.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) KEV update: SimpleHelp + Samsung + D‑Link vulnerabilities (known exploited)**\n- What happened: CISA added **SimpleHelp, Samsung, and D‑Link** flaws to the **Known Exploited Vulnerabilities (KEV)** list; separate reporting reiterates **SimpleHelp** is being exploited.\n- Why it matters operationally: These are commonly **internet-facing/edge** or remotely reachable management components; exploitation can translate to footholds → lateral movement in enterprise networks.\n- Recommended immediate actions for the SOC today: **Identify any exposed SimpleHelp/Samsung/D‑Link assets and owners; validate patch/mitigation status and restrict external access** (WAF/VPN allowlists, mgmt-plane isolation) while hunting for associated access patterns.\n\n**2) WordPress Breeze Cache plugin exploitation (CVE-2026-3844)**\n- What happened: Reporting indicates attackers are exploiting **Breeze Cache plugin flaw CVE-2026-3844** at scale; “400k+ sites” potentially impacted.\n- Why it matters operationally: Even if core banking is isolated, compromised web properties can be used for **credential phishing, watering holes, SEO spam, or pivoting** into internal environments via shared credentials and admin reuse.\n- Recommended immediate actions for the SOC today: **Ask web ops to confirm Breeze Cache presence and patch/disable; review web server/WAF logs for exploit attempts and unexpected admin creation/file writes** on WordPress hosts.\n\n**3) Microsoft Teams used to deliver “Snow” malware (chat-based initial access)**\n- What happened: A threat actor reportedly abused **Microsoft Teams** to deliver a new malware family (“Snow”), leveraging chat messages and user interaction.\n- Why it matters operationally: Teams is high-trust and high-volume; this can bypass email controls and enable **user-assisted execution** and follow-on credential theft (financial-sector impact: BEC, account takeover, fraud).\n- Recommended immediate actions for the SOC today: **Hunt for inbound Teams chats from external tenants delivering files/links; temporarily tighten Teams external access controls and Safe Links/attachments posture** (if policy allows) and alert Service Desk on rapid triage workflow.\n\n**4) Open VSX “sleeper” extensions activating (GlassWorm-linked campaign)**\n- What happened: Report claims **73 Open VSX extensions** acted as “sleepers” and then activated into a malware campaign linked to “GlassWorm.”\n- Why it matters operationally: Developer tools are a high-leverage supply-chain path; compromised endpoints can leak **source, secrets, tokens**, and facilitate CI/CD compromise.\n- Recommended immediate actions for the SOC today: **Inventory VS Code / Open VSX extensions on developer workstations and CI build agents; quarantine/remove any unapproved extensions and rotate exposed tokens/keys if suspicious activity is found** (assume details/IOCs are limited).\n\n**5) New Windows RPC privilege escalation report (details unclear)**\n- What happened: A report describes a **Windows RPC privilege escalation** affecting “all Windows versions” (CVE/patch status not confirmed in the provided summary).\n- Why it matters operationally: If real and weaponized, it lowers the bar for **post-compromise escalation** (turning a user foothold into admin/SYSTEM), accelerating ransomware/operator playbooks.\n- Recommended immediate actions for the SOC today: **Treat as “watch item”: increase alerting on suspicious service creation/LSASS access/credential dumping chains; verify with Microsoft advisory before emergency patching** (assumption: public reporting may be incomplete).\n\n---\n\n### Monitoring & detection recommendations\n- **Internet-facing app exposure (KEV + WordPress):** Monitor **WAF/reverse-proxy + web server logs** for exploit spikes, unusual 4xx/5xx bursts, and POSTs to plugin/admin endpoints; correlate with **EDR process starts from web server users** (ATT&CK: T1190).\n- **SimpleHelp exploitation indicators (generic):** Review **VPN/firewall/IDS + server auth logs** for new remote sessions to SimpleHelp hosts, unusual admin logins, and service installs; flag any outbound beacons from those servers (ATT&CK: T1133, T1059).\n- **Teams-borne malware delivery:** In **M365 Defender / Teams audit logs**, hunt for external tenant chats, unsolicited file transfers, and link-sharing followed by endpoint downloads/execution; correlate with **browser → payload** chains (ATT&CK: T1566.002, T1204).\n- **Endpoint execution from user profile locations:** In **EDR**, watch for executions from `%AppData%`, `%LocalAppData%`, Downloads, and temp paths shortly after Teams/browser activity; prioritize unsigned binaries and LOLBins (ATT&CK: T1204, T1059).\n- **VS Code/Open VSX extension risk:** From **EDR + software inventory**, alert on new/rare `code` extension installs, extension directories modified outside normal change windows, and suspicious child processes spawned by VS Code (ATT&CK: T1552.001 for secrets discovery).\n- **Privilege escalation / post-exploitation (Windows RPC watch):** Tighten monitoring on **new local admin additions, scheduled tasks, services, and token impersonation events**; review for rapid escalation after initial access (ATT&CK: T1068, T1543, T1053).\n- **Web-to-internal pivot risk:** Monitor **DNS + proxy** for WordPress server outbound connections to new domains and abnormal data transfer; alert on credential reuse attempts in **IdP** after any web compromise (ATT&CK: T1071, T1110).\n\n---\n\n### Medium-term follow-ups\n- **Asset hygiene for KEV items:** Build/refresh a living inventory of **remote support tools (incl. SimpleHelp), consumer-grade routers (D‑Link), and Samsung-managed devices**; ensure ownership + patch SLAs aligned to KEV timelines.\n- **Teams hardening review:** Reassess **external tenant access, file transfer controls, and conditional access** for Teams; add user reporting guidance for “unexpected chat from outside org.”\n- **Web plugin governance:** Enforce a **WordPress plugin allowlist**, automated updates where feasible, and file integrity monitoring on web roots; document emergency “disable vulnerable plugin” runbook.\n- **Developer workstation controls:** Standardize VS Code extension sources, require **approved extension lists**, and consider restricting extension install to managed catalogs on high-sensitivity dev/CI hosts.\n- **Privilege escalation readiness:** Validate that **credential dumping protections** (LSASS protection, EDR rules, local admin minimization) are consistently deployed across Windows fleets.\n- **Threat intel enrichment:** Request/ingest vendor/community IOCs for the **Teams “Snow” malware** and **Open VSX campaign** once published; map to existing SIEM detections without overfitting to unverified indicators.",
+  "source_total_items": 7651,
+  "total_items_in_window_all": 76,
+  "total_items_in_window_curated": 18,
+  "morning_call_markdown": "### Executive Summary\n- Multiple high-impact enterprise vulnerabilities surfaced (Metabase Enterprise RCE w/ public PoC, Microsoft Entra agent privilege escalation/tenant takeover, CrowdStrike LogScale file access) — prioritize exposure checks + patch/mitigation.\n- Endpoint/SOC tooling risk: Nessus Agent Windows SYSTEM-level code execution reported — treat vuln scanners/agents as high-value pivots and validate fleet versions.\n- Active threat tradecraft updates: Trigona ransomware improving data theft/evasion; China-linked “GopherWhisper” Go malware campaign — tighten detections around exfil + new tooling.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Metabase Enterprise RCE (public PoC available)**\n- What happened: Metabase Enterprise RCE was reported with a publicly available proof-of-concept exploit.\n- Why it matters operationally: Internet-exposed analytics/BI apps are common footholds; PoC sharply increases likelihood of opportunistic exploitation.\n- Recommended immediate actions for the SOC today: Identify Metabase Enterprise instances (CMDB + scans) and confirm exposure; fast-track patch/mitigation and add WAF/IPS virtual patching if externally reachable.\n\n**2) Microsoft Entra agent privilege escalation → potential tenant takeover**\n- What happened: A flaw in a Microsoft Entra “Agent ID” component reportedly enabled privilege escalation leading to potential tenant takeover.\n- Why it matters operationally: Identity compromise is a primary path to financial fraud, persistence, and broad SaaS access; impact can be org-wide.\n- Recommended immediate actions for the SOC today: Validate affected Entra/agent footprint and patch guidance from Microsoft (assumption: vendor advisory exists); hunt for suspicious role/service principal changes and abnormal admin actions in Entra audit logs.\n\n**3) CrowdStrike LogScale critical file access bug**\n- What happened: A critical bug in CrowdStrike LogScale reportedly allowed attackers to access files.\n- Why it matters operationally: Log platforms are high-trust systems (credentials, configs, tokens); compromise degrades visibility and can enable lateral movement.\n- Recommended immediate actions for the SOC today: Confirm LogScale deployment/version and apply vendor fixes/workarounds; review access logs for unusual reads/downloads of config/secrets and restrict admin/UI exposure (VPN/IP allowlists).\n\n**4) Nessus Agent (Windows) flaw enabling SYSTEM code execution**\n- What happened: A Nessus Agent Windows vulnerability was reported that could enable SYSTEM-level code execution.\n- Why it matters operationally: Security agents run with high privileges across many endpoints; exploitation becomes a scalable privilege-escalation/lateral-movement enabler.\n- Recommended immediate actions for the SOC today: Inventory Nessus Agent versions on Windows and prioritize patching on Tier-0/Tier-1 assets; monitor for abnormal service/agent behavior (unexpected child processes, installer activity).\n\n**5) Ransomware + APT tradecraft updates (Trigona; “GopherWhisper” Go malware)**\n- What happened: Trigona ransomware reportedly added a custom tool for data theft/evasion; a China-linked APT campaign (“GopherWhisper”) used Go-based malware targeting a regional govt context (not directly financial, but relevant tradecraft).\n- Why it matters operationally: Expect increased focus on stealthy collection/exfil before encryption; Go malware often has different EDR signal patterns and can blend in.\n- Recommended immediate actions for the SOC today: Increase scrutiny on outbound exfil indicators and archive/packaging activity; run targeted hunts for anomalous Go/unsigned binaries and unusual persistence creation (assumption: limited public IOCs in the articles).\n\n---\n\n### Monitoring & detection recommendations\n- **Metabase exploitation attempts**: WAF/reverse-proxy + web server logs for Metabase paths, unusual POSTs, spikes in 500/404, and new admin creation; correlate with EDR process execution from the Metabase host (ATT&CK: T1190).\n- **Entra privilege escalation/tenant manipulation**: Microsoft Entra ID AuditLogs/SignInLogs for new privileged role assignments, service principal credential additions, and “consent” events; alert on admin actions from new geos/devices (T1098, T1556).\n- **LogScale compromise patterns**: LogScale application logs + host EDR for file reads of config/keystore paths, sudden export/download actions, and unexpected child processes spawned by LogScale services (T1552).\n- **Nessus Agent abuse on endpoints**: Windows Security + Sysmon/EDR for Nessus-related service binaries spawning cmd/powershell/msiexec, new scheduled tasks, and DLL loads from non-standard directories (T1068, T1059).\n- **Ransomware pre-encryption + exfil**: Proxy/firewall + DLP + EDR for mass file staging (zip/7z/rar), high-volume outbound to new destinations, and use of living-off-the-land tools for discovery (T1074, T1041).\n- **Go-based malware execution**: EDR for new/rare executables with low prevalence, no signature, running from user-writable paths; watch for persistence via Run keys/services and beaconing to uncommon ports (T1547, T1071).\n- **Mac outbound connection visibility (if Mac fleet)**: macOS EDR + network telemetry for newly installed apps initiating outbound connections shortly after install/update; investigate new developer IDs (theme from LuLu outbound-connection control).\n\n---\n\n### Medium-term follow-ups\n- **Patch governance**: Add Metabase Enterprise, Nessus Agent, LogScale, and Entra agent components to an accelerated patch SLAs list; validate internet exposure continuously (ASM scans).\n- **Identity hardening**: Enforce conditional access for admin actions, tighten service principal credential lifecycle, and review break-glass accounts + MFA coverage.\n- **Logging platform isolation**: Segment LogScale and similar telemetry stacks; restrict admin interfaces, rotate secrets/tokens stored on logging hosts, and validate backups/restore procedures.\n- **Ransomware readiness**: Re-validate immutable/offline backups, incident runbooks for data-theft extortion, and ensure egress controls/DLP are tuned for large archive uploads.\n- **Threat hunting enablement**: Create a hunt pack for “agent/tooling as pivot” (scanner agents, log stacks, monitoring agents) focusing on unusual process trees and privilege escalation.\n- **User awareness (scam theme)**: Brief frontline teams on job-offer/overseas scam patterns (from Myanmar scam reporting) to reduce credential/payment social engineering risk; route to fraud team where applicable.",
   "highlights": [
     {
-      "title": "73 Open VSX Sleeper Extensions Linked to GlassWorm Activate New Malware Campaign",
-      "link": "https://cybersecuritynews.com/73-open-vsx-sleeper-extensions-linked-to-glassworm-malware/",
-      "source": "Cyber Security News (FeedBurner)",
-      "published": "2026-04-26T04:29:58+00:00",
-      "smart_groups": [
-        "Curated",
-        "Threat Actors / APT",
-        "Malware / Payloads",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Litecoin Zero-Day Vulnerability Exploited in DoS Attack, Disrupts Major Mining Pools",
-      "link": "https://cybersecuritynews.com/litecoin-zero-day-vulnerability-exploited/",
-      "source": "Cyber Security News (FeedBurner)",
-      "published": "2026-04-26T04:18:58+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "Threat Actors / APT",
-        "Exploit / PoC",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Hyderabad Cybercrime Sting Operation Nabs 14 Suspects Across Multiple States",
-      "link": "https://www.news4hackers.com/hyderabad-cybercrime-sting-operation-nabs-14-suspects-across-multiple-states/",
-      "source": "News4Hackers",
-      "published": "2026-04-26T04:01:57+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "What 108 repositories taught us about open source hygiene",
-      "link": "https://owncloud.com/blogs/what-108-repositories-taught-us-about-open-source-hygiene/",
-      "source": "https://owncloud.com/feed/",
-      "published": "2026-04-25T22:37:28+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "Vendors / Product Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "U.S. CISA adds SimpleHelp, Samsung, and D-Link flaws to its Known Exploited Vulnerabilities catalog",
-      "link": "https://securityaffairs.com/191281/security/u-s-cisa-adds-simplehelp-samsung-and-d-link-flaws-to-its-known-exploited-vulnerabilities-catalog.html",
-      "source": "Security Affairs",
-      "published": "2026-04-25T21:00:26+00:00",
+      "title": "Nessus Agent Windows Flaw Enables SYSTEM-Level Code Execution",
+      "link": "https://gbhackers.com/nessus-agent-windows-flaw/",
+      "source": "GBHackers News",
+      "published": "2026-04-27T07:03:54+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Curated",
-        "Cloud / SaaS",
-        "Exploit / PoC",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Elon Musk’s Grok Most Likely Among Top AI Models to Reinforce Delusions: Study",
-      "link": "https://decrypt.co/365489/elon-musk-grok-most-likely-ai-reinforce-delusions-study",
-      "source": "Decrypt",
-      "published": "2026-04-25T19:01:03+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "Crypto / Web3"
-      ],
-      "curated": true
-    },
-    {
-      "title": "New Windows RPC Vulnerability Lets Attackers Escalate Privileges Across All Windows Versions",
-      "link": "https://cybersecuritynews.com/new-windows-rpc-vulnerability/",
-      "source": "Cyber Security News (FeedBurner)",
-      "published": "2026-04-25T17:50:54+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
         "Windows / Microsoft",
         "General Security"
       ],
       "curated": true
     },
     {
-      "title": "CISA Warns of Multiple SimpleHelp Vulnerabilities Exploited in Attack",
-      "link": "https://cybersecuritynews.com/simplehelp-vulnerabilities-exploited/",
-      "source": "Cyber Security News (FeedBurner)",
-      "published": "2026-04-25T17:23:40+00:00",
+      "title": "gurgaon-man-lost-money-to-myanmar-cybercrime-scam-under-job-promise",
+      "link": "https://www.news4hackers.com/gurgaon-man-lost-money-to-myanmar-cybercrime-scam-under-job-promise/",
+      "source": "News4Hackers",
+      "published": "2026-04-27T07:01:33+00:00",
       "smart_groups": [
-        "Threat Actors / APT",
         "Curated",
         "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Metabase Enterprise RCE Flaw Now Has Public Proof-of-Concept Exploit",
+      "link": "https://gbhackers.com/metabase-enterprise-rce-flaw-public-proof-of-concept-exploit/",
+      "source": "GBHackers News",
+      "published": "2026-04-27T05:29:46+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Top 25 Free Open-Source Cybersecurity Tools for Every Budget",
+      "link": "https://www.news4hackers.com/top-25-free-open-source-cybersecurity-tools-for-every-budget/",
+      "source": "News4Hackers",
+      "published": "2026-04-27T05:25:37+00:00",
+      "smart_groups": [
+        "Curated",
         "Vulnerabilities / CVEs",
         "General Security"
       ],
       "curated": true
     },
     {
-      "title": "IAS Officer Father Loses Lakhs in Kanpur Cyber Scam",
-      "link": "https://www.news4hackers.com/ias-officer-father-loses-lakhs-in-kanpur-cyber-scam/",
+      "title": "The Rise of Cybercrime Hiring on Gig Economy Platforms",
+      "link": "https://www.news4hackers.com/the-rise-of-cybercrime-hiring-on-gig-economy-platforms/",
       "source": "News4Hackers",
-      "published": "2026-04-25T16:03:26+00:00",
+      "published": "2026-04-27T05:24:12+00:00",
       "smart_groups": [
         "Curated",
         "Exploit / PoC",
@@ -129,15 +74,65 @@
       "curated": true
     },
     {
-      "title": "Threat actor uses Microsoft Teams to deploy new “Snow” malware",
-      "link": "https://www.bleepingcomputer.com/news/security/threat-actor-uses-microsoft-teams-to-deploy-new-snow-malware/",
-      "source": "BleepingComputer",
-      "published": "2026-04-25T15:07:44+00:00",
+      "title": "Attackers Chain CODESYS Vulnerabilities to Backdoor Applications",
+      "link": "https://gbhackers.com/attackers-chain-codesys-vulnerabilities/",
+      "source": "GBHackers News",
+      "published": "2026-04-27T05:02:24+00:00",
       "smart_groups": [
-        "Malware / Payloads",
-        "Phishing / Social Engineering",
-        "Threat Actors / APT",
         "Curated",
+        "Cloud / SaaS",
+        "Exploit / PoC",
+        "Malware / Payloads",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "pentest-ai-agents – 28 Claude Code Subagents for Penetration Testing",
+      "link": "https://cybersecuritynews.com/pentest-ai-agents-tool/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-04-27T04:35:47+00:00",
+      "smart_groups": [
+        "Crypto / Web3",
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "25 open-source cybersecurity tools that don’t care about your budget",
+      "link": "https://www.helpnetsecurity.com/2026/04/27/25-open-source-security-tools/",
+      "source": "Help Net Security",
+      "published": "2026-04-27T04:30:39+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Aave asks Arbitrum to send 30K ETH from Kelp exploiter to ‘DeFi United’",
+      "link": "https://cointelegraph.com/news/arbitrum-dao-asked-to-unfreeze-30k-eth-tied-to-kelp-hacker-direct-them-to-defi-united?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound",
+      "source": "Cointelegraph.com News",
+      "published": "2026-04-27T04:20:58+00:00",
+      "smart_groups": [
+        "Crypto / Web3",
+        "Curated",
+        "Exploit / PoC"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Product showcase: LuLu reveals unauthorized outbound connections from Mac apps",
+      "link": "https://www.helpnetsecurity.com/2026/04/27/product-showcase-lulu-macos-firewall/",
+      "source": "Help Net Security",
+      "published": "2026-04-27T04:00:27+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
         "General Security"
       ],
       "curated": true
