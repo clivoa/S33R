@@ -1,77 +1,89 @@
 {
-  "generated_at": "2026-04-28T08:41:13.033179+00:00",
-  "analysis_date": "2026-04-28",
+  "generated_at": "2026-04-29T08:34:32.694226+00:00",
+  "analysis_date": "2026-04-29",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-04-28T06:37:41.743073+00:00",
+  "source_generated_at": "2026-04-29T06:05:25.483117+00:00",
   "source_days_back": 30,
-  "source_total_items": 7805,
-  "total_items_in_window_all": 239,
-  "total_items_in_window_curated": 55,
-  "morning_call_markdown": "### Executive Summary\n- Multiple **actively exploited / easily exploitable vulnerabilities** reported (notably **Zimbra**, **Linux “Pack2TheRoot” privesc**, and **security tooling product CVEs**)—prioritize internet-facing and admin tooling exposure.\n- **Network edge persistence risk** highlighted: Cisco firewall infections may require a **full cold reboot** to clear a persistent backdoor (“Firestarter”); validate integrity of perimeter devices.\n- **Supply-chain risk re-escalated** (TeamPCP campaign + high-download OSS package stealing creds): treat developer endpoints/CI as high-value targets; tighten monitoring on package/CLI usage.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Zimbra servers: actively exploited vulnerability exposure**\n- What happened: Reports indicate **thousands of Zimbra servers** remain vulnerable to an **actively exploited flaw** (CISA warning referenced).  \n- Why it matters operationally: If we run Zimbra (or host clients/partners who do), exploitation can lead to **email compromise, data theft, and lateral movement** from a trusted comms system.  \n- Recommended immediate actions for the SOC today: **Confirm asset inventory/exposure** (external scan + CMDB) and **validate patch/mitigation status**; increase alerting on **new webshell-like artifacts / unusual admin logins / abnormal outbound from mail servers**.\n\n**2) Perimeter device persistence: Cisco firewalls + “Firestarter” backdoor**\n- What happened: Infected Cisco firewalls reportedly need a **cold start** to clear a **persistent backdoor** (“Firestarter”).  \n- Why it matters operationally: Firewall compromise enables **traffic interception, VPN abuse, stealthy persistence**, and can bypass endpoint controls—high impact in financial environments.  \n- Recommended immediate actions for the SOC today: **Escalate to network/security engineering** to validate affected models/versions and determine if **cold reboot** is required; hunt for **unexpected config changes, new/admin accounts, unusual management-plane access** and review **AAA/TACACS/RADIUS logs**.\n\n**3) Supply-chain campaign resurgence (TeamPCP + high-volume OSS credential theft)**\n- What happened: SANS reports **TeamPCP supply-chain activity resumed** with concurrent compromises (incl. security/dev tooling), plus an OSS package with **~1M monthly downloads** stole credentials.  \n- Why it matters operationally: Compromise of **developer workstations/CI/CD** can yield **secrets, signing keys, cloud tokens**, and downstream production access (high leverage vs. banks).  \n- Recommended immediate actions for the SOC today: **Monitor for new/rare dependency installs and CLI executions** on dev endpoints/CI; **rotate exposed tokens** if suspicious package/tooling use is detected and **temporarily restrict outbound** from build agents to approved registries.\n\n**4) Privilege escalation + security product CVEs (Linux “Pack2TheRoot”; CrowdStrike/Tenable advisories)**\n- What happened: “**Pack2TheRoot**” Linux privilege escalation described as **easily exploitable**; separate advisories cite **critical vulnerabilities in security products** (CrowdStrike/Tenable).  \n- Why it matters operationally: Linux privesc boosts initial footholds into **root** (containers/servers); security-tool CVEs can become **control-plane takeovers** that blind detection.  \n- Recommended immediate actions for the SOC today: **Identify impacted Linux distributions/hosts** (esp. internet-facing/jump/CI) and fast-track patching; **verify versions and apply vendor fixes** for security tooling; add temporary detections for **sudden root activity** and **security agent/service tampering**.\n\n**5) Microsoft ecosystem abuse: Teams-based malware delivery (UNC6692 / SNOW) + Windows patch concerns**\n- What happened: Reports of attackers leveraging **Microsoft Teams** to deploy **SNOW malware**, and separate reporting on **incomplete Windows patch / “PhantomRPC” privesc** (details may be evolving—assume exploit interest).  \n- Why it matters operationally: Teams is a trusted channel for phish/malware; Windows privilege escalation accelerates **domain compromise** post-initial access.  \n- Recommended immediate actions for the SOC today: Increase monitoring for **Teams-delivered files/links** and suspicious child processes; validate Windows patch posture for affected components and hunt for **post-exploitation signals** (credential dumping attempts, service creation, abnormal RPC activity).\n\n---\n\n### Monitoring & detection recommendations\n- **Email/Mail server (Zimbra)**: WAF/web logs + server auth logs—alert on **unusual POSTs to admin endpoints, new JSP/PHP artifacts, abnormal outbound** from mail servers (MITRE: T1190, T1505.003).\n- **Firewall/VPN edge (Cisco)**: firewall syslog + management-plane logs—hunt for **config diffs, new local users, remote management from unusual IPs, unexpected reboots** (MITRE: T1068, T1098, T1562).\n- **Supply chain / dev endpoints**: EDR + CI logs—detect **new package manager activity** (npm/pip/go/maven), **unknown binaries in build paths**, and **secret access spikes** in vault/KMS (MITRE: T1195, T1552).\n- **Security tooling platforms (EDR/vuln mgmt consoles)**: admin audit logs—alert on **new API keys, role changes, disabled sensors/scans, connector changes** (MITRE: T1098, T1562.001).\n- **Linux privesc (“Pack2TheRoot”)**: Linux auditd/EDR—watch for **unexpected setuid changes, kernel/module tampering, privilege boundary crossings** and sudden **root shells** (MITRE: T1068).\n- **Microsoft Teams malware path**: M365 audit + Defender for Endpoint—monitor **Teams file downloads**, execution from **Downloads/Temp**, and **Office/Teams spawning script interpreters** (PowerShell/cmd/wscript) (MITRE: T1566.002, T1059).\n- **Windows privesc / patch gap themes**: Windows Security logs + Sysmon—hunt for **new services (7045), scheduled tasks, LSASS access attempts, token privilege adjustments** (MITRE: T1053, T1543, T1003).\n\n---\n\n### Medium-term follow-ups\n- **Edge device resilience**: implement/verify **immutable config backups**, routine integrity checks, and a documented **cold-reboot/runbook** decision tree for firewall compromise scenarios.\n- **CI/CD hardening**: enforce **allowlisted registries**, dependency pinning/lockfiles, and **SLSA-style provenance** checks; review build agent egress and credential scoping.\n- **Azure DevOps permissions audit at scale**: use the Microsoft PowerShell approach to **baseline and continuously audit ADO permissions**; alert on high-risk changes (project admin/service connections).\n- **Secure Boot posture**: leverage Defender’s Secure Boot assessment to **identify endpoints lacking Secure Boot** (ransomware resilience improvement); prioritize privileged users and servers.\n- **Browser/app vuln hygiene**: ensure **Firefox** and common admin tools (e.g., **Notepad++**) are kept current via managed patching; reduce local admin where possible to limit privesc impact.\n- **Third-party/SaaS breach readiness**: given Salesforce-linked data leak reporting, re-check **SSO/MFA enforcement, OAuth app review, and data export monitoring** for CRM/SaaS platforms used by business units.",
+  "source_total_items": 8087,
+  "total_items_in_window_all": 322,
+  "total_items_in_window_curated": 91,
+  "morning_call_markdown": "### Executive Summary\n- Active exploitation: **LiteLLM pre-auth SQLi (CVE-2026-42208)** is being exploited within ~36 hours—treat any exposed LiteLLM/API gateway as **internet-facing emergency patch**.\n- **GitHub.com / GitHub Enterprise Server RCE (CVE-2026-3854)** enables compromise via a **single git push**—high impact for CI/CD and developer identity; prioritize patching and monitoring of runner/execution paths.\n- Elevated social-engineering + destructive malware risk: **AiTM/phishing chains** (DHL, BlobPhish, Robinhood-abuse) plus **VECT 2.0 “ransomware” behaving like a wiper**—tighten email/identity detections and validate backup/restore assumptions.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) LiteLLM CVE-2026-42208 (pre-auth SQL injection) — exploited in the wild**\n- What happened: Reports indicate **CVE-2026-42208** in LiteLLM is being **actively exploited shortly after disclosure**.\n- Why it matters operationally: If LiteLLM is exposed (directly or via reverse proxy), attackers can likely **access/alter data and pivot** into backend services (DB/app secrets), impacting AI-enabled workflows and internal APIs.\n- Recommended immediate actions for the SOC today: **Identify all LiteLLM instances + exposure paths and patch/mitigate now; add WAF/IDS rules & monitor for anomalous SQLi patterns and unexpected admin/API actions.**\n\n**2) GitHub.com / GitHub Enterprise Server RCE (CVE-2026-3854) — “single git push” exploit path**\n- What happened: Multiple sources (incl. vendor research) report **critical RCE in GitHub.com and GitHub Enterprise Server** tracked as **CVE-2026-3854**.\n- Why it matters operationally: A CI/CD foothold enables **code execution, secret theft, repo tampering, and supply-chain compromise** (high blast radius in financial orgs).\n- Recommended immediate actions for the SOC today: **Confirm enterprise patch level / apply vendor mitigations; hunt for abnormal workflow/runner executions, unexpected repo webhooks, and suspicious pushes from unusual accounts/IPs.**\n\n**3) Auth/priv-esc & identity control plane risk (Microsoft Entra ID fix + Windows priv-esc technique)**\n- What happened: Microsoft addressed an **Entra ID privilege escalation bug**; separately, reporting highlights **“PhantomRPC” privilege escalation technique** with no patch (details may be incomplete—assume evolving tradecraft).\n- Why it matters operationally: Identity-plane weaknesses drive **rapid tenant takeover and lateral movement**, especially when paired with phishing/AiTM; Windows priv-esc accelerates post-compromise escalation.\n- Recommended immediate actions for the SOC today: **Validate Entra ID updates are applied/rolled out; increase alerting on role changes/consent grants and suspicious token activity; tighten endpoint monitoring for RPC/service abuse and unusual privilege assignments.**\n\n**4) Phishing/AiTM acceleration (DHL multi-step chain, BlobPhish, Robinhood brand abuse, Signal phishing)**\n- What happened: Multiple campaigns use **multi-stage credential theft**, blob/object tricks in browsers, and **legitimate brand/workflow abuse** to improve bypass and user compliance.\n- Why it matters operationally: Likely to drive **credential compromise/BEC**, MFA bypass (AiTM), and initial access leading to ransomware or data theft.\n- Recommended immediate actions for the SOC today: **Spike-monitor inbound email for shipping/tax/audit/update lures and short-lived redirect chains; enforce conditional access/MFA hardening and prioritize rapid user/session containment on suspected AiTM hits.**\n\n**5) Destructive “ransomware” behavior: VECT 2.0 acts as wiper for larger files**\n- What happened: VECT 2.0 is reported to **irreversibly destroy/wipe files above a size threshold** across Windows/Linux/ESXi; some reporting suggests paying may not help.\n- Why it matters operationally: Increases probability of **non-recoverable impact** and **faster operational outage**, especially on virtualization/storage-heavy estates.\n- Recommended immediate actions for the SOC today: **Validate immutable/offline backups and recent restore tests for ESXi/Linux critical services; raise severity on early ransomware precursors (mass file ops, vssadmin/esxcli tampering, abnormal encryption/wipe patterns).**\n\n---\n\n### Monitoring & detection recommendations\n- **Web/API tier (LiteLLM SQLi):** WAF/reverse-proxy logs + app logs + DB audit logs for SQLi signatures, unusual query volume, and unexpected admin/API calls (ATT&CK: T1190 Exploit Public-Facing Application).\n- **CI/CD & GitHub enterprise:** GitHub audit logs + runner/agent logs + EDR on build hosts for unusual workflow triggers, new secrets access, abnormal `git push` patterns, and unexpected outbound connections from runners (ATT&CK: T1552 Unsecured Credentials, T1059 Command and Scripting Interpreter).\n- **Identity (Entra ID / AiTM):** Entra sign-in logs, audit logs, conditional access insights for “impossible travel,” unfamiliar device/session, atypical token lifetimes, new OAuth app consents, role assignments (ATT&CK: T1078 Valid Accounts, T1098 Account Manipulation).\n- **Email security (brand/lure clusters):** SEG/MDO detections for shipping/tax/audit/update themes; monitor URL rewriting/redirect chains and attachment types that lead to browser-based credential capture (ATT&CK: T1566 Phishing).\n- **Endpoint privilege escalation watch (Windows RPC technique):** Windows Security logs + Sysmon + EDR for suspicious service/RPC interactions, new privileged group membership, and anomalous LSASS/RPC process behaviors (ATT&CK: T1068 Exploitation for Privilege Escalation).\n- **Ransomware/wiper early indicators (VECT-like):** EDR + file server logs + ESXi/vCenter logs for mass file modifications/deletions, snapshot/backup deletion attempts, and unusual admin tool use (`vssadmin`, `wmic`, `esxcli`) (ATT&CK: T1486 Data Encrypted for Impact, T1490 Inhibit System Recovery).\n- **Supply chain / dev tooling:** Proxy/DNS + EDR for developer endpoints pulling from extension/package marketplaces; alert on new/unapproved VS Code extensions (Open VSX) and suspicious package installs (ATT&CK: T1195 Supply Chain Compromise).\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** Add **CVE-2026-42208 (LiteLLM)** and **CVE-2026-3854 (GitHub)** to top patch SLAs; validate compensating controls for any instances that cannot be patched quickly (WAF allowlisting, network segmentation).\n- **Identity hardening after AiTM:** Review conditional access policies (token binding/phishing-resistant MFA where possible), legacy auth blocks, and session risk controls; run a tabletop for “AiTM → role escalation.”\n- **Developer environment controls:** Enforce extension allowlists, signed extension policies where available, and restrict developer tokens/secrets exposure; review internal guidance on installing from alternative marketplaces.\n- **Backups for destructive threats:** Confirm immutability settings and restore RTO/RPO for ESXi/Linux workloads; ensure monitoring on backup deletion/disablement events.\n- **Third-party/SaaS exposure checks:** Validate whether internal users are impacted by reported SaaS email exposure/leaks (e.g., ClickUp/Udemy claims); monitor for credential stuffing against enterprise IdP using those email lists.\n- **Network edge hygiene:** Review OpenSSH/cPanel/Oracle/Mozilla advisory coverage in vuln backlog (even if not confirmed exploited here); prioritize any **internet-facing** assets first.",
   "highlights": [
     {
-      "title": "Extracting and Auditing Azure DevOps Permissions at Scale with PowerShell",
-      "link": "https://techcommunity.microsoft.com/t5/core-infrastructure-and-security/extracting-and-auditing-azure-devops-permissions-at-scale-with/ba-p/4515274",
-      "source": "Core Infrastructure and Security Blog",
-      "published": "2026-04-28T06:32:48+00:00",
-      "smart_groups": [
-        "Windows / Microsoft",
-        "Cloud / SaaS",
-        "Crypto / Web3",
-        "Curated",
-        "Network / OT / ICS",
-        "Vulnerabilities / CVEs",
-        "Vendors / Product Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Pluralistic: Vicky Osterweil's \"The Extended Universe\" (28 Apr 2026)",
-      "link": "https://pluralistic.net/2026/04/27/mouseketeers/",
-      "source": "https://pluralistic.net/feed/",
-      "published": "2026-04-28T05:57:01+00:00",
+      "title": "cPanel Releases Emergency Patch for Critical Authentication Flaw",
+      "link": "https://gbhackers.com/cpanel-releases-emergency-patch/",
+      "source": "GBHackers News",
+      "published": "2026-04-29T05:53:16+00:00",
       "smart_groups": [
         "Curated",
-        "Crypto / Web3",
-        "Exploit / PoC",
-        "Identity / Access",
-        "Network / OT / ICS",
-        "Ransomware",
         "Vulnerabilities / CVEs",
         "General Security"
       ],
       "curated": true
     },
     {
-      "title": "MSAB Interim Report – Q1 2026",
-      "link": "https://www.msab.com/updates/msab-interim-report-q1-2026/",
-      "source": "MSAB",
-      "published": "2026-04-28T05:00:00+00:00",
+      "title": "LiteLLM CVE-2026-42208 SQL Injection Exploited within 36 Hours of Disclosure",
+      "link": "https://thehackernews.com/2026/04/litellm-cve-2026-42208-sql-injection.html",
+      "source": "The Hacker News",
+      "published": "2026-04-29T05:34:00+00:00",
       "smart_groups": [
         "Curated",
         "Vulnerabilities / CVEs",
-        "Detection Engineering"
+        "Threat Actors / APT",
+        "Web / API Security",
+        "Exploit / PoC",
+        "General Security"
       ],
       "curated": true
     },
     {
-      "title": "EDR-Software – ein Kaufratgeber",
-      "link": "https://www.csoonline.com/article/3616110/edr-software-ein-kaufratgeber.html",
-      "source": "CSO Online",
-      "published": "2026-04-28T04:00:00+00:00",
+      "title": "Looking for a cybersecurity professional to interview for a college research paper",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1syplm4/looking_for_a_cybersecurity_professional_to/",
+      "source": "/r/cybersecurity",
+      "published": "2026-04-29T05:30:36+00:00",
+      "smart_groups": [
+        "Curated",
+        "Network / OT / ICS",
+        "Vulnerabilities / CVEs",
+        "OSINT / Community"
+      ],
+      "curated": true
+    },
+    {
+      "title": "GitHub.com and Enterprise Server Vulnerability Allows Remote Code Execution",
+      "link": "https://gbhackers.com/github-com-and-enterprise-server-vulnerability/",
+      "source": "GBHackers News",
+      "published": "2026-04-29T05:07:25+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Curated",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Visualizing Module-Lattice-Based Key-Encapsulation (FIPS 203) — Seeking feedback on geometric accuracy",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1syozog/visualizing_modulelatticebased_keyencapsulation/",
+      "source": "/r/cybersecurity",
+      "published": "2026-04-29T04:58:50+00:00",
       "smart_groups": [
         "Curated",
         "Vulnerabilities / CVEs",
-        "Detection Engineering",
-        "Cloud / SaaS",
-        "Crypto / Web3",
-        "Identity / Access",
+        "OSINT / Community"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Product showcase: SimpleX Chat removes user identifiers from messaging",
+      "link": "https://www.helpnetsecurity.com/2026/04/29/product-showcase-simplex-chat-secure-messaging/",
+      "source": "Help Net Security",
+      "published": "2026-04-29T04:00:36+00:00",
+      "smart_groups": [
+        "Curated",
         "Linux / Unix",
-        "Malware / Payloads",
-        "Network / OT / ICS",
-        "Ransomware",
+        "Vulnerabilities / CVEs",
         "Windows / Microsoft",
         "Mobile Security",
         "General Security"
@@ -79,83 +91,64 @@
       "curated": true
     },
     {
-      "title": "My 5 favorite open source operating systems that aren't Linux",
-      "link": "https://www.zdnet.com/article/my-5-favorite-open-source-operating-systems-that-arent-linux/",
-      "source": "ZDNet – Security",
-      "published": "2026-04-28T02:00:40+00:00",
-      "smart_groups": [
-        "Curated",
-        "Linux / Unix",
-        "Vulnerabilities / CVEs",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Infected Cisco firewalls need cold start to clear persistent Firestarter backdoor",
-      "link": "https://www.csoonline.com/article/4163925/infected-cisco-firewalls-need-cold-start-to-clear-persistent-firestarter-backdoor.html",
+      "title": "Third Party Risk Management: So vermeiden Sie Compliance-Unheil",
+      "link": "https://www.csoonline.com/article/3495375/third-party-risk-management-so-vermeiden-sie-compliance-unheil.html",
       "source": "CSO Online",
-      "published": "2026-04-28T01:31:48+00:00",
+      "published": "2026-04-29T04:00:00+00:00",
       "smart_groups": [
+        "Identity / Access",
+        "Crypto / Web3",
         "Curated",
         "Vulnerabilities / CVEs",
-        "Malware / Payloads",
-        "Detection Engineering",
-        "Threat Actors / APT",
-        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Automating Phishing Email Triage with Microsoft Security Copilot",
+      "link": "https://techcommunity.microsoft.com/t5/microsoft-security-copilot-blog/automating-phishing-email-triage-with-microsoft-security-copilot/ba-p/4416559",
+      "source": "Security Copilot Blog",
+      "published": "2026-04-29T03:50:49+00:00",
+      "smart_groups": [
+        "Email Security / BEC",
+        "Phishing / Social Engineering",
+        "Windows / Microsoft",
+        "Cloud / SaaS",
+        "Crypto / Web3",
+        "Curated",
+        "Network / OT / ICS",
         "Ransomware",
-        "General Security"
+        "Vulnerabilities / CVEs",
+        "Vendors / Product Security"
       ],
       "curated": true
     },
     {
-      "title": "Tropic Trooper targets Chinese speakers with SumatraPDF trojan and VS Code tunnels",
-      "link": "https://www.scworld.com/brief/tropic-trooper-targets-chinese-speakers-with-sumatrapdf-trojan-and-vs-code-tunnels",
-      "source": "SCM feed for Latest",
-      "published": "2026-04-27T23:50:09+00:00",
+      "title": "Looking for a cybersecurity professional to interview for a college research paper",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1sym2hy/looking_for_a_cybersecurity_professional_to/",
+      "source": "/r/cybersecurity",
+      "published": "2026-04-29T02:37:38+00:00",
       "smart_groups": [
+        "Curated",
+        "Network / OT / ICS",
+        "Vulnerabilities / CVEs",
+        "OSINT / Community"
+      ],
+      "curated": true
+    },
+    {
+      "title": "More fake extensions linked to GlassWorm found in Open VSX code marketplace",
+      "link": "https://www.csoonline.com/article/4164524/more-fake-extensions-linked-to-glassworm-found-in-open-vsx-code-marketplace.html",
+      "source": "CSO Online",
+      "published": "2026-04-29T00:48:56+00:00",
+      "smart_groups": [
+        "Supply Chain / Software",
         "Curated",
         "Malware / Payloads",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Thousands of Zimbra servers vulnerable to actively exploited flaw",
-      "link": "https://www.scworld.com/brief/thousands-of-zimbra-servers-vulnerable-to-exploits-cisa-issues-warning",
-      "source": "SCM feed for Latest",
-      "published": "2026-04-27T23:47:44+00:00",
-      "smart_groups": [
-        "Curated",
-        "Exploit / PoC",
         "Vulnerabilities / CVEs",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "LMDeploy vulnerability exploited, highlighting AI infrastructure risks",
-      "link": "https://www.scworld.com/brief/lmdeploy-vulnerability-exploited-in-real-time-highlighting-ai-infrastructure-risks",
-      "source": "SCM feed for Latest",
-      "published": "2026-04-27T23:43:39+00:00",
-      "smart_groups": [
-        "Curated",
-        "Exploit / PoC",
-        "Vulnerabilities / CVEs",
-        "Web / API Security",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Pack2TheRoot flaw allows Linux privilege escalation",
-      "link": "https://www.scworld.com/brief/pack2theroot-flaw-allows-linux-privilege-escalation",
-      "source": "SCM feed for Latest",
-      "published": "2026-04-27T23:40:57+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Curated",
-        "Linux / Unix",
+        "Threat Actors / APT",
+        "Network / OT / ICS",
+        "Ransomware",
         "General Security"
       ],
       "curated": true
