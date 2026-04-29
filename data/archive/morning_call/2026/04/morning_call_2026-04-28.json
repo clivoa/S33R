@@ -1,0 +1,164 @@
+{
+  "generated_at": "2026-04-28T08:41:13.033179+00:00",
+  "analysis_date": "2026-04-28",
+  "model": "gpt-5.2",
+  "window_hours": 24,
+  "source_file": "data/news_recent.json",
+  "source_generated_at": "2026-04-28T06:37:41.743073+00:00",
+  "source_days_back": 30,
+  "source_total_items": 7805,
+  "total_items_in_window_all": 239,
+  "total_items_in_window_curated": 55,
+  "morning_call_markdown": "### Executive Summary\n- Multiple **actively exploited / easily exploitable vulnerabilities** reported (notably **Zimbra**, **Linux “Pack2TheRoot” privesc**, and **security tooling product CVEs**)—prioritize internet-facing and admin tooling exposure.\n- **Network edge persistence risk** highlighted: Cisco firewall infections may require a **full cold reboot** to clear a persistent backdoor (“Firestarter”); validate integrity of perimeter devices.\n- **Supply-chain risk re-escalated** (TeamPCP campaign + high-download OSS package stealing creds): treat developer endpoints/CI as high-value targets; tighten monitoring on package/CLI usage.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Zimbra servers: actively exploited vulnerability exposure**\n- What happened: Reports indicate **thousands of Zimbra servers** remain vulnerable to an **actively exploited flaw** (CISA warning referenced).  \n- Why it matters operationally: If we run Zimbra (or host clients/partners who do), exploitation can lead to **email compromise, data theft, and lateral movement** from a trusted comms system.  \n- Recommended immediate actions for the SOC today: **Confirm asset inventory/exposure** (external scan + CMDB) and **validate patch/mitigation status**; increase alerting on **new webshell-like artifacts / unusual admin logins / abnormal outbound from mail servers**.\n\n**2) Perimeter device persistence: Cisco firewalls + “Firestarter” backdoor**\n- What happened: Infected Cisco firewalls reportedly need a **cold start** to clear a **persistent backdoor** (“Firestarter”).  \n- Why it matters operationally: Firewall compromise enables **traffic interception, VPN abuse, stealthy persistence**, and can bypass endpoint controls—high impact in financial environments.  \n- Recommended immediate actions for the SOC today: **Escalate to network/security engineering** to validate affected models/versions and determine if **cold reboot** is required; hunt for **unexpected config changes, new/admin accounts, unusual management-plane access** and review **AAA/TACACS/RADIUS logs**.\n\n**3) Supply-chain campaign resurgence (TeamPCP + high-volume OSS credential theft)**\n- What happened: SANS reports **TeamPCP supply-chain activity resumed** with concurrent compromises (incl. security/dev tooling), plus an OSS package with **~1M monthly downloads** stole credentials.  \n- Why it matters operationally: Compromise of **developer workstations/CI/CD** can yield **secrets, signing keys, cloud tokens**, and downstream production access (high leverage vs. banks).  \n- Recommended immediate actions for the SOC today: **Monitor for new/rare dependency installs and CLI executions** on dev endpoints/CI; **rotate exposed tokens** if suspicious package/tooling use is detected and **temporarily restrict outbound** from build agents to approved registries.\n\n**4) Privilege escalation + security product CVEs (Linux “Pack2TheRoot”; CrowdStrike/Tenable advisories)**\n- What happened: “**Pack2TheRoot**” Linux privilege escalation described as **easily exploitable**; separate advisories cite **critical vulnerabilities in security products** (CrowdStrike/Tenable).  \n- Why it matters operationally: Linux privesc boosts initial footholds into **root** (containers/servers); security-tool CVEs can become **control-plane takeovers** that blind detection.  \n- Recommended immediate actions for the SOC today: **Identify impacted Linux distributions/hosts** (esp. internet-facing/jump/CI) and fast-track patching; **verify versions and apply vendor fixes** for security tooling; add temporary detections for **sudden root activity** and **security agent/service tampering**.\n\n**5) Microsoft ecosystem abuse: Teams-based malware delivery (UNC6692 / SNOW) + Windows patch concerns**\n- What happened: Reports of attackers leveraging **Microsoft Teams** to deploy **SNOW malware**, and separate reporting on **incomplete Windows patch / “PhantomRPC” privesc** (details may be evolving—assume exploit interest).  \n- Why it matters operationally: Teams is a trusted channel for phish/malware; Windows privilege escalation accelerates **domain compromise** post-initial access.  \n- Recommended immediate actions for the SOC today: Increase monitoring for **Teams-delivered files/links** and suspicious child processes; validate Windows patch posture for affected components and hunt for **post-exploitation signals** (credential dumping attempts, service creation, abnormal RPC activity).\n\n---\n\n### Monitoring & detection recommendations\n- **Email/Mail server (Zimbra)**: WAF/web logs + server auth logs—alert on **unusual POSTs to admin endpoints, new JSP/PHP artifacts, abnormal outbound** from mail servers (MITRE: T1190, T1505.003).\n- **Firewall/VPN edge (Cisco)**: firewall syslog + management-plane logs—hunt for **config diffs, new local users, remote management from unusual IPs, unexpected reboots** (MITRE: T1068, T1098, T1562).\n- **Supply chain / dev endpoints**: EDR + CI logs—detect **new package manager activity** (npm/pip/go/maven), **unknown binaries in build paths**, and **secret access spikes** in vault/KMS (MITRE: T1195, T1552).\n- **Security tooling platforms (EDR/vuln mgmt consoles)**: admin audit logs—alert on **new API keys, role changes, disabled sensors/scans, connector changes** (MITRE: T1098, T1562.001).\n- **Linux privesc (“Pack2TheRoot”)**: Linux auditd/EDR—watch for **unexpected setuid changes, kernel/module tampering, privilege boundary crossings** and sudden **root shells** (MITRE: T1068).\n- **Microsoft Teams malware path**: M365 audit + Defender for Endpoint—monitor **Teams file downloads**, execution from **Downloads/Temp**, and **Office/Teams spawning script interpreters** (PowerShell/cmd/wscript) (MITRE: T1566.002, T1059).\n- **Windows privesc / patch gap themes**: Windows Security logs + Sysmon—hunt for **new services (7045), scheduled tasks, LSASS access attempts, token privilege adjustments** (MITRE: T1053, T1543, T1003).\n\n---\n\n### Medium-term follow-ups\n- **Edge device resilience**: implement/verify **immutable config backups**, routine integrity checks, and a documented **cold-reboot/runbook** decision tree for firewall compromise scenarios.\n- **CI/CD hardening**: enforce **allowlisted registries**, dependency pinning/lockfiles, and **SLSA-style provenance** checks; review build agent egress and credential scoping.\n- **Azure DevOps permissions audit at scale**: use the Microsoft PowerShell approach to **baseline and continuously audit ADO permissions**; alert on high-risk changes (project admin/service connections).\n- **Secure Boot posture**: leverage Defender’s Secure Boot assessment to **identify endpoints lacking Secure Boot** (ransomware resilience improvement); prioritize privileged users and servers.\n- **Browser/app vuln hygiene**: ensure **Firefox** and common admin tools (e.g., **Notepad++**) are kept current via managed patching; reduce local admin where possible to limit privesc impact.\n- **Third-party/SaaS breach readiness**: given Salesforce-linked data leak reporting, re-check **SSO/MFA enforcement, OAuth app review, and data export monitoring** for CRM/SaaS platforms used by business units.",
+  "highlights": [
+    {
+      "title": "Extracting and Auditing Azure DevOps Permissions at Scale with PowerShell",
+      "link": "https://techcommunity.microsoft.com/t5/core-infrastructure-and-security/extracting-and-auditing-azure-devops-permissions-at-scale-with/ba-p/4515274",
+      "source": "Core Infrastructure and Security Blog",
+      "published": "2026-04-28T06:32:48+00:00",
+      "smart_groups": [
+        "Windows / Microsoft",
+        "Cloud / SaaS",
+        "Crypto / Web3",
+        "Curated",
+        "Network / OT / ICS",
+        "Vulnerabilities / CVEs",
+        "Vendors / Product Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Pluralistic: Vicky Osterweil's \"The Extended Universe\" (28 Apr 2026)",
+      "link": "https://pluralistic.net/2026/04/27/mouseketeers/",
+      "source": "https://pluralistic.net/feed/",
+      "published": "2026-04-28T05:57:01+00:00",
+      "smart_groups": [
+        "Curated",
+        "Crypto / Web3",
+        "Exploit / PoC",
+        "Identity / Access",
+        "Network / OT / ICS",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "MSAB Interim Report – Q1 2026",
+      "link": "https://www.msab.com/updates/msab-interim-report-q1-2026/",
+      "source": "MSAB",
+      "published": "2026-04-28T05:00:00+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Detection Engineering"
+      ],
+      "curated": true
+    },
+    {
+      "title": "EDR-Software – ein Kaufratgeber",
+      "link": "https://www.csoonline.com/article/3616110/edr-software-ein-kaufratgeber.html",
+      "source": "CSO Online",
+      "published": "2026-04-28T04:00:00+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Detection Engineering",
+        "Cloud / SaaS",
+        "Crypto / Web3",
+        "Identity / Access",
+        "Linux / Unix",
+        "Malware / Payloads",
+        "Network / OT / ICS",
+        "Ransomware",
+        "Windows / Microsoft",
+        "Mobile Security",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "My 5 favorite open source operating systems that aren't Linux",
+      "link": "https://www.zdnet.com/article/my-5-favorite-open-source-operating-systems-that-arent-linux/",
+      "source": "ZDNet – Security",
+      "published": "2026-04-28T02:00:40+00:00",
+      "smart_groups": [
+        "Curated",
+        "Linux / Unix",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Infected Cisco firewalls need cold start to clear persistent Firestarter backdoor",
+      "link": "https://www.csoonline.com/article/4163925/infected-cisco-firewalls-need-cold-start-to-clear-persistent-firestarter-backdoor.html",
+      "source": "CSO Online",
+      "published": "2026-04-28T01:31:48+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Malware / Payloads",
+        "Detection Engineering",
+        "Threat Actors / APT",
+        "Exploit / PoC",
+        "Ransomware",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Tropic Trooper targets Chinese speakers with SumatraPDF trojan and VS Code tunnels",
+      "link": "https://www.scworld.com/brief/tropic-trooper-targets-chinese-speakers-with-sumatrapdf-trojan-and-vs-code-tunnels",
+      "source": "SCM feed for Latest",
+      "published": "2026-04-27T23:50:09+00:00",
+      "smart_groups": [
+        "Curated",
+        "Malware / Payloads",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Thousands of Zimbra servers vulnerable to actively exploited flaw",
+      "link": "https://www.scworld.com/brief/thousands-of-zimbra-servers-vulnerable-to-exploits-cisa-issues-warning",
+      "source": "SCM feed for Latest",
+      "published": "2026-04-27T23:47:44+00:00",
+      "smart_groups": [
+        "Curated",
+        "Exploit / PoC",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "LMDeploy vulnerability exploited, highlighting AI infrastructure risks",
+      "link": "https://www.scworld.com/brief/lmdeploy-vulnerability-exploited-in-real-time-highlighting-ai-infrastructure-risks",
+      "source": "SCM feed for Latest",
+      "published": "2026-04-27T23:43:39+00:00",
+      "smart_groups": [
+        "Curated",
+        "Exploit / PoC",
+        "Vulnerabilities / CVEs",
+        "Web / API Security",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Pack2TheRoot flaw allows Linux privilege escalation",
+      "link": "https://www.scworld.com/brief/pack2theroot-flaw-allows-linux-privilege-escalation",
+      "source": "SCM feed for Latest",
+      "published": "2026-04-27T23:40:57+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Curated",
+        "Linux / Unix",
+        "General Security"
+      ],
+      "curated": true
+    }
+  ]
+}
