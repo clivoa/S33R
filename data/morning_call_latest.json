@@ -1,150 +1,147 @@
 {
-  "generated_at": "2026-04-30T08:37:38.354234+00:00",
-  "analysis_date": "2026-04-30",
+  "generated_at": "2026-05-01T08:26:54.789750+00:00",
+  "analysis_date": "2026-05-01",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-04-30T07:35:17.330316+00:00",
+  "source_generated_at": "2026-05-01T06:45:14.592464+00:00",
   "source_days_back": 30,
-  "source_total_items": 7994,
-  "total_items_in_window_all": 294,
-  "total_items_in_window_curated": 96,
-  "morning_call_markdown": "### Executive Summary\n- Multiple **actively exploited / 0-day-style vulnerabilities** surfaced across common enterprise stacks (notably **Windows Shell**, **cPanel/WHM**, and a **Linux kernel local root**), increasing the chance of opportunistic compromise and rapid follow-on ransomware activity.\n- **Supply-chain risk spiked**: compromised **SAP-related npm packages** and critical **code-execution bugs in developer/CI tooling** (Gemini CLI/CI, Cursor, GitHub) create pathways to stolen secrets and repo/CI takeover.\n- **Ransomware/wiper activity watch**: reports indicate **VECT 2.0 “ransomware” can behave like a wiper**, raising the impact of any intrusion that reaches encryption/destruction stage.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Windows Shell “0-click” vulnerability actively exploited (CISA + Microsoft reporting; incomplete patch concerns)**\n- **What happened:** A Windows Shell vulnerability (reported as **actively exploited**, described as “0-click”) remains a live exploitation risk; some coverage suggests earlier remediation was incomplete.\n- **Why it matters operationally:** High-likelihood initial access vector in Windows-heavy environments; could enable silent compromise leading to credential theft and lateral movement in financial networks.\n- **Recommended immediate actions for the SOC today:** Confirm patch state on high-risk Windows fleets and edge cases; prioritize hunting for suspicious Shell/Explorer child processes and anomalous file execution chains; escalate any hits involving email/web-delivered content immediately.\n\n**2) cPanel/WHM critical auth bypass (CVE-2026-41940) with PoC + “actively exploited” claims**\n- **What happened:** A critical **authentication bypass** in **cPanel/WHM** has emergency updates available and public technical writeups/PoC are circulating.\n- **Why it matters operationally:** Internet-facing admin panels are high-value targets; auth bypass can quickly lead to full hosting control, webshells, credential theft, and downstream compromise of hosted apps.\n- **Recommended immediate actions for the SOC today:** Identify any exposed cPanel/WHM in the estate/vendor perimeter and validate emergency updates applied; monitor WAF/web logs for suspicious WHM/cPanel endpoint access patterns and new admin session creation; isolate/contain any newly modified web content or unexpected cron jobs.\n\n**3) Linux kernel local privilege escalation “Copy Fail” (CVE-2026-31431) with PoC claims**\n- **What happened:** A widely reported Linux kernel LPE (“Copy Fail”) is claimed to affect major distros since 2017; community chatter includes detection discussions and PoC references.\n- **Why it matters operationally:** Even if initial access is elsewhere (phish/edge/web app), this accelerates **root** on Linux servers (including security tooling, jump boxes, some container hosts), increasing blast radius.\n- **Recommended immediate actions for the SOC today:** Triage which critical Linux tiers are potentially exposed (bastions, app servers, EDR/SIEM collectors, CI runners); increase alerting for privilege escalation indicators (suspicious `sudo`, setuid changes, kernel exploit-like process behavior); fast-track kernel patching where feasible and apply compensating controls on crown-jewel hosts.\n\n**4) Developer/CI supply-chain and repo takeover cluster (SAP npm compromise + GitHub RCE + Gemini CLI/CI + Cursor)**\n- **What happened:** Reports of **compromised SAP-related npm packages** stealing developer/CI secrets, plus critical **code execution** issues affecting **GitHub**, **Gemini CLI/CI**, and **Cursor**-style IDE workflows.\n- **Why it matters operationally:** Direct path to **token/secret theft**, malicious commits/releases, CI runner compromise, and later pivot into production cloud accounts—high impact for financial institutions with extensive automation.\n- **Recommended immediate actions for the SOC today:** Invalidate/rotate high-risk CI/CD secrets (GitHub tokens, npm tokens, cloud creds) where exposure is plausible; review recent dependency changes and unusual CI job behavior (unexpected outbound, new steps, modified workflows); enforce/confirm branch protections and require re-auth for privileged Git operations.\n\n**5) VECT 2.0 ransomware reports indicate wiper-like destructive behavior**\n- **What happened:** Multiple sources report **VECT 2.0** can destroy files (not reliably decryptable), effectively acting as a **wiper** in some conditions.\n- **Why it matters operationally:** Raises severity of any intrusion reaching “ransomware stage”; containment speed becomes critical and backups/recovery assumptions may fail.\n- **Recommended immediate actions for the SOC today:** Treat any VECT-related telemetry as **destructive attack**—prioritize isolation over triage; validate ransomware canary alerts, backup immutability, and EDR ransomware protections are active; monitor for mass file operations and suspicious process encryption patterns across Windows/Linux/ESXi.\n\n---\n\n### Monitoring & detection recommendations\n- **Windows active exploitation hunting:** EDR + Windows Security logs for unusual `explorer.exe` / Shell-related process trees spawning scripting/binaries (MITRE **T1204**, **T1059**); correlate with email/web download telemetry.\n- **Internet-facing admin panel abuse (cPanel/WHM):** WAF/reverse proxy + web server logs for repeated auth anomalies, new admin sessions, suspicious POSTs to management endpoints (MITRE **T1190**); alert on new/unknown user agents hitting admin paths.\n- **Linux privilege escalation signals (“Copy Fail” class):** Linux auditd/syslog + EDR for rapid privilege transitions, setuid bit changes, abnormal `kernel`/`dmesg` events, and suspicious binaries in `/tmp` (MITRE **T1068**).\n- **CI/CD secret theft & runner compromise:** GitHub audit logs / CI platform logs for new tokens, workflow edits, runner registration changes, anomalous outbound from runners (MITRE **T1552**, **T1078**); flag jobs pulling unexpected dependencies.\n- **Repo tampering / single-push exploitation themes:** Git hosting audit logs for suspicious pushes to protected branches, force-push attempts, unusual commit authorship, or changes to build scripts (MITRE **T1578** / **T1565** where applicable).\n- **Ransomware/wiper early indicators:** EDR behavioral detections for mass file modification/rename, shadow copy deletion attempts, service stop patterns (MITRE **T1486**, **T1490**); prioritize ESXi/vCenter logging if applicable.\n- **Credential/access hygiene after supply-chain news:** IdP logs (Entra/Okta) for new OAuth app grants, unusual consent events, and abnormal token usage from new geos/devices (MITRE **T1528**, **T1078**).\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** Build a short list of “must-patch” platforms from this cycle (Windows Shell, cPanel/WHM, Linux kernel) and ensure SLA tracking with verification (not just “reported installed”).\n- **CI/CD hardening:** Enforce least-privilege tokens, short-lived credentials, signed commits/releases where possible; add dependency allowlisting and automated SBOM/dependency scanning for npm.\n- **Secret rotation playbook:** Standardize rapid rotation for GitHub/cloud/npm tokens and document triggers (e.g., dependency compromise notifications, repo RCE advisories).\n- **Web admin surface reduction:** Confirm no direct internet exposure for hosting/admin panels; require VPN/Zero Trust access + MFA + IP allowlists for management interfaces.\n- **Ransomware resilience:** Re-test restore procedures assuming wiper behavior (no decrypt path); validate immutable backups and segregation of backup credentials.\n- **Awareness for dev tooling risk:** Brief engineering on IDE/agent risks (Cursor/Gemini/agents): avoid running untrusted repos with hooks enabled; review policies for “agentic” code execution in dev environments.",
+  "source_total_items": 7959,
+  "total_items_in_window_all": 314,
+  "total_items_in_window_curated": 116,
+  "morning_call_markdown": "### Executive Summary\n- Active exploitation: critical **cPanel/WHM auth bypass (CVE-2026-41940)** and **CISA KEV additions (Microsoft + ConnectWise)** raise immediate internet-exposed takeover risk.\n- New high-impact vuln: Linux kernel local privilege escalation **“Copy Fail” (CVE-2026-31431)** is broadly applicable across major distros—treat as post-compromise escalation risk.\n- Supply-chain pressure increasing: multiple reports of **malicious packages / CI tooling abuse** (PyPI “lightning”/PyTorch Lightning, SAP npm packages, GitHub Actions-related modules) require dev pipeline monitoring today.\n\n### High-priority items (immediate attention)\n\n**1) cPanel/WHM actively exploited zero-day → admin takeover (CVE-2026-41940)**\n- What happened: Multiple sources report CVE-2026-41940 in cPanel/WHM exploited in the wild for months; PoC now public.\n- Why it matters operationally: Any internet-exposed cPanel/WHM in our footprint (or vendors) is a fast path to **web hosting takeover → credential theft/phishing staging**.\n- Recommended immediate actions for the SOC today: Confirm whether we/critical vendors run cPanel/WHM; **patch/mitigate immediately** and add temporary WAF/IPS virtual patching where possible; start a targeted hunt for new admin users, unusual web shells, and outbound beaconing from hosting segments.\n\n**2) CISA KEV update (Microsoft + ConnectWise) + “Windows zero-day exploited” directive**\n- What happened: CISA added at least one newly known-exploited vulnerability to KEV; separate reporting highlights a **Windows flaw exploited as a zero-day** with federal patch mandate (exact CVE not provided in the snippet—assume mainstream Windows component).\n- Why it matters operationally: KEV-listed issues correlate strongly with **opportunistic mass exploitation** and rapid ransomware tradecraft adoption; ConnectWise exposure can enable MSP-style downstream compromise.\n- Recommended immediate actions for the SOC today: Cross-check our vuln mgmt against latest KEV (Microsoft + ConnectWise) and **prioritize emergency patching**; review external exposure for ConnectWise endpoints; increase alerting for suspicious remote tooling, new services, and privilege changes on Windows hosts.\n\n**3) Linux kernel LPE “Copy Fail” (CVE-2026-31431)**\n- What happened: New disclosures describe a reliable local privilege escalation via page-cache corruption affecting major Linux distros (widely described as “trivial” once local execution is achieved).\n- Why it matters operationally: Not a perimeter entry by itself, but materially increases risk of **container/host breakout paths and rapid privilege escalation** after any foothold on Linux servers (including cloud workloads).\n- Recommended immediate actions for the SOC today: Identify Linux estate exposure (kernel versions / distro advisories) and **expedite patching** for internet-facing and sensitive workloads; hunt for suspicious local execution chains (new binaries in `/tmp`, abnormal `sudo`/setuid usage) on Linux servers.\n\n**4) Software supply-chain / CI compromise cluster (PyPI “lightning”/PyTorch Lightning, SAP npm packages, GitHub Actions modules, Gemini CLI)**\n- What happened: Reports of compromised Python packages aimed at credential theft, SAP npm package targeting, Ruby/Go modules used against GitHub Actions, and a critical Gemini CLI flaw enabling host command execution/supply-chain abuse (patch may impact CI/CD).\n- Why it matters operationally: Direct path to **CI runner compromise → secret/token theft → cloud takeover**; high relevance to financial environments with strong automation and IaC.\n- Recommended immediate actions for the SOC today: Alert DevOps to **freeze/validate dependencies** (pin versions, verify maintainers/signatures where available) and rotate exposed CI secrets if suspicious installs detected; SOC to monitor CI runner telemetry for abnormal outbound connections and sudden credential/secret access.\n\n**5) APT tradecraft: China-aligned multi-stage intrusion using ShadowPad**\n- What happened: Reporting indicates China-aligned actors deploying ShadowPad in a multi-stage espionage campaign (details/targets unclear from snippet).\n- Why it matters operationally: ShadowPad is a mature backdoor associated with **stealthy long-dwell intrusions**; financial sector often intersects with geopolitical collection.\n- Recommended immediate actions for the SOC today: Run a focused hunt for ShadowPad-like behavior (suspicious DLL sideloading, unusual service installs, encrypted C2 patterns) on high-value segments; ensure IR readiness for “quiet” persistence (scheduled tasks/services/registry run keys).\n\n### Monitoring & detection recommendations\n- **Internet-exposed admin panels (cPanel/WHM):** WAF/reverse proxy + web server logs for spikes in 4xx/5xx, unusual POSTs to admin endpoints, and new admin creation; EDR for webshell-like process trees (`httpd/nginx` spawning shells). (ATT&CK: T1190)\n- **KEV (Microsoft/ConnectWise) exploitation signals:** Windows Security + Sysmon/EDR for new services, new scheduled tasks, and abnormal parent-child chains from remote tools; perimeter firewall for new inbound admin exposure to ConnectWise. (T1059, T1569, T1053)\n- **Linux “Copy Fail” post-compromise:** Auditd/EDR for privilege escalation indicators: new setuid files, unexpected `sudo` usage, kernel exploit artifacts in `/tmp` or memory-only executables; correlate with prior suspicious SSH logins. (T1068)\n- **CI/CD runner compromise:** GitHub Actions/Jenkins logs + runner host EDR for unusual outbound traffic, secrets access events, and build steps invoking shells/network tools (`curl/wget/nc`); alert on new workflow file modifications. (T1552, T1059)\n- **Dependency abuse (PyPI/npm/RubyGems/Go modules):** Proxy/DNS logs for package registry traffic from atypical hosts; endpoint telemetry for `pip/npm/gem/go get` executed on production servers (should be rare). (T1195)\n- **ShadowPad/APT persistence:** EDR for DLL search order hijacking/sideloading patterns, unsigned module loads in signed processes, and long-lived encrypted outbound connections; DNS for rare domains with low reputation. (T1574, T1055)\n- **Ransomware pre-staging via RDP history enumeration (Qilin behavior reported):** Windows event logs for RDP logon patterns + registry queries of RDP history artifacts; watch for rapid discovery commands preceding encryption. (T1018, T1046)\n\n### Medium-term follow-ups\n- Validate patch SLAs for **Linux kernels** across server fleet (including container hosts) and ensure emergency change windows exist for widely exploitable LPEs (CVE-2026-31431).\n- Review third-party/vendor risk: confirm whether any **hosting/marketing vendors** rely on cPanel/WHM and require attestation of patching/IOC review for CVE-2026-41940.\n- CI/CD hardening: enforce **dependency pinning, allowlists, provenance checks**, and least-privilege tokens for runners; consider isolating runners from production networks.\n- Reassess exposure management for **ConnectWise-style remote admin tooling**: inventory, restrict inbound access, enforce MFA/conditional access, and centralize logging.\n- Add/refresh detections for **Python-based backdoors** and tunneling-service abuse (per reporting) in endpoint/network telemetry; ensure egress controls flag new tunneling domains/services.\n- Security awareness/policy: address “shadow AI” and risky browser extensions by tightening **extension controls** and reminding staff about data handling in gen-AI tools (operational risk reduction, not urgent triage today).",
   "highlights": [
     {
-      "title": "New EtherRAT Variant Uses Trojanized Tftpd64 Installer to Bridge Web2 Malware and Web3 Theft",
-      "link": "https://cybersecuritynews.com/new-etherrat-variant-uses-trojanized-tftpd64-installer/",
-      "source": "Cyber Security News (FeedBurner)",
-      "published": "2026-04-30T07:13:11+00:00",
+      "title": "China-Aligned Hackers Deploy ShadowPad in Multi-Stage Espionage Campaign",
+      "link": "https://gbhackers.com/china-hackers-deploy-shadowpad/",
+      "source": "GBHackers News",
+      "published": "2026-05-01T06:08:51+00:00",
       "smart_groups": [
-        "Crypto / Web3",
-        "Curated",
-        "Malware / Payloads",
         "Network / OT / ICS",
-        "Windows / Microsoft",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Google Fixes CVSS 10 Gemini CLI CI RCE and Cursor Flaws Enable Code Execution",
-      "link": "https://thehackernews.com/2026/04/google-fixes-cvss-10-gemini-cli-ci-rce.html",
-      "source": "The Hacker News",
-      "published": "2026-04-30T07:07:00+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Supply Chain / Software",
-        "Cloud / SaaS",
-        "Curated",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Europol Busts €50 Million Online Fraud Network Running Corporate-Style Scam Call Centres",
-      "link": "https://cybersecuritynews.com/europol-busts-e50-million-online-fraud-network/",
-      "source": "Cyber Security News (FeedBurner)",
-      "published": "2026-04-30T06:45:26+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "cPanel 0-Day Authentication Bypass Vulnerability Actively Exploited in the Wild — PoC Released",
-      "link": "https://cybersecuritynews.com/cpanel-0-day-authentication-bypass-vulnerability/",
-      "source": "Cyber Security News (FeedBurner)",
-      "published": "2026-04-30T06:42:56+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
+        "Threat Actors / APT",
         "Curated",
         "Exploit / PoC",
+        "Vulnerabilities / CVEs",
         "General Security"
       ],
       "curated": true
     },
     {
-      "title": "Compromised SAP npm Packages Found Harvesting Developer and CI/CD Secrets",
-      "link": "https://gbhackers.com/compromised-sap-npm-packages/",
+      "title": "Protect Personal Data with Open-Source Proxy for Secure AI Interactions",
+      "link": "https://www.news4hackers.com/protect-personal-data-with-open-source-proxy-for-secure-ai-interactions/",
+      "source": "News4Hackers",
+      "published": "2026-05-01T06:05:12+00:00",
+      "smart_groups": [
+        "Data Protection / Privacy",
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Open-source privacy proxy masks PII before prompts reach external AI services",
+      "link": "https://www.helpnetsecurity.com/2026/05/01/open-source-pii-privacy-proxy/",
+      "source": "Help Net Security",
+      "published": "2026-05-01T06:00:16+00:00",
+      "smart_groups": [
+        "Data Protection / Privacy",
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Ruby Gems and Go Modules Used in Campaign Targeting GitHub Actions",
+      "link": "https://gbhackers.com/ruby-gems-and-go-modules-used-in-campaign-github/",
       "source": "GBHackers News",
-      "published": "2026-04-30T05:44:54+00:00",
+      "published": "2026-05-01T05:38:10+00:00",
       "smart_groups": [
         "Curated",
         "Supply Chain / Software",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "ProFTPD SQL Injection Flaw Opens Door To Remote Code Execution Attacks",
-      "link": "https://gbhackers.com/proftpd-sql-injection-flaw/",
-      "source": "GBHackers News",
-      "published": "2026-04-30T05:14:52+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Curated",
-        "Web / API Security",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Linux Kernel 0-Day “Copy Fail” Grants Root Access Across Major Distros Since 2017",
-      "link": "https://gbhackers.com/linux-kernel-0-day-copy-fail-grants-root-access-major-distros/",
-      "source": "GBHackers News",
-      "published": "2026-04-30T04:50:03+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "Linux / Unix",
+        "Threat Actors / APT",
         "Exploit / PoC",
+        "Ransomware",
         "General Security"
       ],
       "curated": true
     },
     {
-      "title": "Hacked, Now I can't stop being Paranoid",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1szlwwy/hacked_now_i_cant_stop_being_paranoid/",
-      "source": "/r/cybersecurity",
-      "published": "2026-04-30T04:35:52+00:00",
+      "title": "Shadow AI risks deepen as 31% of users get no employer training",
+      "link": "https://www.helpnetsecurity.com/2026/05/01/shadow-ai-risks-it-oversight/",
+      "source": "Help Net Security",
+      "published": "2026-05-01T05:30:46+00:00",
       "smart_groups": [
-        "Malware / Payloads",
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Adamscountypa.gov data breach: ransomware attack disrupts county services | UpGuard",
+      "link": "https://www.upguard.comnews/adamscountypa-gov-data-breach-2026-04-30",
+      "source": "UpGuard – News",
+      "published": "2026-05-01T05:24:29+00:00",
+      "smart_groups": [
+        "Data Breaches / Leaks",
         "Curated",
         "Ransomware",
-        "Vulnerabilities / CVEs",
-        "Windows / Microsoft",
-        "OSINT / Community"
+        "Vendors / Product Security"
       ],
       "curated": true
     },
     {
-      "title": "10 wichtige Security-Eigenschaften: So setzen Sie die Kraft Ihres IT-Sicherheitstechnik-Teams frei",
-      "link": "https://www.csoonline.com/article/3492187/10-wichtige-security-eigenschaften-so-setzen-sie-die-kraft-ihres-it-sicherheitstechnik-teams-frei.html",
-      "source": "CSO Online",
-      "published": "2026-04-30T03:47:00+00:00",
+      "title": "Claude Security Enters Public Beta for Enterprise Customers",
+      "link": "https://gbhackers.com/claude-security-enters-public-beta/",
+      "source": "GBHackers News",
+      "published": "2026-05-01T05:13:58+00:00",
       "smart_groups": [
-        "Identity / Access",
-        "Cloud / SaaS",
-        "Crypto / Web3",
         "Curated",
+        "Exploit / PoC",
         "Vulnerabilities / CVEs",
         "General Security"
       ],
       "curated": true
     },
     {
-      "title": "Linux Kernel 0-Day “Copy Fail” Roots Every Major Distribution Since 2017",
-      "link": "https://cybersecuritynews.com/linux-kernel-0-day-copy-fail/",
+      "title": "Critical Wireshark Vulnerabilities Let Attackers Execute Arbitrary Code Via Malformed Packets",
+      "link": "https://cybersecuritynews.com/wireshark-vulnerabilities-code-execution/",
       "source": "Cyber Security News (FeedBurner)",
-      "published": "2026-04-30T02:31:49+00:00",
+      "published": "2026-05-01T05:08:44+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Curated",
+        "Network / OT / ICS",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Fake CAPTCHA Scam Uses SMS Pumping to Inflate Phone Bills",
+      "link": "https://gbhackers.com/fake-captcha-scam-2/",
+      "source": "GBHackers News",
+      "published": "2026-05-01T04:58:00+00:00",
+      "smart_groups": [
+        "Curated",
+        "Exploit / PoC",
+        "Malware / Payloads",
+        "Mobile Security",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "313 Team claims DDoS/extortion attack on Canonical, disrupting Ubuntu services and security update infrastructure",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1t0jf3p/313_team_claims_ddosextortion_attack_on_canonical/",
+      "source": "/r/cybersecurity",
+      "published": "2026-05-01T04:47:34+00:00",
       "smart_groups": [
         "Curated",
         "Vulnerabilities / CVEs",
         "Linux / Unix",
-        "Exploit / PoC",
-        "General Security"
+        "OSINT / Community"
       ],
       "curated": true
     }
