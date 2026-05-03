@@ -1,143 +1,143 @@
 {
-  "generated_at": "2026-05-02T08:00:49.334475+00:00",
-  "analysis_date": "2026-05-02",
+  "generated_at": "2026-05-03T08:17:41.358048+00:00",
+  "analysis_date": "2026-05-03",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-05-02T07:52:55.791418+00:00",
+  "source_generated_at": "2026-05-03T06:33:51.487605+00:00",
   "source_days_back": 30,
-  "source_total_items": 7845,
-  "total_items_in_window_all": 282,
-  "total_items_in_window_curated": 81,
-  "morning_call_markdown": "### Executive Summary\n- **Two active, high-impact exposure themes:** an **actively exploited critical cPanel takeover flaw** (reports of mass compromise) and **“Copy.Fail” (CVE-2026-31431) Linux local privesc** with PoC/public guidance.\n- **Supply-chain risk is elevated:** multiple reports of **poisoned npm/RubyGems/Go modules** and **SAP-related npm package compromise** aimed at **credential theft/CI tampering**.\n- **Vendor/third-party risk watch:** **Trellix confirmed unauthorized source code repository access**; treat as potential downstream tooling/trust implications until scoping is clear.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Actively exploited critical cPanel takeover (“cPanelSniper” / KEV-driven patch urgency)**\n- **What happened:** Multiple sources report a **critical cPanel vulnerability with PoC and active exploitation**, with claims of **tens of thousands of servers compromised** and CISA-directed patch timelines.\n- **Why it matters operationally:** If we run/host **any cPanel-managed internet-facing assets (including subsidiaries/vendors)**, compromise likely leads to **webshells, credential theft, and lateral movement** into internal networks.\n- **Recommended immediate actions for the SOC today:** **Confirm asset exposure now** (CMDB + external scan results); **prioritize emergency patch/mitigation + isolate any suspected hosts** and start targeted hunts for new admin users, unexpected cron jobs, webshell indicators, and outbound C2.\n\n**2) Linux “Copy.Fail” local privilege escalation (CVE-2026-31431) with PoC**\n- **What happened:** Microsoft/Wiz/others published details on **CVE-2026-31431 (“Copy.Fail”)**, a broadly applicable **Linux local root privesc** with PoC/public research coverage.\n- **Why it matters operationally:** Any foothold (phish, web exploit, leaked key) on Linux servers/containers can rapidly become **root**, increasing risk for **cloud workload takeover and ransomware staging**.\n- **Recommended immediate actions for the SOC today:** **Inventory vulnerable kernels/images** (cloud + on-prem) and fast-track patching; **hunt for suspicious privilege escalation chains** (new SUID files, abnormal sudo usage, unexpected root shells) on high-value Linux workloads.\n\n**3) Cloud container/agent risk: AWS ECS Agent command injection (CVE-2026-7461)**\n- **What happened:** AWS bulletin disclosed **OS command injection in Amazon ECS Agent** related to **FSx Windows File Server volume credentials** (CVE-2026-7461).\n- **Why it matters operationally:** Could enable **remote code execution in container hosts/agent context** in specific configurations—high impact if present in production clusters supporting critical services.\n- **Recommended immediate actions for the SOC today:** **Identify ECS clusters using FSx Windows File Server volumes** and validate agent versions/config; **increase monitoring on ECS hosts** (process creation, agent logs, instance metadata access attempts) until patched.\n\n**4) Software supply chain campaigns targeting CI and developer credentials (npm/RubyGems/Go; SAP npm packages; “sleeper” packages)**\n- **What happened:** Multiple reports highlight **malicious packages** (including “sleeper” packages) designed for **credential theft and CI pipeline tampering**, including activity impacting **SAP-related npm packages**.\n- **Why it matters operationally:** Financial institutions rely on CI/CD; a poisoned dependency can lead to **token exfiltration, signing key theft, and backdoored releases**—often bypassing traditional perimeter controls.\n- **Recommended immediate actions for the SOC today:** **Alert DevOps/SRE to freeze/verify dependency updates** in critical pipelines; **hunt for anomalous CI runner behavior** (new outbound destinations, unexpected env var reads, secret store access bursts) and rotate exposed tokens if suspicious.\n\n**5) Trellix source code repository access breach (vendor trust / potential future abuse)**\n- **What happened:** Trellix confirmed **unauthorized access to internal source code repositories** (details still emerging).\n- **Why it matters operationally:** Raises risk of **weaponized knowledge (0-days), trojanized builds, or increased phishing/social engineering using internal code context**; also impacts trust in vendor artifacts if supply chain is implicated (assumption: no confirmation yet).\n- **Recommended immediate actions for the SOC today:** **Track vendor advisories for IOC/impact updates**; **tighten allowlisting/update validation** for Trellix-related components (signed updates only, monitor unusual agent update behavior).\n\n---\n\n### Monitoring & detection recommendations\n- **Internet-facing management planes (cPanel exposure):** WAF/web logs + auth logs + EDR on hosts; hunt for **new admin creation, anomalous POSTs to management endpoints, webshell file writes** (MITRE **T1190**, **T1505**).\n- **Linux privesc (“Copy.Fail”):** Linux auditd/EDR telemetry; watch **suspicious root transitions, abnormal sudo/su frequency, creation/modification of SUID/SGID binaries** (MITRE **T1068**, **T1548**).\n- **Cloud ECS / container host monitoring (CVE-2026-7461 theme):** CloudTrail + ECS agent logs + host EDR; alert on **unexpected process spawns from agent context**, abnormal calls to **SSM/Secrets Manager**, and unusual egress from cluster nodes (MITRE **T1059**, **T1552**).\n- **CI/CD supply-chain telemetry:** CI runner logs (GitHub Actions/GitLab/Jenkins), artifact repo logs, and proxy/DNS; detect **unexpected package install during build**, new outbound connections during builds, and **sudden secret access spikes** (MITRE **T1195**, **T1552**).\n- **IdP / SaaS token theft patterns (Okta/agent guardrail bypass themes):** Okta/Azure AD sign-in logs; alert on **impossible travel, new device registrations, atypical OAuth consent, token refresh anomalies** (MITRE **T1078**, **T1528**).\n- **Windows info-stealer/backdoor themes (Deep#Door / trojanized installer reports):** EDR + DNS/proxy; hunt for **browser credential access, LSASS access attempts, new persistence (Run keys/scheduled tasks)** (MITRE **T1555**, **T1056**, **T1547**).\n- **DDoS/extortion awareness (Ubuntu infra disruption referenced):** Network telemetry + uptime monitoring; flag **volumetric spikes** and concurrent **extortion email patterns** against public services (MITRE **T1498**).\n\n---\n\n### Medium-term follow-ups\n- **Patching program focus:** Treat **CVE-2026-31431** and any **cPanel** exposure as “drop everything,” then expand to **SonicWall firmware CVEs** and other edge device updates referenced in news.\n- **External attack surface validation:** Use ASM/scan data to confirm **no forgotten cPanel/admin panels** in subsidiaries, labs, or third parties; document exceptions and compensating controls.\n- **CI/CD hardening:** Enforce **dependency pinning/lockfiles, private registries, provenance/signing (SLSA where feasible)**, and restrict runner egress for high-value pipelines.\n- **Vendor risk actions (Trellix):** Review **software update verification controls**, maintain **SBOM intake where available**, and ensure rapid rollback capability for security tooling updates.\n- **BEC/phishing resilience:** Re-brief business units on **payment change verification** and strengthen detections for **inbox rules/forwarding** and **OAuth app consent** abuse (especially where MFA is already present).\n- **Prepare for “patch wave” tempo:** Expect faster exploit maturation; adjust vuln triage to prioritize **internet-facing + identity + cloud control plane** issues over CVSS-only scoring.",
+  "source_total_items": 7590,
+  "total_items_in_window_all": 104,
+  "total_items_in_window_curated": 38,
+  "morning_call_markdown": "### Executive Summary\n- **Mass exploitation of a critical cPanel/WHM auth bypass (CVE-2026-41940) tied to “Sorry” ransomware activity** — treat any exposed cPanel as potentially compromised.\n- **Cloud identity risk spike:** reports of **automated Azure OAuth abuse** (details limited) plus a **large-scale phishing operation leveraging Google AppSheet** to harvest credentials.\n- **New Windows RAT (“Deep#Door”) with stealth/persistence** highlighted in reporting — prioritize endpoint telemetry review for persistence + unusual C2 behavior.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) cPanel/WHM CVE-2026-41940 auth bypass → mass exploitation + ransomware**\n- **What happened:** Multiple reports indicate **active, mass exploitation** of **CVE-2026-41940 (cPanel/WHM auth bypass)**, with “Sorry” ransomware campaigns observed.\n- **Why it matters operationally:** Internet-facing admin panels are common footholds; auth bypass can rapidly lead to **web shell/dropper → lateral movement → encryption** in hours.\n- **Recommended immediate actions for the SOC today:** **Identify any cPanel/WHM exposure**, confirm patch level / mitigations, and **hunt for post-exploitation** (new admin users/API tokens, unexpected cron jobs, suspicious outbound from hosting subnets).\n\n**2) Azure OAuth automated abuse (cloud identity) — potential token theft / consent grants**\n- **What happened:** Reporting claims a **new exploit/abuse path targeting Microsoft Azure via automated OAuth abuse** (exact CVE/primitive unclear from source).\n- **Why it matters operationally:** OAuth abuse can bypass MFA by obtaining **tokens/consents** and enable persistent access to **M365 mail, SharePoint, OneDrive**—high impact in financial environments.\n- **Recommended immediate actions for the SOC today:** **Review Entra ID audit logs** for abnormal **consent grants / app registrations**, and **contain** by disabling suspicious enterprise apps + revoking sessions for impacted users.\n\n**3) Phishing at scale leveraging Google AppSheet (credential harvesting)**\n- **What happened:** A campaign reportedly used **Google AppSheet** to host/enable phishing flows targeting **Facebook credentials** at ~30k-user scale (platform abuse pattern).\n- **Why it matters operationally:** Technique generalizes: trusted SaaS builders can evade URL reputation controls and drive **credential theft → account takeover → internal phishing/BEC**.\n- **Recommended immediate actions for the SOC today:** **Tune email/web controls** to flag AppSheet/low-code-hosted lures, and **hunt** for sign-ins following email clicks (impossible travel, new device, suspicious OAuth prompts).\n\n**4) “Deep#Door” RAT (Windows) — stealth + persistence**\n- **What happened:** New reporting describes **Deep#Door RAT** focusing on stealth and persistence on Windows endpoints.\n- **Why it matters operationally:** RATs typically precede **data theft, banking fraud enablement, and ransomware staging**; persistence can survive reboots and light remediation.\n- **Recommended immediate actions for the SOC today:** **Hunt for persistence artifacts** (new services, scheduled tasks, Run keys) and **inspect anomalous outbound** from user workstations to rare destinations/protocols.\n\n**5) Trellix source code repository breach (supply-chain / vendor risk)**\n- **What happened:** Trellix disclosed unauthorized access to a **code repository** (scope/impact not fully clear from reporting).\n- **Why it matters operationally:** Potential downstream risk includes **trojanized builds, leaked secrets, or exploit development** targeting Trellix-integrated environments.\n- **Recommended immediate actions for the SOC today:** **Validate Trellix update channels** (only official), **monitor for unusual agent/update behavior**, and track vendor advisories for any required hotfix/IoC guidance.\n\n---\n\n### Monitoring & detection recommendations\n- **Internet-facing cPanel/WHM:** WAF/web logs + server auth logs for **bursts of /whm/ /cpanel requests**, failed→success anomalies, and admin creation events (ATT&CK **T1190 Exploit Public-Facing Application**).\n- **Ransomware early signals (post-cPanel foothold):** EDR for **new remote tools**, privilege escalation, and encryption precursors; watch for mass file rename/write and shadow copy deletion (ATT&CK **T1486 Data Encrypted for Impact**, **T1078 Valid Accounts**).\n- **Entra ID / M365 OAuth abuse:** Entra **AuditLogs/SignInLogs** for **Consent to application**, **Add service principal**, **App role assignment**, unusual refresh token activity (ATT&CK **T1528 Steal Application Access Token**).\n- **Cloud mailbox access after OAuth/ATO:** M365 Unified Audit Log for **MailItemsAccessed**, suspicious inbox rules/forwarding, and bulk downloads from SharePoint/OneDrive (ATT&CK **T1114 Email Collection**).\n- **Phishing via low-code/SaaS hosting (AppSheet pattern):** Email gateway + secure web gateway/proxy logs for **first-time-seen SaaS builder URLs**, then correlate to sign-ins within 5–30 minutes (ATT&CK **T1566 Phishing**).\n- **Deep#Door/persistence hunts:** Windows Security + Sysmon/EDR for **new scheduled tasks/services**, Run key changes, WMI persistence, DLL side-loading-like patterns (ATT&CK **T1053 Scheduled Task**, **T1547 Boot or Logon Autostart Execution**).\n- **Vendor/supply-chain anomaly watch (Trellix):** EDR + software inventory for **unexpected agent version changes**, update failures followed by manual installer runs, and outbound to non-standard update endpoints.\n\n---\n\n### Medium-term follow-ups\n- **Patch & exposure management:** Confirm whether **any business units/third parties** run cPanel/WHM; enforce “no direct admin exposure” and require VPN + MFA for admin panels.\n- **Azure OAuth governance:** Tighten **user consent settings**, require admin consent workflows, and periodically review **enterprise apps** + risky permissions (Mail.Read, offline_access).\n- **Email/web hardening for SaaS-abuse phishing:** Expand URL classification for **low-code platforms**; add user-facing banners for external forms/app-builder links.\n- **Endpoint hardening:** Validate Windows persistence controls (ASR rules where applicable), restrict local admin, and ensure EDR tamper protection is enabled broadly.\n- **Trellix vendor risk tracking:** Engage vendor management for **official breach impact statement**, any required credential rotations, and guidance on secure update validation.\n- **Linux privilege escalation awareness (Copy.Fail / “Copy.Fail” discussions):** Treat as **situational awareness** unless confirmed in your fleet; ensure rapid kernel/package patch cadence for cloud workloads and verify least-privilege on automation accounts.",
   "highlights": [
     {
-      "title": "CVE-2026-31431 (Copy Fail) PHP PoC",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1t1isfr/cve202631431_copy_fail_php_poc/",
+      "title": "Cyber Burnout",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1t29gj8/cyber_burnout/",
       "source": "/r/cybersecurity",
-      "published": "2026-05-02T07:11:24+00:00",
+      "published": "2026-05-03T02:48:45+00:00",
       "smart_groups": [
+        "Detection Engineering",
         "Curated",
         "Vulnerabilities / CVEs",
-        "Linux / Unix",
         "OSINT / Community"
       ],
       "curated": true
     },
     {
-      "title": "built a credential grabber for red team work, would love some honest feedback",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1t1ib7w/built_a_credential_grabber_for_red_team_work/",
+      "title": "A deep dive into Copy.Fail",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1t279ua/a_deep_dive_into_copyfail/",
       "source": "/r/cybersecurity",
-      "published": "2026-05-02T06:44:46+00:00",
+      "published": "2026-05-03T01:05:37+00:00",
       "smart_groups": [
-        "Cloud / SaaS",
-        "Curated",
         "Vulnerabilities / CVEs",
-        "Windows / Microsoft",
+        "Curated",
         "OSINT / Community"
       ],
       "curated": true
     },
     {
-      "title": "Trellix Confirms Source Code Breach With Unauthorized Repository Access",
-      "link": "https://thehackernews.com/2026/05/trellix-confirms-source-code-breach.html",
-      "source": "The Hacker News",
-      "published": "2026-05-02T06:41:00+00:00",
+      "title": "BREAKING NEWS: Data Breach Hits Miles Taylor's Anti-ICE Organizing Site GTFOICE.org",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1t27343/breaking_news_data_breach_hits_miles_taylors/",
+      "source": "/r/cybersecurity",
+      "published": "2026-05-03T00:57:01+00:00",
+      "smart_groups": [
+        "Data Breaches / Leaks",
+        "Crypto / Web3",
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "OSINT / Community"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Sinkholed domain",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1t25tou/sinkholed_domain/",
+      "source": "/r/cybersecurity",
+      "published": "2026-05-02T23:58:31+00:00",
+      "smart_groups": [
+        "Detection Engineering",
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "OSINT / Community"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Looking for Advice Regarding Military Cybersecurity Roles",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1t23o63/looking_for_advice_regarding_military/",
+      "source": "/r/cybersecurity",
+      "published": "2026-05-02T22:22:36+00:00",
       "smart_groups": [
         "Curated",
         "Vulnerabilities / CVEs",
+        "OSINT / Community"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Critrical cPanel flaw mass-exploited in \"Sorry\" ransomware attacks",
+      "link": "https://www.bleepingcomputer.com/news/security/critrical-cpanel-flaw-mass-exploited-in-sorry-ransomware-attacks/",
+      "source": "BleepingComputer",
+      "published": "2026-05-02T21:54:00+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Ransomware",
         "General Security"
       ],
       "curated": true
     },
     {
-      "title": "ZenBusiness - 5,118,184 breached accounts",
-      "link": "https://haveibeenpwned.com/Breach/ZenBusiness",
-      "source": "Have I Been Pwned – Latest Breaches",
-      "published": "2026-05-02T05:53:38+00:00",
+      "title": "Google AppSheet Exploited in 30,000-User Facebook Phishing Operation",
+      "link": "https://hackread.com/google-appsheet-facebook-accountdumpling-scam/",
+      "source": "HackRead",
+      "published": "2026-05-02T18:07:25+00:00",
       "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "Data Breaches / Leaks"
-      ],
-      "curated": true
-    },
-    {
-      "title": "cPanelSniper PoC Exploit Disclosed as 44,000 Servers Reportedly Compromised",
-      "link": "https://gbhackers.com/cpanelsniper-poc-exploit-disclosed/",
-      "source": "GBHackers News",
-      "published": "2026-05-02T04:56:50+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
         "Curated",
         "Exploit / PoC",
+        "Phishing / Social Engineering",
         "General Security"
       ],
       "curated": true
     },
     {
-      "title": "CVE-2026-31431: Copy Fail vulnerability enables Linux root privilege escalation across cloud environments",
-      "link": "https://www.microsoft.com/en-us/security/blog/2026/05/01/cve-2026-31431-copy-fail-vulnerability-enables-linux-root-privilege-escalation/",
-      "source": "Microsoft Security Blog",
-      "published": "2026-05-02T03:06:08+00:00",
+      "title": "CMMC Phase 1 is live. Most contractors aren't ready, and the timeline isn't moving.",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1t1wm3w/cmmc_phase_1_is_live_most_contractors_arent_ready/",
+      "source": "/r/cybersecurity",
+      "published": "2026-05-02T17:47:33+00:00",
       "smart_groups": [
         "Curated",
-        "Vulnerabilities / CVEs",
-        "Cloud / SaaS",
-        "Exploit / PoC",
-        "Linux / Unix",
-        "Vendors / Product Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "cPanelSniper – PoC Exploit Disclosed for cPanel Vulnerability, 44,000 Servers Compromised",
-      "link": "https://cybersecuritynews.com/cpanelsniper-poc-exploit/",
-      "source": "Cyber Security News (FeedBurner)",
-      "published": "2026-05-02T02:57:59+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Curated",
-        "Exploit / PoC",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "The npm Threat Landscape: Attack Surface and Mitigations (Updated May 1)",
-      "link": "https://unit42.paloaltonetworks.com/monitoring-npm-supply-chain-attacks/",
-      "source": "https://unit42.paloaltonetworks.com/feed/",
-      "published": "2026-05-02T00:10:33+00:00",
-      "smart_groups": [
-        "Supply Chain / Software",
-        "Curated",
-        "Malware / Payloads",
-        "Vendors / Product Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Hunting Copy Fail: 732 Bytes to Root",
-      "link": "https://www.youtube.com/watch?v=ZVmpK-9rP0Q",
-      "source": "13Cubed (YouTube)",
-      "published": "2026-05-01T23:49:06+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
+        "Identity / Access",
         "Network / OT / ICS",
-        "Detection Engineering"
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "OSINT / Community"
       ],
       "curated": true
     },
     {
-      "title": "For vulnerability research, smaller models run repeatedly can outperform larger frontier models on cost-to-recall.",
-      "link": "https://www.reddit.com/r/netsec/comments/1t19hv7/for_vulnerability_research_smaller_models_run/",
-      "source": "/r/netsec",
-      "published": "2026-05-01T23:30:46+00:00",
+      "title": "Mythos isn't needed for majority of appsec",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1t1vlrg/mythos_isnt_needed_for_majority_of_appsec/",
+      "source": "/r/cybersecurity",
+      "published": "2026-05-02T17:09:54+00:00",
       "smart_groups": [
-        "Vulnerabilities / CVEs",
         "Curated",
+        "Vulnerabilities / CVEs",
         "OSINT / Community"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Kanpur Cyber Scam Investigation Uncovers 13 Bank Staff Involvement",
+      "link": "https://www.news4hackers.com/kanpur-cyber-scam-investigation-uncovers-13-bank-staff-involvement/",
+      "source": "News4Hackers",
+      "published": "2026-05-02T17:01:47+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "General Security"
       ],
       "curated": true
     }
