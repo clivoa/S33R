@@ -1,0 +1,145 @@
+{
+  "generated_at": "2026-05-05T08:28:20.909729+00:00",
+  "analysis_date": "2026-05-05",
+  "model": "gpt-5.2",
+  "window_hours": 24,
+  "source_file": "data/news_recent.json",
+  "source_generated_at": "2026-05-05T08:18:15.980903+00:00",
+  "source_days_back": 30,
+  "source_total_items": 7644,
+  "total_items_in_window_all": 321,
+  "total_items_in_window_curated": 98,
+  "morning_call_markdown": "### Executive Summary\n- Multiple **actively exploited** server-side flaws are driving real-world compromise risk: **cPanel/WHM RCE**, **Weaver E‑cology RCE**, and **Linux “Copy Fail” kernel exploitation** (CISA KEV-level urgency implied by coverage).\n- **Supply-chain threats** are trending again (backdoored **PyTorch Lightning** + malicious **npm/TanStack/SAP-themed packages**) with direct impact to dev endpoints, CI/CD, and secrets.\n- Expect increased **phishing + session hijack** activity (Amazon SES abuse; “Bluekit” phishing kit with 2FA lures), plus noise risk from **Defender/DigiCert certificate false positives**—triage carefully.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) cPanel/WHM critical vulnerability (CVE-2026-41940) reportedly weaponized/actively exploited**\n- What happened: Multiple reports indicate a **critical cPanel/WHM RCE** is being exploited at scale, including targeting governments/MSPs.\n- Why it matters operationally: If any internet-facing cPanel/WHM exists (including vendors/partners), it’s a fast path to **webserver takeover → lateral movement → ransomware**.\n- Recommended immediate actions for the SOC today: **Identify any exposed cPanel/WHM (internal + third-party hosting)**; prioritize patch/mitigation and **hunt for new admin users, suspicious cron/jobs, webshell-like artifacts** on those hosts.\n\n**2) Weaver E‑cology RCE (CVE-2026-22679) actively exploited via Debug API**\n- What happened: CVE-2026-22679 in **Weaver E‑cology** is reported actively exploited since March, leveraging a **debug API** for RCE.\n- Why it matters operationally: Common in enterprise environments; compromise can lead to **credential theft and data access** (high concern for financial data/processes).\n- Recommended immediate actions for the SOC today: **Confirm presence of Weaver E‑cology** and exposure; **block/limit debug interfaces** and begin **web/app log review for abnormal requests to debug endpoints** and follow-on process execution.\n\n**3) Linux “Copy Fail” kernel flaw added to exploited lists / exploitation underway**\n- What happened: “Copy Fail” Linux kernel vulnerability is now widely reported as **actively exploited to gain root** and added to CISA KEV (per reporting).\n- Why it matters operationally: Direct escalation to root increases blast radius for **ransomware, data exfil, and persistence** across Linux fleets (servers, containers, appliances).\n- Recommended immediate actions for the SOC today: **Inventory vulnerable kernel versions/hosts and prioritize patching**; hunt Linux endpoints for **suspicious privilege-escalation chains** (new SUID files, unusual `modprobe`/kernel module activity, abrupt spikes in root shells).\n\n**4) Supply-chain malware in dev ecosystems (PyTorch Lightning + malicious npm/TanStack/SAP-themed packages)**\n- What happened: Reports of **backdoored packages** (PyTorch Lightning) dropping credential stealers; additional **malicious npm packages** abusing postinstall scripts to steal developer secrets.\n- Why it matters operationally: High likelihood of **secrets theft (GitHub tokens, cloud keys)** → cloud takeover, code tampering, and downstream compromise of internal tooling.\n- Recommended immediate actions for the SOC today: **Alert on new/rare package installs and postinstall script execution on dev/CI hosts**; force **credential rotation** where suspicious installs are found and check CI/CD logs for **unexpected outbound to package registries or unknown endpoints**.\n\n**5) Phishing + session hijacking enablement (Amazon SES abuse + “Bluekit” kit w/ 2FA lures)**\n- What happened: Increased reporting on phishing campaigns leveraging **Amazon SES** and a phishing kit that supports **domain automation, 2FA lures, and session hijack**.\n- Why it matters operationally: Financial orgs are prime BEC targets; session/token theft can bypass MFA and drive **fraud + mailbox takeover**.\n- Recommended immediate actions for the SOC today: **Tighten email/web triage for SES-sent campaigns** and **hunt for impossible travel / new device / anomalous token use** in IdP logs; ensure rapid containment playbooks for **MFA-bypass/session theft** are ready.\n\n---\n\n### Monitoring & detection recommendations\n- **Internet-facing app exploitation (cPanel/Weaver/MOVEit-like themes):** WAF/reverse-proxy + webserver logs for **spikes in 4xx/5xx, unusual POSTs, access to admin/debug paths**; correlate to EDR process spawn on web hosts (ATT&CK: **T1190**).\n- **Linux kernel exploitation (“Copy Fail”):** Linux auditd/EDR for **new root shells, SUID bit changes, abnormal kernel module loads**, and privilege escalation signals (ATT&CK: **T1068**).\n- **Webshell/persistence on Linux web servers:** File integrity + EDR for **new/modified files in web roots**, suspicious cron additions, and new services; monitor outbound connections from web servers to rare destinations (ATT&CK: **T1505.003**, **T1053.003**).\n- **Supply-chain package abuse (npm/Python):** Endpoint + CI/CD logs for `npm install`, `pnpm add`, `pip install` on build agents; alert on **postinstall scripts** spawning `curl/wget/powershell/bash` and exfil behavior (ATT&CK: **T1059**, **T1105**).\n- **Credential/session theft via phishing:** Email security gateway + IdP (Entra/Okta) for **new OAuth consent grants, suspicious MFA prompts, new device registrations, token replay patterns** (ATT&CK: **T1566**, **T1528**).\n- **Amazon SES phishing:** Email headers/logs for **SES infrastructure indicators (sending service patterns)** and brand impersonation; prioritize user-reported messages that include **MFA reset/verification lures**.\n- **Certificate/Defender noise (DigiCert alerts):** Defender alert queue—treat DigiCert-related detections as **potential false positives** but require validation via **certificate store changes + signed binary provenance** before closing (avoid blind suppression).\n\n---\n\n### Medium-term follow-ups\n- **Patch & exposure management:** Validate patch SLAs for **internet-facing panels (cPanel/WHM), enterprise collaboration apps (Weaver), managed file transfer automation (MOVEit)**; ensure external attack surface scans cover these.\n- **DevSecOps hardening:** Enforce **package allowlists**, lockfiles, and internal registries; add controls for **minimum release age / provenance checks** (pnpm 11 theme) in CI pipelines.\n- **Secrets management uplift:** Expand scanning for leaked tokens in repos/CI logs; move dev teams toward **short-lived credentials** and tighter egress from build agents.\n- **Phishing resilience:** Re-brief Service Desk + IAM on **session hijack/MFA-bypass** response (token revocation, device wipe, rapid password reset, mailbox rule review).\n- **Vendor/supply-chain risk:** Track **Trellix source code repo breach** reporting for downstream exposure (internal dependency review, supplier comms, monitoring for trojaned updates).\n- **Tuning/telemetry:** Review correlation rules for **web host process creation** and **CI agent anomalies**; avoid over-suppressing Defender cert alerts while Microsoft/DigiCert false-positive guidance stabilizes (assumption: issue still active/in flux).",
+  "highlights": [
+    {
+      "title": "Critical Android Zero-Click Vulnerability Enables Remote Shell Access",
+      "link": "https://gbhackers.com/critical-android-zero-click-vulnerability/",
+      "source": "GBHackers News",
+      "published": "2026-05-05T08:11:49+00:00",
+      "smart_groups": [
+        "Curated",
+        "Threat Actors / APT",
+        "Exploit / PoC",
+        "Vulnerabilities / CVEs",
+        "Mobile Security",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "CISO Security Mind Map 2026",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1t48xey/ciso_security_mind_map_2026/",
+      "source": "/r/cybersecurity",
+      "published": "2026-05-05T08:03:23+00:00",
+      "smart_groups": [
+        "Curated",
+        "Ransomware",
+        "OSINT / Community"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Weaver E-cology RCE Flaw CVE-2026-22679 Actively Exploited via Debug API",
+      "link": "https://thehackernews.com/2026/05/weaver-e-cology-rce-flaw-cve-2026-22679.html",
+      "source": "The Hacker News",
+      "published": "2026-05-05T07:37:00+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Critical Android Zero-Click Vulnerability Grants Remote Shell Access",
+      "link": "https://cybersecuritynews.com/android-zero-click-vulnerability/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-05-05T07:24:31+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Mobile Security",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Sophisticated Phishing Attacks on the Rise with Amazon SES Exploitation",
+      "link": "https://www.news4hackers.com/sophisticated-phishing-attacks-on-the-rise-with-amazon-ses-exploitation/",
+      "source": "News4Hackers",
+      "published": "2026-05-05T07:02:54+00:00",
+      "smart_groups": [
+        "Curated",
+        "Exploit / PoC",
+        "Phishing / Social Engineering",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "AI Security Trainings",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1t47qsp/ai_security_trainings/",
+      "source": "/r/cybersecurity",
+      "published": "2026-05-05T06:52:36+00:00",
+      "smart_groups": [
+        "Curated",
+        "Data Breaches / Leaks",
+        "Vulnerabilities / CVEs",
+        "OSINT / Community"
+      ],
+      "curated": true
+    },
+    {
+      "title": "How CryptoBind’s Encryption Suite Addresses DPDP Act Requirements",
+      "link": "https://jisasoftech.com/how-cryptobinds-encryption-suite-addresses-dpdp-act-requirements/",
+      "source": "JISA Softech",
+      "published": "2026-05-05T06:17:00+00:00",
+      "smart_groups": [
+        "Data Protection / Privacy",
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Vendors / Product Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "pnpm 11 Turns On Minimum Release Age by Default to Reduce npm Supply Chain Risk",
+      "link": "https://cybersecuritynews.com/pnpm-11-turns-on-minimum-release-age/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-05-05T06:05:39+00:00",
+      "smart_groups": [
+        "Curated",
+        "Threat Actors / APT",
+        "Supply Chain / Software",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Hyderabad Man Arrested for ₹80 Lakh Digital Payment Scam in Panchkula",
+      "link": "https://www.news4hackers.com/hyderabad-man-arrested-for-%e2%82%b980-lakh-digital-payment-scam-in-panchkula/",
+      "source": "News4Hackers",
+      "published": "2026-05-05T06:01:31+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Apache HTTP Server Vulnerability Exposes Millions to Remote Code Execution Threats",
+      "link": "https://gbhackers.com/apache-http-server-vulnerability-exposes-millions-rce/",
+      "source": "GBHackers News",
+      "published": "2026-05-05T05:08:07+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Curated",
+        "General Security"
+      ],
+      "curated": true
+    }
+  ]
+}
