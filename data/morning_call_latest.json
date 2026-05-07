@@ -1,16 +1,95 @@
 {
-  "generated_at": "2026-05-06T08:43:16.719597+00:00",
-  "analysis_date": "2026-05-06",
+  "generated_at": "2026-05-07T08:50:10.118018+00:00",
+  "analysis_date": "2026-05-07",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-05-06T03:03:16.385994+00:00",
+  "source_generated_at": "2026-05-07T03:03:59.927076+00:00",
   "source_days_back": 30,
-  "source_total_items": 7893,
-  "total_items_in_window_all": 297,
-  "total_items_in_window_curated": 113,
-  "morning_call_markdown": "### Executive Summary\n- Active exploitation is reported for multiple enterprise-facing vulnerabilities (Linux “CopyFail”, Weaver E-cology, MetInfo CMS) — prioritize exposure checks and rapid containment playbooks.  \n- Major supply-chain compromise: trojanized **DAEMON Tools** installers reportedly used to deliver backdoors — treat as potential enterprise intrusion vector and hunt for unexpected installs/beaconing.  \n- Identity/endpoint risk uptick: malware abusing **Microsoft Phone Link** to siphon SMS OTPs + Android critical flaw **CVE-2026-0073** PoC — tighten OTP/MDM controls and monitor suspicious Phone Link activity.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Linux “CopyFail” (CVE-2026-31431) — high-severity Linux threat with exploitation chatter**\n- **What happened:** Research and media reporting highlight “CopyFail” as a severe Linux vulnerability with attackers “cashing in” (active exploitation reported).  \n- **Why it matters operationally:** Any internet-/DMZ-adjacent Linux host (web, app, tooling, CI/CD) could be a fast path to initial access and privilege escalation into sensitive environments.  \n- **Recommended immediate actions for the SOC today:** Validate exposure/patch status for critical Linux fleets; hunt for anomalous privilege escalation and suspicious child processes from network-facing daemons; be ready to isolate affected hosts if exploitation suspected.\n\n**2) Actively exploited enterprise app vulns — Weaver E-cology (critical 9.8) + MetInfo CMS RCE**\n- **What happened:** Multiple sources report **active exploitation** of a critical Weaver E-cology vulnerability; MetInfo CMS **CVE-2026-29014** also reported exploited for RCE.  \n- **Why it matters operationally:** These are typical “edge app” footholds used for webshells, credential theft, and lateral movement; finance environments often have legacy web apps with weak segmentation.  \n- **Recommended immediate actions for the SOC today:** Identify any internet-exposed instances (WAF/ASM, vuln mgmt, CMDB) and apply emergency mitigations/patches; hunt for webshell indicators (new/modified files, suspicious POSTs, unusual worker processes) and abnormal outbound connections from those servers.\n\n**3) Supply-chain compromise — trojanized DAEMON Tools official installers**\n- **What happened:** Reporting indicates DAEMON Tools distribution channel was compromised for ~a month to deploy backdoors; attribution speculation includes China-linked activity (unconfirmed).  \n- **Why it matters operationally:** “Trusted installer” execution bypasses user suspicion and can evade allow-listing; developer/IT endpoints are common initial beachheads leading to domain compromise.  \n- **Recommended immediate actions for the SOC today:** Search software inventory/EDR for DAEMON Tools installs/updates in the last 30–45 days and triage endpoints; monitor for new persistence (scheduled tasks/services/startup items) and unusual outbound beacons from hosts running DAEMON Tools.\n\n**4) Identity bypass / OTP theft theme — Phone Link abuse + Edge password exposure**\n- **What happened:** Articles describe malware abusing **Microsoft Phone Link** to siphon SMS OTPs to enterprise PCs; researchers also report **Edge** can expose passwords in process memory (risk depends on local compromise).  \n- **Why it matters operationally:** In a financial institution, OTP interception directly degrades MFA; password exposure in memory increases impact of commodity infostealers and local admin compromise.  \n- **Recommended immediate actions for the SOC today:** Hunt for unexpected Phone Link usage on non-approved endpoints and suspicious access to SMS/notification sync features; monitor for credential dumping/LSASS-adjacent behavior and browser process memory scraping patterns (where your EDR supports it).\n\n**5) Mobile/Android urgent — critical Android flaw CVE-2026-0073 + PoC for ADB auth bypass**\n- **What happened:** Android security bulletins/news report critical **CVE-2026-0073** fixed by Google; community thread notes a PoC for an ADB authentication bypass (assume increased exploitation attempts).  \n- **Why it matters operationally:** BYOD/corporate mobile devices are key to authentication and approvals; compromised devices can enable session theft, OTP interception, and access to corporate apps.  \n- **Recommended immediate actions for the SOC today:** Confirm MDM compliance/enforcement for latest Android patches on managed fleet; block/alert on ADB-enabled devices in corporate policy and investigate any ADB-enabled endpoints connecting to corporate resources.\n\n---\n\n### Monitoring & detection recommendations\n- **Linux exploitation (CopyFail):** EDR + Linux auditd/sysmon-for-linux; hunt for privilege escalation and anomalous shells spawned by web/app daemons (ATT&CK **T1068**, **T1059**).  \n- **Weaver/MetInfo exploitation:** WAF/reverse-proxy logs + web server logs; alert on unusual POSTs to admin/upload endpoints, creation of new executable files under web roots, and outbound connections from web servers (ATT&CK **T1190**, **T1505.003**).  \n- **Supply-chain installer abuse (DAEMON Tools):** EDR process telemetry + software inventory; detect installer execution from user-writable paths and unsigned/unexpected child processes spawning network connections (ATT&CK **T1218**, **T1105**).  \n- **Phone Link OTP siphoning:** Windows EDR + Microsoft Defender for Endpoint events; monitor `PhoneLink.exe`/related components for unusual network activity, injection, or access by untrusted processes (ATT&CK **T1055**, **T1110** follow-on).  \n- **Credential access from browsers (Edge memory exposure):** EDR detections for process memory reads targeting browser processes + suspicious extensions; correlate with new admin rights or unsigned tools (ATT&CK **T1555**, **T1003**).  \n- **Autodownload phishing trend:** Email security gateway + endpoint download telemetry; alert on messages causing immediate file downloads, unusual archive/script types, and subsequent `powershell/mshta/rundll32` execution (ATT&CK **T1566.001**, **T1204**).  \n- **Exchange/ShadowPad reporting (assumption: exploitation of Exchange servers):** Monitor Exchange IIS logs, EDR on Exchange hosts, and outbound traffic for anomalous connections; validate no unexpected webshell-like artifacts (ATT&CK **T1190**, **T1059**).\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** Prepare for tighter remediation SLAs (news notes CISA considering a 3-day deadline for critical/KEV-style flaws) — align internal “internet-exposed” patching to similar targets.  \n- **Supply-chain hardening:** Tighten allow-listing and software sourcing controls (block consumer utilities like disk mounters where not required); enhance package verification for developer tooling/agents.  \n- **Mobile security posture:** Re-validate Android baseline (patch SLAs, ADB disabled, Play Protect/enterprise attestation) and ensure high-risk roles (traders, treasury, admins) are on hardened builds.  \n- **Cloud/WAF telemetry improvements:** If using Azure WAF/Defender for Storage/SQL, ensure alerts flow into SIEM with actionable routing; review “edge app” protection coverage for exposed services.  \n- **AI service exposure:** Given reporting on widespread exposed AI services/Ollama-related issues, inventory internal AI endpoints and ensure they are not internet-exposed; enforce authentication and least privilege.  \n- **Ransomware readiness check:** Although recent items are mostly legal/sentencing updates, keep backup restore tests and segmentation reviews on schedule (especially for Linux/web tiers often hit post-exploit).",
+  "source_total_items": 8028,
+  "total_items_in_window_all": 327,
+  "total_items_in_window_curated": 100,
+  "morning_call_markdown": "### Executive Summary\n- **Actively exploited PAN-OS firewall zero-day (CVE-2026-0300)** enabling unauthenticated/root RCE is the top risk; treat any internet-exposed Palo Alto firewalls as potential initial-access vectors today.\n- **Identity & MFA bypass pressure is rising**: campaigns abusing Microsoft Teams (and malware abusing Phone Link to steal SMS OTPs) increase risk to financial workflows reliant on push/SMS-based MFA.\n- **Supply-chain noise is elevated** (compromised installers + malicious PyPI package); expect endpoint detections tied to “legit” software/update execution paths and developer workstation targeting.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Palo Alto PAN-OS Captive Portal zero-day exploited in the wild (CVE-2026-0300)**\n- **What happened:** Multiple sources report an **unauthenticated RCE** in PAN-OS Captive Portal being **actively exploited** against firewalls.\n- **Why it matters operationally:** Firewalls are prime **edge initial-access**; successful exploitation can yield **root execution**, credential theft, pivoting, and rapid ransomware staging.\n- **Recommended immediate actions for the SOC today:** Validate exposure + versions; prioritize vendor mitigations/patches with NetOps; start targeted hunts on firewall mgmt/auth logs and unusual outbound from firewalls, and treat anomalies as potential IR.\n\n**2) Internet-facing web infrastructure RCE/DoS: Apache HTTP/2 (CVE-2026-23918) + Apache HTTP Server advisory**\n- **What happened:** A **critical Apache HTTP/2 flaw** (double-free; DoS/possible RCE) and a separate **Apache HTTP Server RCE advisory** were highlighted by CERT/community sources.\n- **Why it matters operationally:** Apache is common in customer portals and internal apps; exploitation can enable **service disruption** and potential footholds on app tiers.\n- **Recommended immediate actions for the SOC today:** Identify Apache assets (CMDB + external scan results) and flag internet-facing instances; add short-term WAF rules/virtual patches where possible; monitor for crash loops, repeated HTTP/2 anomalies, and suspicious child process spawns under web workers.\n\n**3) Identity attacks via Microsoft Teams + MFA interception via “Phone Link” abuse (CloudZ RAT theme)**\n- **What happened:** Reporting indicates attackers use **Microsoft Teams** lures to steal creds/manipulate MFA, and malware can abuse **Microsoft Phone Link** to capture **SMS OTPs/notifications**.\n- **Why it matters operationally:** Direct risk to **O365/Entra ID** accounts, privileged access, and payment/treasury workflows—especially where **SMS OTP** or user-approved prompts are in use.\n- **Recommended immediate actions for the SOC today:** Tighten monitoring on Teams external chats, new tenant interactions, and suspicious consent/app registrations; hunt for endpoints running Phone Link with unusual process/network behavior and correlate with impossible travel/new device sign-ins.\n\n**4) Supply-chain threats: compromised installers (DAEMON Tools) + malicious PyPI package (Elementary Data)**\n- **What happened:** A **software installer compromise** was reported for DAEMON Tools, and a **supply-chain attack via PyPI** impacted a vendor (Elementary Data) package ecosystem.\n- **Why it matters operationally:** “Trusted” installers/packages can bypass user suspicion and land on developer/admin endpoints, enabling **credential theft** and downstream internal compromise.\n- **Recommended immediate actions for the SOC today:** Block/alert on known compromised installer execution paths in application control; sweep software inventory for impacted products/packages (assumption: details vary by environment); raise scrutiny for new developer tool installs and abnormal package download behavior from build runners.\n\n---\n\n### Monitoring & detection recommendations\n- **Edge exploitation (PAN-OS):** Monitor **Palo Alto firewall system logs, config audit logs, auth logs, GlobalProtect/captive portal logs** for unusual admin logins, config exports, new local users, and unexpected outbound sessions (ATT&CK: **T1190**).\n- **Web server exploitation attempts (Apache/HTTP/2):** In **WAF + reverse proxy + web server access/error logs**, hunt spikes in HTTP/2 requests, malformed headers/frames, repeated 4xx/5xx patterns, and worker restarts; correlate to new processes spawned by httpd/nginx parents (ATT&CK: **T1190**, **T1505**).\n- **Teams-based phishing & MFA manipulation:** In **M365/Defender for Office/Teams audit + Entra ID sign-in logs**, alert on external tenant chats to high-value users, new MFA method enrollments, risky sign-ins, and suspicious OAuth consent/app registrations (ATT&CK: **T1566**, **T1556**).\n- **SMS OTP theft / Phone Link abuse:** In **EDR + Windows event logs**, detect Phone Link-related processes with unusual child processes, clipboard/notification access patterns (where visible), and unexpected outbound connections; correlate with Entra risky sign-ins (ATT&CK: **T1056**, **T1114**—as applicable).\n- **Supply-chain execution paths:** In **EDR + software inventory**, alert on newly installed unsigned/unexpected versions of common utilities and developer tools; monitor **package manager activity** (pip/npm) from endpoints and CI runners, especially new dependencies pulled outside normal pipelines (ATT&CK: **T1195**).\n- **Linux/dev credential theft tooling (developer targeting theme):** From **EDR for Linux + SSH/auth logs**, hunt for new credential access tools, unusual cron/systemd persistence, and outbound to uncommon ports/protocols (ATT&CK: **T1552**, **T1053**).\n- **QUIC/WebSocket C2 theme (Salat malware):** In **network telemetry (proxy/NDR/firewall)**, baseline and alert on new/rare **QUIC (UDP/443)** usage and long-lived **WebSocket** sessions from non-browser processes; pivot into EDR for the owning process (ATT&CK: **T1071**).\n\n---\n\n### Medium-term follow-ups\n- **Patch/hardening program:** Accelerate remediation SLAs for **internet-facing security appliances and web tiers**; ensure compensating controls (WAF/IPS rules, mgmt-plane isolation) are documented and tested.\n- **MFA resilience:** Reduce reliance on **SMS OTP** for high-risk roles; prioritize phishing-resistant MFA (FIDO2/passkeys) and enforce number-matching/tenant restrictions for Teams where feasible.\n- **Third-party & supply-chain governance:** Review controls for **software installation** (allowlisting, signed binaries) and **dependency management** (private registries, pinning, SBOM checks) for dev/CI environments.\n- **Cloud/SaaS data exposure reviews:** Validate DLP and access controls around marketing/email platforms and other SaaS integrations (assumption: Salesforce Marketing Cloud exposure item lacks full technical detail here).\n- **Ransomware/false-flag tradecraft awareness:** Brief IR/hunters on **APT groups posing as ransomware** (Iran/MuddyWater/Chaos decoy theme) to avoid misattribution and focus on espionage-grade post-exploitation behaviors.\n- **Detection engineering backlog:** Convert today’s hunts into durable rules (SIEM use-cases) for edge-device anomalies, Teams-to-credential theft patterns, and QUIC/WebSocket C2 baselines.",
   "highlights": [
+    {
+      "title": "US government agency to safety test frontier AI models before release",
+      "link": "https://www.csoonline.com/article/4168135/us-government-agency-to-safety-test-frontier-ai-models-before-release-2.html",
+      "source": "CSO Online",
+      "published": "2026-05-07T02:46:38+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Crypto / Web3",
+        "Exploit / PoC",
+        "Ransomware",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "CVE-2026-31431",
+      "link": "https://aws.amazon.com/security/security-bulletins/rss/2026-026-aws/",
+      "source": "Latest Bulletins",
+      "published": "2026-05-07T01:45:36+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Linux / Unix",
+        "Cloud / SaaS",
+        "Vendors / Product Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Elementary Data data breach: supply chain attack compromises PyPI package | UpGuard",
+      "link": "https://www.upguard.comnews/elementary-data-data-breach-2026-04-30",
+      "source": "UpGuard – News",
+      "published": "2026-05-07T01:35:51+00:00",
+      "smart_groups": [
+        "Curated",
+        "Data Breaches / Leaks",
+        "Supply Chain / Software",
+        "Vendors / Product Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "albertarepublicans.com security incident exposes names and addresses of three million Albertans | UpGuard",
+      "link": "https://www.upguard.comnews/albertarepublicans-com-data-breach-2026-05-05",
+      "source": "UpGuard – News",
+      "published": "2026-05-07T01:35:51+00:00",
+      "smart_groups": [
+        "Curated",
+        "Data Breaches / Leaks",
+        "Vendors / Product Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Adamscountypa.gov data breach: ransomware attack disrupts county services | UpGuard",
+      "link": "https://www.upguard.comnews/adamscountypa-gov-data-breach-2026-04-30",
+      "source": "UpGuard – News",
+      "published": "2026-05-07T01:35:51+00:00",
+      "smart_groups": [
+        "Data Breaches / Leaks",
+        "Curated",
+        "Ransomware",
+        "Vendors / Product Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "New Salat Malware Uses QUIC and WebSocket Channels for Stealthy Remote Control",
+      "link": "https://cybersecuritynews.com/new-salat-malware-uses-quic-and-websocket/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-05-07T00:35:42+00:00",
+      "smart_groups": [
+        "Malware / Payloads",
+        "Curated",
+        "General Security"
+      ],
+      "curated": true
+    },
     {
       "title": "North Korean hackers targeted ethnic Koreans in China with Android ‘BirdCall’ malware",
       "link": "https://therecord.media/north-korean-hackers-target-ethnic-koreans-in-china",
@@ -25,135 +104,42 @@
       "curated": true
     },
     {
-      "title": "A Browser AI API? - End of Bug Bounties?",
-      "link": "https://www.youtube.com/watch?v=EWJbJgHFLcg",
-      "source": "Security Now (YouTube Playlist)",
-      "published": "2026-05-06T01:43:30+00:00",
+      "title": "New FEMITBOT Network Uses Telegram Mini Apps to Push Crypto Fraud and Android Malware",
+      "link": "https://cybersecuritynews.com/new-femitbot-network-uses-telegram-mini-apps/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-05-07T00:11:17+00:00",
       "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "Linux / Unix",
-        "Windows / Microsoft",
-        "Community / Briefing"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Weekly Update 502",
-      "link": "https://www.troyhunt.com/weekly-update-502/",
-      "source": "Troy Hunt",
-      "published": "2026-05-06T00:14:13+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Copy Fail: What You Need to Know About the Most Severe Linux Threat in Years",
-      "link": "https://unit42.paloaltonetworks.com/cve-2026-31431-copy-fail/",
-      "source": "Unit 42",
-      "published": "2026-05-05T23:00:33+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "Linux / Unix",
-        "Vendors / Product Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Besoin de conseils sur une DMZ automatisée",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1t4v61i/besoin_de_conseils_sur_une_dmz_automatisée/",
-      "source": "/r/cybersecurity",
-      "published": "2026-05-05T22:52:52+00:00",
-      "smart_groups": [
-        "Curated",
-        "Exploit / PoC",
-        "Identity / Access",
-        "Vulnerabilities / CVEs",
-        "OSINT / Community"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Android ADB Auth Bypass Proof-of-Concept: CVE-2026-0073",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1t4u737/android_adb_auth_bypass_proofofconcept_cve20260073/",
-      "source": "/r/cybersecurity",
-      "published": "2026-05-05T22:12:54+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Curated",
-        "Exploit / PoC",
         "Mobile Security",
-        "OSINT / Community"
-      ],
-      "curated": true
-    },
-    {
-      "title": "New stealthy Quasar Linux malware targets software developers",
-      "link": "https://www.bleepingcomputer.com/news/security/new-stealthy-quasar-linux-malware-targets-software-developers/",
-      "source": "BleepingComputer",
-      "published": "2026-05-05T22:01:39+00:00",
-      "smart_groups": [
-        "Malware / Payloads",
-        "Curated",
-        "Linux / Unix",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Better together with Azure WAF + Microsoft Defender for Storage + Defender for Azure SQL Databases",
-      "link": "https://techcommunity.microsoft.com/t5/microsoft-defender-for-cloud/better-together-with-azure-waf-microsoft-defender-for-storage/ba-p/4517101",
-      "source": "Microsoft Defender Cloud Blog",
-      "published": "2026-05-05T21:54:36+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "Web / API Security",
-        "Data Protection / Privacy",
-        "Cloud / SaaS",
         "Crypto / Web3",
+        "Curated",
         "Exploit / PoC",
         "Malware / Payloads",
-        "Network / OT / ICS",
-        "Phishing / Social Engineering",
-        "Ransomware",
-        "Vendors / Product Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Supply-chain attacks take aim at your AI coding agents",
-      "link": "https://www.csoonline.com/article/4167465/supply-chain-attacks-take-aim-at-your-ai-coding-agents.html",
-      "source": "CSO Online",
-      "published": "2026-05-05T21:18:33+00:00",
-      "smart_groups": [
-        "Supply Chain / Software",
-        "Threat Actors / APT",
-        "Malware / Payloads",
-        "Curated",
-        "Phishing / Social Engineering",
-        "Crypto / Web3",
-        "Network / OT / ICS",
         "General Security"
       ],
       "curated": true
     },
     {
-      "title": "The Dangerous Momentum of Autodownload Phishing",
-      "link": "https://www.paloaltonetworks.com/blog/2026/05/dangerous-momentum-autodownload-phishing/",
-      "source": "Palo Alto Networks Blog",
-      "published": "2026-05-05T21:10:08+00:00",
+      "title": "Threat Brief: Exploitation of PAN-OS Captive Portal Zero-Day for Unauthenticated Remote Code Execution",
+      "link": "https://unit42.paloaltonetworks.com/captive-portal-zero-day/",
+      "source": "Unit 42",
+      "published": "2026-05-07T00:00:53+00:00",
       "smart_groups": [
-        "Cloud / SaaS",
-        "Curated",
-        "Malware / Payloads",
-        "Phishing / Social Engineering",
         "Vulnerabilities / CVEs",
+        "Curated",
+        "Exploit / PoC",
         "Vendors / Product Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Darkhub Hacking-for-Hire Portal Advertises Crypto Fraud, Message Interception, and Monitoring",
+      "link": "https://cybersecuritynews.com/darkhub-hacking-for-hire-portal-advertises-crypto-fraud/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-05-06T23:54:48+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "General Security"
       ],
       "curated": true
     }
