@@ -1,147 +1,146 @@
 {
-  "generated_at": "2026-05-08T07:59:21.988627+00:00",
-  "analysis_date": "2026-05-08",
+  "generated_at": "2026-05-09T08:11:20.921588+00:00",
+  "analysis_date": "2026-05-09",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-05-08T07:51:32.952699+00:00",
+  "source_generated_at": "2026-05-09T06:23:49.296503+00:00",
   "source_days_back": 30,
-  "source_total_items": 7997,
-  "total_items_in_window_all": 343,
-  "total_items_in_window_curated": 104,
-  "morning_call_markdown": "### Executive Summary\n- Active exploitation of **perimeter/mobile management platforms**: **Palo Alto PAN-OS firewall zero-day** activity (nation-state attributed in reporting) and **Ivanti EPMM CVE-2026-6973** added to **CISA KEV**.\n- Public exploit momentum on Linux: **“Dirty Frag” Linux kernel local privilege escalation** now has **PoC** + **AWS bulletin** for affected Amazon Linux kernels—expect rapid weaponization in cloud/dev environments.\n- Multiple **initial-access + credential theft** vectors trending: fake **Claude AI** installers delivering **Beagle** malware; new stealers/worm-like credential theft (e.g., **PCPJack**, **NWHStealer**) increasing risk of account takeover and lateral movement.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Palo Alto PAN-OS firewall zero-day / in-the-wild exploitation**\n- **What happened:** Multiple sources report a **PAN-OS firewall RCE** being exploited **for weeks** (since April), with state/nation-state hallmarks and CISA warnings.\n- **Why it matters operationally:** Internet-facing firewalls = **high-impact initial access**; compromise enables **root-level control**, traffic interception, pivot into internal networks (financial sector high value).\n- **Recommended immediate actions for the SOC today:** Validate exposure (external mgmt/interfaces) + enforce mitigations/vendor guidance; hunt for suspicious admin logins/config changes and any outbound C2 from firewall mgmt plane.\n\n**2) Ivanti Endpoint Manager Mobile (EPMM) CVE-2026-6973 (KEV; actively exploited)**\n- **What happened:** Ivanti patched **CVE-2026-6973** (RCE / admin-level access) with confirmed **active exploitation**; CISA added it to **Known Exploited Vulnerabilities**.\n- **Why it matters operationally:** EPMM is a privileged control plane for mobile devices—compromise can enable **device takeover**, **credential collection**, and persistence via MDM actions.\n- **Recommended immediate actions for the SOC today:** Identify any Ivanti EPMM instances and confirm patch level; review EPMM admin/audit logs for new admins, API token creation, unusual device commands, and abnormal authentication sources.\n\n**3) Linux kernel “Dirty Frag” local privilege escalation (PoC released; Amazon Linux advisory)**\n- **What happened:** Public reporting indicates a Linux kernel LPE dubbed **Dirty Frag** with **PoC** available; AWS issued a bulletin covering **Amazon Linux kernel** impacts.\n- **Why it matters operationally:** LPE accelerates post-compromise from container/user to **root**, increasing blast radius for cloud workloads, CI/CD runners, bastions, and on-prem Linux jump hosts.\n- **Recommended immediate actions for the SOC today:** Prioritize patching on internet-exposed and high-value Linux (bastions, Kubernetes nodes, CI agents); hunt for suspicious local privilege escalation signals (unexpected setuid use, kernel exploit tooling, unusual root sessions).\n\n**4) Web/app & sandbox escapes: Next.js/React Server Components + JavaScript sandbox (vm2) critical issues**\n- **What happened:** Reports of **multiple critical flaws** patched in **Next.js/React Server Components**, and “**13 critical holes**” in a JS sandbox (community references to **vm2** sandbox escapes).\n- **Why it matters operationally:** High likelihood of vulnerable internal tools/customer portals; sandbox escapes can turn “safe” code execution into **full host RCE** on build servers and app nodes.\n- **Recommended immediate actions for the SOC today:** Inventory externally reachable Node.js services and CI runners using sandboxing (vm2-like); fast-track patch/upgrade and add WAF/IDS monitoring for anomalous POST payloads and unexpected child processes from Node runtimes.\n\n**5) Initial-access malware delivery via fake AI tooling + evolving stealers**\n- **What happened:** Fake **Claude AI** sites deliver **Beagle** malware on Windows; additional stealer campaigns noted (e.g., **NWHStealer** with anti-VM/encrypted C2; **PCPJack** exploiting multiple CVEs worm-like).\n- **Why it matters operationally:** High chance of **user-driven execution** (download/install) leading to credential theft, session/token hijack, and rapid propagation via email/chat.\n- **Recommended immediate actions for the SOC today:** Block newly observed/fake software download categories via web proxy where possible; increase alerting on suspicious installer execution + credential dumping patterns, and review email/web telemetry for “AI tool download” lures.\n\n---\n\n### Monitoring & detection recommendations\n- **Firewall/VPN telemetry (PAN-OS):** Monitor management-plane auth, new admin creation, config exports, and unusual outbound connections from the firewall; map to **T1190 (Exploit Public-Facing Application)** / **T1068 (Privilege Escalation)** where applicable.\n- **MDM/EPMM logs (Ivanti):** Hunt for spikes in failed logins, logins from new geos/ASNs, creation of API keys/tokens, and mass device actions (wipe/profile push); tie to **T1078 (Valid Accounts)**.\n- **Linux fleet (Dirty Frag):** From EDR + auditd/syslog, look for abrupt root escalations, execution from `/tmp`/`/dev/shm`, suspicious compiler/toolchain use on servers, and anomalous kernel-related syscalls/crashes; align with **T1068**.\n- **Web apps (Next.js/React/Node sandbox):** WAF + app logs: anomalous request bodies to server actions/APIs, SSRF-like patterns, unexpected file reads, and Node processes spawning shells (`sh`, `bash`, `cmd`, `powershell`); map to **T1059 (Command and Scripting Interpreter)**.\n- **Windows endpoints (fake Claude/Beagle):** EDR: new unsigned installers, persistence (Run keys/services/scheduled tasks), and suspicious browser-to-child-process chains; map to **T1204 (User Execution)** / **T1547 (Boot/Logon Autostart Execution)**.\n- **Email + collaboration tools:** Watch for messages with shortened links / “download Claude/AI installer” themes, and attachments leading to executable content; correlate with endpoint execution.\n- **Cloud/IAM (stealers/token theft themes incl. MCP/OAuth hijacking reporting):** IdP logs for new OAuth grants, unusual consent events, refresh token use from new devices, and impossible travel; map to **T1528 (Steal Application Access Token)** (where applicable).\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** Confirm emergency patch/mitigation SLAs for **PAN-OS**, **Ivanti EPMM**, and **Linux kernels** (including Amazon Linux) and track to completion with exception handling.\n- **Exposure reduction:** Re-validate that firewall management interfaces are not internet-exposed; enforce MFA/conditional access for admin portals and restrict mgmt access to jump networks.\n- **Node/JS supply-chain hygiene:** Inventory usage of **vm2/JS sandboxes**, Next.js/React server components, and CI runners; add SCA policies to prevent vulnerable versions from shipping.\n- **SOC playbooks:** Update runbooks for “Firewall compromise suspected” and “MDM platform compromise” (containment steps, evidence capture, credential rotation scope).\n- **User awareness / web controls:** Targeted comms: “Do not install AI tools from ads/search results”; tighten web filtering for newly registered domains and software download sites (assumption: proxy control available).\n- **Third-party/vendor watch:** Track status of reported supply-chain incidents (e.g., Daemon Tools trojanization) and ensure internal software allowlists/EDR rules block known compromised installers (no specific IOCs provided in the items).",
+  "source_total_items": 7901,
+  "total_items_in_window_all": 252,
+  "total_items_in_window_curated": 91,
+  "morning_call_markdown": "### Executive Summary\n- **Linux estate risk spike:** “Dirty Frag” Linux kernel LPE chain (CVE-2026-43284 / CVE-2026-43500) reported **active exploitation** with public exploit chatter—treat as **post-compromise privilege escalation** priority.\n- **Internet-facing / management-plane alerting:** **Ivanti EPMM zero-day (CVE-2026-6973)** is being exploited; also an **AWS Redshift JDBC driver RCE (CVE-2026-8178)** and a **critical Apache HTTP/2 issue** surfaced—verify exposure fast.\n- **Financially relevant malware:** **TCLBANKER banking trojan** spreading via WhatsApp lures and Outlook “worm-like” behavior; plus Linux credential theft tooling (PamDOORa/Quasar) targeting SSH/dev creds—raise monitoring for credential access and lateral movement.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) “Dirty Frag” Linux kernel LPE chain (CVE-2026-43284, CVE-2026-43500) — active attack reporting**\n- **What happened:** Multiple sources report a Linux kernel local privilege escalation chain (“Dirty Frag”) with in-the-wild activity and exploit availability chatter.\n- **Why it matters operationally:** This is a **post-compromise amplifier**—turns a foothold (webshell, stolen creds, container escape precursor) into **root**, increasing ransomware and data theft impact across Linux servers/Kubernetes nodes.\n- **Recommended immediate actions for the SOC today:** Prioritize detection for **priv-esc to root** on Linux (sudden UID 0 processes, unusual kernel module / syscalls patterns) and **escalate any Linux foothold** to IR immediately; coordinate with infra to apply vendor mitigations/workarounds as available (assumption: full patches may lag).\n\n**2) Ivanti Endpoint Manager Mobile (EPMM) zero-day exploitation (CVE-2026-6973)**\n- **What happened:** Ivanti EPMM vulnerability disclosed as **exploited as a zero-day**; government directives indicate urgent patch timelines.\n- **Why it matters operationally:** EPMM is a **high-value management plane**; compromise can enable **device control, credential theft, SSO token abuse**, and pivoting into internal networks.\n- **Recommended immediate actions for the SOC today:** Confirm if we run Ivanti EPMM and whether it is **internet-exposed**; if present, implement emergency change: **restrict admin access (VPN/allowlist), review recent auth/admin events, and fast-track patch/mitigation** with owners.\n\n**3) Linux credential theft & supply-chain-style targeting: PamDOORa (PAM backdoor) + Quasar Linux RAT**\n- **What happened:** New Linux backdoor campaigns reported stealing **SSH credentials** via PAM module abuse (PamDOORa) and a Linux RAT (“Quasar”) targeting **developer credentials** for downstream supply-chain compromise.\n- **Why it matters operationally:** Directly threatens **SSH key material, bastions, CI/CD**, and privileged developer workstations—high blast radius in regulated environments.\n- **Recommended immediate actions for the SOC today:** Hunt for **PAM module changes** and unexpected edits to `/etc/pam.d/*` and authentication libraries; review EDR telemetry for **new persistence on Linux** and alert on anomalous SSH access patterns from dev networks/bastions.\n\n**4) Financially themed malware: TCLBANKER banking trojan (WhatsApp lures + Outlook propagation)**\n- **What happened:** Reports describe TCLBANKER targeting financial platforms, using **WhatsApp social engineering** and **Outlook-based propagation** techniques; also noted abuse of a **signed installer** in one write-up.\n- **Why it matters operationally:** High likelihood of **credential theft**, session hijack, and **fraud-enabling access**; Outlook propagation increases internal spread risk.\n- **Recommended immediate actions for the SOC today:** Increase monitoring for **new Outlook rules, suspicious inbox forwarding, and unusual attachment execution**; coordinate with Email/Endpoint teams to tighten controls on **signed-but-untrusted installers** and block known risky file types from chat/email.\n\n**5) Patch/exposure checks: AWS Redshift JDBC driver RCE (CVE-2026-8178) + Apache HTTP/2 critical vuln**\n- **What happened:** AWS bulletin flags **unsafe class loading RCE** in Redshift JDBC driver; separate reporting highlights a **critical Apache HTTP/2 vulnerability** with RCE potential.\n- **Why it matters operationally:** These are common components in data/analytics and web stacks; exploitation can yield **app server code execution** and credential access, especially where drivers live in app containers.\n- **Recommended immediate actions for the SOC today:** Identify internal apps using **Redshift JDBC** and confirm driver versions; have web/platform teams **inventory Apache HTTP/2-enabled services**, apply vendor fixes, and add WAF/edge throttling rules where patching is delayed.\n\n---\n\n### Monitoring & detection recommendations\n- **Linux priv-esc / root transition (Dirty Frag theme):** EDR (Linux) process lineage + auditd/syslog; alert on **sudden UID 0**, unusual `sudo`/setuid execution, and kernel-related anomalies (MITRE **T1068**).\n- **Kubernetes/node hardening gap (Dirty Frag + K8s chatter):** Kubernetes audit logs + node EDR; hunt for containers running with **unconfined seccomp / privileged contexts** and unexpected host-level process starts (MITRE **T1611**, **T1059**).\n- **Ivanti EPMM exploitation posture:** WAF/reverse proxy + EPMM app logs + IdP logs; monitor for **new admin creation, auth bypass indicators, config exports**, and unusual API call volume (MITRE **T1190**, **T1098**).\n- **PAM/SSH credential theft (PamDOORa):** File integrity monitoring + EDR + auth logs; alert on modifications to **PAM configs/modules**, new/unknown `.so` in auth paths, and spikes in failed/successful SSH from new sources (MITRE **T1556**, **T1110**).\n- **Developer credential targeting (Quasar/supply chain):** EDR on dev endpoints + Git/CI audit logs; watch for **new SSH keys/tokens**, repo permission changes, and unusual runner activity (MITRE **T1552**, **T1566**).\n- **TCLBANKER / Outlook propagation:** M365 audit logs (Exchange, Defender) + endpoint telemetry; hunt for **new mailbox rules/forwarding**, abnormal OAuth consent, and Office spawning script interpreters (MITRE **T1114**, **T1059**).\n- **Web stack RCE surface (Apache HTTP/2):** WAF + web server access/error logs; baseline and alert on **HTTP/2 request anomalies**, desync-like patterns, and sudden 5xx bursts tied to single clients (MITRE **T1190**).\n\n---\n\n### Medium-term follow-ups\n- **Patching governance:** Establish an expedited track for **Linux kernel updates** and compensating controls when “patch not ready” scenarios occur (segmentation, least privilege, workload isolation).\n- **MDM/EPMM hardening:** Ensure EPMM (if used) is **not directly internet-facing**, enforce MFA/conditional access for admins, and implement **config change alerting**.\n- **Software supply-chain controls:** Tighten controls on developer endpoints/CI: **token rotation cadence**, mandatory MFA for Git/CI, signed artifact verification, and least-privileged runners.\n- **Email/chat threat readiness:** Update user awareness and technical policy for **WhatsApp/IM-delivered payloads**; review attachment and executable controls, especially “signed installer” trust policy.\n- **Vendor/security tooling risk review:** Track the reported **Trellix breach claim** for downstream impact (assumption: may affect trust in updates/support); validate vendor communications and ensure update channels are authentic.\n- **AI/agent tooling exposure (if applicable):** Several items point to AI extension/agent governance weaknesses; inventory internal AI coding/assistant tools and restrict high-privilege integrations until reviewed.",
   "highlights": [
     {
-      "title": "Open-Source Firewall Software for Android – NetGuard Showcase",
-      "link": "https://www.news4hackers.com/open-source-firewall-software-for-android-netguard-showcase/",
-      "source": "News4Hackers",
-      "published": "2026-05-08T06:08:22+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "Mobile Security",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Ivanti Patches EPMM Vulnerability Exploited in Recent Cyberattacks",
-      "link": "https://www.news4hackers.com/ivanti-patches-epmm-vulnerability-exploited-in-recent-cyberattacks/",
-      "source": "News4Hackers",
-      "published": "2026-05-08T06:02:52+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Ivanti Patches EPMM Zero-Day Exploited in Targeted Attacks",
-      "link": "https://www.securityweek.com/ivanti-patches-epmm-zero-day-exploited-in-targeted-attacks/",
-      "source": "SecurityWeek",
-      "published": "2026-05-08T05:41:30+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "PoC Exploit Released for Dirty Frag Linux Kernel Vulnerability",
-      "link": "https://gbhackers.com/poc-exploit-for-dirty-frag-linux-kernel-vulnerability/",
-      "source": "GBHackers News",
-      "published": "2026-05-08T05:23:49+00:00",
+      "title": "NIS2 Article 21: turning compliance controls into technical security evidence",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1t7wcqt/nis2_article_21_turning_compliance_controls_into/",
+      "source": "/r/cybersecurity",
+      "published": "2026-05-09T05:56:28+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Curated",
-        "Exploit / PoC",
-        "Linux / Unix",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Linux Kernel Dirty Frag LPE Exploit Enables Root Access Across Major Distributions",
-      "link": "https://thehackernews.com/2026/05/linux-kernel-dirty-frag-lpe-exploit.html",
-      "source": "The Hacker News",
-      "published": "2026-05-08T05:12:00+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "Linux / Unix",
-        "Exploit / PoC",
         "Identity / Access",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "The Canvas Hack Is a New Kind of Ransomware Debacle",
-      "link": "https://www.wired.com/story/canvas-hack-shinyhunters-ransomware-instructure/",
-      "source": "Security News: Cybersecurity, Hacks, Privacy, National Security",
-      "published": "2026-05-08T05:02:40+00:00",
-      "smart_groups": [
-        "Curated",
         "Ransomware",
-        "General Security"
+        "Supply Chain / Software",
+        "OSINT / Community"
       ],
       "curated": true
     },
     {
-      "title": "Product showcase: NetGuard open-source firewall for Android",
-      "link": "https://www.helpnetsecurity.com/2026/05/08/product-showcase-netguard-open-source-firewall-android/",
-      "source": "Help Net Security",
-      "published": "2026-05-08T05:00:48+00:00",
+      "title": "$6.7M Defi Hack Exposes Vulnerability in Trusted Volumes Platform",
+      "link": "https://www.news4hackers.com/6-7m-defi-hack-exposes-vulnerability-in-trusted-volumes-platform/",
+      "source": "News4Hackers",
+      "published": "2026-05-09T05:02:56+00:00",
       "smart_groups": [
+        "Crypto / Web3",
         "Curated",
+        "Exploit / PoC",
         "Vulnerabilities / CVEs",
-        "Mobile Security",
         "General Security"
       ],
       "curated": true
     },
     {
-      "title": "NWHStealer Campaign Deploys Bun Loader, Anti-VM Evasion, and Encrypted C2",
-      "link": "https://gbhackers.com/nwhstealer-campaign/",
+      "title": "Vidar Infostealer Campaign Steals Passwords, Cookies, Crypto Wallets, and Device Data",
+      "link": "https://gbhackers.com/vidar-infostealer-campaign-steals-passwords-cookies/",
       "source": "GBHackers News",
-      "published": "2026-05-08T04:54:55+00:00",
+      "published": "2026-05-09T04:03:07+00:00",
       "smart_groups": [
         "Malware / Payloads",
-        "Threat Actors / APT",
+        "Crypto / Web3",
         "Curated",
-        "Exploit / PoC",
+        "Vulnerabilities / CVEs",
         "General Security"
       ],
       "curated": true
     },
     {
-      "title": "Multiple Critical Flaws Fixed in Next.js and React Server Components",
-      "link": "https://gbhackers.com/multiple-critical-flaws-fixed-in-next-js-and-react/",
+      "title": "NVIDIA Data Breach Reportedly Exposes Personal Information of GeForce Users",
+      "link": "https://cybersecuritynews.com/nvidia-data-breach-geforce-users/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-05-09T03:33:48+00:00",
+      "smart_groups": [
+        "Data Breaches / Leaks",
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "TCLBANKER Banking Trojan Targets Financial Platforms via WhatsApp and Outlook Worms",
+      "link": "https://lifeboat.com/blog/2026/05/tclbanker-banking-trojan-targets-financial-platforms-via-whatsapp-and-outlook-worms",
+      "source": "Lifeboat – Cybercrime & Malcode",
+      "published": "2026-05-09T03:30:52+00:00",
+      "smart_groups": [
+        "Curated",
+        "Malware / Payloads",
+        "Phishing / Social Engineering",
+        "Data Breaches / Leaks"
+      ],
+      "curated": true
+    },
+    {
+      "title": "NVIDIA confirms GeForce NOW data breach affecting Armenian users",
+      "link": "https://lifeboat.com/blog/2026/05/nvidia-confirms-geforce-now-data-breach-affecting-armenian-users",
+      "source": "Lifeboat – Cybercrime & Malcode",
+      "published": "2026-05-09T03:26:08+00:00",
+      "smart_groups": [
+        "Data Breaches / Leaks",
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "NVIDIA Confirms GeForce Data Breach Exposed Users’ Personal Data",
+      "link": "https://gbhackers.com/nvidia-confirms-geforce-data-breach/",
       "source": "GBHackers News",
-      "published": "2026-05-08T04:47:00+00:00",
+      "published": "2026-05-09T03:21:57+00:00",
       "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Cloud / SaaS",
+        "Data Breaches / Leaks",
+        "Data Protection / Privacy",
         "Curated",
-        "Web / API Security",
+        "Vulnerabilities / CVEs",
         "General Security"
       ],
       "curated": true
     },
     {
-      "title": "New “Dirty Frag” Linux Kernel Vulnerability Could Lead to Root Escalation",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1t6xfcu/new_dirty_frag_linux_kernel_vulnerability_could/",
-      "source": "/r/cybersecurity",
-      "published": "2026-05-08T04:26:53+00:00",
+      "title": "What is a Proxy Server? How They Work + Security Risks | UpGuard",
+      "link": "https://origin.upguard.com/blog/proxy-server",
+      "source": "UpGuard Blog",
+      "published": "2026-05-09T03:19:32+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Vendors / Product Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Critical Microsoft 365 Copilot Vulnerabilities Expose sensitive Information",
+      "link": "https://cybersecuritynews.com/microsoft-365-copilot-vulnerabilities-data/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-05-09T02:34:14+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Linux / Unix",
         "Curated",
-        "Cloud / SaaS",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Why AI agent governance feels harder than traditional security models",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1t7orne/why_ai_agent_governance_feels_harder_than/",
+      "source": "/r/cybersecurity",
+      "published": "2026-05-08T23:51:12+00:00",
+      "smart_groups": [
+        "Curated",
+        "Data Protection / Privacy",
+        "Data Breaches / Leaks",
+        "Crypto / Web3",
+        "Vulnerabilities / CVEs",
         "OSINT / Community"
       ],
       "curated": true
