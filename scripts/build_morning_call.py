@@ -4,7 +4,7 @@ scripts/build_morning_call.py
 
 Generates a SOC-oriented morning call from curated news items in data/news_recent.json.
 
-- Supports GPT-5.5 and GPT-4.1 models.
+- Supports GPT-5.2 and GPT-4.1 models.
 - Handles multiple response formats (string, list-of-blocks, response_text).
 - Filters curated items only.
 - Saves:
@@ -33,7 +33,7 @@ NEWS_RECENT_PATH = Path(os.getenv("NEWS_JSON_PATH", "data/news_recent.json"))
 
 DEFAULT_WINDOW_HOURS = int(os.getenv("MORNING_CALL_WINDOW_HOURS", "24"))
 MAX_ITEMS_FOR_CONTEXT = int(os.getenv("MORNING_CALL_MAX_ITEMS", "100"))
-OPENAI_MODEL = os.getenv("MORNING_CALL_MODEL", "gpt-5.5")
+OPENAI_MODEL = os.getenv("MORNING_CALL_MODEL", "gpt-5.2")
 OUTPUT_BASE_DIR = Path(os.getenv("MORNING_CALL_OUTPUT_DIR", "data/archive"))
 
 
@@ -196,13 +196,13 @@ def build_user_prompt(context_snippet: str, hours: int, total_items: int) -> str
 
 #
 # -------------------------
-# GPT-5.5 Safe Response Extractor
+# GPT-5.2 Safe Response Extractor
 # -------------------------
 #
 
 def extract_text_from_response(resp) -> str:
     """
-    GPT-5.5 may return:
+    GPT-5.2 may return:
       - string in message.content
       - list of {type: "text", text: "..."}
       - or response_text field
