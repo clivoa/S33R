@@ -1,153 +1,152 @@
 {
-  "generated_at": "2026-05-10T08:55:34.234019+00:00",
-  "analysis_date": "2026-05-10",
+  "generated_at": "2026-05-11T10:00:09.159720+00:00",
+  "analysis_date": "2026-05-11",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-05-10T06:42:13.224404+00:00",
+  "source_generated_at": "2026-05-11T07:49:31.371694+00:00",
   "source_days_back": 30,
-  "source_total_items": 7619,
-  "total_items_in_window_all": 71,
-  "total_items_in_window_curated": 18,
-  "morning_call_markdown": "### Executive Summary\n- Supply-chain compromise risk is elevated: a popular downloader’s official site reportedly served trojanized installers (Python RAT) — watch for unusual installer execution and new outbound C2.\n- Multiple fresh vulnerability items surfaced (cPanel/WHM RCE/DoS; React Server Components DoS; community-reported chat-message credential theft CVE) — prioritize exposure checks and patch/mitigation validation.\n- Malware targeting user communication channels is trending (worm-like propagation via Outlook/WhatsApp) — reinforce email/client telemetry monitoring and lateral spread detections.\n\n### High-priority items (immediate attention)\n\n**1) Trojanized software installer / supply-chain compromise (JDownloader installers replaced with Python RAT)**\n- What happened: The JDownloader site was reportedly hacked to distribute installers bundled with a Python-based RAT.\n- Why it matters operationally: High likelihood of initial access via user-driven download; RAT enables credential theft, persistence, and staging for ransomware (T1566/T1204).\n- Recommended immediate actions for the SOC today: Hunt for recent JDownloader installs/executions and python-spawned network activity; block/flag execution of unsigned/unexpected installers from user endpoints where feasible.\n\n**2) Critical exposure check + patch validation: cPanel/WHM flaws (RCE/DoS)**\n- What happened: New vulnerabilities in cPanel/WHM were reported enabling code execution and denial-of-service.\n- Why it matters operationally: Internet-facing admin panels are common targets; compromise can lead to web server takeover, credential access, and pivoting into internal networks (T1190).\n- Recommended immediate actions for the SOC today: Identify any internet-exposed cPanel/WHM in our inventory and confirm patch level; add WAF/edge detections for abnormal access patterns to cPanel endpoints and throttle suspicious sources.\n\n**3) Web app availability risk: React Server Components DoS (CVE-2026-23870)**\n- What happened: A critical DoS vulnerability affecting React Server Components was highlighted (vendor notes customer protections).\n- Why it matters operationally: Availability impact to customer-facing apps/APIs (including auth and payments front-ends) can be exploited for disruption or as cover for fraud (T1499).\n- Recommended immediate actions for the SOC today: Confirm whether any critical apps use affected React Server Components and whether WAF/CDN mitigations are enabled; increase alerting on application-layer traffic spikes and anomalous request patterns to SSR/RSC endpoints.\n\n**4) Malware with worm-like propagation via comms tools (TCLBANKER via WhatsApp/Outlook)**\n- What happened: Active attacks reported for “TCLBANKER” malware leveraging WhatsApp and Outlook worm features.\n- Why it matters operationally: Rapid internal spread via email/client messaging can trigger enterprise-wide impact; also aligns with credential theft and financial fraud workflows (T1566/T1021).\n- Recommended immediate actions for the SOC today: Tighten monitoring on Outlook process behaviors (child processes, script execution, mass-mailing) and WhatsApp desktop activity; triage any reports of unusual outbound messages or mailbox-sent anomalies.\n\n**5) Community-reported “one chat message steals credentials” CVE (details unclear)**\n- What happened: A community post claims a CVE where a single chat message can steal credentials, with follow-on impact (“then it gets worse”) — specifics unconfirmed from this feed.\n- Why it matters operationally: If it affects an enterprise chat/collab platform, it could enable silent credential capture and session hijack across the org (T1555/T1056).\n- Recommended immediate actions for the SOC today: Validate whether this CVE maps to any sanctioned chat platform we run; in the interim, monitor for anomalous OAuth/token use and new logins immediately following receipt of chat messages (assumption due to incomplete details).\n\n### Monitoring & detection recommendations\n- **EDR (Windows/macOS/Linux):** Alert on new/rare installer executions from user download paths and subsequent suspicious child processes (PowerShell/cmd/python) (T1204, T1059) — aligns with trojanized installer + worm-like malware themes.\n- **Proxy/DNS/Firewall logs:** Hunt for new outbound connections from endpoints shortly after “installer” execution, especially python/unknown processes making TLS to rare domains (T1071.001).\n- **Email security + M365/O365 audit logs:** Monitor for bursty outbound email from single users, new inbox rules/forwarding, and unusual attachment types driving execution (T1566, T1114).\n- **Exchange/Outlook telemetry (EDR + M365):** Detect Outlook spawning scripting engines, MSI installers, or mass access to address book/sent items (T1059, T1114).\n- **WAF/CDN/Load balancer:** Watch for application-layer request floods and repeated expensive SSR/RSC routes; set thresholds for 4xx/5xx surges and rate-limit triggers (T1499) — aligns with React DoS risk.\n- **Internet exposure monitoring (ASM/CMDB + vuln scanner):** Daily check for cPanel/WHM fingerprints on public IPs and unexpected admin portal exposure; correlate with auth failures and geo anomalies (T1190).\n- **IdP (Okta/Azure AD) + CASB:** Monitor for anomalous token grants, impossible travel, and new device/session patterns immediately following chat/email interactions (T1528/T1550) — driven by “credential theft via message” claim.\n\n### Medium-term follow-ups\n- Patch/hardening: Ensure formal patch SLAs cover “admin panels” (cPanel/WHM) and web framework components (React SSR/RSC); add explicit ownership for third-party web stacks.\n- Supply-chain controls: Reassess allowlisting policy for end-user software downloads; consider tightening application control (AppLocker/WDAC) and require verified publisher signatures for common tools.\n- WAF/app resilience: Validate DoS playbooks for customer-facing portals (rate limiting, bot protections, autoscaling alarms) and run a tabletop for coordinated DoS + fraud scenarios.\n- Comms-platform risk: If the chat-message credential theft CVE is confirmed applicable, prioritize vendor advisory tracking, rapid config mitigations, and user comms (disable previews/link unfurling if relevant).\n- Threat hunting backlog: Add recurring hunts for “python used as LOLBIN” on user endpoints and for messaging/email-client driven execution chains.\n- Awareness/update: Remind staff not to install “updated installers” from unofficial prompts; route software requests through managed software catalogs only.",
+  "source_total_items": 7444,
+  "total_items_in_window_all": 122,
+  "total_items_in_window_curated": 24,
+  "morning_call_markdown": "### Executive Summary\n- **Supply-chain malware risk:** Multiple reports that the **official JDownloader site served trojanized installers** (Windows/Linux) in a narrow time window—assume some endpoints may have pulled it in.\n- **Externally exposed admin panels:** Reports of **new cPanel vulnerabilities** enabling file access/RCE; high impact if we run/host customer-facing web infrastructure or have third-party hosting exposure.\n- **User-driven initial access trending:** **Malvertising + “shared chat/AI content” lures (macOS)** and **weaponized file delivery** themes reinforce need to watch for download-to-execution chains and remote tool abuse.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) JDownloader supply-chain compromise → Python RAT (Windows/Linux)**\n- **What happened:** The official JDownloader download channel was reportedly compromised (May 6–7) to deliver malware, including a **Python RAT**.\n- **Why it matters operationally:** Realistic “trusted software” infection path; potential for **credential theft, persistence, and lateral movement** if any corporate user installed/updated.\n- **Recommended immediate actions for the SOC today:** Query EDR/software inventory for **JDownloader installs/updates since May 6**; isolate and triage any endpoints with recent install + suspicious child processes (python/cmd/powershell), and open an IR ticket if confirmed.\n\n**2) cPanel vulnerability cluster (file access + potential RCE)**\n- **What happened:** Reporting indicates **new cPanel vulnerabilities** that may allow **unauthorized file access and remote code execution** (details/versions not fully clear from headlines).\n- **Why it matters operationally:** If any **internet-facing cPanel** exists (directly or via vendor/hoster), compromise can lead to **webshells, credential exposure, and downstream access** to internal systems.\n- **Recommended immediate actions for the SOC today:** Identify any **externally exposed cPanel** (our IP space + managed providers); ensure emergency patching/mitigations are tracked, and add WAF/IDS monitoring for spikes in requests to common cPanel paths until versions are validated.\n\n**3) Malvertising-based delivery chains (macOS) using Google Ads + “shared chats”/AI content**\n- **What happened:** Multiple writeups describe **macOS malware delivered via Google Ads** and links embedded in **shared AI/“Claude shared chat”** content.\n- **Why it matters operationally:** Likely to impact **developer/analyst/macOS populations**; supports credential theft and session hijack with minimal exploit sophistication (user-click driven).\n- **Recommended immediate actions for the SOC today:** Increase monitoring for **new unsigned/untrusted app executions on macOS** and abnormal browser-to-shell transitions; push a short advisory to staff: avoid installing tools from ads/shared-chat links, use official vendor pages/bookmarks.\n\n**4) ScreenConnect trojanization/lure + weaponized file delivery (JPEG-themed)**\n- **What happened:** Reporting describes a **weaponized file** chain leading to a **trojanized ScreenConnect** payload (details may be PoC/variant-specific; treat as “delivery technique trending”).\n- **Why it matters operationally:** Remote admin tools (RMM) are high-value for ransomware operators; trojanized installers can provide **rapid remote control** and persistence.\n- **Recommended immediate actions for the SOC today:** Hunt for **new/unknown ScreenConnect clients/services** and suspicious install sources; verify allow-listing for approved remote tools and block unapproved RMM binaries via EDR policy where feasible.\n\n---\n\n### Monitoring & detection recommendations\n- **EDR (Windows/Linux):** Hunt for endpoints with **JDownloader installed/updated May 6–7** followed by unusual child processes (e.g., `python`, `bash`, `curl/wget`, `powershell`) and persistence creation (ATT&CK **T1204**, **T1059**, **T1547**).\n- **Proxy/DNS/SWG:** Look for download-and-execute patterns from **software download categories** followed by immediate C2-like beacons; pivot from any JDownloader download events to subsequent new domains in 0–30 minutes (ATT&CK **T1105**).\n- **EDR (macOS):** Monitor **new LaunchAgents/LaunchDaemons** and first-seen binaries in user-writable paths (`~/Library`, `/tmp`) after browser activity; correlate with ad-click referrers where available (ATT&CK **T1543.001**, **T1059**).\n- **Firewall/WAF/Web server logs:** For any hosted/admin panels, alert on abnormal request volume to **cPanel-related paths** (e.g., `/cpanel`, `/whm`, `/login`) and suspicious parameters/404 sweeps; escalate if followed by new file writes or new PHP/CGI artifacts.\n- **IdP/SSO logs:** Watch for **new device logins, impossible travel, token refresh anomalies** after suspected macOS infections; prioritize privileged users and developers (ATT&CK **T1078**, **T1550**).\n- **RMM/remote access telemetry:** Alert on **new remote tool installs** (ScreenConnect/other) and first-time outbound connections to remote-admin infrastructure; validate against approved software inventory (ATT&CK **T1219**).\n- **File share/SMB telemetry (defensive watch):** Given Windows SMB/file-locking themes in news, monitor for **spikes in file open/lock errors** and anomalous access patterns per host/user; treat as early ransomware signal (ATT&CK **T1486**).\n\n---\n\n### Medium-term follow-ups\n- **Supply-chain hygiene:** Implement/refresh controls for **software provenance** (approved download sources, installer reputation checks, package hash validation where possible) and tighten least-privilege for local installs.\n- **External exposure audit:** Re-confirm inventory of **internet-facing admin panels** (cPanel and similar) across subsidiaries and third parties; ensure contractual SLA for emergency patching and log access.\n- **macOS hardening:** Review macOS baseline: block unsigned apps where feasible, strengthen browser controls, and ensure EDR has full visibility into **persistence locations** and script interpreters.\n- **Remote tool governance:** Reassess policy and detections for **RMM/remote access tools** (allow-list + alert-on-first-seen); validate we can rapidly disable/contain at scale.\n- **Detection quality:** Use the “measuring detection accuracy” theme as a prompt: schedule a quick validation of the above hunts with **known-good test cases** and confirm alert routing to L1/L2 works end-to-end.",
   "highlights": [
     {
-      "title": "Built a platform that combines phishing detection, encrypted file sharing, and cloud security scanning",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1t8ydf8/built_a_platform_that_combines_phishing_detection/",
-      "source": "/r/cybersecurity",
-      "published": "2026-05-10T05:50:26+00:00",
-      "smart_groups": [
-        "Cloud / SaaS",
-        "Curated",
-        "Malware / Payloads",
-        "Phishing / Social Engineering",
-        "Vulnerabilities / CVEs",
-        "OSINT / Community"
-      ],
-      "curated": true
-    },
-    {
-      "title": "New cPanel and WHM Flaws Enable Code Execution, DoS Attacks",
-      "link": "https://cybersecuritynews.com/cpanel-and-whm-flaws/",
-      "source": "Cyber Security News (FeedBurner)",
-      "published": "2026-05-10T05:25:15+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Curated",
-        "Cloud / SaaS",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "CVE-2026-44843: One Chat Message Steals Your Credentials. Then It Gets Worse!",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1t8q7ns/cve202644843_one_chat_message_steals_your/",
-      "source": "/r/cybersecurity",
-      "published": "2026-05-09T23:17:15+00:00",
+      "title": "Measuring Threat Detection Accuracy",
+      "link": "https://detect.fyi/measuring-threat-detection-accuracy-6724732ea150?source=rss----d5fd8f494f6a---4",
+      "source": "Detect.fyi",
+      "published": "2026-05-11T07:22:19+00:00",
       "smart_groups": [
         "Curated",
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "OSINT / Community"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Red Teaming at NCCDC 2026",
-      "link": "http://lockboxx.blogspot.com/2026/05/red-teaming-at-nccdc-2026.html",
-      "source": "http://feeds.feedburner.com/blogspot/ofozM",
-      "published": "2026-05-09T23:16:00+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "Network / OT / ICS",
-        "Malware / Payloads",
         "Threat Actors / APT",
         "Detection Engineering",
+        "Vulnerabilities / CVEs",
+        "Cloud / SaaS",
         "Exploit / PoC",
-        "Linux / Unix",
         "Ransomware",
         "General Security"
       ],
       "curated": true
     },
     {
-      "title": "Best resources to start learning python for cybersecurity and automation",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1t8ny56/best_resources_to_start_learning_python_for/",
-      "source": "/r/cybersecurity",
-      "published": "2026-05-09T21:41:09+00:00",
+      "title": "ShinyHunters Exploits Canvas LMS Free Teacher Accounts in New Breach",
+      "link": "https://gbhackers.com/canvas-lms-free-teacher-accounts/",
+      "source": "GBHackers News",
+      "published": "2026-05-11T07:13:33+00:00",
       "smart_groups": [
         "Curated",
-        "Vulnerabilities / CVEs",
-        "OSINT / Community"
+        "Ransomware",
+        "Exploit / PoC",
+        "General Security"
       ],
       "curated": true
     },
     {
-      "title": "Memory Poisoning AI Agents via ChromaDB",
-      "link": "https://www.reddit.com/r/netsec/comments/1t8hacl/memory_poisoning_ai_agents_via_chromadb/",
-      "source": "/r/netsec",
-      "published": "2026-05-09T19:43:48+00:00",
+      "title": "Windows CreateFileW API Flaw Could Let Attackers Lock SMB Files at Scale",
+      "link": "https://gbhackers.com/windows-createfilew-api-flaw/",
+      "source": "GBHackers News",
+      "published": "2026-05-11T06:57:51+00:00",
       "smart_groups": [
+        "Threat Actors / APT",
         "Curated",
-        "Vulnerabilities / CVEs",
-        "OSINT / Community"
-      ],
-      "curated": true
-    },
-    {
-      "title": "JDownloader site hacked to replace installers with Python RAT malware",
-      "link": "https://www.bleepingcomputer.com/news/security/jdownloader-site-hacked-to-replace-installers-with-python-rat-malware/",
-      "source": "BleepingComputer",
-      "published": "2026-05-09T19:27:58+00:00",
-      "smart_groups": [
-        "Malware / Payloads",
-        "Curated",
-        "Linux / Unix",
+        "Ransomware",
         "Windows / Microsoft",
         "General Security"
       ],
       "curated": true
     },
     {
-      "title": "CVE-2026-23870: Imperva Customers Protected Against Critical React Server Components DoS Vulnerability",
-      "link": "https://www.imperva.com/blog/cve-2026-23870-imperva-customers-protected-against-critical-react-server-components-dos-vulnerability/",
-      "source": "Imperva Blog",
-      "published": "2026-05-09T19:05:01+00:00",
+      "title": "Whitehat returns $190K to Renegade hours after hacking the protocol",
+      "link": "https://cointelegraph.com/news/whitehat-returns-190k-renegade-hours-after-hacking-the-protocol?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound",
+      "source": "Cointelegraph.com News",
+      "published": "2026-05-11T06:55:54+00:00",
       "smart_groups": [
-        "Vulnerabilities / CVEs",
+        "Crypto / Web3",
         "Curated",
-        "Identity / Access",
-        "Vendors / Product Security"
+        "Exploit / PoC"
       ],
       "curated": true
     },
     {
-      "title": "Technical Analysis of EagleSpy V6.0 (CraxsRAT Rebrand) Distributed Through Odysee and Telegram",
-      "link": "https://www.reddit.com/r/netsec/comments/1t8df0j/technical_analysis_of_eaglespy_v60_craxsrat/",
-      "source": "/r/netsec",
-      "published": "2026-05-09T18:50:28+00:00",
+      "title": "JDownloader Downloader Hacked to Infect Users With New Python RAT",
+      "link": "https://cybersecuritynews.com/jdownloader-downloader-hacked/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-05-11T06:48:03+00:00",
       "smart_groups": [
         "Curated",
         "Malware / Payloads",
-        "Crypto / Web3",
-        "Phishing / Social Engineering",
-        "Ransomware",
-        "Mobile Security",
-        "OSINT / Community"
+        "Vulnerabilities / CVEs",
+        "General Security"
       ],
       "curated": true
     },
     {
-      "title": "Getting LLMs Drunk to Find Remote Linux Kernel OOB Writes (and More)",
-      "link": "https://www.reddit.com/r/netsec/comments/1t8cwyx/getting_llms_drunk_to_find_remote_linux_kernel/",
-      "source": "/r/netsec",
-      "published": "2026-05-09T18:31:10+00:00",
+      "title": "Weaponized JPEG file Drops Trojanized ScreenConnect Malware",
+      "link": "https://gbhackers.com/weaponized-jpeg-file/",
+      "source": "GBHackers News",
+      "published": "2026-05-11T06:32:20+00:00",
       "smart_groups": [
         "Curated",
-        "Vulnerabilities / CVEs",
+        "Malware / Payloads",
+        "Windows / Microsoft",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Open-Source Endpoint Security Software for Windows and Linux",
+      "link": "https://www.news4hackers.com/open-source-endpoint-security-software-for-windows-and-linux/",
+      "source": "News4Hackers",
+      "published": "2026-05-11T06:01:34+00:00",
+      "smart_groups": [
+        "Curated",
         "Linux / Unix",
-        "OSINT / Community"
+        "Vulnerabilities / CVEs",
+        "Windows / Microsoft",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "macOS Malware Abuses Google Ads and Claude Shared Chats to Deliver Payloads",
+      "link": "https://gbhackers.com/macos-malware-abuses-google-ads-and-claude-shared-chats/",
+      "source": "GBHackers News",
+      "published": "2026-05-11T05:58:21+00:00",
+      "smart_groups": [
+        "Threat Actors / APT",
+        "Curated",
+        "Exploit / PoC",
+        "Malware / Payloads",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "ODINI Malware Uses CPU Magnetic Signals to Exfiltrate Data from Air-Gapped Systems",
+      "link": "https://gbhackers.com/odini-malware-uses-cpu-magnetic-signals-to-exfiltrate-data/",
+      "source": "GBHackers News",
+      "published": "2026-05-11T05:36:19+00:00",
+      "smart_groups": [
+        "Network / OT / ICS",
+        "Curated",
+        "Exploit / PoC",
+        "Malware / Payloads",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Rustinel: Open-source endpoint detection for Windows and Linux",
+      "link": "https://www.helpnetsecurity.com/2026/05/11/rustinel-open-source-endpoint-detection-windows-linux/",
+      "source": "Help Net Security",
+      "published": "2026-05-11T05:30:18+00:00",
+      "smart_groups": [
+        "Curated",
+        "Linux / Unix",
+        "Vulnerabilities / CVEs",
+        "Windows / Microsoft",
+        "General Security"
       ],
       "curated": true
     }
