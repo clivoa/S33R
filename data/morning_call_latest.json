@@ -1,152 +1,139 @@
 {
-  "generated_at": "2026-05-11T10:00:09.159720+00:00",
-  "analysis_date": "2026-05-11",
+  "generated_at": "2026-05-12T08:54:18.451765+00:00",
+  "analysis_date": "2026-05-12",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-05-11T07:49:31.371694+00:00",
+  "source_generated_at": "2026-05-12T06:52:12.614026+00:00",
   "source_days_back": 30,
-  "source_total_items": 7444,
-  "total_items_in_window_all": 122,
-  "total_items_in_window_curated": 24,
-  "morning_call_markdown": "### Executive Summary\n- **Supply-chain malware risk:** Multiple reports that the **official JDownloader site served trojanized installers** (Windows/Linux) in a narrow time window—assume some endpoints may have pulled it in.\n- **Externally exposed admin panels:** Reports of **new cPanel vulnerabilities** enabling file access/RCE; high impact if we run/host customer-facing web infrastructure or have third-party hosting exposure.\n- **User-driven initial access trending:** **Malvertising + “shared chat/AI content” lures (macOS)** and **weaponized file delivery** themes reinforce need to watch for download-to-execution chains and remote tool abuse.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) JDownloader supply-chain compromise → Python RAT (Windows/Linux)**\n- **What happened:** The official JDownloader download channel was reportedly compromised (May 6–7) to deliver malware, including a **Python RAT**.\n- **Why it matters operationally:** Realistic “trusted software” infection path; potential for **credential theft, persistence, and lateral movement** if any corporate user installed/updated.\n- **Recommended immediate actions for the SOC today:** Query EDR/software inventory for **JDownloader installs/updates since May 6**; isolate and triage any endpoints with recent install + suspicious child processes (python/cmd/powershell), and open an IR ticket if confirmed.\n\n**2) cPanel vulnerability cluster (file access + potential RCE)**\n- **What happened:** Reporting indicates **new cPanel vulnerabilities** that may allow **unauthorized file access and remote code execution** (details/versions not fully clear from headlines).\n- **Why it matters operationally:** If any **internet-facing cPanel** exists (directly or via vendor/hoster), compromise can lead to **webshells, credential exposure, and downstream access** to internal systems.\n- **Recommended immediate actions for the SOC today:** Identify any **externally exposed cPanel** (our IP space + managed providers); ensure emergency patching/mitigations are tracked, and add WAF/IDS monitoring for spikes in requests to common cPanel paths until versions are validated.\n\n**3) Malvertising-based delivery chains (macOS) using Google Ads + “shared chats”/AI content**\n- **What happened:** Multiple writeups describe **macOS malware delivered via Google Ads** and links embedded in **shared AI/“Claude shared chat”** content.\n- **Why it matters operationally:** Likely to impact **developer/analyst/macOS populations**; supports credential theft and session hijack with minimal exploit sophistication (user-click driven).\n- **Recommended immediate actions for the SOC today:** Increase monitoring for **new unsigned/untrusted app executions on macOS** and abnormal browser-to-shell transitions; push a short advisory to staff: avoid installing tools from ads/shared-chat links, use official vendor pages/bookmarks.\n\n**4) ScreenConnect trojanization/lure + weaponized file delivery (JPEG-themed)**\n- **What happened:** Reporting describes a **weaponized file** chain leading to a **trojanized ScreenConnect** payload (details may be PoC/variant-specific; treat as “delivery technique trending”).\n- **Why it matters operationally:** Remote admin tools (RMM) are high-value for ransomware operators; trojanized installers can provide **rapid remote control** and persistence.\n- **Recommended immediate actions for the SOC today:** Hunt for **new/unknown ScreenConnect clients/services** and suspicious install sources; verify allow-listing for approved remote tools and block unapproved RMM binaries via EDR policy where feasible.\n\n---\n\n### Monitoring & detection recommendations\n- **EDR (Windows/Linux):** Hunt for endpoints with **JDownloader installed/updated May 6–7** followed by unusual child processes (e.g., `python`, `bash`, `curl/wget`, `powershell`) and persistence creation (ATT&CK **T1204**, **T1059**, **T1547**).\n- **Proxy/DNS/SWG:** Look for download-and-execute patterns from **software download categories** followed by immediate C2-like beacons; pivot from any JDownloader download events to subsequent new domains in 0–30 minutes (ATT&CK **T1105**).\n- **EDR (macOS):** Monitor **new LaunchAgents/LaunchDaemons** and first-seen binaries in user-writable paths (`~/Library`, `/tmp`) after browser activity; correlate with ad-click referrers where available (ATT&CK **T1543.001**, **T1059**).\n- **Firewall/WAF/Web server logs:** For any hosted/admin panels, alert on abnormal request volume to **cPanel-related paths** (e.g., `/cpanel`, `/whm`, `/login`) and suspicious parameters/404 sweeps; escalate if followed by new file writes or new PHP/CGI artifacts.\n- **IdP/SSO logs:** Watch for **new device logins, impossible travel, token refresh anomalies** after suspected macOS infections; prioritize privileged users and developers (ATT&CK **T1078**, **T1550**).\n- **RMM/remote access telemetry:** Alert on **new remote tool installs** (ScreenConnect/other) and first-time outbound connections to remote-admin infrastructure; validate against approved software inventory (ATT&CK **T1219**).\n- **File share/SMB telemetry (defensive watch):** Given Windows SMB/file-locking themes in news, monitor for **spikes in file open/lock errors** and anomalous access patterns per host/user; treat as early ransomware signal (ATT&CK **T1486**).\n\n---\n\n### Medium-term follow-ups\n- **Supply-chain hygiene:** Implement/refresh controls for **software provenance** (approved download sources, installer reputation checks, package hash validation where possible) and tighten least-privilege for local installs.\n- **External exposure audit:** Re-confirm inventory of **internet-facing admin panels** (cPanel and similar) across subsidiaries and third parties; ensure contractual SLA for emergency patching and log access.\n- **macOS hardening:** Review macOS baseline: block unsigned apps where feasible, strengthen browser controls, and ensure EDR has full visibility into **persistence locations** and script interpreters.\n- **Remote tool governance:** Reassess policy and detections for **RMM/remote access tools** (allow-list + alert-on-first-seen); validate we can rapidly disable/contain at scale.\n- **Detection quality:** Use the “measuring detection accuracy” theme as a prompt: schedule a quick validation of the above hunts with **known-good test cases** and confirm alert routing to L1/L2 works end-to-end.",
+  "source_total_items": 7689,
+  "total_items_in_window_all": 325,
+  "total_items_in_window_curated": 100,
+  "morning_call_markdown": "### Executive Summary\n- **Active exploitation:** cPanel/WHM **CVE-2026-41940** is being exploited to deploy a backdoor; treat any exposed admin hosting surfaces as at-risk.\n- **Supply chain spike:** Large-scale **npm package compromises** + **Checkmarx Jenkins AST plugin** compromise highlight elevated risk in CI/CD and developer dependency pipelines.\n- **Post-compromise risk rising:** New/renewed **Linux kernel LPE (“Dirty Frag” / related LPEs)** and **AD CS abuse guidance** increase the likelihood of rapid privilege escalation once foothold is obtained.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) cPanel/WHM CVE-2026-41940 under active exploitation (filemanager/backdoor activity)**\n- **What happened:** Reporting indicates attackers are actively abusing **CVE-2026-41940** to take over **cPanel/WHM** servers and deploy a **Filemanager/backdoor**.\n- **Why it matters operationally:** If we (or key vendors) have any internet-facing cPanel/WHM, this is direct **initial access → persistence** risk that can lead to credential theft and downstream compromise.\n- **Recommended immediate actions for the SOC today:** Identify any exposed cPanel/WHM in asset inventory and confirm patch level; hunt for **new/unknown admin users, suspicious file writes in web roots, and abnormal outbound from hosting nodes**.\n\n**2) Software supply chain compromises: npm “worm” + broad package tampering; CI credential targeting**\n- **What happened:** Community reporting describes a “mini Shai-Hulud” style **npm worm** compromising **160–170+ packages** (incl. notable ecosystems), abusing **GitHub Actions cache / trusted publishing**; separate coverage notes **TanStack packages** compromised and **CI credentials** targeted.\n- **Why it matters operationally:** High likelihood of **developer workstation/CI runner execution** and **secrets exfiltration**, with potential lateral movement into prod cloud, signing pipelines, and internal artifact repos.\n- **Recommended immediate actions for the SOC today:** Alert DevOps to **freeze/verify dependency updates** and review recent package upgrades; hunt in CI logs for **unexpected workflow changes, unusual npm postinstall scripts, and new outbound connections from runners**.\n\n**3) Checkmarx Jenkins AST plugin compromise (Team-based supply chain intrusion)**\n- **What happened:** Multiple outlets report the **Checkmarx Jenkins AST plugin** was compromised (linked to prior KICS supply chain activity), implying malicious code introduced via a trusted build scanning component.\n- **Why it matters operationally:** Jenkins is often high-trust; a compromised plugin can enable **credential theft, build tampering, and pipeline-to-prod pivoting**.\n- **Recommended immediate actions for the SOC today:** Enumerate Jenkins instances using Checkmarx AST plugin; validate plugin versions/signatures against vendor guidance (if available) and **review Jenkins audit logs for plugin install/update events and abnormal job config changes**.\n\n**4) Linux privilege escalation risk: “Dirty Frag” / related kernel LPEs (post-compromise accelerator)**\n- **What happened:** Multiple reports highlight Linux kernel LPE issues (e.g., “Dirty Frag” **CVE-2026-43500 / CVE-2026-43284** and “Copy Fail” **CVE-2026-31431**), with exploit analysis circulating and warnings of broad enterprise impact.\n- **Why it matters operationally:** Even with strong perimeter controls, any foothold on Linux (app servers, containers hosts, CI runners) can become **root quickly**, complicating containment and increasing ransomware/destructive potential.\n- **Recommended immediate actions for the SOC today:** Prioritize detection for **local exploit / privilege escalation behavior** on Linux estates; coordinate with Infra to **confirm kernel versions and patch/mitigation status** for internet-facing and high-value Linux hosts first.\n\n**5) Web skimming risk: Magecart abuse of Google Tag Manager (GTM)**\n- **What happened:** Threat actors are abusing **Google Tag Manager** to inject **credit card skimmers** (Magecart-style) into websites.\n- **Why it matters operationally:** Financial services web properties (or third-party payment/marketing tags) are prime targets; compromise can cause **card/PII theft** and regulatory exposure.\n- **Recommended immediate actions for the SOC today:** Review GTM admin access, recent container/publish changes, and enforce **MFA + least privilege**; monitor web telemetry for **new third-party JS loads and anomalous form POST destinations**.\n\n---\n\n### Monitoring & detection recommendations\n- **Internet-facing admin panels (cPanel/WHM):** WAF/reverse-proxy + server auth logs for **new admin sessions, brute force, unusual POSTs to file manager endpoints** (ATT&CK: **T1190** Exploit Public-Facing Application).\n- **Jenkins/CI integrity:** Jenkins audit logs + GitHub Actions/Azure DevOps logs for **plugin installs/updates, pipeline YAML edits, new secrets access, unusual cache restores** (ATT&CK: **T1552** Unsecured Credentials, **T1059** Command and Scripting Interpreter).\n- **Dependency execution on endpoints/runner nodes:** EDR on dev workstations/CI runners for **npm/yarn install spawning shells, curl/wget from install hooks, node spawning unusual child processes** (ATT&CK: **T1204** User Execution, **T1105** Ingress Tool Transfer).\n- **Linux post-compromise LPE signals:** EDR/auditd for **suspicious syscalls, kernel exploit tool execution, sudden privilege changes (uid=0), creation of SUID binaries** (ATT&CK: **T1068** Exploitation for Privilege Escalation).\n- **AD CS abuse patterns (enterprise identity):** Windows Security logs + AD CS logs for **unexpected certificate enrollment, abnormal template usage, cert-based logons from new hosts** (ATT&CK: **T1550.003** Pass the Ticket/Certificate abuse themes; map internally to AD CS escalation playbooks).\n- **Web skimming / tag abuse:** CDN/WAF logs + frontend telemetry for **new JS domains, changes in GTM publish history, form data exfil patterns** (ATT&CK: **T1056.003** Web Portal Capture / form grabbing analogs).\n- **Phishing at scale via GenAI tooling:** Email security gateway + web proxy for **bursts of newly registered domains, lookalike login pages, abnormal redirect chains** (ATT&CK: **T1566** Phishing).\n\n---\n\n### Medium-term follow-ups\n- **Patch/mitigation program:** Validate enterprise exposure and patch cadence for Linux kernel LPEs and any cPanel/WHM in subsidiaries/vendors; ensure risk acceptance is documented where patching is delayed.\n- **CI/CD hardening:** Implement/verify **pinned actions, restricted trusted publishing, signed artifacts, least-privilege tokens**, and mandatory review for workflow changes.\n- **Jenkins governance:** Reduce plugin sprawl; enforce **plugin allowlists**, integrity monitoring, and separation of duties for pipeline admins vs deploy credentials.\n- **Tag management controls:** Treat GTM as production code—add **change control, alerting on container publishes, and periodic inventory of third-party tags**.\n- **Identity resilience:** Review AD CS posture (templates, enrollment permissions, auditing) and ensure SOC has **runbooks for certificate-based persistence/escalation**.\n- **Mobile/endpoint awareness (as capacity allows):** Track emerging Android banker/Trojan routing techniques (e.g., novel C2 paths) and ensure mobile fleet telemetry is centrally searchable (assumption: limited details/IOCs in current reporting).",
   "highlights": [
     {
-      "title": "Measuring Threat Detection Accuracy",
-      "link": "https://detect.fyi/measuring-threat-detection-accuracy-6724732ea150?source=rss----d5fd8f494f6a---4",
-      "source": "Detect.fyi",
-      "published": "2026-05-11T07:22:19+00:00",
-      "smart_groups": [
-        "Curated",
-        "Threat Actors / APT",
-        "Detection Engineering",
-        "Vulnerabilities / CVEs",
-        "Cloud / SaaS",
-        "Exploit / PoC",
-        "Ransomware",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "ShinyHunters Exploits Canvas LMS Free Teacher Accounts in New Breach",
-      "link": "https://gbhackers.com/canvas-lms-free-teacher-accounts/",
+      "title": "Magecart Hackers Exploit Google Tag Manager to Inject Credit Card Skimmers",
+      "link": "https://gbhackers.com/magecart-hackers-exploit-google-tag-manager/",
       "source": "GBHackers News",
-      "published": "2026-05-11T07:13:33+00:00",
+      "published": "2026-05-12T06:39:17+00:00",
       "smart_groups": [
         "Curated",
-        "Ransomware",
         "Exploit / PoC",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Windows CreateFileW API Flaw Could Let Attackers Lock SMB Files at Scale",
-      "link": "https://gbhackers.com/windows-createfilew-api-flaw/",
-      "source": "GBHackers News",
-      "published": "2026-05-11T06:57:51+00:00",
-      "smart_groups": [
-        "Threat Actors / APT",
-        "Curated",
-        "Ransomware",
-        "Windows / Microsoft",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Whitehat returns $190K to Renegade hours after hacking the protocol",
-      "link": "https://cointelegraph.com/news/whitehat-returns-190k-renegade-hours-after-hacking-the-protocol?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound",
-      "source": "Cointelegraph.com News",
-      "published": "2026-05-11T06:55:54+00:00",
-      "smart_groups": [
-        "Crypto / Web3",
-        "Curated",
-        "Exploit / PoC"
-      ],
-      "curated": true
-    },
-    {
-      "title": "JDownloader Downloader Hacked to Infect Users With New Python RAT",
-      "link": "https://cybersecuritynews.com/jdownloader-downloader-hacked/",
-      "source": "Cyber Security News (FeedBurner)",
-      "published": "2026-05-11T06:48:03+00:00",
-      "smart_groups": [
-        "Curated",
-        "Malware / Payloads",
         "Vulnerabilities / CVEs",
         "General Security"
       ],
       "curated": true
     },
     {
-      "title": "Weaponized JPEG file Drops Trojanized ScreenConnect Malware",
-      "link": "https://gbhackers.com/weaponized-jpeg-file/",
-      "source": "GBHackers News",
-      "published": "2026-05-11T06:32:20+00:00",
+      "title": "Congo’s Coltan Belt: Verifying Deadly Landslides At Mines Under M23 Control",
+      "link": "https://www.bellingcat.com/news/africa/2026/05/12/congos-coltan-belt-verifying-deadly-landslides-at-mines-under-m23-control/",
+      "source": "Bellingcat",
+      "published": "2026-05-12T06:34:28+00:00",
       "smart_groups": [
         "Curated",
-        "Malware / Payloads",
-        "Windows / Microsoft",
-        "Exploit / PoC",
+        "Vulnerabilities / CVEs",
         "General Security"
       ],
       "curated": true
     },
     {
-      "title": "Open-Source Endpoint Security Software for Windows and Linux",
-      "link": "https://www.news4hackers.com/open-source-endpoint-security-software-for-windows-and-linux/",
+      "title": "Open-Source Vulnerability Scanner Plugin for IDE",
+      "link": "https://www.news4hackers.com/open-source-vulnerability-scanner-plugin-for-ide/",
       "source": "News4Hackers",
-      "published": "2026-05-11T06:01:34+00:00",
+      "published": "2026-05-12T06:01:28+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Curated",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "BitUnlocker Downgrade Attack Bypasses Windows 11 Disk Encryption in Minutes",
+      "link": "https://gbhackers.com/bitunlocker-downgrade-attack-bypasses-windows-11-disk-encryption/",
+      "source": "GBHackers News",
+      "published": "2026-05-12T05:59:20+00:00",
       "smart_groups": [
         "Curated",
-        "Linux / Unix",
         "Vulnerabilities / CVEs",
+        "Exploit / PoC",
         "Windows / Microsoft",
         "General Security"
       ],
       "curated": true
     },
     {
-      "title": "macOS Malware Abuses Google Ads and Claude Shared Chats to Deliver Payloads",
-      "link": "https://gbhackers.com/macos-malware-abuses-google-ads-and-claude-shared-chats/",
+      "title": "Checkmarx Jenkins AST Plugin Compromised in KICS Supply Chain Attack",
+      "link": "https://gbhackers.com/checkmarx-jenkins-ast-plugin/",
       "source": "GBHackers News",
-      "published": "2026-05-11T05:58:21+00:00",
+      "published": "2026-05-12T05:54:43+00:00",
       "smart_groups": [
-        "Threat Actors / APT",
         "Curated",
-        "Exploit / PoC",
-        "Malware / Payloads",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "ODINI Malware Uses CPU Magnetic Signals to Exfiltrate Data from Air-Gapped Systems",
-      "link": "https://gbhackers.com/odini-malware-uses-cpu-magnetic-signals-to-exfiltrate-data/",
-      "source": "GBHackers News",
-      "published": "2026-05-11T05:36:19+00:00",
-      "smart_groups": [
         "Network / OT / ICS",
-        "Curated",
-        "Exploit / PoC",
-        "Malware / Payloads",
         "General Security"
       ],
       "curated": true
     },
     {
-      "title": "Rustinel: Open-source endpoint detection for Windows and Linux",
-      "link": "https://www.helpnetsecurity.com/2026/05/11/rustinel-open-source-endpoint-detection-windows-linux/",
-      "source": "Help Net Security",
-      "published": "2026-05-11T05:30:18+00:00",
+      "title": "Google Warns Hackers Are Using AI to Build Working Zero-Day Exploits",
+      "link": "https://gbhackers.com/google-warns-hackers-are-using-ai-to-build-working-zero-day/",
+      "source": "GBHackers News",
+      "published": "2026-05-12T05:06:53+00:00",
       "smart_groups": [
         "Curated",
-        "Linux / Unix",
         "Vulnerabilities / CVEs",
-        "Windows / Microsoft",
+        "Exploit / PoC",
         "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "HEIDI: Free IDE security plugin for open-source vulnerability checks",
+      "link": "https://www.helpnetsecurity.com/2026/05/12/heidi-free-ide-security-plugin/",
+      "source": "Help Net Security",
+      "published": "2026-05-12T05:00:47+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Curated",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Hackers used AI to craft zero-day attack to bypass 2FA: Google",
+      "link": "https://cointelegraph.com/news/hackers-used-ai-craft-zero-day-attack-bypass-2fa?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound",
+      "source": "Cointelegraph.com News",
+      "published": "2026-05-12T04:53:02+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Curated",
+        "Threat Actors / APT",
+        "Identity / Access",
+        "Crypto / Web3"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Mini Shai-Hulud npm worm compromises 160+ packages, abuses GitHub Actions cache + Trusted Publishing. Full list of compromised packages",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1tar3yl/mini_shaihulud_npm_worm_compromises_160_packages/",
+      "source": "/r/cybersecurity",
+      "published": "2026-05-12T04:40:15+00:00",
+      "smart_groups": [
+        "Supply Chain / Software",
+        "Curated",
+        "OSINT / Community"
+      ],
+      "curated": true
+    },
+    {
+      "title": "In Depth Guide To VM Based Obfuscation - What it is and how to handle it.",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1taqwrx/in_depth_guide_to_vm_based_obfuscation_what_it_is/",
+      "source": "/r/cybersecurity",
+      "published": "2026-05-12T04:30:06+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "OSINT / Community"
       ],
       "curated": true
     }
