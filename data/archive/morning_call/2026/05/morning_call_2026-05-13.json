@@ -1,0 +1,139 @@
+{
+  "generated_at": "2026-05-13T09:19:42.390414+00:00",
+  "analysis_date": "2026-05-13",
+  "model": "gpt-5.2",
+  "window_hours": 24,
+  "source_file": "data/news_recent.json",
+  "source_generated_at": "2026-05-13T06:56:22.273155+00:00",
+  "source_days_back": 30,
+  "source_total_items": 7946,
+  "total_items_in_window_all": 335,
+  "total_items_in_window_curated": 106,
+  "morning_call_markdown": "### Executive Summary\n- Patch/exploit pressure is high: Microsoft May Patch Tuesday (no confirmed MS zero-days) plus multiple **critical RCE** advisories (notably **Fortinet**), and **active exploitation of cPanel CVE-2026-41940** to drop a backdoor.\n- **Software supply-chain risk spiked**: “Mini Shai-Hulud” compromises in popular packages (npm/RubyGems), plus the worm code reportedly being open-sourced—assume rapid copycat activity and internal developer exposure.\n- Ransomware remains disruptive: high-volume trend reporting + notable victim confirmations (e.g., Foxconn/West Pharma); treat current vuln/exposed edge services as ransomware pre-positioning risk.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Fortinet products – critical RCE advisories (FortiSandbox / FortiAuthenticator and others)**\n- What happened: Multiple sources report **critical Fortinet vulnerabilities** that can allow **remote code execution** across enterprise products.\n- Why it matters operationally: Fortinet appliances are common perimeter/identity components; RCE here is frequently leveraged for **initial access** and rapid lateral movement in ransomware intrusions.\n- Recommended immediate actions for the SOC today: Confirm inventory/exposure (internet-facing mgmt/UI/API); prioritize emergency patch/mitigation and add targeted monitoring on Fortinet admin logins/config changes.\n\n**2) cPanel CVE-2026-41940 – active exploitation with “Filemanager” backdoor**\n- What happened: Reporting indicates **in-the-wild exploitation** of **CVE-2026-41940** to deploy a **Filemanager backdoor** (campaign attributed to a named actor in reporting).\n- Why it matters operationally: Any internet-facing hosting/admin panel compromise is a high-likelihood pivot into web apps, creds, and downstream environments (supply-chain style impact if hosted assets are customer-facing).\n- Recommended immediate actions for the SOC today: Identify any cPanel instances (including third-party hosted); hunt for new/unknown PHP/“filemanager” artifacts and unusual admin sessions; isolate affected hosts and rotate credentials/API tokens tied to those servers.\n\n**3) Supply-chain compromise cluster – npm/RubyGems + “Mini Shai-Hulud”/package worm activity**\n- What happened: Multiple reports of **malicious packages and compromised libraries** (npm packages including Mistral AI SDK/TanStack Router; RubyGems temporarily suspending signups after malicious uploads); related “Mini Shai-Hulud” infections described.\n- Why it matters operationally: Direct path to internal developer endpoints/CI runners and production deployments; can yield secrets theft and unauthorized code execution in build pipelines.\n- Recommended immediate actions for the SOC today: Alert engineering/DevOps to freeze/verify dependency updates; hunt in CI/CD logs for unexpected package installs, new maintainer/version jumps, and suspicious postinstall scripts; rotate exposed build secrets if any suspect package touched.\n\n**4) Email infrastructure RCE risk – Exim BDAT issue (CVE-2026-45185)**\n- What happened: Community/research reporting highlights **unauthenticated RCE on Exim via BDAT** under certain builds/configs (notably mentions GnuTLS builds in coverage).\n- Why it matters operationally: Email servers are high-value, externally reachable, and often underpatched; exploitation provides a strong foothold for credential theft, internal recon, and business email compromise staging.\n- Recommended immediate actions for the SOC today: Confirm whether Exim is used anywhere (including appliances/legacy relays); if present, urgently validate version/build flags and apply vendor guidance; increase monitoring on SMTP daemon crashes/restarts and new privileged processes spawned by mail components.\n\n**5) Microsoft Patch Tuesday (May 2026) – large volume, includes critical Windows/Office items**\n- What happened: Microsoft released a large patch set (reports cite ~120–137 CVEs; includes **Word RCEs** and critical Windows components such as Netlogon/DNS per roundup-style coverage); no confirmed MS zero-days in the bulletin reporting.\n- Why it matters operationally: Even without confirmed zero-days, attackers rapidly weaponize patch diffing; Office/Windows RCE chains are common for phishing-led initial access.\n- Recommended immediate actions for the SOC today: Fast-track patching for internet-adjacent and high-privilege systems (AD/DNS, management servers) and Office endpoints; tighten email attachment controls and watch for Word-spawned child processes on unpatched fleets.\n\n---\n\n### Monitoring & detection recommendations\n- **Fortinet edge devices**: Monitor firewall/VPN/appliance logs for new admin users, config exports, unusual API calls, and unexpected reboots (ATT&CK: T1190 Exploit Public-Facing Application).\n- **cPanel exploitation/backdoor**: From web server + EDR telemetry, hunt for new webshell-like files, unexpected PHP execution, and outbound connections from hosting nodes to unknown destinations (T1505.003 Web Shell, T1041 Exfiltration Over C2 Channel).\n- **Supply-chain (npm/RubyGems) & CI/CD**: Review CI runner logs (GitHub Actions/GitLab/Jenkins/TeamCity) for anomalous dependency install steps, new registries, postinstall script execution, and secrets access spikes (T1552 Unsecured Credentials).\n- **Endpoint post-phish / Office RCE**: EDR detections for `winword.exe` spawning `cmd.exe/powershell.exe/mshta.exe/rundll32.exe`, plus unusual child processes from Office apps (T1204 User Execution, T1059 Command and Scripting Interpreter).\n- **Email server (Exim) telemetry**: On Linux mail hosts, alert on unexpected Exim process trees, privilege escalations, and new listening ports; correlate with external SMTP traffic surges and service restarts (T1068 Privilege Escalation where applicable).\n- **Credential theft / stealer trend (Vidar-like reporting)**: Watch IdP and VPN for impossible travel, MFA fatigue patterns, new device enrollments, and sudden token refresh spikes; prioritize high-risk users (payments, treasury, admins) (T1556 Modify Authentication Process / T1110 Brute Force where relevant).\n- **Phishing site mass-production (AI tooling abuse)**: Email + web proxy logs for newly registered lookalike domains and first-seen hosting platforms; block/flag brand impersonation targeting finance workflows (T1566 Phishing).\n\n---\n\n### Medium-term follow-ups\n- **Patch governance**: Convert May Patch Tuesday into a staged rollout with explicit priority for AD/DNS, Office, and management planes; measure exposure by asset criticality, not just CVSS.\n- **Third-party & hosting due diligence**: Revalidate contracts/attestations for any externally hosted admin panels (cPanel-like) and require rapid patch SLAs + breach notification clauses.\n- **Software supply-chain controls**: Enforce dependency allowlists, lockfiles, provenance/SBOM checks, and restrict CI egress; consider temporary blocks on risky package sources until verified.\n- **Email hardening**: Inventory all MTAs; validate Exim build/config, isolate public-facing MTAs, and ensure rapid rebuild/patch capability for mail infrastructure.\n- **Ransomware readiness**: Recheck offline backups, restore drills, and privileged access reviews; focus on edge appliances and identity systems as the most common ransomware entry points.\n- **SOC playbooks**: Update “edge appliance RCE” and “CI/CD supply-chain compromise” playbooks with clear containment steps (credential/token rotation, build pipeline isolation, artifact review).",
+  "highlights": [
+    {
+      "title": "Q1 2026 Ransomware Attacks Hits 2,122 Orgs Amid Fewer, More Impactful Groups",
+      "link": "https://gbhackers.com/q1-2026-ransomware-attacks/",
+      "source": "GBHackers News",
+      "published": "2026-05-13T06:38:56+00:00",
+      "smart_groups": [
+        "Curated",
+        "Ransomware",
+        "Data Breaches / Leaks",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "New Exim BDAT bug shows why “just patch the mail server” is still not simple",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1tbrjsh/new_exim_bdat_bug_shows_why_just_patch_the_mail/",
+      "source": "/r/cybersecurity",
+      "published": "2026-05-13T06:38:27+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "OSINT / Community"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Malware crew TeamPCP open-sources its Shai-Hulud worm on GitHub",
+      "link": "https://www.theregister.com/security/2026/05/13/malware-crew-teampcp-open-sources-its-shai-hulud-worm-on-github/5239319",
+      "source": "The Register - Security",
+      "published": "2026-05-13T06:23:32+00:00",
+      "smart_groups": [
+        "Curated",
+        "Malware / Payloads",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "AI-Powered Autonomous Security Bug Detection Tool",
+      "link": "https://www.news4hackers.com/ai-powered-autonomous-security-bug-detection-tool/",
+      "source": "News4Hackers",
+      "published": "2026-05-13T06:01:37+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "NetSPI AI-powered Continuous Pentesting identifies high-impact vulnerabilities",
+      "link": "https://www.helpnetsecurity.com/2026/05/13/netspi-ai-powered-continuous-pentesting-offerings/",
+      "source": "Help Net Security",
+      "published": "2026-05-13T05:59:30+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Curated",
+        "Ransomware",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Fake FinalShell and Xshell Sites Push Kong RAT Malware",
+      "link": "https://gbhackers.com/fake-finalshell-and-xshell-sites/",
+      "source": "GBHackers News",
+      "published": "2026-05-13T05:52:01+00:00",
+      "smart_groups": [
+        "Malware / Payloads",
+        "Curated",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Sandyaa: Open-source autonomous security bug hunter",
+      "link": "https://www.helpnetsecurity.com/2026/05/13/sandyaa-open-source-autonomous-security-bug-hunter/",
+      "source": "Help Net Security",
+      "published": "2026-05-13T05:30:42+00:00",
+      "smart_groups": [
+        "Exploit / PoC",
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Open-Source Wi-Fi Cyber Range for Enhanced Security Training",
+      "link": "https://www.news4hackers.com/open-source-wi-fi-cyber-range-for-enhanced-security-training/",
+      "source": "News4Hackers",
+      "published": "2026-05-13T05:04:08+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Kelp DAO eyes unpausing withdrawals after attackers’ rsETH on Arbitrum is burned",
+      "link": "https://cointelegraph.com/news/kelp-dao-eyes-reopening-withdrawals-as-attackers-rseth-on-arbitrum-is-burned?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound",
+      "source": "Cointelegraph.com News",
+      "published": "2026-05-13T04:33:33+00:00",
+      "smart_groups": [
+        "Curated",
+        "Exploit / PoC",
+        "Crypto / Web3"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Researchers open-source a Wi-Fi cyber range for security training",
+      "link": "https://www.helpnetsecurity.com/2026/05/13/wi-fi-cyber-range-security/",
+      "source": "Help Net Security",
+      "published": "2026-05-13T04:30:14+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    }
+  ]
+}
