@@ -1,0 +1,147 @@
+{
+  "generated_at": "2026-05-14T08:51:17.678327+00:00",
+  "analysis_date": "2026-05-14",
+  "model": "gpt-5.2",
+  "window_hours": 24,
+  "source_file": "data/news_recent.json",
+  "source_generated_at": "2026-05-14T07:50:43.940786+00:00",
+  "source_days_back": 30,
+  "source_total_items": 8039,
+  "total_items_in_window_all": 326,
+  "total_items_in_window_curated": 103,
+  "morning_call_markdown": "### Executive Summary\n- Multiple **high-impact vulns with public PoC** surfaced/updated in common enterprise stack (Linux kernel LPE, **NGINX/Exim RCE**, Fortinet auth/sandbox) → fast-follow exploitation risk.\n- **Windows/M365 risk is elevated**: Patch Tuesday is large, plus **publicly dropped Windows “zero-day” style disclosures** (incl. BitLocker access bypass) → prioritize endpoint hardening + patch validation.\n- **Ransomware initial access trends** continue (edge devices, infostealers, Exchange re-exploitation) and real-world activity (Nitrogen/Foxconn, “Gentlemen” leak) → focus on perimeter + credential theft detections.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Linux kernel “Fragnesia” local privilege escalation (PoC / cloud bulletin coverage)**\n- **What happened:** Public reporting + vendor bulletins highlight “Fragnesia” Linux kernel LPE (page-cache / ESP-in-TCP-related) enabling root from local foothold.\n- **Why it matters operationally:** Any **container/VM foothold** (webshell, stolen SSH key, CI runner, k8s pod) could pivot to **root** and compromise secrets, payment apps, or lateral movement.\n- **Recommended immediate actions for the SOC today:** Identify exposed Linux fleets (internet-facing + privileged workloads) and **verify kernel versions/mitigations**; raise alerting for **sudden root escalation** + abnormal kernel activity on prod Linux.\n\n**2) Internet-facing service RCEs with PoC: NGINX rewrite module + Exim mailer**\n- **What happened:** Reports of an **unauthenticated NGINX rewrite-module RCE** (PoC referenced) and a **new critical Exim RCE** (PoC referenced).\n- **Why it matters operationally:** These are commonly internet-exposed in DMZs; exploitation can yield **remote code execution** → web tier takeover → credential theft and ransomware staging.\n- **Recommended immediate actions for the SOC today:** Inventory/confirm any **externally reachable NGINX/Exim** (including embedded appliances/containers) and **apply vendor fixes/workarounds**; temporarily **tighten WAF/IPS rules** for suspicious rewrite patterns and Exim exploit attempts (block/alert).\n\n**3) Fortinet critical RCEs (FortiAuthenticator/FortiSandbox) + edge-device initial access trend**\n- **What happened:** Fortinet patched **critical RCE flaws** in FortiAuthenticator and FortiSandbox; separate reporting shows RaaS (“Gentlemen”) leveraging **Fortinet/Cisco edge devices** for initial access.\n- **Why it matters operationally:** These products sit on **identity and malware-analysis choke points**; compromise can yield **credential access** and trusted internal pivoting (high blast radius).\n- **Recommended immediate actions for the SOC today:** Confirm patch status and **restrict management interfaces** (ACL/VPN-only, MFA) for Fortinet/Cisco edge; add priority monitoring for **new admin accounts, config exports, auth anomalies** from these devices.\n\n**4) Microsoft ecosystem: Patch Tuesday surge + “zero-day” style disclosures (BitLocker/Windows)**\n- **What happened:** Microsoft released a large Patch Tuesday (120–138 issues reported) including critical RCEs (e.g., DNS/Netlogon) and a **critical zero-click Outlook vuln patch**; separately, researchers dropped **YellowKey/GreenPlasma** Windows issues and a **BitLocker access bypass PoC** was published.\n- **Why it matters operationally:** Patch gaps + public exploit concepts increase likelihood of **rapid weaponization**, especially for phishing-to-compromise chains and post-compromise **data access** (BitLocker bypass typically requires local/physical or prior access—assumption based on typical BitLocker issues; validate internally).\n- **Recommended immediate actions for the SOC today:** Prioritize patch/mitigation verification for **Outlook, domain controllers, DNS/Netlogon paths**; increase alerting for **suspicious Outlook child processes**, credential dumping, and signs of **offline disk access/tamper** on endpoints.\n\n---\n\n### Monitoring & detection recommendations\n- **Linux LPE / post-exploitation:** EDR + auditd/syslog: watch for **sudden uid=0 transitions**, unusual `sudo`/`pkexec` usage, kernel module loads, and privileged container escapes (MITRE: **T1068**, **T1611**).\n- **NGINX/Exim exploitation attempts:** WAF/Reverse-proxy logs + web server access logs: spike in **500s**, unusual rewrite evaluations, abnormal URI patterns, Exim logs with unexpected **command execution / shell metacharacters** (MITRE: **T1190**).\n- **Fortinet / edge device abuse:** Firewall/VPN + FortiAuthenticator/FortiSandbox logs: **admin login anomalies**, config changes, new VPN users, auth failures followed by success, outbound connections from appliances to rare ASNs (MITRE: **T1133**, **T1078**).\n- **Outlook zero-click / email-to-code signals:** Email security + EDR: suspicious **attachment-less** message patterns triggering Outlook crashes, plus Outlook spawning `cmd.exe`, `powershell.exe`, `rundll32.exe`, or writing to user temp (MITRE: **T1204**, **T1059**).\n- **DC/DNS/Netlogon RCE follow-on:** Windows Security logs (DCs) + network IDS: abnormal **RPC/Netlogon** activity, new services, unexpected scheduled tasks, and lateral movement surges (MITRE: **T1021**, **T1569.002**).\n- **Infostealer → ransomware pipeline (Gentlemen leak / trend):** EDR + proxy/DNS: credential store access, browser data grabs, new persistence + C2 over HTTPS to low-reputation domains; correlate with **new VPN/SSO logins** shortly after (MITRE: **T1555**, **T1056**, **T1071.001**).\n- **Teams meeting AI note-taking bots (data exposure risk):** M365/Defender for Cloud Apps + Entra ID sign-ins: new OAuth app consents, unusual **Teams meeting join patterns**, bots joining external meetings, and mass transcript/note access (MITRE: **T1528**, **T1213**).\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** Convert this week’s Microsoft + Fortinet + Linux items into a **48–72h patch SLA** for internet-facing and identity-adjacent systems; require post-patch **validation** (not just deployment).\n- **DMZ hardening:** Review NGINX/Exim deployment patterns (containers, sidecars, appliance-bundled) and ensure **WAF coverage + least-privilege service accounts**.\n- **Edge exposure reduction:** Re-audit all **remote management surfaces** (Fortinet/Cisco/other) for “VPN-only + MFA + allowlists,” and ensure configs are backed up securely.\n- **Credential-theft resilience:** Expand detections and response playbooks for **infostealers** (isolation, token revocation, browser credential resets) given RaaS dependence on stolen creds.\n- **Supply-chain posture:** Given renewed focus on npm/RubyGems ecosystem abuse, enforce **dependency pinning, provenance checks, and CI secret scanning** for internal apps and build pipelines.\n- **Data-breach hygiene:** HIBP entry for a financial-adjacent vendor (Abrigo) is a reminder—run a **credential exposure sweep** for corporate emails and enforce **phishing-resistant MFA** where gaps remain.",
+  "highlights": [
+    {
+      "title": "New Fragnesia Linux flaw lets attackers gain root privileges",
+      "link": "https://www.bleepingcomputer.com/news/security/new-fragnesia-linux-flaw-lets-attackers-gain-root-privileges/",
+      "source": "BleepingComputer",
+      "published": "2026-05-14T07:34:19+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Curated",
+        "Linux / Unix",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Researcher Drops YellowKey, GreenPlasma Windows Zero-Days",
+      "link": "https://www.securityweek.com/researcher-drops-yellowkey-greenplasma-windows-zero-days/",
+      "source": "SecurityWeek",
+      "published": "2026-05-14T07:27:42+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Windows / Microsoft",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "The Hidden Security Risk in Microsoft Teams: Detecting AI Note-Taking Bots with KQL",
+      "link": "https://detect.fyi/hunting-ai-note-taking-bots-in-microsoft-teams-meetings-using-defender-xdr-with-kql-queries-db1fdb64ba51?source=rss----d5fd8f494f6a---4",
+      "source": "Detect.fyi",
+      "published": "2026-05-14T07:17:50+00:00",
+      "smart_groups": [
+        "Detection Engineering",
+        "Crypto / Web3",
+        "Curated",
+        "Identity / Access",
+        "Malware / Payloads",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "New Fragnesia Linux Kernel LPE Grants Root Access via Page Cache Corruption",
+      "link": "https://thehackernews.com/2026/05/new-fragnesia-linux-kernel-lpe-grants.html",
+      "source": "The Hacker News",
+      "published": "2026-05-14T07:06:15+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Curated",
+        "Linux / Unix",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Cyber Scams Alert: Fake Telegram Groups Promising Crypto and Forex Gains Target Doctors",
+      "link": "https://www.news4hackers.com/cyber-scams-alert-fake-telegram-groups-promising-crypto-and-forex-gains-target-doctors/",
+      "source": "News4Hackers",
+      "published": "2026-05-14T07:01:42+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Critical 18-Year-Old NGINX Vulnerability Enables Remote Code Execution Attacks – PoC Released",
+      "link": "https://cybersecuritynews.com/18-year-old-nginx-rce-vulnerability/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-05-14T06:27:20+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Curated",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Nitrogen Ransomware claims massive data theft from Foxconn",
+      "link": "https://securityaffairs.com/192099/uncategorized/nitrogen-ransomware-claims-massive-data-theft-from-foxconn.html",
+      "source": "Security Affairs",
+      "published": "2026-05-14T06:14:24+00:00",
+      "smart_groups": [
+        "Threat Actors / APT",
+        "Curated",
+        "Ransomware",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "18-Year-Old NGINX Rewrite Module Flaw Enables Unauthenticated RCE",
+      "link": "https://thehackernews.com/2026/05/18-year-old-nginx-rewrite-module-flaw.html",
+      "source": "The Hacker News",
+      "published": "2026-05-14T06:00:09+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Curated",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Critical MongoDB Vulnerability Allow Attackers to Execute Arbitrary Code",
+      "link": "https://cybersecuritynews.com/mongodb-rce-vulnerability/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-05-14T05:54:28+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Threat Actors / APT",
+        "Cloud / SaaS",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "The Gentlemen RaaS Leverages Fortinet and Cisco Edge Devices for Initial Access",
+      "link": "https://cybersecuritynews.com/the-gentlemen-raas-leverages-fortinet-and-cisco-edge-devices/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-05-14T05:44:45+00:00",
+      "smart_groups": [
+        "Ransomware",
+        "Curated",
+        "General Security"
+      ],
+      "curated": true
+    }
+  ]
+}
