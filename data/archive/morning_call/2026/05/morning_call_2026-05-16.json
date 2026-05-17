@@ -1,0 +1,152 @@
+{
+  "generated_at": "2026-05-16T08:20:47.612305+00:00",
+  "analysis_date": "2026-05-16",
+  "model": "gpt-5.2",
+  "window_hours": 24,
+  "source_file": "data/news_recent.json",
+  "source_generated_at": "2026-05-16T06:12:38.894094+00:00",
+  "source_days_back": 30,
+  "source_total_items": 8029,
+  "total_items_in_window_all": 231,
+  "total_items_in_window_curated": 96,
+  "morning_call_markdown": "### Executive Summary\n- **Microsoft Exchange on-prem zero-day is reportedly exploited in the wild** (CVE-2026-42897) with a low-click/open-email trigger path → treat as **active perimeter-to-server compromise risk**.\n- **Cisco Catalyst SD-WAN auth bypass (CVE-2026-20182) is actively exploited** and under government patch directives → prioritize edge device exposure validation and emergency patching.\n- **Identity + supply-chain abuse continues:** OAuth device-code token theft campaigns and npm/macOS supply-chain incidents reinforce need for **IdP conditional access tightening + CI/CD/package integrity monitoring**.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Microsoft Exchange Server on-prem zero-day (CVE-2026-42897) – active exploitation**\n- **What happened:** Multiple sources report Microsoft warning that an **Exchange Server zero-day** is being exploited; trigger may be **opening a crafted email** (OWA-related spoofing/crafted content).\n- **Why it matters operationally:** Direct path to **server RCE / mailbox access / lateral movement**; Exchange compromise is a common precursor to **ransomware and domain takeover** in financial environments.\n- **Recommended immediate actions for the SOC today:** **Confirm asset inventory + exposure (internet-facing OWA/ECP)**; implement/verify **vendor mitigations and emergency patch** as available; start **retro-hunt** for suspicious Exchange/webshell indicators and unusual Exchange child processes.\n\n**2) Cisco Catalyst SD-WAN zero-day (CVE-2026-20182) – auth bypass, exploited**\n- **What happened:** Cisco patched a **max-severity SD-WAN authentication bypass** and it’s reported as **actively exploited**; government agencies ordered rapid patching.\n- **Why it matters operationally:** SD-WAN compromise is **edge-to-core**: attacker can gain admin control, reroute traffic, plant persistence, and pivot into internal networks/segments.\n- **Recommended immediate actions for the SOC today:** **Identify all Cisco SD-WAN/Viptela/Catalyst SD-WAN controllers/edges** and confirm patch level; **restrict management plane exposure** (ACL/VPN/admin allowlists) until patched; monitor for **new admin users/config changes** and anomalous control-plane logins.\n\n**3) Identity token theft via OAuth Device Authorization Flow (Microsoft 365)**\n- **What happened:** Reports of attackers abusing **OAuth device code flow** to steal **Microsoft 365 tokens** (often paired with social engineering/phishing).\n- **Why it matters operationally:** Token theft can **bypass MFA** and lead to rapid mailbox access, persistence, and downstream fraud/BEC; high relevance for financial services.\n- **Recommended immediate actions for the SOC today:** Tighten **Conditional Access** (device compliance, location, risk-based controls) and consider **restricting device code flow** where feasible; hunt for **unusual device-code sign-ins** and abnormal OAuth consent/token activity in Entra ID logs.\n\n**4) Supply-chain compromise signals: npm `node-ipc` + macOS TanStack-related incident (OpenAI)**\n- **What happened:** `node-ipc` npm package compromise reported (credential theft), and a separate macOS supply-chain event tied to **TanStack** impacted endpoints and triggered app updates.\n- **Why it matters operationally:** Build/developer pipeline compromise enables **credential harvesting, cloud key theft, and code tampering**; banks often have broad npm usage in internal apps.\n- **Recommended immediate actions for the SOC today:** Ask engineering to **freeze/verify** dependencies for impacted packages and review recent `package-lock.json`/`pnpm-lock` changes; SOC to monitor dev endpoints for **suspicious npm install scripts / unexpected outbound** and check for **new secrets exposure** (AWS keys, GitHub tokens).\n\n**5) Web payment skimming via exploited WordPress plugin (Funnel Builder)**\n- **What happened:** Active exploitation of a **WordPress Funnel Builder plugin flaw** used to steal **payment card data** (web skimming-like outcomes).\n- **Why it matters operationally:** If any bank-owned marketing/microsites use WordPress, this is a direct **card data capture / brand abuse** risk; also a foothold for further webserver compromise.\n- **Recommended immediate actions for the SOC today:** Verify whether any externally facing WordPress properties run the plugin; if yes, **patch/disable immediately** and inspect for **unauthorized JS injections**, new admin users, and unexpected outgoing connections from web hosts.\n\n---\n\n### Monitoring & detection recommendations\n- **Exchange exploitation / post-compromise:** Monitor **Exchange/IIS logs, Windows Security, EDR** for suspicious **w3wp.exe spawning cmd/powershell**, new services/tasks, unusual module loads (ATT&CK: **T1505.003**, **T1059**, **T1105**).\n- **Cisco SD-WAN edge compromise:** Review **SD-WAN controller/edge audit logs**, firewall/VPN logs for **new admin sessions**, config pushes outside change windows, mgmt-plane access from new IP ranges (ATT&CK: **T1190**, **T1078**).\n- **OAuth device-code abuse (M365):** In **Entra ID sign-in logs** hunt for **Device Code** authentication events, atypical user agents, impossible travel, and token issuance followed by mailbox access from new locations (ATT&CK: **T1528**, **T1078.004**).\n- **Phishing-to-session theft:** Monitor **email gateway + M365 audit logs** for calendar invite-based lures and anomalous OAuth app consents; alert on **new inbox rules/forwarding** (ATT&CK: **T1566**, **T1114**, **T1098.004**).\n- **Supply-chain/npm abuse:** On developer endpoints, alert on **npm/yarn/pnpm running postinstall scripts**, unusual child processes, and outbound to rare domains; review **CI/CD runner logs** for unexpected pipeline step edits (ATT&CK: **T1195.001**, **T1059**).\n- **Credential stealer activity (Gremlin stealer evolution):** Use **EDR + proxy/DNS** to detect credential dumping/browser data access patterns and staging in obscure resource files; watch for mass access to browser credential stores (ATT&CK: **T1555**, **T1005**).\n- **Ransomware readiness signal (Gunra RaaS expansion):** Increase alert fidelity for **backup deletion attempts**, vssadmin/bcdedit usage, and rapid encryption-like file I/O bursts; validate immutable backup telemetry (ATT&CK: **T1490**, **T1486**).\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** Ensure emergency change path covers **Exchange** and **Cisco SD-WAN**; add both to “must-patch” dashboards with owner/ETA and external exposure tagging.\n- **Device-code flow policy:** Decide org stance on **OAuth device authorization** (allow only for managed devices / specific apps); document exceptions for business-critical tooling.\n- **CI/CD hardening:** Implement controls aligned to “living off the pipeline” guidance—**signed builds, least-privileged runners, secret scanning, branch protections**, and audit trail retention.\n- **Cloud/ML SDK integrity:** Review AWS bulletin items (SageMaker SDK artifact integrity issues) for any internal ML pipelines; ensure **artifact signing/verification** and provenance tracking.\n- **Linux estate watch:** Track “Fragnesia” Linux privesc disclosure (details unclear from sources listed) and validate endpoint hardening (kernel/live patch cadence, EDR coverage).\n- **Web property assurance:** Inventory all externally hosted marketing/affiliate sites (WordPress/plugins), enforce **WAF + file integrity monitoring**, and standardize rapid plugin patching/disable procedures.",
+  "highlights": [
+    {
+      "title": "The Boring Stuff is Dangerous Now",
+      "link": "https://www.darkreading.com/cyber-risk/ai-code-and-agents-forces-defenders-adapt",
+      "source": "darkreading",
+      "published": "2026-05-18T13:00:00+00:00",
+      "smart_groups": [
+        "Threat Actors / APT",
+        "Curated",
+        "Exploit / PoC",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Google Project Zero Discloses Zero-Click Exploit Chain for Pixel 10 Devices",
+      "link": "https://cybersecuritynews.com/zero-click-exploit-chain-pixel-10-devices/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-05-16T04:02:15+00:00",
+      "smart_groups": [
+        "Curated",
+        "Exploit / PoC",
+        "Vulnerabilities / CVEs",
+        "Mobile Security",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "AmEx Interview!",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1tecsm3/amex_interview/",
+      "source": "/r/cybersecurity",
+      "published": "2026-05-15T23:30:11+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Curated",
+        "Network / OT / ICS",
+        "OSINT / Community"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Developer credential-stealing pipeline also collected operator workstations",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1tecgwl/developer_credentialstealing_pipeline_also/",
+      "source": "/r/cybersecurity",
+      "published": "2026-05-15T23:16:22+00:00",
+      "smart_groups": [
+        "Curated",
+        "Exploit / PoC",
+        "Identity / Access",
+        "Malware / Payloads",
+        "Network / OT / ICS",
+        "Supply Chain / Software",
+        "OSINT / Community"
+      ],
+      "curated": true
+    },
+    {
+      "title": "TeamPCP releases ‘vibe coded’ Shai-Hulud source code, issues challenge",
+      "link": "https://www.scworld.com/news/teampcp-releases-vibe-coded-shai-hulud-source-code-issues-challenge",
+      "source": "SCM feed for Latest",
+      "published": "2026-05-15T22:28:20+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Pwn2Own Berlin 2026, Day Two: $385,750 more, Microsoft Exchange falls, and the running total crosses $900K",
+      "link": "https://securityaffairs.com/192209/security/pwn2own-berlin-2026-day-two-385750-more-microsoft-exchange-falls-and-the-running-total-crosses-900k.html",
+      "source": "Security Affairs",
+      "published": "2026-05-15T21:53:56+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Curated",
+        "Linux / Unix",
+        "Windows / Microsoft",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Microsoft warns of active exploitation of new Exchange Server zero-day vulnerability",
+      "link": "https://www.scworld.com/brief/microsoft-warns-of-active-exploitation-of-new-exchange-server-zero-day-vulnerability",
+      "source": "SCM feed for Latest",
+      "published": "2026-05-15T21:50:45+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Web / API Security",
+        "Windows / Microsoft",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Researchers bypass Apple's M5 security with AI-powered macOS exploit",
+      "link": "https://www.scworld.com/brief/researchers-bypass-apples-m5-security-with-ai-powered-macos-exploit",
+      "source": "SCM feed for Latest",
+      "published": "2026-05-15T21:48:25+00:00",
+      "smart_groups": [
+        "Curated",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "WordPress Funnel Builder vulnerability exploited to steal payment data",
+      "link": "https://www.scworld.com/brief/wordpress-funnel-builder-vulnerability-exploited-to-steal-payment-data",
+      "source": "SCM feed for Latest",
+      "published": "2026-05-15T21:38:24+00:00",
+      "smart_groups": [
+        "Curated",
+        "Exploit / PoC",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "American Lending Center data breach impacts over 123,000 individuals",
+      "link": "https://www.scworld.com/brief/american-lending-center-data-breach-impacts-over-123000-individuals",
+      "source": "SCM feed for Latest",
+      "published": "2026-05-15T21:36:42+00:00",
+      "smart_groups": [
+        "Data Breaches / Leaks",
+        "Threat Actors / APT",
+        "Curated",
+        "Ransomware",
+        "General Security"
+      ],
+      "curated": true
+    }
+  ]
+}
