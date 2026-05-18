@@ -1,15 +1,15 @@
 {
-  "generated_at": "2026-05-17T08:33:26.534343+00:00",
-  "analysis_date": "2026-05-17",
+  "generated_at": "2026-05-18T10:41:14.233188+00:00",
+  "analysis_date": "2026-05-18",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-05-17T06:53:12.433733+00:00",
+  "source_generated_at": "2026-05-18T08:53:03.923437+00:00",
   "source_days_back": 30,
-  "source_total_items": 7814,
-  "total_items_in_window_all": 84,
-  "total_items_in_window_curated": 24,
-  "morning_call_markdown": "### Executive Summary\n- Active exploitation and/or KEV movement around **Microsoft Exchange** plus fresh **Pwn2Own Exchange/Windows** chains increases risk of rapid weaponization against internet-facing enterprise services.\n- **Public PoC for a critical NGINX flaw** is circulating; expect opportunistic scanning and exploitation attempts against edge/proxy tiers.\n- Multiple **supply-chain and web-skimming** stories (malicious TanStack packages; exploited WordPress funnel/checkout plugin) reinforce risk to customer-facing web stacks and developer pipelines.\n\n### High-priority items (immediate attention)\n**1) Microsoft Exchange: KEV-listed exploited flaw + new Pwn2Own Exchange bug chains**\n- What happened: CISA added an **Exchange Server vulnerability** to KEV (known exploited), and Pwn2Own showcased additional **Exchange/Windows** 0-days/exploit chains.\n- Why it matters operationally: Exchange remains a prime initial-access vector in financial services; KEV status + conference exploit activity typically drives **mass scanning within days**.\n- Recommended immediate actions for the SOC today: Confirm all Exchange servers are inventoried and patched/mitigated per Microsoft guidance; prioritize **internet-facing** instances; increase alerting on Exchange auth anomalies and webshell patterns (OWA/ECP/IIS).\n\n**2) NGINX critical vulnerability: PoC published and reported exploitation**\n- What happened: Security outlets report **public PoC code** for a critical NGINX vulnerability and claims of exploitation in the wild (exact CVE not provided in the summary—assume mainstream NGINX deployments are targeted).\n- Why it matters operationally: NGINX often fronts banking apps/APIs; edge compromise can enable credential theft, request smuggling, upstream pivoting, or traffic manipulation.\n- Recommended immediate actions for the SOC today: Identify all internet-facing NGINX instances (incl. containers/ingress controllers) and validate version/exposure; apply vendor patches/mitigations ASAP; enable/raise WAF rules and watch for unusual 4xx/5xx spikes and suspicious URI patterns.\n\n**3) Ecommerce/web-skimming: exploited WordPress “Funnel Builder”/WooCommerce checkout skimmer activity**\n- What happened: Under active exploitation, a **WordPress Funnel Builder flaw** is being used to inject skimmers into WooCommerce checkout flows (community + news coverage).\n- Why it matters operationally: Even if not core banking, compromised marketing/microsites can lead to **payment card theft**, brand damage, and pivoting via shared credentials/CDNs.\n- Recommended immediate actions for the SOC today: Locate any WordPress/WooCommerce in the estate (incl. subsidiaries/marketing) and patch/disable the affected plugin; hunt for unexpected JS injections on checkout pages and file changes in web roots; review admin logins for brute force/credential stuffing.\n\n**4) Supply chain risk: malicious TanStack packages reported (OpenAI-linked incident)**\n- What happened: A supply-chain attack involving **malicious TanStack packages** was reported, impacting downstream consumers (details/IOCs not included here—assume npm ecosystem exposure).\n- Why it matters operationally: Financial orgs with internal web apps may pull compromised dependencies into CI/CD, leading to credential theft or implanted backdoors that bypass perimeter controls.\n- Recommended immediate actions for the SOC today: Query SBOM/dependency scanners for TanStack usage; temporarily pin/allowlist known-good versions and block suspicious package versions once validated by AppSec; monitor CI runners/dev endpoints for new outbound connections and token access anomalies.\n\n### Monitoring & detection recommendations\n- **Exchange/IIS monitoring (T1190, T1505.003):** IIS logs, Windows Security, EDR on Exchange—hunt for unusual POSTs to OWA/ECP, new/rare .aspx in web directories, w3wp spawning cmd/powershell, and abnormal mailbox export/role changes.\n- **Edge proxy / NGINX exploitation attempts (T1190):** NGINX access/error logs + WAF—alert on spikes in 400/500s, long or malformed headers, unusual methods, traversal strings, and requests to rarely used admin/status endpoints.\n- **Web-skimmer indicators on web servers (T1557, T1059.007):** Web server file integrity (FIM), CMS audit logs—detect unexpected JS file changes, new inline scripts on payment pages, and unauthorized plugin/theme edits.\n- **Supply-chain/CI abuse (T1195, T1552.004):** CI/CD audit logs, Git provider logs, secrets manager—monitor for new package installs during builds, anomalous access to npm tokens, sudden dependency changes, and unusual outbound from build agents.\n- **APT Turla/Kazuar evolution (T1071.001, T1090):** EDR + DNS/proxy logs—hunt for long-lived periodic beaconing, new services/scheduled tasks, and P2P-like traffic patterns from endpoints that typically don’t run such tooling.\n- **Malicious installer distribution (JDownloader site compromise theme) (T1204.002):** Web proxy + EDR—flag downloads of unsigned installers from atypical domains, new “portable” tools execution, and first-seen binaries executed from Downloads/Temp.\n- **macOS kernel exploit chatter (assumption: limited enterprise exposure):** macOS EDR + MDM—watch for unusual privilege escalation behavior, new kernel extensions/system extensions, and tampering with security controls on developer/admin Macs.\n\n### Medium-term follow-ups\n- **Patch governance:** Re-validate SLAs for internet-facing **Exchange and NGINX**; ensure automated asset discovery includes containers/ingress and shadow IT.\n- **Web platform hardening:** For any WordPress presence, enforce least-privilege admin, MFA, plugin allowlisting, and file integrity monitoring; consider isolating marketing sites from corporate auth and networks.\n- **Dependency/SBOM maturity:** Expand SBOM coverage to frontend stacks (npm) and enforce CI policies (lockfiles, signed commits, provenance checks) to reduce supply-chain blast radius.\n- **Threat hunting playbooks:** Add/update hunts for Exchange post-exploitation (webshell + mailbox access) and edge-proxy compromise patterns; capture lessons learned into L1 triage runbooks.\n- **Third-party risk check:** If any business units use hosted ecommerce or external checkout widgets, confirm vendor incident notification paths and validate security headers/CSP to reduce skimmer impact.\n- **Pwn2Own-driven risk:** Track vendor advisories for the showcased 0-days (Exchange/Windows/others) and pre-stage mitigations (WAF rules, segmentation, service exposure review) before patches land.",
+  "source_total_items": 7707,
+  "total_items_in_window_all": 124,
+  "total_items_in_window_curated": 48,
+  "morning_call_markdown": "### Executive Summary\n- Active exploitation reported for **NGINX CVE-2026-42945**; assume internet-facing reverse proxies/WAF front-ends are being probed now.\n- **Microsoft Exchange Server vulnerability is being exploited** (per CISA warning); treat on-prem Exchange as high risk until verified patched/mitigated.\n- Multiple **new PoCs/0-days (Windows “MiniPlasma”, Linux “DirtyDecrypt”)** increase local-priv-esc risk post-initial access; raise detection for privilege escalation and suspicious child processes.\n\n### High-priority items (immediate attention)\n\n**1) NGINX CVE-2026-42945 – exploitation in the wild**\n- What happened: Multiple outlets report **active exploitation** of a **critical NGINX flaw (CVE-2026-42945)** causing worker crashes and potential RCE.\n- Why it matters operationally: NGINX commonly fronts banking apps/APIs; compromise can enable **traffic interception, credential theft, webshell drop**, or outage.\n- Recommended immediate actions for the SOC today: **Identify all internet-facing NGINX** (incl. containers) and validate patch/mitigation status; **monitor for abnormal worker restarts/crashes + new/unexpected config changes** and suspicious upstream connections from NGINX hosts.\n\n**2) Microsoft Exchange Server vuln exploited (CISA alert)**\n- What happened: CISA warns of a **Microsoft Exchange Server vulnerability exploited in attacks** (details may vary by environment; assume on-prem Exchange at risk).\n- Why it matters operationally: Exchange exploitation is a fast path to **email access, internal lateral movement, and data theft** in financial environments.\n- Recommended immediate actions for the SOC today: **Confirm Exchange versions + patch levels** and apply vendor mitigations; **hunt on Exchange for unusual web requests/auth anomalies and new persistence artifacts** (e.g., unexpected virtual directory changes / new scheduled tasks).\n\n**3) Windows “MiniPlasma” zero-day / PoC – SYSTEM privilege escalation**\n- What happened: Reports claim a **Windows local privilege escalation “MiniPlasma” 0-day** with **PoC** enabling **SYSTEM** on fully patched systems.\n- Why it matters operationally: Raises impact of phishing/malware initial access; enables **EDR tampering, credential dumping, ransomware staging**.\n- Recommended immediate actions for the SOC today: **Increase alerting for privilege escalation patterns** (suspicious service creation, token manipulation, unusual parent/child chains); **isolate and triage any endpoint showing rapid privilege jumps** after user-level execution.\n\n**4) Linux “DirtyDecrypt” root escalation – exploit available**\n- What happened: Public reporting indicates an **exploit available** for a **Linux local root escalation** (“DirtyDecrypt”).\n- Why it matters operationally: Threat actors landing low-priv shells on Linux (web apps, CI runners, jump hosts) can **pivot to root**, steal secrets, and persist.\n- Recommended immediate actions for the SOC today: **Inventory exposed/high-value Linux hosts** (web tiers, CI/CD, bastions) and prioritize patching; **hunt for new setuid binaries, suspicious kernel/userland exploit artifacts, and unusual privilege transitions**.\n\n**5) Supply-chain / dev-secrets risk (Grafana codebase access + OtterCookie credential-stealer)**\n- What happened: Grafana reports a **security incident involving GitHub codebase access**; separate reporting highlights **OtterCookie malware** stealing **SSH keys, cloud tokens, dev secrets**.\n- Why it matters operationally: Stolen source/secrets can lead to **downstream compromise** (CI/CD abuse, cloud takeover) and later ransomware/extortion.\n- Recommended immediate actions for the SOC today: **Rotate/revoke high-risk tokens/keys** where exposure is plausible (GitHub, CI, cloud, SSH); **monitor for unusual GitHub/CI logins and abnormal cloud API calls** originating from developer endpoints or build systems.\n\n### Monitoring & detection recommendations\n- **Internet edge / NGINX**: Watch WAF/reverse-proxy logs for **spikes in 4xx/5xx, worker restarts, anomalous request patterns**; correlate with host logs for **new processes spawned by NGINX** (ATT&CK: T1190 Exploit Public-Facing Application).\n- **Exchange**: Prioritize IIS logs + Exchange admin/audit logs for **unusual endpoints, auth failures/success bursts, and atypical admin actions**; alert on **new scheduled tasks/services** on Exchange hosts (ATT&CK: T1053 Scheduled Task/Job).\n- **Windows LPE (MiniPlasma theme)**: EDR/Sysmon for **service creation (7045), LSASS access attempts, credential dumping tools**, and **unsigned driver/service loads**; investigate **rapid integrity-level jumps** after Office/browser-launched processes (ATT&CK: T1068 Exploitation for Privilege Escalation).\n- **Linux LPE (DirtyDecrypt theme)**: Auditd/journald/EDR for **new SUID files, chmod/chown anomalies, /tmp execution**, and **unexpected root shells**; monitor for **suspicious compilation activity on servers** (gcc/clang) (ATT&CK: T1068).\n- **Dev secrets / OtterCookie**: Endpoint telemetry for **access to SSH directories, credential stores, browser token DBs**, and mass file reads in repos; cloud logs for **token replay** (impossible travel, new user-agent, new ASN) (ATT&CK: T1552 Unsecured Credentials, T1528 Steal Application Access Token).\n- **Web plugins (WordPress ecosystem)**: For any corporate-hosted WP (marketing, subsidiaries), monitor web logs for **file read, SQLi, auth bypass patterns** and unexpected **new admin users/plugins** (ATT&CK: T1190).\n- **General “PoC acceleration” (Pwn2Own / AI exploitation window)**: Temporarily tighten thresholds on **newly-exposed services** and **new CVE scanning signatures** at perimeter; correlate scanner activity with subsequent auth attempts (ATT&CK: T1595 Active Scanning).\n\n### Medium-term follow-ups\n- **Patch governance**: Validate ownership and patch SLAs for **NGINX, Exchange, Windows, Linux kernels**, and any **automation platforms (e.g., n8n)**; ensure internet-facing assets are in the fastest lane.\n- **Reverse proxy hardening**: Enforce **immutable config deployment**, restrict admin interfaces, and add **file integrity monitoring** on NGINX/Gateway configs and modules.\n- **Exchange risk reduction** (assumption: some on-prem presence): Reduce exposure via **segmentation, restricted admin access, EDR coverage**, and validated backup/restore drills for mailbox and AD dependencies.\n- **Dev/CI security**: Implement/confirm **short-lived tokens**, mandatory **MFA for GitHub/CI**, secret scanning, and rapid **key rotation playbooks** following vendor incidents.\n- **Privilege escalation resilience**: Review endpoint baselines for **local admin sprawl**, enable **Credential Guard/LSASS protections** where feasible, and ensure LPE detections are tuned for noise but not suppressed.\n- **Third-party/vendor watch**: Track advisories/updates for products mentioned (NGINX, Exchange, Grafana) and prepare **customer-impact comms** if any externally hosted services are affected.",
   "highlights": [
     {
       "title": "The Boring Stuff is Dangerous Now",
@@ -26,66 +26,26 @@
       "curated": true
     },
     {
-      "title": "First Public macOS Kernel Exploit on Apple M5 Prepared Using Mythos Preview in Five Days",
-      "link": "https://cybersecuritynews.com/first-public-macos-kernel-exploit/",
+      "title": "Critical Marimo RCE Flaw Could Let Attackers Execute Malicious Code Remotely",
+      "link": "https://gbhackers.com/critical-marimo-rce-flaw/",
+      "source": "GBHackers News",
+      "published": "2026-05-18T08:45:28+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "CISA Warns of Microsoft Exchange Server Vulnerability Exploited in Attacks",
+      "link": "https://cybersecuritynews.com/cisa-microsoft-exchange-server-vulnerability/",
       "source": "Cyber Security News (FeedBurner)",
-      "published": "2026-05-17T02:48:36+00:00",
+      "published": "2026-05-18T08:32:59+00:00",
       "smart_groups": [
         "Curated",
         "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "Linux / Unix",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Questions about data blockers",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1tfame1/questions_about_data_blockers/",
-      "source": "/r/cybersecurity",
-      "published": "2026-05-17T00:47:30+00:00",
-      "smart_groups": [
-        "Curated",
-        "Malware / Payloads",
-        "Vulnerabilities / CVEs",
-        "OSINT / Community"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Pwn2Own Berlin 2026, Day Three: DEVCORE Crowned Master of Pwn, $1.298 Million Total",
-      "link": "https://securityaffairs.com/192250/hacking/pwn2own-berlin-2026-day-three-devcore-crowned-master-of-pwn-1-298-million-total.html",
-      "source": "Security Affairs",
-      "published": "2026-05-17T00:41:06+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Canvas hack: is it ever a good idea to pay a ransom, and what happens to the data?",
-      "link": "https://www.theguardian.com/technology/2026/may/17/canvas-hack-cyber-criminals-data-ransom-paid",
-      "source": "The Guardian Cybercrime",
-      "published": "2026-05-16T18:00:16+00:00",
-      "smart_groups": [
-        "Ransomware",
-        "Data Protection / Privacy",
-        "Curated",
-        "Data Breaches / Leaks"
-      ],
-      "curated": true
-    },
-    {
-      "title": "U.S. CISA adds a flaw in Microsoft Exchange Server to its Known Exploited Vulnerabilities catalog",
-      "link": "https://securityaffairs.com/192240/hacking/u-s-cisa-adds-a-flaw-in-microsoft-exchange-server-to-its-known-exploited-vulnerabilities-catalog.html",
-      "source": "Security Affairs",
-      "published": "2026-05-16T17:30:29+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "Threat Actors / APT",
+        "Web / API Security",
         "Windows / Microsoft",
         "Exploit / PoC",
         "General Security"
@@ -93,36 +53,77 @@
       "curated": true
     },
     {
-      "title": "Russian APT Turla builds long-term access tool with Kazuar Botnet evolution",
-      "link": "https://securityaffairs.com/192231/apt/russian-apt-turla-builds-long-term-access-tool-with-kazuar-botnet-evolution.html",
-      "source": "Security Affairs",
-      "published": "2026-05-16T16:48:57+00:00",
+      "title": "1 Million WordPress Sites Affected by Avada Builder File Read and SQL Injection Flaws",
+      "link": "https://cybersecuritynews.com/avada-builder-plugin-vulnerability/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-05-18T08:30:10+00:00",
       "smart_groups": [
-        "Threat Actors / APT",
-        "Malware / Payloads",
+        "Web / API Security",
+        "Data Protection / Privacy",
+        "Cloud / SaaS",
         "Curated",
+        "Exploit / PoC",
+        "Vulnerabilities / CVEs",
         "General Security"
       ],
       "curated": true
     },
     {
-      "title": "I contributed to an open-source Bluetooth stress testing tool that just got a major algorithm refactor",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1texap2/i_contributed_to_an_opensource_bluetooth_stress/",
-      "source": "/r/cybersecurity",
-      "published": "2026-05-16T15:47:53+00:00",
+      "title": "n8n Security Flaws Could Let Attackers Achieve Remote Code Execution",
+      "link": "https://gbhackers.com/n8n-security-flaws-remote-code-execution/",
+      "source": "GBHackers News",
+      "published": "2026-05-18T08:28:07+00:00",
       "smart_groups": [
-        "Curated",
-        "Ransomware",
         "Vulnerabilities / CVEs",
-        "OSINT / Community"
+        "Curated",
+        "Cloud / SaaS",
+        "General Security"
       ],
       "curated": true
     },
     {
-      "title": "Funnel Builder Flaw Under Active Exploitation Enables WooCommerce Checkout Skimming",
-      "link": "https://thehackernews.com/2026/05/funnel-builder-flaw-under-active.html",
-      "source": "The Hacker News",
-      "published": "2026-05-16T15:20:48+00:00",
+      "title": "OtterCookie Malware Steals Dev Secrets, SSH Keys, Cloud Credentials, and Tokens",
+      "link": "https://gbhackers.com/ottercookie-malware-steals-dev-secrets/",
+      "source": "GBHackers News",
+      "published": "2026-05-18T08:23:18+00:00",
+      "smart_groups": [
+        "Malware / Payloads",
+        "Data Protection / Privacy",
+        "Curated",
+        "Ransomware",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "SO-CON 2026",
+      "link": "https://falconforce.nl/so-con-2026/",
+      "source": "https://falconforce.nl/feed/",
+      "published": "2026-05-18T08:03:55+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Taking Stock of the State of European Cyber Resilience Act (CRA) Compliance: An Urgent Wake-up Call for the Open Source Ecosystem",
+      "link": "https://openssf.org/blog/2026/05/18/taking-stock-of-the-state-of-european-cyber-resilience-act-cra-compliance-an-urgent-wake-up-call-for-the-open-source-ecosystem/",
+      "source": "Open Source Security Foundation",
+      "published": "2026-05-18T08:00:46+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Exploitation of Critical NGINX Vulnerability Begins",
+      "link": "https://www.securityweek.com/exploitation-of-critical-nginx-vulnerability-begins/",
+      "source": "SecurityWeek",
+      "published": "2026-05-18T07:27:42+00:00",
       "smart_groups": [
         "Curated",
         "Vulnerabilities / CVEs",
@@ -132,13 +133,15 @@
       "curated": true
     },
     {
-      "title": "Indian Police Bust Nigerian Citizen in Delhi for Online Scamming Scheme",
-      "link": "https://www.news4hackers.com/indian-police-bust-nigerian-citizen-in-delhi-for-online-scamming-scheme/",
-      "source": "News4Hackers",
-      "published": "2026-05-16T15:02:55+00:00",
+      "title": "Exploit available for new DirtyDecrypt Linux root escalation flaw",
+      "link": "https://www.bleepingcomputer.com/news/security/exploit-available-for-new-dirtydecrypt-linux-root-escalation-flaw/",
+      "source": "BleepingComputer",
+      "published": "2026-05-18T07:18:33+00:00",
       "smart_groups": [
         "Curated",
         "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Linux / Unix",
         "General Security"
       ],
       "curated": true
