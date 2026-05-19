@@ -1,129 +1,72 @@
 {
-  "generated_at": "2026-05-18T10:41:14.233188+00:00",
-  "analysis_date": "2026-05-18",
+  "generated_at": "2026-05-19T10:06:15.991647+00:00",
+  "analysis_date": "2026-05-19",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-05-18T08:53:03.923437+00:00",
+  "source_generated_at": "2026-05-19T09:53:14.806641+00:00",
   "source_days_back": 30,
-  "source_total_items": 7707,
-  "total_items_in_window_all": 124,
-  "total_items_in_window_curated": 48,
-  "morning_call_markdown": "### Executive Summary\n- Active exploitation reported for **NGINX CVE-2026-42945**; assume internet-facing reverse proxies/WAF front-ends are being probed now.\n- **Microsoft Exchange Server vulnerability is being exploited** (per CISA warning); treat on-prem Exchange as high risk until verified patched/mitigated.\n- Multiple **new PoCs/0-days (Windows “MiniPlasma”, Linux “DirtyDecrypt”)** increase local-priv-esc risk post-initial access; raise detection for privilege escalation and suspicious child processes.\n\n### High-priority items (immediate attention)\n\n**1) NGINX CVE-2026-42945 – exploitation in the wild**\n- What happened: Multiple outlets report **active exploitation** of a **critical NGINX flaw (CVE-2026-42945)** causing worker crashes and potential RCE.\n- Why it matters operationally: NGINX commonly fronts banking apps/APIs; compromise can enable **traffic interception, credential theft, webshell drop**, or outage.\n- Recommended immediate actions for the SOC today: **Identify all internet-facing NGINX** (incl. containers) and validate patch/mitigation status; **monitor for abnormal worker restarts/crashes + new/unexpected config changes** and suspicious upstream connections from NGINX hosts.\n\n**2) Microsoft Exchange Server vuln exploited (CISA alert)**\n- What happened: CISA warns of a **Microsoft Exchange Server vulnerability exploited in attacks** (details may vary by environment; assume on-prem Exchange at risk).\n- Why it matters operationally: Exchange exploitation is a fast path to **email access, internal lateral movement, and data theft** in financial environments.\n- Recommended immediate actions for the SOC today: **Confirm Exchange versions + patch levels** and apply vendor mitigations; **hunt on Exchange for unusual web requests/auth anomalies and new persistence artifacts** (e.g., unexpected virtual directory changes / new scheduled tasks).\n\n**3) Windows “MiniPlasma” zero-day / PoC – SYSTEM privilege escalation**\n- What happened: Reports claim a **Windows local privilege escalation “MiniPlasma” 0-day** with **PoC** enabling **SYSTEM** on fully patched systems.\n- Why it matters operationally: Raises impact of phishing/malware initial access; enables **EDR tampering, credential dumping, ransomware staging**.\n- Recommended immediate actions for the SOC today: **Increase alerting for privilege escalation patterns** (suspicious service creation, token manipulation, unusual parent/child chains); **isolate and triage any endpoint showing rapid privilege jumps** after user-level execution.\n\n**4) Linux “DirtyDecrypt” root escalation – exploit available**\n- What happened: Public reporting indicates an **exploit available** for a **Linux local root escalation** (“DirtyDecrypt”).\n- Why it matters operationally: Threat actors landing low-priv shells on Linux (web apps, CI runners, jump hosts) can **pivot to root**, steal secrets, and persist.\n- Recommended immediate actions for the SOC today: **Inventory exposed/high-value Linux hosts** (web tiers, CI/CD, bastions) and prioritize patching; **hunt for new setuid binaries, suspicious kernel/userland exploit artifacts, and unusual privilege transitions**.\n\n**5) Supply-chain / dev-secrets risk (Grafana codebase access + OtterCookie credential-stealer)**\n- What happened: Grafana reports a **security incident involving GitHub codebase access**; separate reporting highlights **OtterCookie malware** stealing **SSH keys, cloud tokens, dev secrets**.\n- Why it matters operationally: Stolen source/secrets can lead to **downstream compromise** (CI/CD abuse, cloud takeover) and later ransomware/extortion.\n- Recommended immediate actions for the SOC today: **Rotate/revoke high-risk tokens/keys** where exposure is plausible (GitHub, CI, cloud, SSH); **monitor for unusual GitHub/CI logins and abnormal cloud API calls** originating from developer endpoints or build systems.\n\n### Monitoring & detection recommendations\n- **Internet edge / NGINX**: Watch WAF/reverse-proxy logs for **spikes in 4xx/5xx, worker restarts, anomalous request patterns**; correlate with host logs for **new processes spawned by NGINX** (ATT&CK: T1190 Exploit Public-Facing Application).\n- **Exchange**: Prioritize IIS logs + Exchange admin/audit logs for **unusual endpoints, auth failures/success bursts, and atypical admin actions**; alert on **new scheduled tasks/services** on Exchange hosts (ATT&CK: T1053 Scheduled Task/Job).\n- **Windows LPE (MiniPlasma theme)**: EDR/Sysmon for **service creation (7045), LSASS access attempts, credential dumping tools**, and **unsigned driver/service loads**; investigate **rapid integrity-level jumps** after Office/browser-launched processes (ATT&CK: T1068 Exploitation for Privilege Escalation).\n- **Linux LPE (DirtyDecrypt theme)**: Auditd/journald/EDR for **new SUID files, chmod/chown anomalies, /tmp execution**, and **unexpected root shells**; monitor for **suspicious compilation activity on servers** (gcc/clang) (ATT&CK: T1068).\n- **Dev secrets / OtterCookie**: Endpoint telemetry for **access to SSH directories, credential stores, browser token DBs**, and mass file reads in repos; cloud logs for **token replay** (impossible travel, new user-agent, new ASN) (ATT&CK: T1552 Unsecured Credentials, T1528 Steal Application Access Token).\n- **Web plugins (WordPress ecosystem)**: For any corporate-hosted WP (marketing, subsidiaries), monitor web logs for **file read, SQLi, auth bypass patterns** and unexpected **new admin users/plugins** (ATT&CK: T1190).\n- **General “PoC acceleration” (Pwn2Own / AI exploitation window)**: Temporarily tighten thresholds on **newly-exposed services** and **new CVE scanning signatures** at perimeter; correlate scanner activity with subsequent auth attempts (ATT&CK: T1595 Active Scanning).\n\n### Medium-term follow-ups\n- **Patch governance**: Validate ownership and patch SLAs for **NGINX, Exchange, Windows, Linux kernels**, and any **automation platforms (e.g., n8n)**; ensure internet-facing assets are in the fastest lane.\n- **Reverse proxy hardening**: Enforce **immutable config deployment**, restrict admin interfaces, and add **file integrity monitoring** on NGINX/Gateway configs and modules.\n- **Exchange risk reduction** (assumption: some on-prem presence): Reduce exposure via **segmentation, restricted admin access, EDR coverage**, and validated backup/restore drills for mailbox and AD dependencies.\n- **Dev/CI security**: Implement/confirm **short-lived tokens**, mandatory **MFA for GitHub/CI**, secret scanning, and rapid **key rotation playbooks** following vendor incidents.\n- **Privilege escalation resilience**: Review endpoint baselines for **local admin sprawl**, enable **Credential Guard/LSASS protections** where feasible, and ensure LPE detections are tuned for noise but not suppressed.\n- **Third-party/vendor watch**: Track advisories/updates for products mentioned (NGINX, Exchange, Grafana) and prepare **customer-impact comms** if any externally hosted services are affected.",
+  "source_total_items": 7960,
+  "total_items_in_window_all": 289,
+  "total_items_in_window_curated": 99,
+  "morning_call_markdown": "### Executive Summary\n- Multiple **internet-facing RCE/0-day-style risks** are trending: **Exchange zero-day under active attack (no patch)** and **NGINX RCE (CVE-2026-42945) reportedly exploited**.\n- **Software supply-chain compromises** expanded: **malicious GitHub Action tag redirects**, **malicious npm packages (“mini Shai‑Hulud”)**, and a **compromised VS Code extension (Nx Console)** stealing credentials/secrets.\n- **Cloud identity compromise remains the fastest path to impact**: reporting highlights **Entra ID/M365/Azure data theft patterns** and a Microsoft write-up on **Storm‑2949** shows how one identity compromise can cascade “cloud-wide”.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Microsoft Exchange zero-day reportedly exploited (no patch available)**\n- What happened: Reporting indicates an **Exchange zero-day** is **under attack** with **no vendor patch** yet available.  \n- Why it matters operationally: Exchange compromise is a high-confidence path to **org-wide email takeover, lateral movement, and BEC/ransomware staging** in financial environments.  \n- Recommended immediate actions for the SOC today: **Identify all internet-facing Exchange** and confirm exposure; **tighten perimeter/allowlisting + WAF rules where possible** and **hunt for abnormal OWA/ECP activity, new inbox rules, suspicious PowerShell/WSMan from Exchange hosts**.\n\n**2) NGINX critical RCE (CVE-2026-42945) “actively exploited” + multiple NGINX vulns**\n- What happened: Multiple sources report **critical NGINX RCE (CVE-2026-42945)** with **in-the-wild exploitation**; advisory chatter also mentions **multiple NGINX RCE-capable issues**.  \n- Why it matters operationally: NGINX is commonly **internet-facing** (reverse proxies/API gateways); exploitation can lead to **web tier takeover**, credential theft, and pivoting into internal networks.  \n- Recommended immediate actions for the SOC today: **Inventory and flag all exposed NGINX/F5 NGINX instances** and confirm versions; **prioritize emergency patch/mitigation** and **monitor for webshell indicators and unexpected child processes spawned by nginx worker/master**.\n\n**3) CI/CD & developer supply-chain attacks (GitHub Actions tag redirect + npm “mini Shai‑Hulud” + VS Code extension)**\n- What happened: A **GitHub Action supply-chain** issue redirected popular tags to an **impostor commit** stealing workflow credentials; **malicious AntV npm packages** were pushed via a compromised maintainer; **Nx Console VS Code extension** reported stealing dev/cloud secrets.  \n- Why it matters operationally: Stolen CI/CD tokens and developer secrets enable **source/code access, signing key theft, cloud compromise**, and downstream production tampering—high impact for financial software pipelines.  \n- Recommended immediate actions for the SOC today: **Rotate GitHub/OIDC secrets and any CI tokens used in the last 7 days** (assumption: exposure window unknown); **block/alert on new or unapproved GitHub Actions + pin actions to commit SHA** and **hunt for unusual outbound from runners/dev endpoints to code-hosting or paste-like destinations**.\n\n**4) Cloud identity compromise patterns (Entra ID/M365/Azure theft)**\n- What happened: Reports highlight **attackers exploiting Entra ID accounts** to access **M365/Azure data**; Microsoft details **Storm‑2949** chaining identity compromise into broader cloud breach.  \n- Why it matters operationally: For financial institutions, identity compromise can rapidly lead to **data exfiltration, mailbox rule abuse (BEC), OAuth app abuse, and persistence** with minimal malware.  \n- Recommended immediate actions for the SOC today: **Review high-risk sign-ins + impossible travel + token anomalies**; **audit new OAuth app consents/service principals, role assignments, and Conditional Access changes** in the last 24–72h.\n\n---\n\n### Monitoring & detection recommendations\n- **Exchange (EDR + Windows logs + IIS/HTTP proxy logs)**: hunt for **new mailbox inbox rules, abnormal ECP/OWA access, Exchange spawning cmd/powershell** (ATT&CK: **T1059**, **T1505**).\n- **NGINX/web gateways (WAF, reverse proxy access logs, process telemetry)**: alert on **spikes in 4xx/5xx with odd URIs**, **uploads to uncommon paths**, and **nginx workers spawning shells/binaries** (ATT&CK: **T1190**).\n- **GitHub/CI (GitHub audit logs, runner logs, secrets manager logs)**: monitor for **workflow file edits**, **new actions usage**, **unexpected OIDC token exchanges**, and **mass secret reads** (ATT&CK: **T1552**, **T1078**).\n- **npm/dependency activity (artifact repos, build logs, EDR on build agents)**: detect **new/rare package names**, **postinstall script execution**, and **unexpected outbound during builds** (ATT&CK: **T1554**, **T1105**).\n- **Developer endpoints (EDR + browser telemetry)**: watch for **VS Code extension installs/updates outside policy**, and **credential store access + unusual network beacons** (ATT&CK: **T1555**, **T1056**).\n- **Entra ID/Azure (Entra sign-in logs, unified audit log, Azure Activity Logs)**: alert on **new privileged role assignments**, **Conditional Access policy edits**, **new service principals/credentials**, and **mailbox delegation changes** (ATT&CK: **T1098**, **T1136**).\n- **macOS fleet (EDR, MDM, DNS/proxy logs)**: monitor for **fake update lures / new LaunchAgents**, and **credential theft behavior** tied to SHub/Reaper-style stealers (ATT&CK: **T1555**, **T1543.001**).\n\n---\n\n### Medium-term follow-ups\n- **Patch/hardening sprint**: validate coverage for **NGINX**, **n8n RCE reports**, and **AWS amazon-redshift-python-driver RCE (CVE-2026-8838)** across dev and analytics stacks; ensure owners and SLAs are set.\n- **Supply-chain guardrails**: enforce **“pin GitHub Actions to SHA”**, restrict marketplace actions, and require **code-owner review** for `.github/workflows/*`; consider runner egress controls.\n- **Secret hygiene program**: expand automated detection for **secrets in repos** (lessons from leaked cloud keys incidents) and require **rotation playbooks** for CI/cloud credentials.\n- **Identity resilience**: tighten **Conditional Access**, require phishing-resistant MFA for admins, and implement continuous monitoring for **OAuth consent + service principal credential creation**.\n- **Vendor exposure check**: if you run **Grafana** or depend on its code/artifacts, confirm you’re not reusing exposed tokens and verify **artifact integrity**; treat downstream code-consumption as higher risk until clarified.\n- **User-driven attack awareness**: brief helpdesk/SOC on **CalPhishing-style calendar invite lures** and update reporting guidance (finance users are high-value BEC targets).",
   "highlights": [
     {
-      "title": "The Boring Stuff is Dangerous Now",
-      "link": "https://www.darkreading.com/cyber-risk/ai-code-and-agents-forces-defenders-adapt",
-      "source": "darkreading",
-      "published": "2026-05-18T13:00:00+00:00",
+      "title": "Trying to find serious builders in cybersecurity - not just “let’s build” conversations",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1thi09j/trying_to_find_serious_builders_in_cybersecurity/",
+      "source": "/r/cybersecurity",
+      "published": "2026-05-19T09:48:57+00:00",
       "smart_groups": [
-        "Threat Actors / APT",
-        "Curated",
-        "Exploit / PoC",
         "Vulnerabilities / CVEs",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Critical Marimo RCE Flaw Could Let Attackers Execute Malicious Code Remotely",
-      "link": "https://gbhackers.com/critical-marimo-rce-flaw/",
-      "source": "GBHackers News",
-      "published": "2026-05-18T08:45:28+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "CISA Warns of Microsoft Exchange Server Vulnerability Exploited in Attacks",
-      "link": "https://cybersecuritynews.com/cisa-microsoft-exchange-server-vulnerability/",
-      "source": "Cyber Security News (FeedBurner)",
-      "published": "2026-05-18T08:32:59+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "Web / API Security",
-        "Windows / Microsoft",
-        "Exploit / PoC",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "1 Million WordPress Sites Affected by Avada Builder File Read and SQL Injection Flaws",
-      "link": "https://cybersecuritynews.com/avada-builder-plugin-vulnerability/",
-      "source": "Cyber Security News (FeedBurner)",
-      "published": "2026-05-18T08:30:10+00:00",
-      "smart_groups": [
-        "Web / API Security",
-        "Data Protection / Privacy",
         "Cloud / SaaS",
-        "Curated",
-        "Exploit / PoC",
-        "Vulnerabilities / CVEs",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "n8n Security Flaws Could Let Attackers Achieve Remote Code Execution",
-      "link": "https://gbhackers.com/n8n-security-flaws-remote-code-execution/",
-      "source": "GBHackers News",
-      "published": "2026-05-18T08:28:07+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Curated",
-        "Cloud / SaaS",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "OtterCookie Malware Steals Dev Secrets, SSH Keys, Cloud Credentials, and Tokens",
-      "link": "https://gbhackers.com/ottercookie-malware-steals-dev-secrets/",
-      "source": "GBHackers News",
-      "published": "2026-05-18T08:23:18+00:00",
-      "smart_groups": [
-        "Malware / Payloads",
-        "Data Protection / Privacy",
         "Curated",
         "Ransomware",
-        "General Security"
+        "OSINT / Community"
       ],
       "curated": true
     },
     {
-      "title": "SO-CON 2026",
-      "link": "https://falconforce.nl/so-con-2026/",
-      "source": "https://falconforce.nl/feed/",
-      "published": "2026-05-18T08:03:55+00:00",
+      "title": "Cyber security professionals in hyderabad, india",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1thhz7l/cyber_security_professionals_in_hyderabad_india/",
+      "source": "/r/cybersecurity",
+      "published": "2026-05-19T09:47:21+00:00",
       "smart_groups": [
         "Curated",
         "Vulnerabilities / CVEs",
-        "General Security"
+        "OSINT / Community"
       ],
       "curated": true
     },
     {
-      "title": "Taking Stock of the State of European Cyber Resilience Act (CRA) Compliance: An Urgent Wake-up Call for the Open Source Ecosystem",
-      "link": "https://openssf.org/blog/2026/05/18/taking-stock-of-the-state-of-european-cyber-resilience-act-cra-compliance-an-urgent-wake-up-call-for-the-open-source-ecosystem/",
-      "source": "Open Source Security Foundation",
-      "published": "2026-05-18T08:00:46+00:00",
+      "title": "Cyble Named a Challenger in the Inaugural 2026 Gartner® Magic Quadrant™ for Cyberthreat Intelligence Technologies",
+      "link": "https://cyble.com/blog/cyble-challenger-in-2026-gartner-magic-quadrant-for-cyberthreat-intelligence-technologies/",
+      "source": "Cyble",
+      "published": "2026-05-19T09:46:55+00:00",
+      "smart_groups": [
+        "Crypto / Web3",
+        "Curated",
+        "Ransomware",
+        "Vendors / Product Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "RCE and arbitrary file write in Vitess vtbackup via untrusted MANIFEST fields",
+      "link": "https://www.reddit.com/r/netsec/comments/1thhqa3/rce_and_arbitrary_file_write_in_vitess_vtbackup/",
+      "source": "/r/netsec",
+      "published": "2026-05-19T09:34:18+00:00",
       "smart_groups": [
         "Curated",
         "Vulnerabilities / CVEs",
-        "General Security"
+        "OSINT / Community"
       ],
       "curated": true
     },
     {
-      "title": "Exploitation of Critical NGINX Vulnerability Begins",
-      "link": "https://www.securityweek.com/exploitation-of-critical-nginx-vulnerability-begins/",
-      "source": "SecurityWeek",
-      "published": "2026-05-18T07:27:42+00:00",
+      "title": "20-Year-Old PostgreSQL Flaw Gets Public PoC Exploit for Remote Code Execution",
+      "link": "https://gbhackers.com/20-year-old-postgresql-flaw-gets-public-poc-exploit/",
+      "source": "GBHackers News",
+      "published": "2026-05-19T09:19:42+00:00",
       "smart_groups": [
         "Curated",
         "Vulnerabilities / CVEs",
@@ -133,15 +76,69 @@
       "curated": true
     },
     {
-      "title": "Exploit available for new DirtyDecrypt Linux root escalation flaw",
-      "link": "https://www.bleepingcomputer.com/news/security/exploit-available-for-new-dirtydecrypt-linux-root-escalation-flaw/",
-      "source": "BleepingComputer",
-      "published": "2026-05-18T07:18:33+00:00",
+      "title": "Grafana Labs Confirms Hackers Stole Source Code",
+      "link": "https://www.infosecurity-magazine.com/news/grafana-labs-confirms-hackers/",
+      "source": "Infosecurity Magazine – News",
+      "published": "2026-05-19T09:15:00+00:00",
       "smart_groups": [
         "Curated",
         "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "7 tips for accelerating cyber incident recovery",
+      "link": "https://www.csoonline.com/article/4172697/7-tips-for-accelerating-cyber-incident-recovery.html",
+      "source": "CSO Online",
+      "published": "2026-05-19T09:00:00+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Crypto / Web3",
+        "Curated",
+        "Identity / Access",
+        "Malware / Payloads",
+        "Network / OT / ICS",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Hack The Box Report Reveals AI-Driven Shift Reshaping Cybersecurity Skills and Talent Strategy",
+      "link": "https://www.hackthebox.com/blog/htb-cybersecurity-workforce-intelligence-report",
+      "source": "Hack The Box – Blog",
+      "published": "2026-05-19T09:00:00+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Vendors / Product Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Four-Faith Industrial Routers Targeted in Botnet Hijacking Campaign",
+      "link": "https://gbhackers.com/four-faith-industrial-routers-targeted-in-botnet-hijacking-campaign/",
+      "source": "GBHackers News",
+      "published": "2026-05-19T08:52:42+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Curated",
         "Exploit / PoC",
-        "Linux / Unix",
+        "Malware / Payloads",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "PostgreSQL Flaws Expose Databases to Remote Code Execution and SQL Injection",
+      "link": "https://gbhackers.com/postgresql-flaws-expose-databases/",
+      "source": "GBHackers News",
+      "published": "2026-05-19T08:41:02+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Curated",
+        "Web / API Security",
+        "Cloud / SaaS",
         "General Security"
       ],
       "curated": true
