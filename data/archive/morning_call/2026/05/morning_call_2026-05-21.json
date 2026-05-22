@@ -1,0 +1,142 @@
+{
+  "generated_at": "2026-05-21T10:03:18.279647+00:00",
+  "analysis_date": "2026-05-21",
+  "model": "gpt-5.2",
+  "window_hours": 24,
+  "source_file": "data/news_recent.json",
+  "source_generated_at": "2026-05-21T08:03:38.042947+00:00",
+  "source_days_back": 30,
+  "source_total_items": 8286,
+  "total_items_in_window_all": 319,
+  "total_items_in_window_curated": 111,
+  "morning_call_markdown": "### Executive Summary\n- Multiple high-impact exploitation paths surfaced: Microsoft Defender **zero-days in the wild**, and a **max-severity Drupal core SQLi/RCE risk** with active exploit concern—prioritize endpoint and internet-facing patch/mitigation validation.\n- Ongoing **software supply-chain fallout** (TanStack/npm / poisoned VS Code extension / GitHub repo theft; CI/CD secret targeting) increases risk of credential/token compromise and downstream customer-impacting incidents.\n- **Ransomware + access-broker themes** remain acute: SMB-based remote encryption behavior reported, plus **SonicWall VPN MFA bypass due to incomplete patching**—tighten monitoring on remote access and lateral movement.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Microsoft Defender zero-days exploited in attacks (in-the-wild)**\n- **What happened:** Microsoft warned of new Defender zero-days being exploited in active attacks (details limited in headline-level reporting).\n- **Why it matters operationally:** If successful, attackers can reduce detection/response efficacy on Windows endpoints—high leverage for ransomware and hands-on-keyboard intrusions.\n- **Recommended immediate actions for the SOC today:** Verify Defender platform/engine/signature update currency fleet-wide; hunt for sudden Defender health/status changes, disabled protections, or service tampering on critical endpoint populations.\n\n**2) Drupal core max-severity SQL injection / potential RCE exposure (PostgreSQL-focused)**\n- **What happened:** Emergency Drupal core advisory (SA-CORE-2026-004) for highly critical SQLi; multiple sources flag high exploitation risk and PostgreSQL-specific impact.\n- **Why it matters operationally:** Internet-facing CMS compromise is a common initial access vector (webshells, credential theft, pivoting into internal networks).\n- **Recommended immediate actions for the SOC today:** Identify all Drupal instances (incl. subsidiaries/marketing sites) and confirm patch level; add WAF/IDS virtual patch rules (SQLi patterns) and increase alerting for webshell-like file writes and unusual POST traffic to Drupal endpoints.\n\n**3) Supply-chain/Dev tooling compromise cluster (GitHub internal repo theft + TanStack/npm + CI/CD secret targeting)**\n- **What happened:** GitHub confirmed breach/theft of thousands of internal repos tied to a poisoned VS Code extension; related TanStack/npm supply-chain activity and follow-on incidents (e.g., token rotation failures) reported; “mini Shai-Hulud” targets CI/CD secrets.\n- **Why it matters operationally:** Stolen source + CI/CD secrets/tokens can enable lateral movement into cloud, build systems, artifact repos, and production pipelines—high impact in financial services.\n- **Recommended immediate actions for the SOC today:** Trigger targeted secret/token review: rotate high-risk GitHub/OAuth/app tokens, CI runners’ credentials, npm/pypi publish tokens; monitor for new/unknown GitHub Apps, unusual PAT use, and unexpected package version bumps in internal builds.\n\n**4) Remote access edge risk: SonicWall VPN MFA bypass due to incomplete patching**\n- **What happened:** Reporting indicates attackers can bypass SonicWall VPN MFA when patching is incomplete/misapplied.\n- **Why it matters operationally:** VPN compromise remains a primary entry point for ransomware/affiliate activity; “partial remediation” is a real-world failure mode.\n- **Recommended immediate actions for the SOC today:** Validate SonicWall patch posture/config matches vendor guidance (not just version); increase monitoring for anomalous VPN logins (new geos, new devices, impossible travel) and enforce conditional access where possible.\n\n**5) Ransomware tradecraft update: SMB abuse enabling remote encryption (“WantToCry”)**\n- **What happened:** A ransomware variant reportedly abuses SMB to encrypt remote files and “evade detection” by acting across shares rather than running obvious payloads on each host.\n- **Why it matters operationally:** Increases likelihood of rapid, multi-host impact via file servers and shared drives—material business disruption risk.\n- **Recommended immediate actions for the SOC today:** Heighten alerting on mass file modifications/renames over SMB, spikes in SMB write ops, and suspicious share traversal; confirm backups/restore testing and ensure file server EDR coverage + segmentation controls are functioning.\n\n---\n\n### Monitoring & detection recommendations\n- **Endpoint security tampering (Defender/EDR disruption):** EDR + Windows Event Logs (Service Control Manager, Defender operational logs); hunt for security tool disablement/tamper events and abrupt policy changes (ATT&CK: **T1562 Impair Defenses**).\n- **Drupal exploitation/webshell follow-on:** WAF/proxy logs + web server logs + EDR on web hosts; look for SQLi probes, atypical POSTs to Drupal paths, new PHP files in web roots, and outbound connections from web servers (ATT&CK: **T1190 Exploit Public-Facing Application**).\n- **CI/CD & developer identity abuse after supply-chain incidents:** GitHub audit logs, CI runner logs, IdP (Okta/AAD) sign-ins; alert on new PAT creation, unusual token scopes, new OAuth app grants, and runner executions from new IP ranges (ATT&CK: **T1078 Valid Accounts**).\n- **Package supply-chain anomalies:** Build logs + artifact repository logs + dependency scanners; flag unexpected dependency additions, typosquatted modules (Go/npm), and sudden version jumps tied to internal pipelines (ATT&CK: **T1195 Supply Chain Compromise**).\n- **VPN edge compromise / MFA bypass behavior:** VPN logs + firewall + IdP; hunt for successful logins without expected MFA artifacts, new user-agent strings, and admin portal access attempts (ATT&CK: **T1133 External Remote Services**).\n- **SMB-based ransomware early warning:** File server logs (SMB auditing), EDR telemetry, Windows file auditing; detect bursts of file writes/renames, high-entropy extensions, and multiple share access from a single workstation/service account (ATT&CK: **T1486 Data Encrypted for Impact**).\n- **Infostealer activity + credential replay risk:** EDR + email gateway + browser credential store access telemetry; watch for unusual archive creation, credential-dumping-like access patterns, and subsequent new-session tokens in SaaS (ATT&CK: **T1555 Credentials from Password Stores**).\n\n---\n\n### Medium-term follow-ups\n- **Patch governance / validation:** Add a control to verify *effective remediation* (not “version only”) for VPN/edge devices (SonicWall lesson learned); include config validation and MFA enforcement checks.\n- **Drupal hardening program:** Ensure least-privilege DB accounts, restrict admin paths, enforce file integrity monitoring on web roots, and confirm WAF coverage for all internet-facing CMS.\n- **Software supply-chain controls:** Require signed commits/releases where possible, enforce dependency allowlisting, and implement automated secret scanning + mandatory token rotation playbooks after repo/tooling incidents.\n- **Linux fleet risk review:** Multiple Linux local privilege escalation items with PoCs reported (e.g., “PinTheft”, ptrace-path credential disclosure); prioritize patching on jump hosts, CI runners, and servers with developer access.\n- **EDR resilience testing:** Given “EDR hang/leave files unscanned” style reports (e.g., GhostTree theme), run controlled validation of endpoint sensor health reporting and ensure SOC has alerts for degraded coverage.\n- **Threat intel alignment:** Map these themes into a short-term hunt plan focused on initial access via public-facing apps + token/secret abuse + SMB impact pathways (tie to DBIR finding: vulnerability exploitation as dominant initial access vector).",
+  "highlights": [
+    {
+      "title": "Microsoft warns of new Defender zero-days exploited in attacks",
+      "link": "https://www.bleepingcomputer.com/news/security/microsoft-warns-of-new-defender-zero-days-exploited-in-attacks/",
+      "source": "BleepingComputer",
+      "published": "2026-05-21T07:49:48+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Critical Drupal Vulnerability Could Leave Sites Open to Cyberattack",
+      "link": "https://gbhackers.com/critical-drupal-vulnerability-could-leave-sites-open-to-cyberattack/",
+      "source": "GBHackers News",
+      "published": "2026-05-21T07:38:31+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Mini Shai-Hulud Hits @antv npm Packages, Targets CI/CD Secrets",
+      "link": "https://gbhackers.com/antv-npm-packages/",
+      "source": "GBHackers News",
+      "published": "2026-05-21T07:14:12+00:00",
+      "smart_groups": [
+        "Supply Chain / Software",
+        "Curated",
+        "Threat Actors / APT",
+        "Exploit / PoC",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Terra adds continuous network exploitation validation to its platform",
+      "link": "https://www.helpnetsecurity.com/2026/05/21/terra-security-network-exploitation-validation/",
+      "source": "Help Net Security",
+      "published": "2026-05-21T07:13:32+00:00",
+      "smart_groups": [
+        "Curated",
+        "Exploit / PoC",
+        "Ransomware",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Nine-Year-Old Kernel Flaw Puts Linux SSH Private Keys at Risk",
+      "link": "https://gbhackers.com/nine-year-old-kernel-flaw/",
+      "source": "GBHackers News",
+      "published": "2026-05-21T07:10:25+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Curated",
+        "Linux / Unix",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "How an image could compromise your Mac: understanding an ExifTool vulnerability (CVE-2026-3102)",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1tjcoei/how_an_image_could_compromise_your_mac/",
+      "source": "/r/cybersecurity",
+      "published": "2026-05-21T07:05:45+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Curated",
+        "OSINT / Community"
+      ],
+      "curated": true
+    },
+    {
+      "title": "github-links-repo-breach-tanstack-npm-supply-chain-attack",
+      "link": "https://www.news4hackers.com/github-links-repo-breach-tanstack-npm-supply-chain-attack/",
+      "source": "News4Hackers",
+      "published": "2026-05-21T07:02:14+00:00",
+      "smart_groups": [
+        "Supply Chain / Software",
+        "Curated",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "GitHub links repo breach to TanStack npm supply-chain attack",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1tjcioz/github_links_repo_breach_to_tanstack_npm/",
+      "source": "/r/cybersecurity",
+      "published": "2026-05-21T06:57:28+00:00",
+      "smart_groups": [
+        "Supply Chain / Software",
+        "Curated",
+        "OSINT / Community"
+      ],
+      "curated": true
+    },
+    {
+      "title": "GitHub links repo breach to TanStack npm supply-chain attack",
+      "link": "https://www.bleepingcomputer.com/news/security/github-links-repo-breach-to-tanstack-npm-supply-chain-attack/",
+      "source": "BleepingComputer",
+      "published": "2026-05-21T06:54:01+00:00",
+      "smart_groups": [
+        "Supply Chain / Software",
+        "Curated",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Another working Linux LPE exploit is out. How are teams treating local-only bugs now?",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1tjbzzi/another_working_linux_lpe_exploit_is_out_how_are/",
+      "source": "/r/cybersecurity",
+      "published": "2026-05-21T06:29:24+00:00",
+      "smart_groups": [
+        "Curated",
+        "Exploit / PoC",
+        "Linux / Unix",
+        "OSINT / Community"
+      ],
+      "curated": true
+    }
+  ]
+}
