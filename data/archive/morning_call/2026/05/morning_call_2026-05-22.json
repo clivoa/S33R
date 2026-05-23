@@ -1,0 +1,156 @@
+{
+  "generated_at": "2026-05-22T09:49:56.866380+00:00",
+  "analysis_date": "2026-05-22",
+  "model": "gpt-5.2",
+  "window_hours": 24,
+  "source_file": "data/news_recent.json",
+  "source_generated_at": "2026-05-22T09:33:42.920863+00:00",
+  "source_days_back": 30,
+  "source_total_items": 8282,
+  "total_items_in_window_all": 326,
+  "total_items_in_window_curated": 127,
+  "morning_call_markdown": "### Executive Summary\n- Multiple **known-exploited** items are in play: **Trend Micro Apex One** (endpoint/security mgmt) and **Microsoft Defender** zero-days, plus a **CVSS 10 Cisco Secure Workload REST API** flaw—treat as potential rapid enterprise compromise paths.\n- **Supply-chain pressure is spiking**: npm token revocations after “mini Shai-Hulud”, GitHub repo/CI backdooring (“Megalodon”), Hugging Face abused to deliver npm malware, and a TanStack-related incident impacting Grafana data/code.\n- **Identity/phishing remains a primary entry**: new M365-focused PhaaS (“Kali365”) + fake Teams installers and “invitation” phish campaigns—expect credential theft leading to MFA bypass/abuse.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Trend Micro Apex One vulnerability (exploited / KEV)**\n- **What happened:** Trend Micro released fixes for an **Apex One** vulnerability reported as **exploited in the wild** and added to **CISA KEV**.\n- **Why it matters operationally:** Apex One is often highly privileged; exploitation can enable **remote control of endpoints / lateral movement** in enterprise networks.\n- **Recommended immediate actions for the SOC today:** Confirm Apex One versions and **patch/mitigate immediately**; hunt for **new admin accounts, service creation, remote execution from Apex One hosts**.\n\n**2) Microsoft Defender zero-days (exploited in the wild)**\n- **What happened:** Reports indicate **two Microsoft Defender vulnerabilities** are being **actively exploited**, with at least one enabling **SYSTEM-level** impact.\n- **Why it matters operationally:** Defender is ubiquitous; successful exploitation can grant **high integrity execution** and suppress detection/response on endpoints.\n- **Recommended immediate actions for the SOC today:** Verify Defender platform/engine versions and **apply Microsoft patches/updates**; prioritize IR review of any **Defender tamper events, unexpected service/driver changes, or AV exclusions**.\n\n**3) Software supply-chain & CI/CD compromise wave (npm/GitHub/Hugging Face/TanStack)**\n- **What happened:** npm **revoked 2FA-bypass publishing tokens** after “mini Shai-Hulud”; “Megalodon” reportedly **infected thousands of GitHub repos** via CI workflows; Hugging Face used to **deliver npm malware**; TanStack supply-chain incident associated with **Grafana code/data theft** claims.\n- **Why it matters operationally:** Financial org dev pipelines can be a direct route to **secrets theft (cloud keys), signed artifact poisoning, and downstream production compromise**.\n- **Recommended immediate actions for the SOC today:** Trigger a **CI/CD credential hygiene check** (rotate high-risk tokens, audit recent secret access); scan for **unexpected workflow changes/new maintainers/new package versions** in critical repos and build pipelines.\n\n**4) Browser exposure: unfixed Chromium bug + exploit/PoC details leaked**\n- **What happened:** Reporting indicates **details and/or exploit code** for an **unfixed Chromium vulnerability** were exposed/published.\n- **Why it matters operationally:** Raises likelihood of **drive-by / phishing-to-exploit** chains against user workstations (especially finance ops users).\n- **Recommended immediate actions for the SOC today:** Enforce **rapid browser update cadence** (Chrome/Edge); increase monitoring for **browser-spawned suspicious processes** (e.g., script engines spawning shells) and isolate high-risk endpoints quickly.\n\n**5) Critical infrastructure software vulnerabilities: Cisco Secure Workload (CVSS 10) + Drupal SQLi**\n- **What happened:** Cisco patched a **CVSS 10.0** Secure Workload REST API issue enabling data access; Drupal Core **CVE-2026-9082 SQLi** highlighted with strong vendor/WAF guidance.\n- **Why it matters operationally:** These sit on management planes/web tiers—common targets for **initial access and data theft** in ransomware and extortion operations.\n- **Recommended immediate actions for the SOC today:** Identify any **internet-exposed** instances and **restrict access** (IP allowlists/VPN) pending patch verification; review WAF/IDS for **SQLi/REST abuse spikes** against these assets.\n\n---\n\n### Monitoring & detection recommendations\n- **Endpoint (EDR/Defender/Apex One servers):** Hunt for **security-tool tampering**, new exclusions, disabled services, or suspicious child processes from AV components (MITRE **T1562 Impair Defenses**, **T1059 Command and Scripting Interpreter**).\n- **Email + IdP (M365/Entra ID):** Alert on **password reset abuse**, anomalous MFA prompts, impossible travel, and new device registrations linked to “Kali365”/credential phishing (MITRE **T1566 Phishing**, **T1078 Valid Accounts**).\n- **Web proxy/DNS:** Watch for user downloads of **fake Teams installers** and unusual first-seen domains shortly before endpoint execution; correlate with EDR install events (MITRE **T1204 User Execution**).\n- **CI/CD logs (GitHub Actions, GitLab CI, Jenkins) + secrets managers:** Detect **workflow file edits**, new runners, cache/artifact poisoning behaviors, and unexpected outbound calls during builds (MITRE **T1552 Unsecured Credentials**, **T1195 Supply Chain Compromise**).\n- **Package management telemetry (npm registries/artifact repos):** Flag **sudden package version jumps**, new transitive dependencies, and packages pulled from unusual sources (internal allowlist breaches) tied to current npm campaign reporting.\n- **Network security (FW/IDS/WAF):** Increase scrutiny for **SQLi patterns** targeting Drupal and unusual REST API calls targeting **Cisco Secure Workload** endpoints (MITRE **T1190 Exploit Public-Facing Application**).\n- **VPN/Remote access gateways:** Given reporting on **SonicWall VPN MFA bypass exploitation**, watch for **MFA-less sessions**, new geo/device patterns, and privilege escalation post-login (MITRE **T1133 External Remote Services**).\n- **Linux servers:** Monitor for **SOCKS5/proxy backdoors** and selective HTTP proxying behaviors (new listening ports, persistence via systemd/cron) aligned with recent Linux malware reporting (MITRE **T1090 Proxy**, **T1543 Create/Modify System Process**).\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** Align internal SLAs to **KEV-driven patching** (Apex One, Defender, other KEV adds) and validate coverage across gold images/VDI.\n- **Supply-chain hardening:** Require **signed commits/releases**, tighten **CI permissions**, restrict GitHub Actions to approved actions, and implement dependency allowlisting + SBOM monitoring for critical apps.\n- **Browser risk reduction:** Consider **temporary hardening** (site isolation, blocking unsigned extensions, limiting download execution) for high-risk user groups (trading, payments ops) until Chromium issue fully remediated.\n- **External exposure review:** Re-validate inventory for **Drupal and Cisco Secure Workload** deployments; ensure management interfaces are **not internet-exposed** and are behind strong auth + network controls.\n- **Phishing resilience:** Tune detections/playbooks around **Teams lure**, “invitation” phish, and **M365 credential harvesting**; ensure rapid user reporting path and fast token/session revocation.\n- **Threat intel/process:** Note CISA moving to allow researchers to submit to KEV—expect **faster KEV updates**; ensure the SOC’s daily triage includes **new KEV deltas** and automated ticketing to patch teams.",
+  "highlights": [
+    {
+      "title": "CISA to allow researchers to report vulnerabilities to exploited bugs catalog",
+      "link": "https://therecord.media/cisa-to-allow-researchers-to-report-vulnerabilities-kev",
+      "source": "The Record – Cybercrime",
+      "published": "2026-05-23T01:11:00+00:00",
+      "smart_groups": [
+        "Curated",
+        "Exploit / PoC",
+        "Vulnerabilities / CVEs",
+        "Data Breaches / Leaks"
+      ],
+      "curated": true
+    },
+    {
+      "title": "‘First VPN’ Cybercrime Service Disrupted, Administrator Arrested",
+      "link": "https://www.securityweek.com/first-vpn-cybercrime-service-disrupted-administrator-arrested/",
+      "source": "SecurityWeek",
+      "published": "2026-05-22T09:24:22+00:00",
+      "smart_groups": [
+        "Curated",
+        "Ransomware",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Millions of NGINX Servers Face Fresh Zero-Day Concerns After Recent Rift Patch dubbed \"nginx-poolslip\"",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1tkdedb/millions_of_nginx_servers_face_fresh_zeroday/",
+      "source": "/r/cybersecurity",
+      "published": "2026-05-22T09:05:41+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "OSINT / Community"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Looking for a cybersecurity professional to interview for a university project (interview in French)",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1tkde2e/looking_for_a_cybersecurity_professional_to/",
+      "source": "/r/cybersecurity",
+      "published": "2026-05-22T09:05:15+00:00",
+      "smart_groups": [
+        "Data Protection / Privacy",
+        "Curated",
+        "Network / OT / ICS",
+        "Vulnerabilities / CVEs",
+        "OSINT / Community"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Trend Micro Patching Vulnerability in Apex One Following Zero-Day Exploit",
+      "link": "https://www.news4hackers.com/trend-micro-patching-vulnerability-in-apex-one-following-zero-day-exploit/",
+      "source": "News4Hackers",
+      "published": "2026-05-22T09:01:36+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "What I’m Hearing at Security Conferences Worldwide About Ransomware",
+      "link": "https://fidelissecurity.com/threatgeek/thought-leadership/hearing-at-security-conferences-worldwide-about-ransomware/",
+      "source": "Fidelis Security",
+      "published": "2026-05-22T09:00:22+00:00",
+      "smart_groups": [
+        "Curated",
+        "Network / OT / ICS",
+        "Ransomware",
+        "Vendors / Product Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Identity as the primary attack surface: What modern breaches are really exploiting",
+      "link": "https://www.csoonline.com/article/4175323/identity-as-the-primary-attack-surface-what-modern-breaches-are-really-exploiting.html",
+      "source": "CSO Online",
+      "published": "2026-05-22T09:00:00+00:00",
+      "smart_groups": [
+        "Identity / Access",
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Cloud / SaaS",
+        "Ransomware",
+        "Threat Actors / APT",
+        "Data Protection / Privacy",
+        "Detection Engineering",
+        "Crypto / Web3",
+        "Exploit / PoC",
+        "Linux / Unix",
+        "Malware / Payloads",
+        "Network / OT / ICS",
+        "Phishing / Social Engineering",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Google Publishes Exploit Code for Unfixed Chromium Bug Exposing Millions of Users",
+      "link": "https://cybersecuritynews.com/google-publishes-chromium-exploit-code/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-05-22T08:54:15+00:00",
+      "smart_groups": [
+        "Exploit / PoC",
+        "Curated",
+        "Malware / Payloads",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "TrendAI Patches Apex One Zero-Day Exploited in the Wild",
+      "link": "https://www.securityweek.com/trendai-patches-apex-one-zero-day-exploited-in-the-wild/",
+      "source": "SecurityWeek",
+      "published": "2026-05-22T08:19:24+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Web / API Security",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Safe read-only check script for Copy Fail / CVE-2026-31431",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1tkcfai/safe_readonly_check_script_for_copy_fail/",
+      "source": "/r/cybersecurity",
+      "published": "2026-05-22T08:10:32+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "OSINT / Community"
+      ],
+      "curated": true
+    }
+  ]
+}
