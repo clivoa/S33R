@@ -1,16 +1,68 @@
 {
-  "generated_at": "2026-05-22T09:49:56.866380+00:00",
-  "analysis_date": "2026-05-22",
+  "generated_at": "2026-05-23T08:31:47.674109+00:00",
+  "analysis_date": "2026-05-23",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-05-22T09:33:42.920863+00:00",
+  "source_generated_at": "2026-05-23T07:40:48.107238+00:00",
   "source_days_back": 30,
-  "source_total_items": 8282,
-  "total_items_in_window_all": 326,
-  "total_items_in_window_curated": 127,
-  "morning_call_markdown": "### Executive Summary\n- Multiple **known-exploited** items are in play: **Trend Micro Apex One** (endpoint/security mgmt) and **Microsoft Defender** zero-days, plus a **CVSS 10 Cisco Secure Workload REST API** flaw—treat as potential rapid enterprise compromise paths.\n- **Supply-chain pressure is spiking**: npm token revocations after “mini Shai-Hulud”, GitHub repo/CI backdooring (“Megalodon”), Hugging Face abused to deliver npm malware, and a TanStack-related incident impacting Grafana data/code.\n- **Identity/phishing remains a primary entry**: new M365-focused PhaaS (“Kali365”) + fake Teams installers and “invitation” phish campaigns—expect credential theft leading to MFA bypass/abuse.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Trend Micro Apex One vulnerability (exploited / KEV)**\n- **What happened:** Trend Micro released fixes for an **Apex One** vulnerability reported as **exploited in the wild** and added to **CISA KEV**.\n- **Why it matters operationally:** Apex One is often highly privileged; exploitation can enable **remote control of endpoints / lateral movement** in enterprise networks.\n- **Recommended immediate actions for the SOC today:** Confirm Apex One versions and **patch/mitigate immediately**; hunt for **new admin accounts, service creation, remote execution from Apex One hosts**.\n\n**2) Microsoft Defender zero-days (exploited in the wild)**\n- **What happened:** Reports indicate **two Microsoft Defender vulnerabilities** are being **actively exploited**, with at least one enabling **SYSTEM-level** impact.\n- **Why it matters operationally:** Defender is ubiquitous; successful exploitation can grant **high integrity execution** and suppress detection/response on endpoints.\n- **Recommended immediate actions for the SOC today:** Verify Defender platform/engine versions and **apply Microsoft patches/updates**; prioritize IR review of any **Defender tamper events, unexpected service/driver changes, or AV exclusions**.\n\n**3) Software supply-chain & CI/CD compromise wave (npm/GitHub/Hugging Face/TanStack)**\n- **What happened:** npm **revoked 2FA-bypass publishing tokens** after “mini Shai-Hulud”; “Megalodon” reportedly **infected thousands of GitHub repos** via CI workflows; Hugging Face used to **deliver npm malware**; TanStack supply-chain incident associated with **Grafana code/data theft** claims.\n- **Why it matters operationally:** Financial org dev pipelines can be a direct route to **secrets theft (cloud keys), signed artifact poisoning, and downstream production compromise**.\n- **Recommended immediate actions for the SOC today:** Trigger a **CI/CD credential hygiene check** (rotate high-risk tokens, audit recent secret access); scan for **unexpected workflow changes/new maintainers/new package versions** in critical repos and build pipelines.\n\n**4) Browser exposure: unfixed Chromium bug + exploit/PoC details leaked**\n- **What happened:** Reporting indicates **details and/or exploit code** for an **unfixed Chromium vulnerability** were exposed/published.\n- **Why it matters operationally:** Raises likelihood of **drive-by / phishing-to-exploit** chains against user workstations (especially finance ops users).\n- **Recommended immediate actions for the SOC today:** Enforce **rapid browser update cadence** (Chrome/Edge); increase monitoring for **browser-spawned suspicious processes** (e.g., script engines spawning shells) and isolate high-risk endpoints quickly.\n\n**5) Critical infrastructure software vulnerabilities: Cisco Secure Workload (CVSS 10) + Drupal SQLi**\n- **What happened:** Cisco patched a **CVSS 10.0** Secure Workload REST API issue enabling data access; Drupal Core **CVE-2026-9082 SQLi** highlighted with strong vendor/WAF guidance.\n- **Why it matters operationally:** These sit on management planes/web tiers—common targets for **initial access and data theft** in ransomware and extortion operations.\n- **Recommended immediate actions for the SOC today:** Identify any **internet-exposed** instances and **restrict access** (IP allowlists/VPN) pending patch verification; review WAF/IDS for **SQLi/REST abuse spikes** against these assets.\n\n---\n\n### Monitoring & detection recommendations\n- **Endpoint (EDR/Defender/Apex One servers):** Hunt for **security-tool tampering**, new exclusions, disabled services, or suspicious child processes from AV components (MITRE **T1562 Impair Defenses**, **T1059 Command and Scripting Interpreter**).\n- **Email + IdP (M365/Entra ID):** Alert on **password reset abuse**, anomalous MFA prompts, impossible travel, and new device registrations linked to “Kali365”/credential phishing (MITRE **T1566 Phishing**, **T1078 Valid Accounts**).\n- **Web proxy/DNS:** Watch for user downloads of **fake Teams installers** and unusual first-seen domains shortly before endpoint execution; correlate with EDR install events (MITRE **T1204 User Execution**).\n- **CI/CD logs (GitHub Actions, GitLab CI, Jenkins) + secrets managers:** Detect **workflow file edits**, new runners, cache/artifact poisoning behaviors, and unexpected outbound calls during builds (MITRE **T1552 Unsecured Credentials**, **T1195 Supply Chain Compromise**).\n- **Package management telemetry (npm registries/artifact repos):** Flag **sudden package version jumps**, new transitive dependencies, and packages pulled from unusual sources (internal allowlist breaches) tied to current npm campaign reporting.\n- **Network security (FW/IDS/WAF):** Increase scrutiny for **SQLi patterns** targeting Drupal and unusual REST API calls targeting **Cisco Secure Workload** endpoints (MITRE **T1190 Exploit Public-Facing Application**).\n- **VPN/Remote access gateways:** Given reporting on **SonicWall VPN MFA bypass exploitation**, watch for **MFA-less sessions**, new geo/device patterns, and privilege escalation post-login (MITRE **T1133 External Remote Services**).\n- **Linux servers:** Monitor for **SOCKS5/proxy backdoors** and selective HTTP proxying behaviors (new listening ports, persistence via systemd/cron) aligned with recent Linux malware reporting (MITRE **T1090 Proxy**, **T1543 Create/Modify System Process**).\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** Align internal SLAs to **KEV-driven patching** (Apex One, Defender, other KEV adds) and validate coverage across gold images/VDI.\n- **Supply-chain hardening:** Require **signed commits/releases**, tighten **CI permissions**, restrict GitHub Actions to approved actions, and implement dependency allowlisting + SBOM monitoring for critical apps.\n- **Browser risk reduction:** Consider **temporary hardening** (site isolation, blocking unsigned extensions, limiting download execution) for high-risk user groups (trading, payments ops) until Chromium issue fully remediated.\n- **External exposure review:** Re-validate inventory for **Drupal and Cisco Secure Workload** deployments; ensure management interfaces are **not internet-exposed** and are behind strong auth + network controls.\n- **Phishing resilience:** Tune detections/playbooks around **Teams lure**, “invitation” phish, and **M365 credential harvesting**; ensure rapid user reporting path and fast token/session revocation.\n- **Threat intel/process:** Note CISA moving to allow researchers to submit to KEV—expect **faster KEV updates**; ensure the SOC’s daily triage includes **new KEV deltas** and automated ticketing to patch teams.",
+  "source_total_items": 8198,
+  "total_items_in_window_all": 258,
+  "total_items_in_window_curated": 95,
+  "morning_call_markdown": "### Executive Summary\n- Active exploitation/KEV adds: Trend Micro Apex One + Langflow, plus multiple “0-day/PoC disclosed” items (LiteSpeed cPanel plugin, Drupal SQLi, Chromium exploit details) = heightened patch/mitigation urgency.\n- Supply-chain compromises accelerating (npm “art-template”, Laravel-Lang packages/GitHub repo takeovers, broader OSS poisoning) with real risk of developer-workstation and CI/CD pivot into prod.\n- Identity phishing tradecraft continues to mature (Kali365/M365 OAuth stealers, Tycoon 2FA kit updates) — expect more token theft, consent-grant abuse, and MFA bypass attempts.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Known-exploited vulnerabilities: Trend Micro Apex One + Langflow (CISA KEV adds)**\n- What happened: CISA added exploited flaws affecting Trend Micro Apex One and Langflow to the KEV catalog (active exploitation reported).\n- Why it matters operationally: These are common enterprise/security tooling and web-app components; exploitation can enable rapid endpoint takeover or server-side compromise and lateral movement.\n- Recommended immediate actions for the SOC today: Confirm asset inventory/exposure and patch status; hunt for exploit/behavioral signals on affected hosts and isolate any suspicious Apex One/Langflow servers.\n\n**2) Web app compromise wave: Drupal critical SQL injection (CVE-2026-9082) targeted quickly**\n- What happened: A critical Drupal core SQLi (noted as CVE-2026-9082) is reported as being targeted shortly after disclosure.\n- Why it matters operationally: Internet-facing CMS compromise is a common foothold leading to webshells, credential theft, and downstream access to internal networks (especially if same creds reused).\n- Recommended immediate actions for the SOC today: Identify all Drupal instances (incl. marketing microsites/third parties) and prioritize patch/mitigation; add WAF rules/virtual patching and review webserver logs for SQLi/webshell patterns.\n\n**3) Exploit/0-day disclosure risk: LiteSpeed cPanel plugin 0-day + Chromium bug details/PoC leakage**\n- What happened: Reports indicate a LiteSpeed cPanel plugin 0-day exploited for root access; Google/Chromium bug details and exploit code disclosure raised concern before full remediation.\n- Why it matters operationally: Hosting/admin panels are high-impact initial access; browser-to-bot/RCE paths increase risk of endpoint compromise via routine browsing (phish/drive-by), especially on privileged/admin workstations.\n- Recommended immediate actions for the SOC today: Validate whether any internet-facing cPanel/LiteSpeed exists in our estate or vendors; push/verify emergency browser updates and monitor for abnormal Chrome child processes and new persistence on admin endpoints.\n\n**4) Software supply-chain incidents: npm “art-template”, Laravel-Lang/GitHub repo compromises, “poisoning OSS at scale”**\n- What happened: Multiple reports of popular OSS packages/backdoors and mass GitHub repo compromise impacting many versions/projects (including watering-hole style delivery).\n- Why it matters operationally: Dev workstations/CI runners can ingest malicious dependencies → credential theft (tokens), build poisoning, and signed artifact compromise affecting production.\n- Recommended immediate actions for the SOC today: Alert dev/CI owners to freeze updates for named packages/projects pending verification; hunt for unusual outbound from CI runners/dev endpoints (new domains, curl/wget/npm postinstall behavior) and rotate exposed tokens if compromise suspected.\n\n**5) Identity phishing at scale: Kali365 PhaaS + OAuth stealers; Tycoon 2FA kit evolution**\n- What happened: FBI warnings highlight Kali365 phishing-as-a-service tied to Microsoft 365 attacks and OAuth/token-stealing tooling; Tycoon 2FA phishing kit has evolved.\n- Why it matters operationally: Token theft bypasses MFA and drives BEC, internal reconnaissance, mailbox rule abuse, and cloud data access—high impact for financial services.\n- Recommended immediate actions for the SOC today: Tighten monitoring for suspicious OAuth consent grants and anomalous sign-ins; rapidly triage any user-reported M365 login prompts and enforce conditional access for high-risk sign-ins.\n\n---\n\n### Monitoring & detection recommendations\n- **Trend Micro Apex One / endpoint tooling abuse**: EDR + Windows Event Logs (Sysmon if present) for suspicious service installs, DLL side-loading, unusual Apex One server child processes (ATT&CK: T1569, T1543).\n- **Langflow / web app exploitation**: WAF/reverse proxy + webserver logs for origin/host header anomalies, unexpected admin endpoints hit, and post-exploit process spawn on servers (ATT&CK: T1190).\n- **Drupal SQLi → webshell**: Web logs for SQLi patterns, high-error bursts, atypical POSTs to Drupal endpoints; EDR on web hosts for new PHP files in web roots and anomalous `sh/bash` from `www-data` (ATT&CK: T1505.003, T1105).\n- **cPanel/LiteSpeed compromise behaviors**: Linux audit/auth logs for new privileged users, cron additions, SSH keys dropped, and `wget/curl` from web processes; monitor outbound from hosting nodes to newly seen infra (ATT&CK: T1053.003, T1078).\n- **Chromium exploitation / browser-to-bot**: EDR telemetry for Chrome spawning shells/scripting engines (cmd/powershell/wscript) and unusual persistence immediately after browser activity (ATT&CK: T1204, T1547).\n- **Supply-chain / dependency execution**: Dev endpoints + CI runner logs for `npm install`/`postinstall` scripts invoking network utilities, new Node/Python processes with external connections; proxy/DNS for new domains from build agents (ATT&CK: T1554, T1105).\n- **OAuth/token theft & phishing**: IdP/Azure AD (or equivalent) audit logs for new OAuth app consents, impossible travel, atypical user agents, and mailbox rule creation; Email security logs for lookalike login pages (ATT&CK: T1550.001, T1114.003).\n\n---\n\n### Medium-term follow-ups\n- **Patch governance**: Ensure KEV-driven SLAs cover security tooling (Trend Micro) and niche web components (Langflow/Drupal) with clear emergency change paths.\n- **OSS/CI hardening**: Enforce dependency pinning, lockfile review, package allowlisting, and restricted egress from CI runners; adopt signing/provenance checks where feasible.\n- **Browser and admin workstation policy**: Separate privileged browsing/admin tasks; validate rapid browser update compliance and reduce local admin where possible.\n- **Phishing resilience**: Review Conditional Access policies (token binding, risk-based access), restrict OAuth app consent, and implement tighter controls on external email forwarding and mailbox rules.\n- **Internet-facing asset inventory**: Reconcile unknown/legacy web properties (marketing/vendor-hosted) to ensure Drupal/cPanel exposures are owned, scanned, and patched.\n- **Threat intel/process**: With CISA opening KEV nominations, establish an internal “candidate KEV” pipeline from SOC findings (exploited-in-the-wild signals) to vulnerability management for faster prioritization.",
   "highlights": [
+    {
+      "title": "Hackers Compromised 233 Versions of Laravel-Lang Packages by Hacking 700 GitHub Repos",
+      "link": "https://cybersecuritynews.com/laravel-lang-packages-compromised/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-05-23T05:34:00+00:00",
+      "smart_groups": [
+        "Curated",
+        "Malware / Payloads",
+        "Vulnerabilities / CVEs",
+        "Threat Actors / APT",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Online Dating App Scam: AI Tools & Fake Identities Land Woman Trapped",
+      "link": "https://www.news4hackers.com/online-dating-app-scam-ai-tools-fake-identities-land-woman-trapped/",
+      "source": "News4Hackers",
+      "published": "2026-05-23T04:02:15+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Barabanki Crime: Love Scam Exposed, Fake Police and Lawyers Demanded Money",
+      "link": "https://www.news4hackers.com/barabanki-crime-love-scam-exposed-fake-police-and-lawyers-demanded-money/",
+      "source": "News4Hackers",
+      "published": "2026-05-23T04:01:17+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Anthropic’s Claude Mythos Preview Uncovers 10,000+ 0-Days in Project Glasswing",
+      "link": "https://cybersecuritynews.com/anthropics-claude-mythos-preview-0-days/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-05-23T03:40:43+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Network / OT / ICS",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true
+    },
     {
       "title": "CISA to allow researchers to report vulnerabilities to exploited bugs catalog",
       "link": "https://therecord.media/cisa-to-allow-researchers-to-report-vulnerabilities-kev",
@@ -25,22 +77,10 @@
       "curated": true
     },
     {
-      "title": "‘First VPN’ Cybercrime Service Disrupted, Administrator Arrested",
-      "link": "https://www.securityweek.com/first-vpn-cybercrime-service-disrupted-administrator-arrested/",
-      "source": "SecurityWeek",
-      "published": "2026-05-22T09:24:22+00:00",
-      "smart_groups": [
-        "Curated",
-        "Ransomware",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Millions of NGINX Servers Face Fresh Zero-Day Concerns After Recent Rift Patch dubbed \"nginx-poolslip\"",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1tkdedb/millions_of_nginx_servers_face_fresh_zeroday/",
+      "title": "What do i need to learn to get into application security? Which Degrees/Certs",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1tl0sw1/what_do_i_need_to_learn_to_get_into_application/",
       "source": "/r/cybersecurity",
-      "published": "2026-05-22T09:05:41+00:00",
+      "published": "2026-05-23T00:21:53+00:00",
       "smart_groups": [
         "Curated",
         "Vulnerabilities / CVEs",
@@ -49,106 +89,73 @@
       "curated": true
     },
     {
-      "title": "Looking for a cybersecurity professional to interview for a university project (interview in French)",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1tkde2e/looking_for_a_cybersecurity_professional_to/",
-      "source": "/r/cybersecurity",
-      "published": "2026-05-22T09:05:15+00:00",
+      "title": "Google leaks details for Chromium bug that can turn browsers into bots",
+      "link": "https://www.csoonline.com/article/4176504/google-leaks-details-for-chromium-bug-that-can-turn-browsers-into-bots.html",
+      "source": "CSO Online",
+      "published": "2026-05-23T00:08:01+00:00",
+      "smart_groups": [
+        "Curated",
+        "Exploit / PoC",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "Data Protection / Privacy",
+        "Crypto / Web3",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Russian Threat Groups Use RDP, VPN, Supply Chain Attacks, and Social Engineering for Initial Access",
+      "link": "https://cybersecuritynews.com/russian-threat-groups-use-rdp-vpn-supply-chain-attacks/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-05-22T22:08:37+00:00",
+      "smart_groups": [
+        "Curated",
+        "Phishing / Social Engineering",
+        "Exploit / PoC",
+        "Threat Actors / APT",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Hackers Backdoor Popular art-template npm Package to Launch Watering-Hole Attacks",
+      "link": "https://cybersecuritynews.com/hackers-backdoor-popular-art-template-npm-package/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-05-22T22:08:05+00:00",
+      "smart_groups": [
+        "Curated",
+        "Exploit / PoC",
+        "Supply Chain / Software",
+        "Malware / Payloads",
+        "Mobile Security",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Redefining Security for an AI Driven World",
+      "link": "https://techcommunity.microsoft.com/t5/core-infrastructure-and-security/redefining-security-for-an-ai-driven-world/ba-p/4521961",
+      "source": "Core Infrastructure and Security Blog",
+      "published": "2026-05-22T21:14:55+00:00",
       "smart_groups": [
         "Data Protection / Privacy",
         "Curated",
-        "Network / OT / ICS",
         "Vulnerabilities / CVEs",
-        "OSINT / Community"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Trend Micro Patching Vulnerability in Apex One Following Zero-Day Exploit",
-      "link": "https://www.news4hackers.com/trend-micro-patching-vulnerability-in-apex-one-following-zero-day-exploit/",
-      "source": "News4Hackers",
-      "published": "2026-05-22T09:01:36+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
+        "Identity / Access",
+        "Detection Engineering",
+        "Phishing / Social Engineering",
+        "Crypto / Web3",
         "Exploit / PoC",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "What I’m Hearing at Security Conferences Worldwide About Ransomware",
-      "link": "https://fidelissecurity.com/threatgeek/thought-leadership/hearing-at-security-conferences-worldwide-about-ransomware/",
-      "source": "Fidelis Security",
-      "published": "2026-05-22T09:00:22+00:00",
-      "smart_groups": [
-        "Curated",
+        "Windows / Microsoft",
+        "Data Breaches / Leaks",
+        "Supply Chain / Software",
+        "Threat Actors / APT",
+        "Cloud / SaaS",
+        "Malware / Payloads",
         "Network / OT / ICS",
         "Ransomware",
         "Vendors / Product Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Identity as the primary attack surface: What modern breaches are really exploiting",
-      "link": "https://www.csoonline.com/article/4175323/identity-as-the-primary-attack-surface-what-modern-breaches-are-really-exploiting.html",
-      "source": "CSO Online",
-      "published": "2026-05-22T09:00:00+00:00",
-      "smart_groups": [
-        "Identity / Access",
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "Cloud / SaaS",
-        "Ransomware",
-        "Threat Actors / APT",
-        "Data Protection / Privacy",
-        "Detection Engineering",
-        "Crypto / Web3",
-        "Exploit / PoC",
-        "Linux / Unix",
-        "Malware / Payloads",
-        "Network / OT / ICS",
-        "Phishing / Social Engineering",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Google Publishes Exploit Code for Unfixed Chromium Bug Exposing Millions of Users",
-      "link": "https://cybersecuritynews.com/google-publishes-chromium-exploit-code/",
-      "source": "Cyber Security News (FeedBurner)",
-      "published": "2026-05-22T08:54:15+00:00",
-      "smart_groups": [
-        "Exploit / PoC",
-        "Curated",
-        "Malware / Payloads",
-        "Vulnerabilities / CVEs",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "TrendAI Patches Apex One Zero-Day Exploited in the Wild",
-      "link": "https://www.securityweek.com/trendai-patches-apex-one-zero-day-exploited-in-the-wild/",
-      "source": "SecurityWeek",
-      "published": "2026-05-22T08:19:24+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "Web / API Security",
-        "Exploit / PoC",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Safe read-only check script for Copy Fail / CVE-2026-31431",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1tkcfai/safe_readonly_check_script_for_copy_fail/",
-      "source": "/r/cybersecurity",
-      "published": "2026-05-22T08:10:32+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "OSINT / Community"
       ],
       "curated": true
     }
