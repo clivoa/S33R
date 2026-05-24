@@ -1,86 +1,84 @@
 {
-  "generated_at": "2026-05-23T08:31:47.674109+00:00",
-  "analysis_date": "2026-05-23",
+  "generated_at": "2026-05-24T08:45:24.670353+00:00",
+  "analysis_date": "2026-05-24",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-05-23T07:40:48.107238+00:00",
+  "source_generated_at": "2026-05-24T07:57:28.052880+00:00",
   "source_days_back": 30,
-  "source_total_items": 8198,
-  "total_items_in_window_all": 258,
-  "total_items_in_window_curated": 95,
-  "morning_call_markdown": "### Executive Summary\n- Active exploitation/KEV adds: Trend Micro Apex One + Langflow, plus multiple “0-day/PoC disclosed” items (LiteSpeed cPanel plugin, Drupal SQLi, Chromium exploit details) = heightened patch/mitigation urgency.\n- Supply-chain compromises accelerating (npm “art-template”, Laravel-Lang packages/GitHub repo takeovers, broader OSS poisoning) with real risk of developer-workstation and CI/CD pivot into prod.\n- Identity phishing tradecraft continues to mature (Kali365/M365 OAuth stealers, Tycoon 2FA kit updates) — expect more token theft, consent-grant abuse, and MFA bypass attempts.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Known-exploited vulnerabilities: Trend Micro Apex One + Langflow (CISA KEV adds)**\n- What happened: CISA added exploited flaws affecting Trend Micro Apex One and Langflow to the KEV catalog (active exploitation reported).\n- Why it matters operationally: These are common enterprise/security tooling and web-app components; exploitation can enable rapid endpoint takeover or server-side compromise and lateral movement.\n- Recommended immediate actions for the SOC today: Confirm asset inventory/exposure and patch status; hunt for exploit/behavioral signals on affected hosts and isolate any suspicious Apex One/Langflow servers.\n\n**2) Web app compromise wave: Drupal critical SQL injection (CVE-2026-9082) targeted quickly**\n- What happened: A critical Drupal core SQLi (noted as CVE-2026-9082) is reported as being targeted shortly after disclosure.\n- Why it matters operationally: Internet-facing CMS compromise is a common foothold leading to webshells, credential theft, and downstream access to internal networks (especially if same creds reused).\n- Recommended immediate actions for the SOC today: Identify all Drupal instances (incl. marketing microsites/third parties) and prioritize patch/mitigation; add WAF rules/virtual patching and review webserver logs for SQLi/webshell patterns.\n\n**3) Exploit/0-day disclosure risk: LiteSpeed cPanel plugin 0-day + Chromium bug details/PoC leakage**\n- What happened: Reports indicate a LiteSpeed cPanel plugin 0-day exploited for root access; Google/Chromium bug details and exploit code disclosure raised concern before full remediation.\n- Why it matters operationally: Hosting/admin panels are high-impact initial access; browser-to-bot/RCE paths increase risk of endpoint compromise via routine browsing (phish/drive-by), especially on privileged/admin workstations.\n- Recommended immediate actions for the SOC today: Validate whether any internet-facing cPanel/LiteSpeed exists in our estate or vendors; push/verify emergency browser updates and monitor for abnormal Chrome child processes and new persistence on admin endpoints.\n\n**4) Software supply-chain incidents: npm “art-template”, Laravel-Lang/GitHub repo compromises, “poisoning OSS at scale”**\n- What happened: Multiple reports of popular OSS packages/backdoors and mass GitHub repo compromise impacting many versions/projects (including watering-hole style delivery).\n- Why it matters operationally: Dev workstations/CI runners can ingest malicious dependencies → credential theft (tokens), build poisoning, and signed artifact compromise affecting production.\n- Recommended immediate actions for the SOC today: Alert dev/CI owners to freeze updates for named packages/projects pending verification; hunt for unusual outbound from CI runners/dev endpoints (new domains, curl/wget/npm postinstall behavior) and rotate exposed tokens if compromise suspected.\n\n**5) Identity phishing at scale: Kali365 PhaaS + OAuth stealers; Tycoon 2FA kit evolution**\n- What happened: FBI warnings highlight Kali365 phishing-as-a-service tied to Microsoft 365 attacks and OAuth/token-stealing tooling; Tycoon 2FA phishing kit has evolved.\n- Why it matters operationally: Token theft bypasses MFA and drives BEC, internal reconnaissance, mailbox rule abuse, and cloud data access—high impact for financial services.\n- Recommended immediate actions for the SOC today: Tighten monitoring for suspicious OAuth consent grants and anomalous sign-ins; rapidly triage any user-reported M365 login prompts and enforce conditional access for high-risk sign-ins.\n\n---\n\n### Monitoring & detection recommendations\n- **Trend Micro Apex One / endpoint tooling abuse**: EDR + Windows Event Logs (Sysmon if present) for suspicious service installs, DLL side-loading, unusual Apex One server child processes (ATT&CK: T1569, T1543).\n- **Langflow / web app exploitation**: WAF/reverse proxy + webserver logs for origin/host header anomalies, unexpected admin endpoints hit, and post-exploit process spawn on servers (ATT&CK: T1190).\n- **Drupal SQLi → webshell**: Web logs for SQLi patterns, high-error bursts, atypical POSTs to Drupal endpoints; EDR on web hosts for new PHP files in web roots and anomalous `sh/bash` from `www-data` (ATT&CK: T1505.003, T1105).\n- **cPanel/LiteSpeed compromise behaviors**: Linux audit/auth logs for new privileged users, cron additions, SSH keys dropped, and `wget/curl` from web processes; monitor outbound from hosting nodes to newly seen infra (ATT&CK: T1053.003, T1078).\n- **Chromium exploitation / browser-to-bot**: EDR telemetry for Chrome spawning shells/scripting engines (cmd/powershell/wscript) and unusual persistence immediately after browser activity (ATT&CK: T1204, T1547).\n- **Supply-chain / dependency execution**: Dev endpoints + CI runner logs for `npm install`/`postinstall` scripts invoking network utilities, new Node/Python processes with external connections; proxy/DNS for new domains from build agents (ATT&CK: T1554, T1105).\n- **OAuth/token theft & phishing**: IdP/Azure AD (or equivalent) audit logs for new OAuth app consents, impossible travel, atypical user agents, and mailbox rule creation; Email security logs for lookalike login pages (ATT&CK: T1550.001, T1114.003).\n\n---\n\n### Medium-term follow-ups\n- **Patch governance**: Ensure KEV-driven SLAs cover security tooling (Trend Micro) and niche web components (Langflow/Drupal) with clear emergency change paths.\n- **OSS/CI hardening**: Enforce dependency pinning, lockfile review, package allowlisting, and restricted egress from CI runners; adopt signing/provenance checks where feasible.\n- **Browser and admin workstation policy**: Separate privileged browsing/admin tasks; validate rapid browser update compliance and reduce local admin where possible.\n- **Phishing resilience**: Review Conditional Access policies (token binding, risk-based access), restrict OAuth app consent, and implement tighter controls on external email forwarding and mailbox rules.\n- **Internet-facing asset inventory**: Reconcile unknown/legacy web properties (marketing/vendor-hosted) to ensure Drupal/cPanel exposures are owned, scanned, and patched.\n- **Threat intel/process**: With CISA opening KEV nominations, establish an internal “candidate KEV” pipeline from SOC findings (exploited-in-the-wild signals) to vulnerability management for faster prioritization.",
+  "source_total_items": 7927,
+  "total_items_in_window_all": 87,
+  "total_items_in_window_curated": 29,
+  "morning_call_markdown": "### Executive Summary\n- Active exploitation reported for a **highly critical Drupal SQL injection (CVE-2026-9082)**—treat any exposed Drupal as at-risk and prioritize internet-facing triage today.\n- Multiple **edge / infrastructure compromise paths** highlighted: **F5 BIG-IP SSH pivoting reports**, **LiteSpeed cPanel plugin “0-day” claims**, and **“Underminr” domain-trust bypass**—increase monitoring on inbound admin access and unusual outbound TLS/SNI patterns.\n- **Supply-chain malware activity in developer ecosystems** (Packagist/Laravel-lang; broader GitHub repo poisoning chatter) reinforces need to watch build runners, CI secrets, and new dependency pulls.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Drupal core SQL injection actively exploited (CVE-2026-9082)**\n- What happened: Reporting indicates **CVE-2026-9082** is **under active attack** shortly after patch release.\n- Why it matters operationally: Internet-facing CMS compromise is a common **initial access** path leading to webshells, credential theft, and lateral movement into internal networks.\n- Recommended immediate actions for the SOC today: **Identify all Drupal assets (esp. internet-facing), verify patch level/mitigations, and hunt for post-exploitation** (new admin users, unexpected PHP files, suspicious DB queries/webshell patterns).\n\n**2) Edge device / admin-plane intrusion risk (F5 BIG-IP + LiteSpeed cPanel plugin “0-day” claims)**\n- What happened: Articles claim attackers are **abusing F5 BIG-IP to gain SSH access and pivot**; separate report claims a **LiteSpeed cPanel plugin 0-day** enabling root access (details may be incomplete—assume “actively targeted” until validated).\n- Why it matters operationally: Compromise of **load balancers / web hosting control planes** can expose credentials, enable traffic interception, and provide privileged footholds near critical apps.\n- Recommended immediate actions for the SOC today: **Review last 7 days of F5/cPanel admin authentication and config-change logs**, and **tighten access** (restrict management interfaces to jump hosts/VPN, enforce MFA where supported, confirm current versions/hotfix status with infra owners).\n\n**3) “Underminr” vulnerability: hiding malicious connections behind trusted domains**\n- What happened: “Underminr” is described as enabling attackers to **mask malicious outbound connections behind trusted domain names** (mechanism varies by environment; treat as an egress-monitoring blind spot).\n- Why it matters operationally: This can **degrade domain allowlist/“trusted SNI” controls**, increasing chances of stealthy C2/exfil over TLS.\n- Recommended immediate actions for the SOC today: **Increase scrutiny of outbound TLS where cert/SNI/domain reputation don’t align**, and **prioritize detections based on destination ASN/JA3/traffic anomalies** rather than domain string alone.\n\n**4) Software supply-chain compromise in PHP ecosystem (Packagist / Laravel-lang packages)**\n- What happened: Reports of **hijacked Laravel Lang / Packagist packages** delivering credential-stealing malware; separate note on npm strengthening publisher controls (context: supply-chain risk remains high).\n- Why it matters operationally: Developer workstations and CI/CD runners are high-value—compromised dependencies can steal **cloud/API keys, repo tokens, and production secrets**.\n- Recommended immediate actions for the SOC today: **Query EDR/telemetry for recent installs/updates of affected PHP packages in dev/CI environments**, and **review CI secrets access + rotate tokens** if any suspicious dependency pull or unknown build-step execution is found.\n\n---\n\n### Monitoring & detection recommendations\n- **Web/CMS exploitation (Drupal)**: WAF/reverse proxy + web server logs—hunt for SQLi indicators and anomalous POSTs to Drupal endpoints; look for new/modified PHP files on web roots (ATT&CK: T1190).\n- **Edge admin-plane access (F5/cPanel)**: F5 audit logs, SSH auth logs, PAM, and bastion logs—alert on **new SSH enablement**, new local users, config saves, and admin access from non-jump sources (T1078, T1021).\n- **Outbound TLS “trusted domain” abuse (Underminr theme)**: Proxy/DNS + firewall + TLS inspection metadata—flag **SNI/cert mismatch**, unusual JA3/JA4, spikes in connections to “trusted” domains from non-browser processes (T1071.001, T1573).\n- **Supply-chain execution on endpoints/CI**: EDR + CI runner logs—alert on package manager activity (composer/npm) followed by **new binary drops**, credential store access, or unusual network beacons from build agents (T1059, T1105).\n- **Credential stealing behavior (Laravel-lang/Packagist)**: Endpoint telemetry—watch for browsers/CLI tools accessing token files (e.g., `~/.ssh`, cloud creds, `.env`, CI env vars), unexpected archive creation, and exfil-like uploads (T1555, T1005).\n- **Router/botnet noise (ASUS/RondoDox; Zyxel credential leak chatter)**: Perimeter firewall + NetFlow—monitor for unusual outbound scanning, spikes in UDP/TCP to random IPs from branches; validate CPE management exposure is disabled externally (T1046).\n- **Ransomware ecosystem shifts (pure extortion + VPN infra disruption)**: DLP/email/web gateway—watch for **data staging** patterns and extortion emails; correlate with large outbound transfers and new cloud sharing links (T1567, T1020).\n\n---\n\n### Medium-term follow-ups\n- **Patch & exposure management**: Confirm enterprise-wide posture for **Drupal**, **NGINX “poolslip”** claims, and any **LiteSpeed/cPanel** advisories once vendor details are validated; track exceptions with compensating controls.\n- **Edge hardening**: Ensure F5/cPanel management planes are **segmented**, MFA enforced where possible, and admin access is **just-in-time** via bastions; review key rotation cadence for device/service accounts.\n- **Supply-chain controls**: Expand controls beyond npm: enforce **dependency allowlists**, signed/verified releases where possible, and CI policies preventing unreviewed dependency updates on protected pipelines.\n- **CI/CD & secrets hygiene**: Inventory where secrets live (CI variables, vaults, `.env` files), reduce standing privileges, and implement automated **token rotation** and **secret scanning** on repos/artifacts.\n- **Egress strategy**: Reduce reliance on “trusted domain” allowlisting; move toward **behavior + certificate + destination intelligence** and ensure TLS metadata is retained for investigations.\n- **Awareness for dev teams**: Targeted advisory to developers on recent **Packagist/Laravel-lang compromise** patterns: pin versions, review maintainer changes, and validate package integrity before updates.",
   "highlights": [
     {
-      "title": "Hackers Compromised 233 Versions of Laravel-Lang Packages by Hacking 700 GitHub Repos",
-      "link": "https://cybersecuritynews.com/laravel-lang-packages-compromised/",
-      "source": "Cyber Security News (FeedBurner)",
-      "published": "2026-05-23T05:34:00+00:00",
+      "title": "Capcha Code Malware",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1tm3yqk/capcha_code_malware/",
+      "source": "/r/cybersecurity",
+      "published": "2026-05-24T06:16:10+00:00",
       "smart_groups": [
         "Curated",
         "Malware / Payloads",
         "Vulnerabilities / CVEs",
-        "Threat Actors / APT",
-        "General Security"
+        "OSINT / Community"
       ],
       "curated": true
     },
     {
-      "title": "Online Dating App Scam: AI Tools & Fake Identities Land Woman Trapped",
-      "link": "https://www.news4hackers.com/online-dating-app-scam-ai-tools-fake-identities-land-woman-trapped/",
+      "title": "Global Operation Saffron Disrupts Major Ransomware VPN Network",
+      "link": "https://www.news4hackers.com/global-operation-saffron-disrupts-major-ransomware-vpn-network/",
       "source": "News4Hackers",
-      "published": "2026-05-23T04:02:15+00:00",
+      "published": "2026-05-24T06:01:35+00:00",
       "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Barabanki Crime: Love Scam Exposed, Fake Police and Lawyers Demanded Money",
-      "link": "https://www.news4hackers.com/barabanki-crime-love-scam-exposed-fake-police-and-lawyers-demanded-money/",
-      "source": "News4Hackers",
-      "published": "2026-05-23T04:01:17+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Anthropic’s Claude Mythos Preview Uncovers 10,000+ 0-Days in Project Glasswing",
-      "link": "https://cybersecuritynews.com/anthropics-claude-mythos-preview-0-days/",
-      "source": "Cyber Security News (FeedBurner)",
-      "published": "2026-05-23T03:40:43+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
         "Network / OT / ICS",
-        "Exploit / PoC",
+        "Curated",
+        "Ransomware",
         "General Security"
       ],
       "curated": true
     },
     {
-      "title": "CISA to allow researchers to report vulnerabilities to exploited bugs catalog",
-      "link": "https://therecord.media/cisa-to-allow-researchers-to-report-vulnerabilities-kev",
-      "source": "The Record – Cybercrime",
-      "published": "2026-05-23T01:11:00+00:00",
+      "title": "Euro and USD stablecoins depeg amid ongoing $2.8M StablR exploit",
+      "link": "https://cointelegraph.com/news/euro-and-usd-stablecoins-depeg-amid-ongoing-28m-stablr-exploit?utm_source=rss_feed&utm_medium=rss&utm_campaign=rss_partner_inbound",
+      "source": "Cointelegraph.com News",
+      "published": "2026-05-24T05:39:02+00:00",
       "smart_groups": [
         "Curated",
         "Exploit / PoC",
-        "Vulnerabilities / CVEs",
-        "Data Breaches / Leaks"
+        "Crypto / Web3"
       ],
       "curated": true
     },
     {
-      "title": "What do i need to learn to get into application security? Which Degrees/Certs",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1tl0sw1/what_do_i_need_to_learn_to_get_into_application/",
+      "title": "getting lost when hunting",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1tm2bzc/getting_lost_when_hunting/",
       "source": "/r/cybersecurity",
-      "published": "2026-05-23T00:21:53+00:00",
+      "published": "2026-05-24T04:49:58+00:00",
+      "smart_groups": [
+        "Curated",
+        "Exploit / PoC",
+        "Vulnerabilities / CVEs",
+        "OSINT / Community"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Theoretical Design Concept for Post-Exploitation Browser Defense",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1tlxeme/theoretical_design_concept_for_postexploitation/",
+      "source": "/r/cybersecurity",
+      "published": "2026-05-24T00:53:27+00:00",
+      "smart_groups": [
+        "Curated",
+        "Exploit / PoC",
+        "OSINT / Community"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Google Certifications...",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1tlvqf5/google_certifications/",
+      "source": "/r/cybersecurity",
+      "published": "2026-05-23T23:37:29+00:00",
       "smart_groups": [
         "Curated",
         "Vulnerabilities / CVEs",
@@ -89,73 +87,57 @@
       "curated": true
     },
     {
-      "title": "Google leaks details for Chromium bug that can turn browsers into bots",
-      "link": "https://www.csoonline.com/article/4176504/google-leaks-details-for-chromium-bug-that-can-turn-browsers-into-bots.html",
-      "source": "CSO Online",
-      "published": "2026-05-23T00:08:01+00:00",
+      "title": "Which of these gоv roles would fare better in the private sector?",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1tlsag2/which_of_these_gоv_roles_would_fare_better_in_the/",
+      "source": "/r/cybersecurity",
+      "published": "2026-05-23T21:09:52+00:00",
       "smart_groups": [
-        "Curated",
-        "Exploit / PoC",
-        "Ransomware",
-        "Vulnerabilities / CVEs",
-        "Data Protection / Privacy",
-        "Crypto / Web3",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Russian Threat Groups Use RDP, VPN, Supply Chain Attacks, and Social Engineering for Initial Access",
-      "link": "https://cybersecuritynews.com/russian-threat-groups-use-rdp-vpn-supply-chain-attacks/",
-      "source": "Cyber Security News (FeedBurner)",
-      "published": "2026-05-22T22:08:37+00:00",
-      "smart_groups": [
-        "Curated",
-        "Phishing / Social Engineering",
-        "Exploit / PoC",
-        "Threat Actors / APT",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Hackers Backdoor Popular art-template npm Package to Launch Watering-Hole Attacks",
-      "link": "https://cybersecuritynews.com/hackers-backdoor-popular-art-template-npm-package/",
-      "source": "Cyber Security News (FeedBurner)",
-      "published": "2026-05-22T22:08:05+00:00",
-      "smart_groups": [
-        "Curated",
-        "Exploit / PoC",
-        "Supply Chain / Software",
         "Malware / Payloads",
-        "Mobile Security",
+        "Vulnerabilities / CVEs",
+        "Crypto / Web3",
+        "Curated",
+        "Exploit / PoC",
+        "Linux / Unix",
+        "OSINT / Community"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Laravel Lang packages hijacked to deploy credential-stealing malware",
+      "link": "https://www.bleepingcomputer.com/news/security/laravel-lang-packages-hijacked-to-deploy-credential-stealing-malware/",
+      "source": "BleepingComputer",
+      "published": "2026-05-23T20:48:23+00:00",
+      "smart_groups": [
+        "Curated",
+        "Malware / Payloads",
         "General Security"
       ],
       "curated": true
     },
     {
-      "title": "Redefining Security for an AI Driven World",
-      "link": "https://techcommunity.microsoft.com/t5/core-infrastructure-and-security/redefining-security-for-an-ai-driven-world/ba-p/4521961",
-      "source": "Core Infrastructure and Security Blog",
-      "published": "2026-05-22T21:14:55+00:00",
+      "title": "npm Adds 2FA-Gated Publishing and Package Install Controls Against Supply Chain Attacks",
+      "link": "https://thehackernews.com/2026/05/npm-adds-2fa-gated-publishing-and.html",
+      "source": "The Hacker News",
+      "published": "2026-05-23T16:35:10+00:00",
       "smart_groups": [
-        "Data Protection / Privacy",
         "Curated",
-        "Vulnerabilities / CVEs",
+        "Supply Chain / Software",
         "Identity / Access",
-        "Detection Engineering",
-        "Phishing / Social Engineering",
-        "Crypto / Web3",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "CVE-2026-9082: Drupal’s Highly Critical SQL Injection Flaw Is Already Under Active Attack",
+      "link": "https://securityaffairs.com/192557/security/cve-2026-9082-drupals-highly-critical-sql-injection-flaw-is-already-under-active-attack.html",
+      "source": "Security Affairs",
+      "published": "2026-05-23T16:17:07+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Web / API Security",
         "Exploit / PoC",
-        "Windows / Microsoft",
-        "Data Breaches / Leaks",
-        "Supply Chain / Software",
-        "Threat Actors / APT",
-        "Cloud / SaaS",
-        "Malware / Payloads",
-        "Network / OT / ICS",
-        "Ransomware",
-        "Vendors / Product Security"
+        "General Security"
       ],
       "curated": true
     }
