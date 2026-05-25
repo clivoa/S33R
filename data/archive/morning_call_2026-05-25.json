@@ -1,0 +1,159 @@
+{
+  "generated_at": "2026-05-25T10:47:29.171045+00:00",
+  "analysis_date": "2026-05-25",
+  "model": "gpt-5.2",
+  "window_hours": 24,
+  "source_file": "data/news_recent.json",
+  "source_generated_at": "2026-05-25T08:30:14.482672+00:00",
+  "source_days_back": 30,
+  "source_total_items": 7912,
+  "total_items_in_window_all": 110,
+  "total_items_in_window_curated": 35,
+  "morning_call_markdown": "### Executive Summary\n- Active exploitation reported for **Drupal core SQL injection** and **Ghost CMS SQLi** in the wild—treat as “patch/mitigate now” for any internet-facing CMS footprint.  \n- Multiple **software supply-chain campaigns** (GitHub “Megalodon” repo infections; “TrapDoor” malicious packages across npm/PyPI/Crates) increase risk of dev-tool credential theft and poisoned builds.  \n- Emerging **evasion and stealth C2 patterns** (shared CDNs to bypass reputation, Azure-hosted C2, Linux package-name spoofing) warrant tightened monitoring on outbound traffic and developer endpoints.\n\n### High-priority items (immediate attention)\n\n**1) Web app/CMS exploitation (Drupal core SQLi + Ghost CMS SQLi/ClickFix campaign)**\n- **What happened:** CISA and multiple reports highlight **active exploitation** of a Drupal core SQL injection; Ghost CMS SQLi is being used in a large-scale “ClickFix” style campaign.  \n- **Why it matters operationally:** Internet-facing CMS bugs commonly lead to **initial access → webshell/dropper → credential theft/ransomware**; financial sites/APIs and marketing domains are frequent entry points.  \n- **Recommended immediate actions for the SOC today:** Validate whether we run Drupal/Ghost externally; if yes **patch/mitigate immediately** and **review last 7 days** of WAF/web logs for SQLi + new admin creation/webshell patterns.\n\n**2) Supply-chain compromise risk (GitHub “Megalodon” + “TrapDoor” malicious packages)**\n- **What happened:** Reports of **>5,500 GitHub repos infected** (“Megalodon”) and a coordinated **TrapDoor** campaign pushing credential-stealing malware via **npm/PyPI/Crates** (dozens of packages).  \n- **Why it matters operationally:** Impacts **developer workstations, CI runners, build pipelines**; can leak tokens (GitHub, cloud, signing keys) and introduce backdoors into internal tooling.  \n- **Recommended immediate actions for the SOC today:** Alert DevOps/AppSec to **freeze new dependency updates** pending review; hunt for **unexpected package installs/build-step changes** on CI and dev endpoints, and rotate any exposed tokens if suspicious repo activity is found.\n\n**3) Targeted malware using cloud infrastructure & reputation evasion (Azure C2 + shared CDN abuse)**\n- **What happened:** “MiniUpdate RAT” reportedly **uses Azure as C2**; separate reporting shows attackers **hosting on shared CDNs** to evade domain reputation controls.  \n- **Why it matters operationally:** Outbound traffic may look “benign” (major cloud/CDN), reducing block efficacy; increases dwell time and data-theft risk.  \n- **Recommended immediate actions for the SOC today:** Increase scrutiny on **new/rare outbound connections** to cloud/CDN endpoints from user subnets; prioritize triage for endpoints exhibiting **beaconing patterns** or new persistence shortly after email/browser activity.\n\n**4) Windows ViewState deserialization exploitation (KnowledgeDeliver)**\n- **What happened:** Threat intel reports exploitation of a **ViewState deserialization vulnerability** in “KnowledgeDeliver” leading to code execution (details limited in the summary).  \n- **Why it matters operationally:** ViewState/deserialization exploitation often yields **rapid server-side RCE** and is commonly leveraged by APTs and ransomware affiliates.  \n- **Recommended immediate actions for the SOC today:** Confirm whether the product exists in our environment (externally reachable first); if present, **restrict access** (IP allowlisting/VPN) and hunt IIS/.NET telemetry for **abnormal ViewState parameters** and suspicious child processes.\n\n### Monitoring & detection recommendations\n- **Web/WAF + app server logs (Drupal/Ghost):** Watch for SQLi indicators (error spikes, UNION/SELECT patterns), **new admin creation**, file writes under web roots; map to **T1190 Exploit Public-Facing Application**.  \n- **EDR on web servers:** Alert on w3wp/nginx/apache spawning shells or downloaders (cmd/powershell/curl/wget), new scheduled tasks/services; **T1059 Command and Scripting Interpreter**, **T1105 Ingress Tool Transfer**.  \n- **CI/CD + repo audit logs (GitHub/Git):** Monitor for unusual pushes to package manifests, workflow YAML changes, new deploy keys/tokens, repo secrets access; **T1552 Unsecured Credentials** (and general credential access patterns).  \n- **Endpoint telemetry (dev workstations):** Hunt for new package manager activity (npm/pip/cargo) immediately followed by outbound connections and browser credential-store access; **T1555 Credentials from Password Stores**.  \n- **DNS/Proxy/Firewall egress (CDN/Azure C2):** Baseline “rare domain” + “new SNI/JA3” from corporate endpoints; flag periodic low-volume beacons to cloud/CDN; **T1071.001 Web Protocols**.  \n- **Linux fleet/package logs:** Detect suspicious package installs with **lookalike SSH naming**, unsigned packages, or new binaries in /usr/local/bin; **T1036 Masquerading**.  \n- **Email security/secure web gateway (PhaaS evolution / phishing services):** Tighten detections for credential-harvest kits, QR/attachment lures, and “shared hosting/CDN redirect chains”; **T1566 Phishing**, **T1598 Phishing for Information**.\n\n### Medium-term follow-ups\n- **Patch governance:** Ensure Drupal/Ghost (and any other CMS) are in the **internet-facing patch SLA** with continuous external asset discovery and WAF virtual patch rules.  \n- **Supply-chain controls:** Expand/accelerate **dependency allowlisting**, SBOM enforcement, and **CI runner isolation**; consider npm’s **staged publishing** features where applicable (organizational policy update).  \n- **Token hygiene:** Review secrets management—shorten TTL for CI tokens, enforce least privilege for GitHub/cloud keys, and enable anomaly alerts for secrets access.  \n- **Cloud egress strategy:** Formalize monitoring for “trusted cloud/CDN used as C2” (Azure/CDN categories) using behavior-based rules, not reputation alone.  \n- **Ransomware readiness:** Given ongoing ransomware pressure (survey signals willingness-to-pay trend), revalidate **offline backups, restore tests, and privileged account segmentation**.  \n- **Threat hunting playbooks:** Add a focused playbook for **deserialization/ViewState exploitation** (IIS/.NET-specific telemetry) and validate logging coverage on all ASP.NET apps.",
+  "highlights": [
+    {
+      "title": "Exploitation of KnowledgeDeliver via ViewState Deserialization Vulnerability",
+      "link": "https://cloud.google.com/blog/topics/threat-intelligence/knowledgedeliver-viewstate-deserialization-vulnerability/",
+      "source": "Threat Intelligence",
+      "published": "2026-05-25T14:00:00+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Windows / Microsoft",
+        "Malware / Payloads",
+        "Threat Actors / APT",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "2 PhaaS 2 Furious: The Evolution of Chinese-language Phishing Services",
+      "link": "https://cloud.google.com/blog/topics/threat-intelligence/chinese-language-phishing-services/",
+      "source": "Threat Intelligence",
+      "published": "2026-05-25T14:00:00+00:00",
+      "smart_groups": [
+        "Phishing / Social Engineering",
+        "Curated",
+        "Threat Actors / APT",
+        "Data Protection / Privacy",
+        "Crypto / Web3",
+        "Exploit / PoC",
+        "Identity / Access",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "Mobile Security",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Pluralistic: No honor among (ad-tech) thieves (25 May 2026)",
+      "link": "https://pluralistic.net/2026/05/25/lying-spies/",
+      "source": "https://pluralistic.net/feed/",
+      "published": "2026-05-25T08:21:45+00:00",
+      "smart_groups": [
+        "Data Protection / Privacy",
+        "Cloud / SaaS",
+        "Curated",
+        "Identity / Access",
+        "Network / OT / ICS",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Hackers Exploit Shared CDNs to Evade Domain Reputation Filters",
+      "link": "https://gbhackers.com/hackers-exploit-shared-cdns/",
+      "source": "GBHackers News",
+      "published": "2026-05-25T08:16:57+00:00",
+      "smart_groups": [
+        "Cloud / SaaS",
+        "Curated",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Massive GitHub Repository Breach Exposes Over 5,500 Organizations to ‘Megalodon’ Malware",
+      "link": "https://www.news4hackers.com/massive-github-repository-breach-exposes-over-5500-organizations-to-megalodon-malware/",
+      "source": "News4Hackers",
+      "published": "2026-05-25T08:01:38+00:00",
+      "smart_groups": [
+        "Curated",
+        "Malware / Payloads",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Over 5,500 GitHub Repositories Infected in ‘Megalodon’ Supply Chain Attack",
+      "link": "https://www.securityweek.com/over-5500-github-repositories-infected-in-megalodon-supply-chain-attack/",
+      "source": "SecurityWeek",
+      "published": "2026-05-25T07:40:55+00:00",
+      "smart_groups": [
+        "Curated",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Hackers Hide Linux Malware in SSH-Like Package Filename",
+      "link": "https://gbhackers.com/hackers-hide-linux-malware-in-ssh/",
+      "source": "GBHackers News",
+      "published": "2026-05-25T07:26:21+00:00",
+      "smart_groups": [
+        "Curated",
+        "Linux / Unix",
+        "Malware / Payloads",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "To pay, or not to pay: 58% of CISOs say they would pay the ransom for their data",
+      "link": "https://www.csoonline.com/article/4176472/to-pay-or-not-to-pay-58-of-cisos-say-they-would-pay-the-ransom-for-their-data.html",
+      "source": "CSO Online",
+      "published": "2026-05-25T07:00:00+00:00",
+      "smart_groups": [
+        "Ransomware",
+        "Curated",
+        "Identity / Access",
+        "Network / OT / ICS",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "CISA Warns of Drupal Core SQL Injection Vulnerability Exploited in Attacks",
+      "link": "https://cybersecuritynews.com/drupal-core-sql-injection-vulnerability-exploited/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-05-25T06:52:58+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Web / API Security",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "GitHub Adds Staged Publishing to npm to Block Automated Supply Chain Attacks",
+      "link": "https://cybersecuritynews.com/github-adds-staged-publishing-to-npm-to-block-automated-supply-chain-attacks/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-05-25T06:51:58+00:00",
+      "smart_groups": [
+        "Curated",
+        "Supply Chain / Software",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    }
+  ]
+}
