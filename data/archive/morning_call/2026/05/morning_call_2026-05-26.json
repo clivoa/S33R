@@ -1,0 +1,165 @@
+{
+  "generated_at": "2026-05-26T10:20:05.578666+00:00",
+  "analysis_date": "2026-05-26",
+  "model": "gpt-5.2",
+  "window_hours": 24,
+  "source_file": "data/news_recent.json",
+  "source_generated_at": "2026-05-26T07:57:11.994375+00:00",
+  "source_days_back": 30,
+  "source_total_items": 8078,
+  "total_items_in_window_all": 208,
+  "total_items_in_window_curated": 55,
+  "morning_call_markdown": "### Executive Summary\n- Active exploitation: KnowledgeDeliver LMS deserialization flaw being used to drop web shells (BLUEBEAM) and post-exploitation tooling (Godzilla/Cobalt Strike) — treat any exposed instances as potentially compromised.\n- Web compromise trend: Ghost CMS (CVE-2026-26980) reportedly exploited at scale (700+ sites) to deliver “ClickFix” style malware/social engineering to visitors; watch for watering-hole impact on users.\n- Supply-chain + endpoint exposure: Poisoned Laravel-Lang packages and ongoing “TeamPCP” supply-chain activity, plus newly reported 7-Zip issues and a Windows LNK spoofing bug (CVE-2026-25185) increase risk of initial access via software/update channels and user execution.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) KnowledgeDeliver LMS active exploitation (web shell + C2 tooling)**\n- What happened: Reports indicate a KnowledgeDeliver LMS ViewState/deserialization flaw is being exploited to deploy BLUEBEAM web shells, Godzilla, and Cobalt Strike.\n- Why it matters operationally: Direct path from internet-facing app to persistent access and lateral movement (common ransomware/pre-ransom tradecraft).\n- Recommended immediate actions for the SOC today: Identify any KnowledgeDeliver exposure and owners; initiate rapid triage (web logs + EDR on host) and contain/patch or isolate if internet-facing.\n\n**2) Ghost CMS CVE-2026-26980 exploited at scale (ClickFix/watering-hole delivery)**\n- What happened: Ghost CMS vulnerability (CVE-2026-26980) is reported actively exploited to compromise 700+ sites and serve fake CAPTCHA/“ClickFix” lures leading to malware execution.\n- Why it matters operationally: Increases risk of drive-by/user-execution events from normal browsing (could lead to credential theft, session hijack, or malware footholds).\n- Recommended immediate actions for the SOC today: Confirm we have no Ghost CMS in our estate (including marketing microsites/vendors); tighten web filtering and alert on “fake CAPTCHA” execution patterns (PowerShell/mshta/rundll32 from browsers).\n\n**3) Supply-chain activity: Laravel-Lang package poisoning + “TeamPCP” campaign**\n- What happened: Laravel-Lang packages were reported poisoned for malware delivery; SANS notes continued “TeamPCP” supply-chain activity through 2026-05-24 (details may vary by environment).\n- Why it matters operationally: Dev/build pipelines and servers can be an indirect initial-access route into production networks and credentials (high impact in financial orgs).\n- Recommended immediate actions for the SOC today: Ask DevOps to inventory recent dependency updates (composer/npm/pip as applicable) and verify package integrity; increase monitoring on build agents for unexpected outbound connections and new persistence.\n\n**4) Endpoint execution risk: 7-Zip vulns + Windows Shell Link spoofing (CVE-2026-25185)**\n- What happened: New 7-Zip vulnerabilities reported enabling arbitrary code execution; 0patch released micropatches for Windows LNK processing spoofing (CVE-2026-25185).\n- Why it matters operationally: Common user workflows (opening archives/shortcuts) can be leveraged for phishing-to-execution, especially when combined with modern delivery via iMessage/RCS or email.\n- Recommended immediate actions for the SOC today: Identify 7-Zip versions across endpoints and prioritize updates on high-risk user groups; review exposure to LNK execution from downloads and consider temporary ASR/hardening controls (where feasible) while patch guidance is validated.\n\n**5) Phishing delivery evolution: RCS/iMessage + “PhaaS” maturation; MFA bypass reality**\n- What happened: Phishing campaigns are leveraging RCS and iMessage to evade traditional SMS filtering; reporting highlights evolving Chinese-language PhaaS ecosystems and that MFA alone is insufficient.\n- Why it matters operationally: Higher success rates for credential theft/OTP relay and session token theft leads to account takeover and BEC-style fraud.\n- Recommended immediate actions for the SOC today: Increase watch on IdP risky sign-ins and token/session anomalies; ensure L1 playbooks treat “mobile-delivered phishing” as standard and quickly correlate device + IdP + mailbox activity.\n\n---\n\n### Monitoring & detection recommendations\n- **Internet-facing app exploitation (KnowledgeDeliver/Ghost):** WAF/web server logs + EDR on web hosts for suspicious POSTs, ViewState/deserialization errors, new ASPX/PHP files, unusual worker processes spawning shells (T1190, T1505).\n- **Web-to-script execution (“ClickFix” patterns):** Proxy/DNS + EDR for browsers spawning `powershell.exe`, `mshta.exe`, `rundll32.exe`, `wscript/cscript` shortly after visiting compromised sites (T1204, T1059).\n- **Cobalt Strike / commodity post-exploitation:** EDR + firewall for new services, suspicious named pipes, beacon-like egress patterns, abnormal connections from servers to internet, especially from LMS/web tiers (T1055, T1071).\n- **Supply-chain/build agent anomalies:** CI/CD logs + EDR on build runners for new scheduled tasks/services, unsigned binaries in build directories, unexpected outbound to code/package repos or unknown hosts (T1553.005, T1053).\n- **Archive/LNK-based initial access:** Email gateway + endpoint telemetry for `.lnk`, `.zip/.7z` from external sources; alert on Mark-of-the-Web bypass indicators and user execution from Downloads/Temp (T1566, T1204).\n- **IdP/MFA bypass & session theft:** IdP logs (Entra/Okta/etc.) for impossible travel, unusual device binding changes, atypical OAuth consent, refresh token reuse, and new forwarding rules after sign-in (T1556, T1098).\n- **Third-party/vendor breach spillover:** DLP/UEBA + IAM for spikes in credential stuffing/password reset attempts following public breach reporting (assume secondary targeting) (T1110).\n\n---\n\n### Medium-term follow-ups\n- **Patch/hardening program:** Validate and prioritize patches/mitigations for Ghost CMS, KnowledgeDeliver, 7-Zip, and Windows LNK spoofing (CVE-2026-25185); confirm ownership for all internet-facing CMS/LMS assets.\n- **Web isolation / browsing controls:** Reassess controls for “fake CAPTCHA / ClickFix” style lures (script execution restrictions, browser hardening, download controls, ASR rules where compatible).\n- **Software supply-chain governance:** Tighten dependency pinning, SBOM usage, and package integrity verification for dev teams; define an escalation path when upstream packages are reported poisoned.\n- **Phishing resilience beyond MFA:** Expand conditional access (device compliance, risk-based policies), implement phishing-resistant MFA for privileged users, and review session/token protection controls.\n- **Threat intel to fraud fusion:** Coordinate with fraud/AML teams on the reported sale of “verified bank mule accounts” (Telegram) to improve monitoring for mule patterns and rapid account interdiction.\n- **IR readiness for ransomware tradecraft:** Ensure endpoint forensic readiness (EDR retention, web server log retention, golden images) given ongoing trends of webapp exploitation → C2 → ransomware.",
+  "highlights": [
+    {
+      "title": "Phishing Campaigns Exploit RCS and iMessage to Evade SMS Security Filters",
+      "link": "https://gbhackers.com/phishing-campaigns-exploit-rcs-and-imessage/",
+      "source": "GBHackers News",
+      "published": "2026-05-26T07:07:17+00:00",
+      "smart_groups": [
+        "Threat Actors / APT",
+        "Curated",
+        "Exploit / PoC",
+        "Phishing / Social Engineering",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Vulnerabilities have become cyber attackers’ No. 1 door to the enterprise",
+      "link": "https://www.csoonline.com/article/4176086/vulnerabilities-have-become-cyber-attackers-no-1-door-to-the-enterprise.html",
+      "source": "CSO Online",
+      "published": "2026-05-26T07:00:00+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Cloud / SaaS",
+        "Phishing / Social Engineering",
+        "Ransomware",
+        "Data Breaches / Leaks",
+        "Threat Actors / APT",
+        "Exploit / PoC",
+        "Windows / Microsoft",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Eversource Energy data breach: names and Social Security numbers compromised | UpGuard",
+      "link": "https://www.upguard.com/news/eversource-energy-data-breach-2026-05-25",
+      "source": "UpGuard – News",
+      "published": "2026-05-26T05:36:45+00:00",
+      "smart_groups": [
+        "Data Breaches / Leaks",
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Vendors / Product Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "KnowledgeDeliver LMS Flaw Exploited to Deploy Godzilla and Cobalt Strike",
+      "link": "https://thehackernews.com/2026/05/knowledgedeliver-lms-flaw-exploited-to.html",
+      "source": "The Hacker News",
+      "published": "2026-05-26T05:19:38+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "IPL Ticket Scammers Use Fake Portals & Malware to Target Fans Globally",
+      "link": "https://www.news4hackers.com/ipl-ticket-scammers-use-fake-portals-malware-to-target-fans-globally/",
+      "source": "News4Hackers",
+      "published": "2026-05-26T05:03:23+00:00",
+      "smart_groups": [
+        "Curated",
+        "Exploit / PoC",
+        "Malware / Payloads",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Hackers Abuse KnowledgeDeliver LMS Flaw to Install BLUEBEAM Web Shell",
+      "link": "https://gbhackers.com/hackers-abuse-knowledgedeliver-lms-flaw/",
+      "source": "GBHackers News",
+      "published": "2026-05-26T05:00:30+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Product showcase: F-Secure Internet Security blocks phishing sites, fake stores, and SMS scams",
+      "link": "https://www.helpnetsecurity.com/2026/05/26/product-showcase-f-secure-internet-security-android/",
+      "source": "Help Net Security",
+      "published": "2026-05-26T05:00:28+00:00",
+      "smart_groups": [
+        "Curated",
+        "Malware / Payloads",
+        "Phishing / Social Engineering",
+        "Ransomware",
+        "Windows / Microsoft",
+        "Mobile Security",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Ransomware Uses ChaCha20 and Curve25519 to Encrypt Windows Files",
+      "link": "https://gbhackers.com/ransomware-uses-chacha20-and-curve25519/",
+      "source": "GBHackers News",
+      "published": "2026-05-26T04:58:17+00:00",
+      "smart_groups": [
+        "Curated",
+        "Network / OT / ICS",
+        "Ransomware",
+        "Windows / Microsoft",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "New 7-Zip Vulnerabilities Let Attackers Execute Arbitrary Code and Compromise Systems",
+      "link": "https://cybersecuritynews.com/7-zip-vulnerabilities-code-execution/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-05-26T04:05:03+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Curated",
+        "Exploit / PoC",
+        "Ransomware",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Security experts caution MFA alone can no longer stop threat actors",
+      "link": "https://www.csoonline.com/article/4176814/security-experts-caution-mfa-alone-can-no-longer-stop-threat-actors.html",
+      "source": "CSO Online",
+      "published": "2026-05-26T02:50:41+00:00",
+      "smart_groups": [
+        "Identity / Access",
+        "Email Security / BEC",
+        "Phishing / Social Engineering",
+        "Curated",
+        "Threat Actors / APT",
+        "Exploit / PoC",
+        "Linux / Unix",
+        "Network / OT / ICS",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "Mobile Security",
+        "General Security"
+      ],
+      "curated": true
+    }
+  ]
+}
