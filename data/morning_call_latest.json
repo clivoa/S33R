@@ -1,153 +1,151 @@
 {
-  "generated_at": "2026-05-27T10:19:28.350802+00:00",
-  "analysis_date": "2026-05-27",
+  "generated_at": "2026-05-28T10:24:36.421322+00:00",
+  "analysis_date": "2026-05-28",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-05-27T10:00:23.719778+00:00",
+  "source_generated_at": "2026-05-28T08:07:13.468864+00:00",
   "source_days_back": 30,
-  "source_total_items": 8328,
-  "total_items_in_window_all": 315,
-  "total_items_in_window_curated": 106,
-  "morning_call_markdown": "### Executive Summary\n- Multiple **actively exploited server-side flaws** are in scope today: **LiteSpeed cPanel plugin zero-day (CISA KEV)** plus **SharePoint Server RCE (CVE-2026-45659)** and **KnowledgeDeliver zero-day web-shell installs**.\n- **Credential theft + banking malware pressure is rising**: Chinese phishing groups shifting to **live credential interception**, and a new **Android banking trojan (OverlayPhantom)** targeting mobile users.\n- **Supply-chain/developer endpoint risk continues** (GitHub Actions abuse, trojanized “AI tool” installers, fake repos distributing RATs) with direct impact on CI/CD integrity and privileged workstation compromise.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) LiteSpeed cPanel plugin zero-day (CISA: exploited in the wild)**\n- What happened: CISA is urging immediate patching for an **exploited LiteSpeed cPanel plugin zero-day**.\n- Why it matters operationally: Internet-facing hosting/control panels are frequent **initial access** leading to web shells, credential theft, and ransomware staging.\n- Recommended immediate actions for the SOC today: **Confirm exposure** (asset inventory for cPanel + LiteSpeed plugin), **patch/mitigate now**; hunt for **new/unknown web shells** and anomalous admin logins on any affected hosts.\n\n**2) Microsoft SharePoint Server RCE (CVE-2026-45659)**\n- What happened: Microsoft patched a **high-severity SharePoint RCE** across server versions (public reporting includes exploitability focus).\n- Why it matters operationally: SharePoint is commonly **internet-reachable** in enterprises; compromise often results in **rapid lateral movement** and data access in financial environments.\n- Recommended immediate actions for the SOC today: **Identify all SharePoint servers and patch level**; increase monitoring for **IIS/SharePoint process anomalies** and suspicious file drops under web roots.\n\n**3) KnowledgeDeliver zero-day used to install web shells**\n- What happened: Multiple outlets report a **KnowledgeDeliver flaw exploited as a zero-day** to deploy **web shells**.\n- Why it matters operationally: Web shells enable **persistent remote access** and are a common bridge to credential dumping and ransomware deployment.\n- Recommended immediate actions for the SOC today: **Locate any KnowledgeDeliver instances** (assumption: may exist in niche business units) and apply vendor mitigations; hunt for **unexpected .aspx/.php/.jsp** in app directories and suspicious outbound C2 from those servers.\n\n**4) Web CMS exploitation at scale (Ghost CMS CVE-2026-26980; Drupal added to CISA KEV)**\n- What happened: Reports of **large-scale exploitation** of Ghost CMS (poisoning hundreds of sites) and a **Drupal vuln added to CISA KEV**.\n- Why it matters operationally: Even “non-core” web properties can be used for **credential phishing, watering holes, skimmers,** or as **pivot infrastructure** into internal networks.\n- Recommended immediate actions for the SOC today: **Inventory externally facing CMS** (Ghost/Drupal) and prioritize patching/mitigations; monitor for **new admin users, theme/plugin changes, and unexpected redirects/scripts** on web assets.\n\n**5) Mobile account takeover + banking malware (WhatsApp 0-click on iOS 16; OverlayPhantom Android banker)**\n- What happened: Reporting on a **0-click WhatsApp account takeover targeting iOS 16** and an **Android banking trojan using overlays** (OverlayPhantom).\n- Why it matters operationally: High-risk for **executive/privileged user** comms compromise, MFA fatigue/social engineering, and **fraud** via mobile banking overlay tactics.\n- Recommended immediate actions for the SOC today: Push **mobile advisory** (WhatsApp/iOS update guidance; restrict high-risk messaging for sensitive workflows); monitor IdP for **MFA resets, new device enrollments, and abnormal token/device registrations** tied to VIPs.\n\n---\n\n### Monitoring & detection recommendations\n- **Web shell / web server compromise hunts**: IIS/Apache/Nginx logs + EDR on web servers for **rare POSTs to new endpoints, odd user agents, and new executable/script drops** (ATT&CK: T1505.003, T1190).\n- **SharePoint-specific telemetry**: Windows Security + Sysmon/EDR on SharePoint for **w3wp.exe spawning cmd/powershell**, suspicious child processes, and new scheduled tasks/services (T1059, T1053).\n- **Control panel exploitation** (cPanel/LiteSpeed): Web logs + auth logs for **new admin sessions**, IP geovelocity anomalies, and sudden changes to vhost configs/cron jobs (T1078).\n- **Identity live-intercept phishing**: IdP (Entra ID/Okta), CASB, email gateway for **device code auth abuse, unusual OAuth consent, rapid session token creation, impossible travel** (T1566, T1550.001, T1528).\n- **RDP + remote admin tool precursors to ransomware** (per NightSpire reporting): VPN/RDP gateways + EDR for **new inbound RDP from atypical sources**, execution of RAT/admin tools, and **PsExec/WMI lateral movement** (T1021.001, T1569.002, T1047).\n- **Supply-chain/CI integrity**: GitHub audit logs + CI runner logs for **workflow changes, new secrets access, cache/artifact anomalies**, and commits from unusual actors (T1195.002).\n- **Developer endpoint malware** (trojanized AI installers; fake repos distributing RATs): EDR for **new unsigned installers**, anomalous persistence (Run keys/LaunchAgents), and outbound traffic to newly seen domains from dev subnets (T1204, T1547).\n- **DNS resolver risk (BIND 9 vuln reporting)**: DNS server logs + IDS for **crash/restart events, malformed query spikes**, and anomalous AXFR/zone-related traffic (T1499 if DoS patterns emerge).\n\n---\n\n### Medium-term follow-ups\n- **Patch governance**: Align internal SLA to “CISA KEV / exploited-in-the-wild” handling (LiteSpeed/Drupal/Trend Micro Apex One note) with **48–72h max** for internet-facing services; validate actual patch deployment via vuln scans.\n- **External attack surface review**: Reconfirm which apps are **internet-exposed** (SharePoint, CMS, control panels) and enforce **WAF, geo/IP allowlisting where feasible, and admin interface isolation**.\n- **Mobile security posture**: Tighten MDM controls for WhatsApp and high-risk messaging apps; enforce **OS/app update compliance**, restrict sideloading on Android, and review VIP communications playbooks.\n- **CI/CD hardening**: Require signed actions, pin dependencies, restrict cache usage, enforce least-privilege tokens, and enable **branch protection + mandatory reviews** for workflow files.\n- **Phishing resilience**: Update detections and user guidance for **real-time credential interception** (reverse proxies) and expand conditional access controls (token protection, phishing-resistant MFA where possible).\n- **Ransomware containment readiness**: Evaluate/enable Defender’s **automatic device isolation** preview capability (where appropriate) and rehearse isolation criteria to reduce blast radius during fast-moving intrusions.",
+  "source_total_items": 8357,
+  "total_items_in_window_all": 295,
+  "total_items_in_window_curated": 81,
+  "morning_call_markdown": "### Executive Summary\n- **Active exploitation focus:** CISA added **LiteSpeed cPanel plugin CVE-2026-48172 (CVSS 10)** to KEV; treat as **internet-facing, actively exploited** and verify exposure immediately.  \n- **Financially relevant malware pressure:** Continued **Grandoreiro banking trojan** activity (Portugal/LatAm) + **Android RATs (BTMOB)**; expect credential theft, session hijack, and fraudulent payment attempts.  \n- **Identity + social engineering escalation:** Multiple reports of **IT support impersonation** and **cloud token theft/MFA bypass via ROADtools misuse**; prioritize monitoring for anomalous helpdesk actions and Azure/Entra token activity.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) CISA KEV: LiteSpeed cPanel plugin vulnerability (CVE-2026-48172) actively exploited**\n- **What happened:** CISA added a **LiteSpeed cPanel plugin bug (CVE-2026-48172, CVSS 10.0)** to the Known Exploited Vulnerabilities catalog; exploitation reported in the wild.  \n- **Why it matters operationally:** Likely impacts **internet-facing hosting/admin panels**; compromise can quickly lead to **root access, webshells, credential theft, and lateral movement**.  \n- **Recommended immediate actions for the SOC today:** **Identify any cPanel/LiteSpeed plugin exposure (externally and internally)** and push emergency patch/mitigation; **hunt for new privileged users, suspicious cron/jobs, webshell-like files, and unexpected outbound connections** from affected servers.\n\n**2) Fortinet ecosystem: FortiClient EMS code execution exploited to deploy malware**\n- **What happened:** Reports indicate **FortiClient EMS code execution** being exploited to deploy **EKZ malware** (details/patch level unclear from headlines—assume exploitation is plausible).  \n- **Why it matters operationally:** Fortinet management tooling is often **high-trust**; compromise can enable **endpoint fleet tampering**, malware staging, and credential access at scale.  \n- **Recommended immediate actions for the SOC today:** **Inventory FortiClient EMS instances + verify current patch/hotfix status**; **review EMS admin logins/config changes and endpoint package pushes** over the last 7 days and isolate any suspicious management host behavior.\n\n**3) Web/API auth bypass risk: Starlette “BadHost” affecting FastAPI-based services (incl. AI/agent endpoints)**\n- **What happened:** Multiple outlets flagged a **high-severity Starlette vulnerability (“BadHost”)** that can enable **authentication bypass / access to sensitive endpoints** in FastAPI/Starlette-based deployments.  \n- **Why it matters operationally:** Financial orgs commonly run **internal APIs, AI assistants/agents, and automation services** on FastAPI; bypass could expose **PII, secrets, or administrative actions** without valid auth.  \n- **Recommended immediate actions for the SOC today:** **Locate Starlette/FastAPI services (esp. internet-exposed) and confirm versions/patch guidance**; **monitor for unusual Host header patterns, spikes in 401→200 transitions, and access to admin/debug endpoints**.\n\n**4) Identity attacks: ROADtools misuse for token theft + MFA bypass patterns**\n- **What happened:** Reporting highlights **ROADtools being used in cloud attacks** to **steal tokens and bypass MFA controls** (tradecraft-focused, not a single vendor CVE).  \n- **Why it matters operationally:** Token theft enables **session hijack** and persistence even with MFA; financial-sector impact includes **account takeover, mailbox access, and payment workflow manipulation**.  \n- **Recommended immediate actions for the SOC today:** **Increase alerting on “impossible travel,” new device registration, unusual OAuth consent/app registrations, and refresh-token anomalies**; **validate conditional access enforcement and block legacy auth** where still present.\n\n**5) Social engineering + ransomware extortion: IT support impersonation / “Silent Ransom Group” tactics**\n- **What happened:** FBI-adjacent coverage and reporting describe users **letting in tech-support impersonators**; “Silent Ransom Group” noted using **IT support impersonation** to access victims and extort data.  \n- **Why it matters operationally:** This bypasses technical controls via **interactive access (remote tools), credential capture, and data exfiltration**—common precursors to ransomware/extortion.  \n- **Recommended immediate actions for the SOC today:** **Watch for new/rare remote-access tool installs and unexpected inbound support sessions**; **reinforce helpdesk verification steps today (call-back, ticket validation) and require approvals for remote control to privileged systems**.\n\n---\n\n### Monitoring & detection recommendations\n- **Internet-facing Linux/web hosts (cPanel/LiteSpeed):** EDR + web server logs + auth logs; hunt for **new root shells, sudo to root, new cron/systemd timers, webshell file writes** (ATT&CK: **T1190**, **T1059**, **T1543**).  \n- **FortiClient EMS / management plane:** EMS audit logs + EDR on EMS server; alert on **new admin users, unusual login geos, config/package deployment changes** (ATT&CK: **T1078**, **T1562**).  \n- **Starlette/FastAPI “BadHost” symptoms:** API gateway/WAF + app logs; detect **abnormal Host header values, SSRF-like routing behavior, admin endpoint access**, and **authentication anomalies** (ATT&CK: **T1190**).  \n- **Cloud token theft / ROADtools tradecraft:** Entra ID sign-in logs + Unified Audit Log; hunt for **suspicious device code/OAuth activity, unusual token refresh patterns, new service principals, consent grants** (ATT&CK: **T1528**, **T1550**).  \n- **Tech support impersonation / remote tool abuse:** Endpoint software inventory + proxy/DNS + helpdesk ticketing; alert on **new AnyDesk/ScreenConnect/TeamViewer-like installs**, execution from user profile, or **unsigned remote tooling** (ATT&CK: **T1219**).  \n- **Banking trojan (Grandoreiro) + malware delivery:** Email gateway + EDR + browser telemetry; hunt for **malicious macro/script chains, atypical PowerShell, new scheduled tasks, credential theft indicators** (ATT&CK: **T1566**, **T1059.001**, **T1053**).  \n- **Mobile threat spillover (BTMOB/Android RAT):** MDM + CASB (if applicable); monitor **new sideloaded apps, accessibility service abuse, overlay permissions**; correlate with **fraud/transaction anomalies**.\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** Implement/refresh **“KEV within X days”** SLA; explicitly track **LiteSpeed/cPanel, Fortinet management components, and Starlette/FastAPI** in vulnerability backlog.  \n- **Cloud hardening:** Review **Conditional Access** (token protection, phishing-resistant MFA for admins, device compliance) and **restrict OAuth app consent** to approved publishers.  \n- **Remote support controls:** Standardize **helpdesk verification** + require **privileged approval** for remote-control sessions; consider **application allowlisting** for remote tooling.  \n- **Ransomware readiness:** Use the Akira kill-chain writeup as a checklist—validate **egress controls, backup immutability, lateral movement detections**, and **admin share monitoring**.  \n- **Supply chain hygiene (developer-focused botnet / npm RATs):** Tighten controls on **developer endpoints** (dependency scanning, allowlisted registries, signed builds) and monitor for **unexpected package installs**.  \n- **Credential exposure watch:** Review HIBP-reported breaches relevant to your user base (e.g., Kemper) for **password reuse risk**; ensure **SSO/MFA + credential reset** processes are ready if matches are found.",
   "highlights": [
     {
-      "title": "European AI Adoption Surges to 99%, Data Regulation Main Driver Behind Policy Breaches",
-      "link": "https://www.news4hackers.com/european-ai-adoption-surges-to-99-data-regulation-main-driver-behind-policy-breaches/",
-      "source": "News4Hackers",
-      "published": "2026-05-27T09:04:06+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "The NSA, ‘Mythos’ and the quiet emergence of AI cyber doctrine",
-      "link": "https://www.csoonline.com/article/4176737/the-nsa-mythos-and-the-quiet-emergence-of-ai-cyber-doctrine.html",
-      "source": "CSO Online",
-      "published": "2026-05-27T09:00:00+00:00",
+      "title": "How to exclude specific CVEs with CVE exceptions in Microsoft Defender Vulnerability Management",
+      "link": "https://techcommunity.microsoft.com/t5/microsoft-defender-vulnerability/how-to-exclude-specific-cves-with-cve-exceptions-in-microsoft/ba-p/4523507",
+      "source": "Vulnerability Management",
+      "published": "2026-05-28T08:06:04+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Curated",
-        "Threat Actors / APT",
-        "Network / OT / ICS",
-        "Cloud / SaaS",
         "Crypto / Web3",
         "Identity / Access",
-        "Exploit / PoC",
-        "Linux / Unix",
-        "Malware / Payloads",
-        "Phishing / Social Engineering",
+        "Network / OT / ICS",
         "Ransomware",
-        "Windows / Microsoft",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "RCE in Strix Agent(Sandbox): A practical guide to prompt injections with impact",
-      "link": "https://www.reddit.com/r/netsec/comments/1tozkke/rce_in_strix_agentsandbox_a_practical_guide_to/",
-      "source": "/r/netsec",
-      "published": "2026-05-27T08:40:15+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "OSINT / Community"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Proofpoint Introduces Active Exploits Protection to Help Organizations Prioritize Vulnerability Patching for Real-World Attacks in the AI Era",
-      "link": "https://www.proofpoint.com/us/newsroom/press-releases/proofpoint-introduces-active-exploits-protection-help-organizations",
-      "source": "Proofpoint – Vendor",
-      "published": "2026-05-27T08:07:39+00:00",
-      "smart_groups": [
-        "Curated",
-        "Exploit / PoC",
-        "Vulnerabilities / CVEs",
         "Vendors / Product Security"
       ],
       "curated": true
     },
     {
-      "title": "Artificial Intelligence Coding Solutions for Exploit Validation Fixes",
-      "link": "https://www.news4hackers.com/artificial-intelligence-coding-solutions-for-exploit-validation-fixes/",
-      "source": "News4Hackers",
-      "published": "2026-05-27T08:03:40+00:00",
+      "title": "Ketch brings multi-agent AI orchestration to enterprise privacy programs",
+      "link": "https://www.helpnetsecurity.com/2026/05/28/ketch-brings-multi-agent-ai-orchestration-to-enterprise-privacy-programs/",
+      "source": "Help Net Security",
+      "published": "2026-05-28T07:34:18+00:00",
       "smart_groups": [
+        "Data Protection / Privacy",
         "Curated",
-        "Exploit / PoC",
-        "Vulnerabilities / CVEs",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Does Android Auto make your phone overheat? Try these 8 ways to cool it down",
-      "link": "https://www.zdnet.com/article/how-to-cool-down-phone-overheating-android-auto/",
-      "source": "ZDNet – Security",
-      "published": "2026-05-27T08:00:59+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "Mobile Security",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Pluralistic: AI and a world without migrants (27 May 2026)",
-      "link": "https://pluralistic.net/2026/05/27/unnecessariat/",
-      "source": "https://pluralistic.net/feed/",
-      "published": "2026-05-27T07:57:41+00:00",
-      "smart_groups": [
         "Ransomware",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Kemper - 269,299 breached accounts",
+      "link": "https://haveibeenpwned.com/Breach/Kemper",
+      "source": "Have I Been Pwned – Latest Breaches",
+      "published": "2026-05-28T07:22:18+00:00",
+      "smart_groups": [
+        "Curated",
+        "Phishing / Social Engineering",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "Data Breaches / Leaks"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Silent Ransom Group Targets Law Firms With IT Support Impersonation Attacks",
+      "link": "https://cybersecuritynews.com/silent-ransom-group-targets-law-firms/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-05-28T07:15:06+00:00",
+      "smart_groups": [
+        "Phishing / Social Engineering",
+        "Curated",
+        "Ransomware",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Announcing the newest cohort of the Google for Startups Accelerator: Middle East, North Africa & Turkey",
+      "link": "https://cloud.google.com/blog/topics/startups/meet-the-newest-cohort-of-our-mena-t-startup-accelerator/",
+      "source": "Google Cloud Blog",
+      "published": "2026-05-28T07:00:00+00:00",
+      "smart_groups": [
         "Cloud / SaaS",
         "Curated",
-        "Identity / Access",
         "Network / OT / ICS",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "Web / API Security",
+        "Vendors / Product Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Hottest cybersecurity open-source tools of the month: May 2026",
+      "link": "https://www.helpnetsecurity.com/2026/05/28/hottest-cybersecurity-open-source-tools-of-the-month-may-2026/",
+      "source": "Help Net Security",
+      "published": "2026-05-28T05:00:55+00:00",
+      "smart_groups": [
+        "Curated",
         "Vulnerabilities / CVEs",
         "General Security"
       ],
       "curated": true
     },
     {
-      "title": "New 0-Click WhatsApp Account Takeover Attack Targeting iOS 16 Users",
-      "link": "https://cybersecuritynews.com/0-click-whatsapp-target-ios-16-users/",
+      "title": "Companies built AI into core systems before figuring out how to govern it",
+      "link": "https://www.helpnetsecurity.com/2026/05/28/check-point-genai-security-controls-report/",
+      "source": "Help Net Security",
+      "published": "2026-05-28T04:30:39+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Canonical releases Workshop for one-command sandboxed dev environments on Ubuntu",
+      "link": "https://www.helpnetsecurity.com/2026/05/28/canonical-workshop-ubuntu/",
+      "source": "Help Net Security",
+      "published": "2026-05-28T04:00:47+00:00",
+      "smart_groups": [
+        "Crypto / Web3",
+        "Curated",
+        "Linux / Unix",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "FortiClient EMS Code Execution Vulnerability Exploited to Deploy EKZ Malware",
+      "link": "https://cybersecuritynews.com/forticlient-code-execution-vulnerability/",
       "source": "Cyber Security News (FeedBurner)",
-      "published": "2026-05-27T07:34:36+00:00",
-      "smart_groups": [
-        "Curated",
-        "Exploit / PoC",
-        "Mobile Security",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Hackers Exploit Shared CDN Edge IPs to Evade Protective DNS Filtering",
-      "link": "https://gbhackers.com/hackers-exploit-shared-cdn-edge-ips/",
-      "source": "GBHackers News",
-      "published": "2026-05-27T07:16:17+00:00",
-      "smart_groups": [
-        "Curated",
-        "Exploit / PoC",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Microsoft SharePoint Has a New RCE Flaw. If You Haven’t Patched Yet, Go Do That.",
-      "link": "https://securityaffairs.com/192730/security/microsoft-sharepoint-has-a-new-rce-flaw-if-you-havent-patched-yet-go-do-that.html",
-      "source": "Security Affairs",
-      "published": "2026-05-27T07:10:59+00:00",
+      "published": "2026-05-28T03:38:43+00:00",
       "smart_groups": [
         "Curated",
         "Vulnerabilities / CVEs",
         "Exploit / PoC",
+        "Malware / Payloads",
         "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Eversource Energy data breach: names and Social Security numbers compromised | UpGuard",
+      "link": "https://www.upguard.com/news/eversource-energy-data-breach-2026-05-25",
+      "source": "UpGuard – News",
+      "published": "2026-05-28T01:48:23+00:00",
+      "smart_groups": [
+        "Data Breaches / Leaks",
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Vendors / Product Security"
       ],
       "curated": true
     }
