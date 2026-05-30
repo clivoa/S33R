@@ -1,150 +1,150 @@
 {
-  "generated_at": "2026-05-29T10:14:31.828283+00:00",
-  "analysis_date": "2026-05-29",
+  "generated_at": "2026-05-30T08:41:07.114524+00:00",
+  "analysis_date": "2026-05-30",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-05-29T08:05:44.807783+00:00",
+  "source_generated_at": "2026-05-30T06:53:53.549301+00:00",
   "source_days_back": 30,
-  "source_total_items": 8359,
-  "total_items_in_window_all": 308,
-  "total_items_in_window_curated": 92,
-  "morning_call_markdown": "### Executive Summary\n- Active exploitation reported for a **critical FortiClient EMS flaw (CVE-2026-35616)** used to push credential stealers/infostealers—treat as **internet-facing, high-risk** if we run EMS.\n- Multiple **developer / supply-chain risk signals**: **CISA alert on Nx Console + GitHub repo compromises**, plus **critical Git service RCE (Gogs) and Gitea exposure**—watch for internal lateral movement starting from dev tooling.\n- **Ransomware + social engineering** remains a front-door risk: **Teams-based IT helpdesk impersonation** and FBI warning on **fake IT support tactics**, plus new analysis of a **self-propagating ransomware** variant.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) FortiClient EMS critical vuln actively exploited (CVE-2026-35616)**\n- What happened: Reporting indicates **active exploitation** of a **critical FortiClient EMS** vulnerability to deploy **credential-stealer/infostealer** malware.\n- Why it matters operationally: EMS is often **high-privilege and centrally connected** to endpoints; compromise can enable **rapid credential theft + endpoint pivoting** in a financial environment.\n- Recommended immediate actions for the SOC today: **Confirm whether EMS is deployed/exposed**; prioritize **patch/mitigation + restrict access (VPN/admin IP allowlists)**; start **retro-hunt for unusual EMS admin logins, new packages/tasks, or outbound C2** from EMS.\n\n**2) Git/dev platform exposure: critical Gogs RCE + Gitea container access issue**\n- What happened: A **critical RCE in Gogs** (authenticated user to code execution) is being broadly discussed; separate reporting flags **Gitea container-related exposure** affecting many deployments.\n- Why it matters operationally: Git services often store **secrets, CI tokens, and build artifacts**; compromise can lead to **supply-chain insertion** and **privilege escalation** into CI/CD and cloud.\n- Recommended immediate actions for the SOC today: **Inventory Gogs/Gitea presence (on-prem + cloud)**; if present, **isolate/admin-restrict and fast-track patches**; hunt for **new/unknown users, repo setting changes, suspicious web requests, and CI runner token usage**.\n\n**3) CISA alert: supply-chain compromises impacting Nx Console and GitHub repositories (plus KEV adds Nx Console-related issues)**\n- What happened: CISA issued an alert on **Nx Console and GitHub repo compromises**; additional notes indicate CISA KEV updates include **Nx Console** (and other) exploited flaws.\n- Why it matters operationally: This is a **developer endpoint + repo trust** issue—compromised plugins/repos can trigger **credential theft, code tampering, or persistent access** via build pipelines.\n- Recommended immediate actions for the SOC today: **Identify developers using Nx Console / affected repos**; **rotate potentially exposed tokens (GitHub, CI, cloud)**; monitor for **unexpected GitHub OAuth/app authorizations and unusual git actions from new IPs**.\n\n**4) Collaboration/social engineering: Microsoft Teams “helpdesk impersonation” abuse + fake IT support tactics**\n- What happened: Attackers are abusing **Teams collaboration features** to impersonate IT/helpdesk; FBI warning highlights **fake IT support tactics** (including impersonation).\n- Why it matters operationally: Bypasses email controls; can drive **credential capture (T1566)**, MFA fatigue/push approval, remote tool execution, and **initial access** to regulated systems.\n- Recommended immediate actions for the SOC today: Tune for **new external-to-internal Teams chats, new tenant federation contact spikes, and link/file delivery**; remind Service Desk to **use out-of-band verification**; ensure detections for **remote tool installs + suspicious PowerShell** from user endpoints.\n\n**5) Ransomware engineering signal: “Gentlemen” self-propagating Go encryptor (MS analysis)**\n- What happened: Microsoft published analysis of a **self-propagating ransomware** written in Go, emphasizing automated spread behavior.\n- Why it matters operationally: Propagation increases risk of **rapid multi-segment impact**; early detection depends on spotting **worm-like lateral movement and mass encryption precursors**.\n- Recommended immediate actions for the SOC today: Hunt for **burst SMB/RPC authentication attempts, remote service creation, PsExec/WMI usage**, and **rapid file rename/write spikes**; validate **EDR ransomware protections** are enabled on critical server tiers.\n\n---\n\n### Monitoring & detection recommendations\n- **FortiClient EMS**: Monitor EMS host via **EDR + Windows Event Logs (4624/4625/4672, service/task creation)** and **perimeter/WAF** if web-exposed; hunt for **new admin sessions + unusual child processes** (ATT&CK: T1078, T1059).\n- **Git services (Gogs/Gitea)**: Review **reverse proxy/WAF access logs + app audit logs** for **new users, privilege changes, repo hooks/webhooks modifications, and suspicious upload endpoints** (ATT&CK: T1190, T1565.001).\n- **Supply-chain / Nx Console / GitHub**: From **GitHub audit logs** track **new OAuth app grants, PAT creation, workflow changes, runner registration**, and pushes from unusual geos/IPs; correlate with **IdP sign-in logs** (ATT&CK: T1550, T1552).\n- **Teams impersonation**: From **M365 Unified Audit Log / Teams admin logs**, alert on **external chats/messages to privileged users**, **mass messaging**, and **file/link shares**; correlate to **endpoint execution of downloaded content** (ATT&CK: T1566, T1204).\n- **Infostealer outcomes**: From **proxy/DNS + EDR**, hunt for **browser credential store access, unusual archive creation (zip/7z), and outbound to new domains** soon after user interaction (ATT&CK: T1555, T1041).\n- **Ransomware propagation**: Monitor **firewall east-west + Windows Security logs** for **SMB lateral movement spikes**, **remote service creation (7045)**, **WMI (Operational log)**, and **AD enumeration patterns** (ATT&CK: T1021.002, T1047).\n- **Mobile phishing payload generation (Android malware service trend)**: Watch **email/SMS phishing reports + MDM telemetry** for **new sideloaded app installs, accessibility abuse indicators, and unusual WebView/overlay behaviors** (ATT&CK: T1476/T1660 as applicable—use platform mappings internally).\n\n---\n\n### Medium-term follow-ups\n- **Patch governance**: Apply/validate **Oracle May 2026 CPU (35 CVEs)** across supported Oracle estates; ensure change windows and compensating controls where patching lags.\n- **Repo trust controls**: Tighten **artifact provenance** (signed commits/releases where feasible), enforce **least-privileged GitHub tokens**, and restrict **who can approve CI workflow changes** (especially for financial apps).\n- **Developer endpoint hardening**: Review exposure to **remote dev tooling risk** (e.g., Remote-SSH/IDE extensions reported as pivot paths); enforce **extension allowlists** and monitor for **unexpected SSH key use**.\n- **Cloud/SaaS token hygiene**: Based on Zapier/Nx Console supply-chain themes, review **SaaS token storage/rotation**, implement **short-lived tokens**, and ensure **secrets scanning** on repos.\n- **DDoS readiness (Azure WAF/DDoS guidance)**: Confirm **WAF policies, rate limits, bot rules, and DDoS protection** are tuned for customer-facing portals and APIs; run a tabletop on escalation thresholds.\n- **Awareness + procedures**: Update playbooks for **Teams-based social engineering** and “IT support” impersonation—explicit verification steps and fast reporting channels for privileged users.",
+  "source_total_items": 8295,
+  "total_items_in_window_all": 237,
+  "total_items_in_window_curated": 61,
+  "morning_call_markdown": "### Executive Summary\n- **Active exploitation reported:** PAN‑OS authentication bypass is being exploited in the wild—treat any internet-exposed Palo Alto management/auth surfaces as high risk until verified patched/mitigated.  \n- **“Patchless” exposure:** A **critical RCE in Gogs** has public exploit modules and **no fix yet**—isolate/remove exposure immediately if present in dev/CI environments.  \n- **Supply-chain + ransomware tradecraft:** Multiple reports of **typosquatted npm/NuGet packages stealing cloud/CI secrets** plus **ransomware using SYSTEM scheduled tasks**—prioritize dev endpoint + CI telemetry and Windows persistence hunts.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Palo Alto Networks PAN‑OS authentication bypass (exploited in the wild)**\n- **What happened:** Reports indicate a **PAN‑OS authentication bypass** is **actively exploited**.  \n- **Why it matters operationally:** Could enable **unauthorized access to perimeter/security infrastructure**, leading to device takeover, policy tampering, and downstream intrusion.  \n- **Recommended immediate actions for the SOC today:** Validate exposure (internet-facing mgmt/auth portals), confirm version/mitigation status with NetOps; increase alerting on PAN‑OS admin logins/config changes and block suspicious access paths where feasible.\n\n**2) Gogs Git service critical RCE (public exploit; no fix yet)**\n- **What happened:** A **critical zero-day RCE in Gogs** is public with exploit modules; vendor fix not yet available (per reporting).  \n- **Why it matters operationally:** Git services often hold **source + secrets**; RCE enables rapid pivot into CI/CD, credential theft, and ransomware staging.  \n- **Recommended immediate actions for the SOC today:** Identify any Gogs instances (prod/dev/lab) and **remove from internet / restrict to VPN**; hunt for anomalous process spawn and web requests on Gogs hosts; rotate tokens/keys if compromise suspected.\n\n**3) FortiClient EMS-related vulnerability used to deliver infostealer (enterprise device impact)**\n- **What happened:** Reporting links a **FortiClient EMS vulnerability** to **infostealer delivery** reaching managed enterprise devices.  \n- **Why it matters operationally:** Stealer activity commonly leads to **credential/session theft**, MFA fatigue bypass attempts, and high-likelihood ransomware follow-on in financial environments.  \n- **Recommended immediate actions for the SOC today:** Confirm EMS exposure/version and patch/mitigate with endpoint team; prioritize detections on endpoints enrolled via EMS for credential dumping/stealer behaviors and unusual outbound to new domains.\n\n**4) Software supply-chain: typosquatted npm + malicious NuGet (banking credential theft / cloud & CI secret theft)**\n- **What happened:** Multiple reports of **typosquatted npm packages** stealing cloud/CI secrets and a **malicious NuGet package** masquerading as a banking SDK exfiltrating passwords.  \n- **Why it matters operationally:** Compromised developer tooling can leak **cloud keys, CI runners, signing secrets** → direct path to production compromise and fraud.  \n- **Recommended immediate actions for the SOC today:** Ask DevSecOps to check recent dependency adds/updates against allowlists; monitor egress from dev/CI hosts for unusual token/secret exfil patterns; trigger immediate secret rotation if suspect packages were installed.\n\n**5) Ransomware tradecraft: SYSTEM scheduled task used for encryption (elevated)**\n- **What happened:** Ransomware campaigns observed using **SYSTEM-level scheduled tasks** to encrypt local drives with elevated privileges.  \n- **Why it matters operationally:** Scheduled tasks are common and can blend in; this pattern supports **rapid, scalable encryption** after privilege escalation.  \n- **Recommended immediate actions for the SOC today:** Hunt for newly created/modified scheduled tasks running as **SYSTEM** from non-standard paths; tighten detection around task creation followed by mass file modifications.\n\n---\n\n### Monitoring & detection recommendations\n- **PAN‑OS / perimeter appliances:** Monitor firewall/VPN/admin logs for **new admin accounts, auth bypass indicators, unusual mgmt-plane access**, and config commits (ATT&CK **T1078**, **T1098**).  \n- **Internet-facing Git/dev services (Gogs):** From WAF/web logs + host EDR, hunt for **unexpected child processes spawned by the Gogs service**, web requests to uncommon endpoints, and new binaries in app directories (ATT&CK **T1190**, **T1059**).  \n- **FortiClient EMS + endpoints:** Correlate EMS server logs with EDR detections for **credential access** behaviors and post-install persistence; prioritize endpoints newly checking in or receiving packages near the suspected timeframe (ATT&CK **T1003**, **T1547**).  \n- **Windows scheduled tasks → ransomware:** From Windows Security logs (4698/4699) + TaskScheduler Operational + EDR, alert on **task creation as SYSTEM** plus execution from **user-writable locations** (ATT&CK **T1053.005**).  \n- **Supply-chain on dev/CI:** From EDR + proxy/DNS + CI audit logs, look for **package manager execution (npm/nuget) followed by outbound to newly observed domains** and access to secret stores (ATT&CK **T1552**, **T1041**).  \n- **Email/BEC thread hijack via lookalike domains:** From email gateway + M365/Google Workspace audit, flag **in-thread replies** from **newly registered / lookalike domains** and mailbox rules/forwarding changes (ATT&CK **T1566**, **T1114**).  \n- **Phishing abusing trusted platforms (Adobe/LinkedIn themes; fake Adobe pages):** Monitor URL click telemetry + web proxy for **brand-themed lures** hosted on legitimate platforms and subsequent payload download/execution (ATT&CK **T1204.001**).  \n- **Chrome large patch release:** Track browser version compliance and watch for **drive-by indicators** on unpatched endpoints; prioritize high-risk user groups (traders, finance ops, devs).\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** Ensure expedited patch/mitigation workflows for **PAN‑OS**, **Chrome**, and any **Notepad++** deployment in enterprise images; validate scanning coverage for edge appliances.  \n- **DevSecOps controls:** Implement/expand **package allowlisting**, lockfiles, and artifact integrity checks for npm/NuGet; require provenance checks for new dependencies in critical repos.  \n- **CI/CD hardening:** Reduce standing secrets on runners; move to short-lived tokens and tighten egress from build agents; add detections for “developer tool abuse to exfil code/secrets.”  \n- **Email anti-BEC improvements:** Enforce DMARC alignment, strengthen external sender tagging, and add user reporting playbooks focused on **reply-chain lookalike** scenarios.  \n- **Ransomware resilience:** Re-validate backup immutability and restore testing; confirm EDR tamper protection and privileged account monitoring for task-based persistence.  \n- **Cloud/SIEM integrations:** If using Microsoft Sentinel and AWS, evaluate the updated **Security Lake integration** options to improve cross-cloud visibility (assumption: environment supports these services).",
   "highlights": [
     {
-      "title": "Anthropic launches Claude Opus 4.8, prepares Mythos-class models for all customers",
-      "link": "https://www.helpnetsecurity.com/2026/05/29/anthropic-claude-opus-4-8/",
-      "source": "Help Net Security",
-      "published": "2026-05-29T07:36:14+00:00",
+      "title": "Palo Alto Networks PAN-OS Authentication Vulnerability Bypass Exploited in the Wild",
+      "link": "https://cybersecuritynews.com/palo-alto-vulnerability-exploited/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-05-30T02:45:22+00:00",
       "smart_groups": [
-        "Curated",
         "Vulnerabilities / CVEs",
+        "Curated",
+        "Exploit / PoC",
         "General Security"
       ],
       "curated": true
     },
     {
-      "title": "I evaluated 5 LLM agents on patching real-world CVEs. Here is what I found.",
-      "link": "https://www.reddit.com/r/netsec/comments/1tquesx/i_evaluated_5_llm_agents_on_patching_realworld/",
-      "source": "/r/netsec",
-      "published": "2026-05-29T07:32:36+00:00",
+      "title": "Hitting a plateau after 2 years in Web Security: How do I transition from standard OWASP bugs to finding CVEs and novel techniques?",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1trlnq3/hitting_a_plateau_after_2_years_in_web_security/",
+      "source": "/r/cybersecurity",
+      "published": "2026-05-30T01:15:27+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Curated",
+        "Web / API Security",
+        "Cloud / SaaS",
+        "Exploit / PoC",
         "OSINT / Community"
       ],
       "curated": true
     },
     {
-      "title": "GDPR set the tone for regulatory action — and the AI fine pushback to come",
-      "link": "https://www.csoonline.com/article/4178001/gdpr-set-the-tone-for-regulatory-action-and-the-ai-fine-pushback-to-come.html",
+      "title": "Russia-aligned crime group Greyvibe extensively uses AI in attacks",
+      "link": "https://www.csoonline.com/article/4178879/russia-aligned-crime-group-greyvibe-extensively-uses-ai-in-attacks.html",
       "source": "CSO Online",
-      "published": "2026-05-29T07:00:00+00:00",
-      "smart_groups": [
-        "Data Protection / Privacy",
-        "Network / OT / ICS",
-        "Curated",
-        "Exploit / PoC",
-        "Identity / Access",
-        "Ransomware",
-        "Vulnerabilities / CVEs",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Azure DDoS Protection & Azure WAF: A Layered Defense for Modern DDoS Attacks",
-      "link": "https://techcommunity.microsoft.com/t5/azure-network-security-blog/azure-ddos-protection-azure-waf-a-layered-defense-for-modern/ba-p/4523745",
-      "source": "Azure Network Security Blog",
-      "published": "2026-05-29T06:52:47+00:00",
-      "smart_groups": [
-        "Web / API Security",
-        "Curated",
-        "Cloud / SaaS",
-        "Crypto / Web3",
-        "Exploit / PoC",
-        "Malware / Payloads",
-        "Network / OT / ICS",
-        "Ransomware",
-        "Vulnerabilities / CVEs",
-        "Vendors / Product Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Advanced Methods for Enhancing Trojan Malware Detection Capabilities",
-      "link": "https://www.news4hackers.com/advanced-methods-for-enhancing-trojan-malware-detection-capabilities/",
-      "source": "News4Hackers",
-      "published": "2026-05-29T06:03:00+00:00",
+      "published": "2026-05-30T00:22:14+00:00",
       "smart_groups": [
         "Malware / Payloads",
-        "Curated",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "The behavioral signals that sharpen Trojan malware detection",
-      "link": "https://www.helpnetsecurity.com/2026/05/29/trojan-malware-detection-research/",
-      "source": "Help Net Security",
-      "published": "2026-05-29T05:30:25+00:00",
-      "smart_groups": [
-        "Malware / Payloads",
-        "Curated",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Cybercrime on Inactive E-commerce Platforms",
-      "link": "https://www.news4hackers.com/cybercrime-on-inactive-e-commerce-platforms/",
-      "source": "News4Hackers",
-      "published": "2026-05-29T05:03:02+00:00",
-      "smart_groups": [
-        "Curated",
-        "Exploit / PoC",
-        "Vulnerabilities / CVEs",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "VS Code Remote-SSH RCE Lets Attackers Pivot From Developer Machines to Cloud Servers",
-      "link": "https://cybersecuritynews.com/vs-code-remote-ssh-rce/",
-      "source": "Cyber Security News (FeedBurner)",
-      "published": "2026-05-29T04:21:22+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Threat Actors / APT",
-        "Curated",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Delhi Police Partners with NIELIT for Enhanced Tech-Powered Law Enforcement",
-      "link": "https://www.news4hackers.com/delhi-police-partners-with-nielit-for-enhanced-tech-powered-law-enforcement/",
-      "source": "News4Hackers",
-      "published": "2026-05-29T04:01:23+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Hackers Exploit Microsoft Teams’ Collaboration Features to Impersonate IT Helpdesk Staff",
-      "link": "https://cybersecuritynews.com/microsoft-teams-collaboration-features-exploited/",
-      "source": "Cyber Security News (FeedBurner)",
-      "published": "2026-05-29T03:48:50+00:00",
-      "smart_groups": [
-        "Curated",
         "Phishing / Social Engineering",
-        "Threat Actors / APT",
+        "Ransomware",
+        "Windows / Microsoft",
+        "Cloud / SaaS",
+        "Curated",
+        "Mobile Security",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Microsoft and security researcher’s dueling posts about cybersecurity disclosures get nasty",
+      "link": "https://www.csoonline.com/article/4178869/microsoft-and-security-researchers-dueling-posts-about-cybersecurity-disclosures-get-nasty.html",
+      "source": "CSO Online",
+      "published": "2026-05-29T23:53:22+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Curated",
+        "Exploit / PoC",
+        "Network / OT / ICS",
+        "Ransomware",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "BEC Victim - Attacker replied inside a real email thread using a lookalike domain",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1trijux/bec_victim_attacker_replied_inside_a_real_email/",
+      "source": "/r/cybersecurity",
+      "published": "2026-05-29T22:59:38+00:00",
+      "smart_groups": [
+        "Email Security / BEC",
+        "Phishing / Social Engineering",
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "OSINT / Community"
+      ],
+      "curated": true
+    },
+    {
+      "title": "A practical checklist for evaluating npm packages (supply chain attacks, slopsquatting, etc.)",
+      "link": "https://www.reddit.com/r/netsec/comments/1trf5hb/a_practical_checklist_for_evaluating_npm_packages/",
+      "source": "/r/netsec",
+      "published": "2026-05-29T20:47:05+00:00",
+      "smart_groups": [
+        "Curated",
+        "Supply Chain / Software",
+        "OSINT / Community"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Aligning on Machine-Readable Signals as the Foundation for Due Diligence",
+      "link": "https://openssf.org/blog/2026/05/29/aligning-on-machine-readable-signals-as-the-foundation-for-due-diligence/",
+      "source": "Open Source Security Foundation",
+      "published": "2026-05-29T19:22:29+00:00",
+      "smart_groups": [
+        "Curated",
+        "Supply Chain / Software",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "No fix yet for critical RCE bug in open-source Git service Gogs - exploit module is out",
+      "link": "https://www.theregister.com/security/2026/05/29/no-fix-yet-for-critical-gogs-rce-bug-exploit-module-is-out/5248691",
+      "source": "The Register - Security",
+      "published": "2026-05-29T18:26:48+00:00",
+      "smart_groups": [
+        "Curated",
         "Exploit / PoC",
         "Vulnerabilities / CVEs",
         "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "What is SOCMINT? Social media intelligence in investigations",
+      "link": "https://www.magnetforensics.com/blog/what-is-socmint-social-media-intelligence-in-investigations/",
+      "source": "Magnet Forensics",
+      "published": "2026-05-29T18:21:58+00:00",
+      "smart_groups": [
+        "Curated",
+        "Network / OT / ICS",
+        "Vulnerabilities / CVEs",
+        "Detection Engineering"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Imperva Customers Protected Against CVE-2026-45247 in Mirasvit Full Page Cache Warmer for Magento",
+      "link": "https://www.imperva.com/blog/imperva-customers-protected-against-cve-2026-45247-in-mirasvit-full-page-cache-warmer-for-magento/",
+      "source": "Imperva Blog",
+      "published": "2026-05-29T18:16:18+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Vendors / Product Security"
       ],
       "curated": true
     }
