@@ -1,140 +1,149 @@
 {
-  "generated_at": "2026-05-31T09:24:01.574726+00:00",
-  "analysis_date": "2026-05-31",
+  "generated_at": "2026-06-01T12:09:30.865986+00:00",
+  "analysis_date": "2026-06-01",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-05-31T08:54:40.037846+00:00",
+  "source_generated_at": "2026-06-01T10:29:25.185588+00:00",
   "source_days_back": 30,
-  "source_total_items": 8004,
-  "total_items_in_window_all": 80,
-  "total_items_in_window_curated": 16,
-  "morning_call_markdown": "### Executive Summary\n- Active exploitation reported for a Palo Alto GlobalProtect/PAN-OS authentication bypass: treat internet-facing VPN as a top compromise vector today.\n- Multiple high-risk vuln signals: critical Flowise RCE with public exploit code + a new Linux local root (CIFSwitch) impacting multiple distros; validate exposure and tighten monitoring.\n- Expect increased “AI/dev tooling” attack surface discussions (Flowise / pentest-swarm tooling / “vibe coding”): focus on securing internal app platforms and developer-adjacent services.\n\n### High-priority items (immediate attention)\n\n**1) Palo Alto GlobalProtect / PAN-OS auth bypass now exploited**\n- What happened: Reporting indicates a GlobalProtect VPN authentication bypass flaw is being exploited in the wild (and PAN-OS is referenced as high-signal/KEV-style chatter in community intel).\n- Why it matters operationally: Internet-facing VPN compromise is a common initial access path to domain-wide impact and ransomware in financial environments (T1133).\n- Recommended immediate actions for the SOC today: Confirm patch/hotfix status + exposure of GlobalProtect portals/gateways; hunt for anomalous VPN auth patterns (logins without expected MFA/challenges, unusual geo/IP, odd user-agent) and new admin/config changes.\n\n**2) Critical Flowise RCE + exploit code published (AI workflow/LLM tooling)**\n- What happened: A critical RCE affecting Flowise is reported, with public exploit code available.\n- Why it matters operationally: If Flowise is exposed (often deployed quickly for prototypes), it can enable server takeover and pivoting into internal networks/CI secrets (T1190, T1059).\n- Recommended immediate actions for the SOC today: Identify any Flowise instances (asset inventory + web scans + container platforms) and restrict/disable external access; add short-term WAF/IDS coverage and monitor for webshell/process anomalies on suspected hosts.\n\n**3) “CIFSwitch” Linux flaw: local privilege escalation to root across distros**\n- What happened: A new Linux vulnerability (“CIFSwitch”) is reported to enable root on multiple distributions.\n- Why it matters operationally: Post-compromise privilege escalation is a key step after initial access (T1068), especially on jump hosts, app servers, and container hosts.\n- Recommended immediate actions for the SOC today: Prioritize patch assessment on Linux fleets (especially bastions, VPN concentrator adjunct hosts, security tooling servers); hunt for suspicious privilege escalation indicators (unexpected setuid changes, odd kernel/module activity, sudden root shells) on high-value Linux systems.\n\n**4) Offensive tooling acceleration: “pentest swarm AI” + community “vibe coding security”**\n- What happened: Coverage highlights AI-assisted tooling with live access to nmap/sqlmap/Burp/Metasploit and community discussion on insecure AI-driven coding practices.\n- Why it matters operationally: Increases likelihood of faster scanning/exploitation and more vulnerable internal apps/services deployed without controls; also increases risk of credential/secret leakage in dev workflows (T1588, T1595).\n- Recommended immediate actions for the SOC today: Watch for spikes in recon/scanning against internet apps/VPN and internal east-west scanning from dev subnets; remind engineering to avoid exposing dev tools and to rotate any secrets potentially embedded in “AI-generated” code or configs.\n\n### Monitoring & detection recommendations\n- **VPN edge (GlobalProtect/PAN-OS):** Monitor VPN/portal logs + firewall admin logs for logins without MFA prompts, new admin accounts, config exports, and unusual source geos; map to **T1133 (External Remote Services)** and **T1098 (Account Manipulation)**.\n- **Web exploitation (Flowise RCE):** From WAF/reverse proxy + web server logs, hunt for exploit-like POST bursts, unusual endpoints, command injection patterns, and new processes spawned by web service accounts; **T1190 (Exploit Public-Facing App)**.\n- **Linux privilege escalation (CIFSwitch):** From EDR on Linux + auditd/syslog, alert on new SUID binaries, unexpected `sudo`/`su` usage, suspicious child processes from service accounts, and sudden root sessions; **T1068 (Privilege Escalation)**.\n- **Lateral movement after edge compromise:** From EDR + Windows security logs, look for new remote services, PsExec/WMI/WinRM usage, and credential dumping precursors; **T1021 (Remote Services)**, **T1003 (OS Credential Dumping)**.\n- **Recon/scanning (AI-assisted tooling theme):** From NetFlow/NDR + IDS, detect spikes in port scans (e.g., high-rate SYNs), SQLi probing, and broad subnet sweeps—especially originating from dev/test segments; **T1595 (Active Scanning)**.\n- **Cloud/SaaS & IdP:** From IdP logs (Okta/AAD/etc.) monitor anomalous token grants, MFA fatigue patterns, and impossible travel—especially after any VPN anomalies; **T1078 (Valid Accounts)**.\n- **Change monitoring:** From CMDB/config mgmt + firewall/VPN change logs, alert on unplanned policy changes, new NATs, new external exposures (Flowise/dev tools), and emergency rule additions.\n\n### Medium-term follow-ups\n- Confirm whether the GlobalProtect/PAN-OS issue is in your affected versions and align with vendor guidance (patch windows, mitigations, logging levels); document a “VPN edge rapid response” playbook refresh.\n- Formalize discovery and governance for “AI/dev workflow tools” (Flowise-like services): require internal-only exposure, SSO/MFA where possible, secrets scanning, and container image provenance checks.\n- Linux hardening backlog: enforce least privilege, ensure EDR coverage on all Linux tiers (including bastions), and validate auditd rules for privilege escalation detection.\n- Review alert-fatigue/automation opportunities (community Wazuh + automation theme): tune edge-auth and web exploit detections into high-confidence triage queues with clear runbooks.\n- Conduct a quick tabletop on “edge compromise → domain escalation → ransomware” with IR: validate containment steps (VPN disablement, IdP token revocation, segmentation blocks, golden image rebuild criteria).",
+  "source_total_items": 7844,
+  "total_items_in_window_all": 123,
+  "total_items_in_window_curated": 35,
+  "morning_call_markdown": "### Executive Summary\n- Active exploitation reported against **Palo Alto PAN-OS / GlobalProtect** (auth bypass via forged cookies) and now tracked in **CISA KEV** → treat any exposed VPN edge as high-risk.\n- Reports of **Windows Netlogon “0-click” RCE** under active exploitation (details incomplete) → prioritize validation/patch posture and tighten DC/network monitoring.\n- Web and third-party component risks: **WP Maps Pro** (admin creation) actively exploited; **libvips** critical vuln noted by vendors (e.g., ownCloud ecosystem) → inventory and patch where present.\n\n### High-priority items (immediate attention)\n\n**1) Palo Alto PAN-OS / GlobalProtect auth bypass (CVE-2026-0257) – active exploitation**\n- What happened: Multiple sources report attackers abusing **forged GlobalProtect VPN cookies** to bypass authentication; PAN-OS flaw added to **CISA KEV** and exploited “for weeks.”\n- Why it matters operationally: Direct compromise path to internal networks (edge device → creds/session hijack → lateral movement) with high likelihood of ongoing scanning/weaponization against financial orgs.\n- Recommended immediate actions for the SOC today: **Identify all PAN-OS/GlobalProtect internet-facing instances and confirm patched/hotfixed**; **hunt for anomalous VPN sessions** (new geo/ASN, impossible travel, logins without MFA prompts) and **consider forced re-auth / session invalidation** where supported.\n\n**2) Windows Netlogon “0-click” RCE – active exploitation claims (treat as potentially critical)**\n- What happened: Reports claim **active in-the-wild exploitation** of a **Netlogon 0-click RCE** impacting Windows domain environments (public details/quality uncertain from sources provided).\n- Why it matters operationally: If real/weaponized, this is a fast path to **Domain Controller compromise**, ransomware staging, and widespread outage.\n- Recommended immediate actions for the SOC today: **Validate exposure and patch level** for DCs and member servers (Microsoft advisories/KBs as applicable); **increase monitoring on DCs** for suspicious Netlogon/LSASS activity and isolate any host showing rapid authentication anomalies.\n\n**3) Internet-facing edge exploitation theme: Fortinet/Trend Micro flaw exploitation used to deploy malware**\n- What happened: Reporting indicates attackers are using **exploited Fortinet and Trend Micro vulnerabilities** as initial access to deploy malware.\n- Why it matters operationally: Reinforces that **edge/network security appliances remain a primary initial access vector**; financial sector often targeted for rapid monetization.\n- Recommended immediate actions for the SOC today: **Run an “edge device patch/exposure sweep”** (Fortinet/Trend Micro/Palo Alto) and confirm management interfaces aren’t exposed; **review recent admin logins/config changes** on appliances and open IR if new local users, policy changes, or unexpected tunnels are observed.\n\n**4) Web app compromise: WP Maps Pro plugin exploited to create admin accounts**\n- What happened: Active exploitation reported for **WP Maps Pro** allowing attackers to **create administrator accounts** on affected WordPress sites.\n- Why it matters operationally: Any compromised public web property can become a foothold for phishing, brand abuse, skimming, or internal pivoting via reused credentials/secrets.\n- Recommended immediate actions for the SOC today: **Identify WordPress instances and check for WP Maps Pro presence/version**; **hunt for newly created WP admin users** and unexpected plugin/theme installs, then rotate any credentials/API keys stored on impacted hosts.\n\n**5) Third-party library risk: critical libvips vulnerability referenced by ownCloud**\n- What happened: Vendor communication highlights a **critical vulnerability in libvips** (image processing library) relevant to ownCloud users/operators; scope/version specifics not fully captured in the provided snippet.\n- Why it matters operationally: libvips is often embedded in web stacks; image parsing bugs frequently lead to **RCE/DoS** and are attractive for opportunistic exploitation.\n- Recommended immediate actions for the SOC today: **Inventory servers/containers using ownCloud and/or libvips** (SBOM, package lists, container scans); **apply vendor guidance/patches** and add temporary WAF rules to restrict risky upload endpoints if patching is delayed.\n\n### Monitoring & detection recommendations\n- **VPN/edge (Palo Alto GlobalProtect):** Monitor VPN auth logs for **sessions without normal auth flow**, new device fingerprints, unusual source geos/ASNs; correlate with firewall logs for immediate post-VPN internal scanning (ATT&CK: **T1133**).\n- **Domain Controllers (Netlogon):** On DCs, watch Windows Security logs for spikes in authentication failures/successes, abnormal computer account activity, and service creation; EDR alerts around LSASS access and credential dumping patterns (ATT&CK: **T1068**, **T1003**).\n- **Network appliance integrity:** Collect/alert on **configuration changes**, new admin users, firmware/OS changes, and unexpected outbound connections from security appliances (firewall/VPN/NAC logs) (ATT&CK: **T1562.001**).\n- **Web server/WordPress:** From web logs + WordPress audit logs, hunt for **/wp-admin user creation**, plugin editor usage, new admin accounts, and POSTs to plugin endpoints tied to WP Maps Pro; EDR for webshell behaviors (ATT&CK: **T1505.003**).\n- **File upload / image processing paths (libvips theme):** Web/WAF logs for spikes in image upload attempts, abnormal content-types, or repeated 4xx/5xx on image endpoints; app crash loops/CPU spikes indicating DoS attempts.\n- **Credential/session abuse:** IdP logs (Azure AD/Entra, Okta, etc.) for impossible travel, token anomalies, and MFA fatigue patterns—especially for VPN and privileged users (ATT&CK: **T1078**).\n- **Malware delivery post-edge exploit:** EDR telemetry for new scheduled tasks/services, suspicious PowerShell, and rapid discovery commands shortly after VPN/appliance access (ATT&CK: **T1059**, **T1053**, **T1082**).\n\n### Medium-term follow-ups\n- **Patch governance:** Ensure PAN-OS/GlobalProtect, Fortinet, Trend Micro, and Windows DC patch SLAs are aligned to “edge/DC within 24–72h” with exception tracking; verify CISA KEV-driven prioritization.\n- **Session hygiene:** Review feasibility of **shorter VPN session lifetimes**, stricter device posture checks, and revocation mechanisms; confirm logging verbosity on VPN appliances is sufficient for forensics.\n- **Web stack hardening:** For WordPress and similar CMS, enforce plugin allowlists, restrict admin access (IP allowlisting/VPN), enable strong auditing, and remove unused plugins.\n- **Software composition visibility:** Improve SBOM/package inventory for shared libraries like **libvips** across Linux hosts/containers; integrate into vuln management for faster “where used” queries.\n- **SOC content updates:** Evaluate Microsoft Sentinel May 2026 updates for any new connectors/analytics that improve VPN/AD detection coverage; plan rule tuning to reduce noise.\n- **IR readiness:** Confirm playbooks for “VPN edge compromise” and “suspected DC exploitation” include rapid containment steps (session revocation, appliance isolation, DC isolation, credential resets) and tabletop within the next two weeks.",
   "highlights": [
     {
-      "title": "Vibe Coding Security",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1tspwql/vibe_coding_security/",
-      "source": "/r/cybersecurity",
-      "published": "2026-05-31T08:50:42+00:00",
+      "title": "A Critical Vulnerability in libvips: What ownCloud Users and Operators Need to Know",
+      "link": "https://owncloud.com/blogs/a-critical-vulnerability-in-libvips-what-owncloud-users-and-operators-need-to-know/",
+      "source": "https://owncloud.com/feed/",
+      "published": "2026-06-01T10:10:05+00:00",
       "smart_groups": [
         "Curated",
-        "Exploit / PoC",
-        "Identity / Access",
-        "OSINT / Community"
-      ],
-      "curated": true
-    },
-    {
-      "title": "What actually moved the needle on our alert fatigue (Wazuh + some automation, lessons after ~6 months)",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1tspjoq/what_actually_moved_the_needle_on_our_alert/",
-      "source": "/r/cybersecurity",
-      "published": "2026-05-31T08:29:41+00:00",
-      "smart_groups": [
-        "Curated",
-        "Identity / Access",
         "Vulnerabilities / CVEs",
-        "OSINT / Community"
+        "Vendors / Product Security"
       ],
       "curated": true
     },
     {
-      "title": "Hyderabad Police Crack Down on India’s Cybercrime Hub – Operation Octopus",
-      "link": "https://www.news4hackers.com/hyderabad-police-crack-down-on-indias-cybercrime-hub-operation-octopus/",
+      "title": "GlobalProtect VPN Authentication Bypass Exploited by Hackers CVE 2026-0257",
+      "link": "https://www.news4hackers.com/globalprotect-vpn-authentication-bypass-exploited-by-hackers-cve-2026-0257/",
       "source": "News4Hackers",
-      "published": "2026-05-31T08:03:54+00:00",
+      "published": "2026-06-01T10:03:25+00:00",
       "smart_groups": [
         "Curated",
         "Vulnerabilities / CVEs",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Want to Learn Cybersecurity in 2026 – Need Guidance, Roadmap, Tools, Resources & AI Advice",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1tsgude/want_to_learn_cybersecurity_in_2026_need_guidance/",
-      "source": "/r/cybersecurity",
-      "published": "2026-05-31T00:59:20+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "OSINT / Community"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Question for teams running parallel agents: Would you actually pay for a deterministic control plane, or are we all just building custom wrappers forever?",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1ts8y6c/question_for_teams_running_parallel_agents_would/",
-      "source": "/r/cybersecurity",
-      "published": "2026-05-30T19:24:05+00:00",
-      "smart_groups": [
-        "Supply Chain / Software",
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "Web / API Security",
-        "OSINT / Community"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Palo Alto GlobalProtect VPN auth bypass flaw now exploited in attacks",
-      "link": "https://www.bleepingcomputer.com/news/security/palo-alto-globalprotect-vpn-auth-bypass-flaw-now-exploited-in-attacks/",
-      "source": "BleepingComputer",
-      "published": "2026-05-30T18:02:51+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Curated",
         "Exploit / PoC",
         "General Security"
       ],
       "curated": true
     },
     {
-      "title": "Two People Arrested in Kanpur for ₹14 Crore Cyber Fraud Scam",
-      "link": "https://www.news4hackers.com/two-people-arrested-in-kanpur-for-%e2%82%b914-crore-cyber-fraud-scam/",
-      "source": "News4Hackers",
-      "published": "2026-05-30T16:03:15+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Critical Flaw Exposes Flowise Systems to Remote Code Execution Attacks",
-      "link": "https://www.news4hackers.com/critical-flaw-exposes-flowise-systems-to-remote-code-execution-attacks/",
-      "source": "News4Hackers",
-      "published": "2026-05-30T16:01:57+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Exploit Code Published for Critical Flowise RCE Vulnerability",
-      "link": "https://www.securityweek.com/exploit-code-published-for-critical-flowise-rce-vulnerability/",
+      "title": "Recent Palo Alto Networks Vulnerability Exploited for Weeks",
+      "link": "https://www.securityweek.com/recent-palo-alto-networks-vulnerability-exploited-for-weeks/",
       "source": "SecurityWeek",
-      "published": "2026-05-30T15:55:59+00:00",
+      "published": "2026-06-01T10:00:00+00:00",
       "smart_groups": [
-        "Exploit / PoC",
-        "Curated",
         "Vulnerabilities / CVEs",
+        "Curated",
+        "Exploit / PoC",
         "General Security"
       ],
       "curated": true
     },
     {
-      "title": "New Linux Flaw Exploits Multiple Distributions with Root Access",
-      "link": "https://www.news4hackers.com/new-linux-flaw-exploits-multiple-distributions-with-root-access/",
-      "source": "News4Hackers",
-      "published": "2026-05-30T15:01:49+00:00",
+      "title": "What’s new in Microsoft Sentinel: May 2026",
+      "link": "https://techcommunity.microsoft.com/t5/microsoft-sentinel-blog/what-s-new-in-microsoft-sentinel-may-2026/ba-p/4523419",
+      "source": "Microsoft Sentinel Blog",
+      "published": "2026-06-01T09:57:18+00:00",
       "smart_groups": [
+        "Cloud / SaaS",
+        "Identity / Access",
+        "Network / OT / ICS",
+        "Curated",
+        "Data Protection / Privacy",
+        "Detection Engineering",
+        "Exploit / PoC",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "Vendors / Product Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "CIFSwitch, a Linux Root Bug Hidden in Plain Sight for 19 Years",
+      "link": "https://securityaffairs.com/192959/security/a-spacex-security-engineer-used-ai-to-find-a-19-year-old-linux-bug-that-gives-attackers-root.html",
+      "source": "Security Affairs",
+      "published": "2026-06-01T09:55:15+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
         "Curated",
         "Linux / Unix",
-        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Pluralistic: Molly Crabapple's 'Here Where We Live Is Our Country' (01 Jun 2026)",
+      "link": "https://pluralistic.net/2026/06/01/doikayt/",
+      "source": "https://pluralistic.net/feed/",
+      "published": "2026-06-01T09:25:48+00:00",
+      "smart_groups": [
+        "Ransomware",
+        "Cloud / SaaS",
+        "Crypto / Web3",
+        "Curated",
+        "Identity / Access",
+        "Network / OT / ICS",
         "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "NVIDIA Open Sources Physical AI Agent Tools for Development",
+      "link": "https://www.news4hackers.com/nvidia-open-sources-physical-ai-agent-tools-for-development/",
+      "source": "News4Hackers",
+      "published": "2026-06-01T09:02:09+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Helping defense's use of AI catch up with offense, cost of the vulnpocalypse, news - Evan Powell - ESW #461",
+      "link": "https://podcast.securityweekly.com/helping-defenses-use-of-ai-catch-up-with-offense-cost-of-the-vulnpocalypse-news-evan-powell-esw-461",
+      "source": "Security Weekly Podcast Network (Audio)",
+      "published": "2026-06-01T09:00:00+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Curated",
+        "Community / Briefing"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Critical WP Maps Pro Flaw Actively Exploited to Create Admin Accounts",
+      "link": "https://thehackernews.com/2026/06/critical-wp-maps-pro-flaw-actively.html",
+      "source": "The Hacker News",
+      "published": "2026-06-01T08:45:29+00:00",
+      "smart_groups": [
+        "Threat Actors / APT",
+        "Curated",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "U.S. CISA adds Palo Alto Networks PAN-OS flaw to its Known Exploited Vulnerabilities catalog",
+      "link": "https://securityaffairs.com/192951/security/u-s-cisa-adds-palo-alto-networks-pan-os-flaw-to-its-known-exploited-vulnerabilities-catalog.html",
+      "source": "Security Affairs",
+      "published": "2026-06-01T08:36:29+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Curated",
+        "Exploit / PoC",
         "General Security"
       ],
       "curated": true
