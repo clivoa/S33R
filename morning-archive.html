@@ -1,0 +1,577 @@
+---
+layout: null
+permalink: /briefs/
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>S33R – Morning Call Archive</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="{{ '/styles.css' | relative_url }}" />
+  <script src="{{ '/ui.js' | relative_url }}"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+  <style>
+    .briefs-layout {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 4px 0 32px;
+    }
+
+    .briefs-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.75rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .briefs-title {
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .briefs-meta {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    /* Search bar */
+    .briefs-search-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 1rem;
+    }
+
+    .briefs-search-wrap {
+      position: relative;
+      flex: 1;
+    }
+
+    .briefs-search-icon {
+      position: absolute;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted);
+      font-size: 16px;
+      pointer-events: none;
+    }
+
+    .briefs-search-input {
+      width: 100%;
+      padding: 9px 12px 9px 34px;
+      border-radius: 10px;
+      border: 1px solid var(--line);
+      background: var(--surface-2);
+      color: var(--text);
+      font-size: 13px;
+      font-family: inherit;
+      box-sizing: border-box;
+    }
+
+    .briefs-search-input:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+
+    .briefs-clear-btn {
+      padding: 8px 14px;
+      border-radius: 10px;
+      border: 1px solid var(--line);
+      background: var(--surface-2);
+      color: var(--muted);
+      font-size: 13px;
+      cursor: pointer;
+      transition: background 0.12s, color 0.12s;
+    }
+
+    .briefs-clear-btn:hover {
+      background: var(--surface);
+      color: var(--text);
+    }
+
+    /* Month filter */
+    .month-filter {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 1rem;
+    }
+
+    .mf-btn {
+      padding: 3px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: var(--surface);
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.12s, color 0.12s, border-color 0.12s;
+    }
+
+    .mf-btn:hover { background: var(--surface-2); color: var(--text); }
+
+    .mf-btn.active {
+      background: var(--accent-soft);
+      border-color: color-mix(in oklab, var(--primary) 34%, var(--line));
+      color: var(--primary);
+    }
+
+    /* Results info */
+    .briefs-results-info {
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 0.75rem;
+    }
+
+    /* Brief card */
+    .brief-card {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: var(--surface);
+      margin-bottom: 10px;
+      overflow: hidden;
+      transition: border-color 0.15s;
+    }
+
+    .brief-card:hover { border-color: var(--line-strong); }
+
+    .brief-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 16px;
+      cursor: pointer;
+    }
+
+    .brief-date-block {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+    }
+
+    .brief-date {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .brief-day-label {
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .brief-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      align-items: center;
+    }
+
+    .brief-chip {
+      font-size: 11px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 2px 8px;
+      color: var(--text-2);
+      background: var(--surface-2);
+      white-space: nowrap;
+    }
+
+    .brief-chip.cve { border-color: color-mix(in oklab, var(--warning) 50%, var(--line)); color: var(--warning); }
+
+    .brief-expand-icon {
+      font-size: 16px;
+      color: var(--muted);
+      transition: transform 0.2s;
+      flex-shrink: 0;
+    }
+
+    .brief-card.expanded .brief-expand-icon { transform: rotate(180deg); }
+
+    .brief-summary {
+      padding: 0 16px 12px;
+      font-size: 13px;
+      color: var(--text-2);
+      line-height: 1.5;
+    }
+
+    .brief-summary mark {
+      background: color-mix(in oklab, var(--primary) 20%, transparent);
+      color: var(--text);
+      border-radius: 3px;
+      padding: 0 2px;
+    }
+
+    .brief-body {
+      display: none;
+      border-top: 1px solid var(--line);
+      padding: 16px;
+    }
+
+    .brief-card.expanded .brief-body { display: block; }
+
+    /* Rendered markdown styles */
+    .brief-markdown h3, .brief-markdown h2 {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text);
+      margin: 1em 0 0.4em;
+      border-bottom: 1px dashed var(--line);
+      padding-bottom: 4px;
+    }
+
+    .brief-markdown h3:first-child { margin-top: 0; }
+
+    .brief-markdown ul, .brief-markdown ol {
+      padding-left: 1.2em;
+      margin: 0.4em 0;
+    }
+
+    .brief-markdown li {
+      font-size: 13px;
+      color: var(--text-2);
+      line-height: 1.55;
+      margin-bottom: 4px;
+    }
+
+    .brief-markdown p {
+      font-size: 13px;
+      color: var(--text-2);
+      line-height: 1.55;
+      margin: 0.4em 0;
+    }
+
+    .brief-markdown strong { color: var(--text); }
+
+    .brief-markdown code {
+      font-size: 11px;
+      background: var(--surface-2);
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      padding: 1px 5px;
+      color: var(--primary);
+    }
+
+    .brief-markdown a {
+      color: var(--primary);
+      text-decoration: none;
+    }
+
+    .brief-markdown a:hover { text-decoration: underline; }
+
+    .brief-copy-btn {
+      margin-top: 12px;
+      padding: 6px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: var(--surface-2);
+      color: var(--muted);
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .brief-copy-btn:hover { color: var(--text); }
+
+    .no-results {
+      text-align: center;
+      padding: 40px 16px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .loading-briefs {
+      text-align: center;
+      padding: 40px 16px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    @media (max-width: 600px) {
+      .brief-chips { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <nav class="minimal-navbar" aria-label="Primary navigation">
+    <a href="{{ '/' | relative_url }}" class="minimal-nav-link">News</a>
+    <a href="{{ '/morning/' | relative_url }}" class="minimal-nav-link">Morning</a>
+    <a href="{{ '/trend/' | relative_url }}" class="minimal-nav-link">Trends</a>
+    <a href="{{ '/history/' | relative_url }}" class="minimal-nav-link">History</a>
+    <a href="{{ '/briefs/' | relative_url }}" class="minimal-nav-link" aria-current="page">Briefs</a>
+    <a href="{{ '/archive/' | relative_url }}" class="minimal-nav-link">Archive</a>
+    <a href="{{ '/archive-overview/' | relative_url }}" class="minimal-nav-link">Overview</a>
+  </nav>
+
+  <div class="page">
+    <header class="site-header">
+      <div class="site-title">S33R Security News Feed</div>
+    </header>
+
+    <main class="briefs-layout">
+      <section class="briefs-header">
+        <div>
+          <div class="briefs-title">Morning Call Archive</div>
+          <p class="briefs-meta" id="briefs-meta">Loading…</p>
+        </div>
+      </section>
+
+      <div class="briefs-search-row">
+        <div class="briefs-search-wrap">
+          <span class="briefs-search-icon" aria-hidden="true">⌕</span>
+          <input
+            id="briefs-search"
+            class="briefs-search-input"
+            type="text"
+            placeholder="Search across all briefings…"
+            autocomplete="off"
+          />
+        </div>
+        <button id="briefs-clear" class="briefs-clear-btn" type="button">Clear</button>
+      </div>
+
+      <div class="month-filter" id="monthFilter"></div>
+
+      <p class="briefs-results-info" id="briefs-results-info"></p>
+
+      <div id="briefs-list">
+        <div class="loading-briefs">Loading briefings…</div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <p>
+        S33R Security News Feed<br>
+        <span class="muted">Daily AI-generated security briefings</span>
+      </p>
+    </footer>
+  </div>
+
+  <script>
+    const indexUrl = "{{ '/data/morning_call_index.json' | relative_url }}";
+    const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    const MONTHS_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+    let allEntries = [];
+    let activeMonth = "all";
+    let searchQuery = "";
+    let debounceTimer = null;
+
+    function formatDate(dateStr) {
+      const [y, m, d] = dateStr.split("-").map(Number);
+      const dt = new Date(Date.UTC(y, m - 1, d));
+      const day = DAYS[dt.getUTCDay()];
+      return `${day}, ${MONTHS_SHORT[m - 1]} ${d}, ${y}`;
+    }
+
+    function highlight(text, query) {
+      if (!query) return escHtml(text);
+      const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const re = new RegExp(`(${escaped})`, "gi");
+      return escHtml(text).replace(re, "<mark>$1</mark>");
+    }
+
+    function escHtml(s) {
+      return (s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+
+    function getMonthKey(dateStr) { return dateStr.slice(0, 7); }
+
+    function buildMonthFilter(entries) {
+      const months = [...new Set(entries.map((e) => getMonthKey(e.date)))].sort().reverse();
+      const container = document.getElementById("monthFilter");
+      container.innerHTML = "";
+
+      const allBtn = document.createElement("button");
+      allBtn.className = "mf-btn active";
+      allBtn.textContent = "All";
+      allBtn.dataset.month = "all";
+      container.appendChild(allBtn);
+
+      months.forEach((m) => {
+        const [y, mo] = m.split("-").map(Number);
+        const label = `${MONTHS_SHORT[mo - 1]} ${y}`;
+        const btn = document.createElement("button");
+        btn.className = "mf-btn";
+        btn.textContent = label;
+        btn.dataset.month = m;
+        container.appendChild(btn);
+      });
+
+      container.addEventListener("click", (e) => {
+        const btn = e.target.closest(".mf-btn");
+        if (!btn) return;
+        container.querySelectorAll(".mf-btn").forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        activeMonth = btn.dataset.month;
+        renderList();
+      });
+    }
+
+    function filterEntries() {
+      let result = allEntries;
+      if (activeMonth !== "all") {
+        result = result.filter((e) => getMonthKey(e.date) === activeMonth);
+      }
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        result = result.filter((e) => {
+          const hay = [e.exec_summary || "", e.markdown || "", e.date].join(" ").toLowerCase();
+          return hay.includes(q);
+        });
+      }
+      return result;
+    }
+
+    function renderList() {
+      const entries = filterEntries();
+      const q = searchQuery;
+      const listEl = document.getElementById("briefs-list");
+      const info = document.getElementById("briefs-results-info");
+
+      info.textContent = `${entries.length} briefing${entries.length !== 1 ? "s" : ""}`;
+      listEl.innerHTML = "";
+
+      if (!entries.length) {
+        listEl.innerHTML = '<div class="no-results">No briefings match your search.</div>';
+        return;
+      }
+
+      entries.forEach((entry) => {
+        const card = document.createElement("div");
+        card.className = "brief-card";
+
+        // Header (clickable)
+        const header = document.createElement("div");
+        header.className = "brief-card-header";
+
+        const dateBlock = document.createElement("div");
+        dateBlock.className = "brief-date-block";
+        const dateEl = document.createElement("span");
+        dateEl.className = "brief-date";
+        dateEl.textContent = formatDate(entry.date);
+        dateBlock.appendChild(dateEl);
+
+        const chips = document.createElement("div");
+        chips.className = "brief-chips";
+
+        if (entry.word_count) {
+          const wc = document.createElement("span");
+          wc.className = "brief-chip";
+          wc.textContent = `${entry.word_count} words`;
+          chips.appendChild(wc);
+        }
+
+        (entry.cves || []).slice(0, 3).forEach((cve) => {
+          const c = document.createElement("span");
+          c.className = "brief-chip cve";
+          c.textContent = cve;
+          chips.appendChild(c);
+        });
+
+        if ((entry.cves || []).length > 3) {
+          const more = document.createElement("span");
+          more.className = "brief-chip";
+          more.textContent = `+${entry.cves.length - 3} CVEs`;
+          chips.appendChild(more);
+        }
+
+        const icon = document.createElement("span");
+        icon.className = "brief-expand-icon";
+        icon.textContent = "▾";
+
+        header.appendChild(dateBlock);
+        header.appendChild(chips);
+        header.appendChild(icon);
+        card.appendChild(header);
+
+        // Summary (always visible)
+        const summary = document.createElement("div");
+        summary.className = "brief-summary";
+        summary.innerHTML = highlight(entry.exec_summary || "No executive summary.", q);
+        card.appendChild(summary);
+
+        // Body (markdown, hidden by default)
+        const body = document.createElement("div");
+        body.className = "brief-body";
+        let rendered = false;
+
+        header.addEventListener("click", () => {
+          const wasExpanded = card.classList.contains("expanded");
+          card.classList.toggle("expanded");
+          if (!wasExpanded && !rendered) {
+            const mdDiv = document.createElement("div");
+            mdDiv.className = "brief-markdown";
+            mdDiv.innerHTML = marked.parse(entry.markdown || "");
+            const copyBtn = document.createElement("button");
+            copyBtn.className = "brief-copy-btn";
+            copyBtn.type = "button";
+            copyBtn.textContent = "Copy markdown";
+            copyBtn.addEventListener("click", (ev) => {
+              ev.stopPropagation();
+              window.S33R_UI?.copyText(entry.markdown || "", "Markdown copied");
+            });
+            body.appendChild(mdDiv);
+            body.appendChild(copyBtn);
+            rendered = true;
+          }
+        });
+
+        card.appendChild(body);
+        listEl.appendChild(card);
+      });
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      const searchInput = document.getElementById("briefs-search");
+      const clearBtn = document.getElementById("briefs-clear");
+
+      searchInput.addEventListener("input", () => {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+          searchQuery = searchInput.value.trim();
+          renderList();
+        }, 200);
+      });
+
+      clearBtn.addEventListener("click", () => {
+        searchInput.value = "";
+        searchQuery = "";
+        renderList();
+        searchInput.focus();
+      });
+
+      // Keyboard shortcut: / to focus
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "/" && !["INPUT", "TEXTAREA"].includes(document.activeElement?.tagName)) {
+          e.preventDefault();
+          searchInput.focus();
+        }
+      });
+
+      fetch(indexUrl, { cache: "no-store" })
+        .then((r) => r.json())
+        .then((data) => {
+          allEntries = data.entries || [];
+          const dr = data.date_range || {};
+          document.getElementById("briefs-meta").textContent =
+            `${data.total} briefings · ${dr.oldest || "?"} – ${dr.newest || "?"}`;
+          buildMonthFilter(allEntries);
+          renderList();
+        })
+        .catch((err) => {
+          console.error("Failed to load morning_call_index.json", err);
+          document.getElementById("briefs-list").innerHTML =
+            '<div class="no-results">Failed to load briefings.</div>';
+        });
+    });
+  </script>
+</body>
+</html>
