@@ -234,6 +234,92 @@ permalink: /trend/
       margin: 0 0 8px;
     }
 
+    .curated-toggle {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--muted);
+      cursor: pointer;
+      padding: 0 4px;
+      white-space: nowrap;
+    }
+
+    .curated-toggle input {
+      accent-color: var(--primary);
+      cursor: pointer;
+    }
+
+    .cooc-table {
+      display: grid;
+      gap: 5px;
+      margin-top: 6px;
+    }
+
+    .cooc-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr auto;
+      gap: 8px;
+      align-items: center;
+      font-size: 12px;
+      color: var(--text-2);
+      border-bottom: 1px dashed var(--line);
+      padding-bottom: 5px;
+    }
+
+    .cooc-row:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+
+    .cooc-pair {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .cooc-tag {
+      font-size: 11px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 2px 7px;
+      color: var(--text-2);
+      background: var(--surface);
+      cursor: pointer;
+      transition: border-color 0.12s, color 0.12s;
+    }
+
+    .cooc-tag:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+
+    .cooc-count {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--primary);
+      white-space: nowrap;
+      text-align: right;
+    }
+
+    .cooc-arrow {
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .chart-clickable {
+      cursor: pointer;
+    }
+
+    .velocity-new {
+      font-size: 10px;
+      color: var(--success);
+      font-weight: 600;
+      margin-left: 4px;
+    }
+
     @media (max-width: 900px) {
       .trend-grid {
         grid-template-columns: minmax(0, 1fr);
@@ -271,11 +357,17 @@ permalink: /trend/
             Top categories, CVEs, vendors, keywords and attack trends derived from the monthly archive and recent news.
           </p>
         </div>
-        <div class="window-selector" id="windowSelector">
-          <button data-win="24h">Last 24h</button>
-          <button data-win="7d" class="active">Last 7d</button>
-          <button data-win="30d">Last 30d</button>
-          <button data-win="90d">Last 90d</button>
+        <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
+          <div class="window-selector" id="windowSelector">
+            <button data-win="24h">Last 24h</button>
+            <button data-win="7d" class="active">Last 7d</button>
+            <button data-win="30d">Last 30d</button>
+            <button data-win="90d">Last 90d</button>
+          </div>
+          <label class="curated-toggle" title="Show only curated/high-signal items in Priority Now">
+            <input type="checkbox" id="curated-only-toggle" />
+            <span>Curated only</span>
+          </label>
         </div>
       </section>
 
@@ -367,6 +459,32 @@ permalink: /trend/
         </article>
 
         <article class="card">
+          <h2>Keyword velocity (fastest-growing)</h2>
+          <p class="trend-note">
+            Keywords with the highest growth rate compared to the previous window of the same size. "new" means the term didn't appear in the previous period.
+          </p>
+          <div class="chart-container small-chart">
+            <canvas id="keywordVelocityChart"></canvas>
+          </div>
+        </article>
+
+        <article class="card">
+          <h2>Co-occurrences: CVE × Vendor</h2>
+          <p class="trend-note">
+            CVE and vendor pairs that appear together most often in the same news item. Click any tag to search the feed.
+          </p>
+          <div id="cooc-cve-vendor" class="cooc-table"></div>
+        </article>
+
+        <article class="card">
+          <h2>Co-occurrences: Actor × Malware</h2>
+          <p class="trend-note">
+            Threat actor and malware family pairs from the same news items. Click any tag to search the feed.
+          </p>
+          <div id="cooc-actor-malware" class="cooc-table"></div>
+        </article>
+
+        <article class="card">
           <h2>Delta analytics (current vs previous window)</h2>
           <p class="trend-note">
             Shows what increased or decreased in the selected window versus the previous period of the same size.
@@ -399,8 +517,10 @@ permalink: /trend/
 
   <script>
     const trendsUrl = "{{ '/data/trends.json' | relative_url }}";
+    const newsUrl = "{{ '/' | relative_url }}";
 
     let trendsData = null;
+    let curatedOnly = false;
     const WINDOW_DAYS = {
       "24h": 1,
       "7d": 7,
@@ -417,6 +537,7 @@ permalink: /trend/
     let trendChart = null;
     let cveChart = null;
     let threatActorChart = null;
+    let keywordVelocityChart = null;
 
     function cssVar(name) {
       return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
@@ -564,32 +685,57 @@ permalink: /trend/
       const labels = dataToUse.map(d => d.date);
       const counts = dataToUse.map(d => d.count);
 
+      // 7-day rolling average for anomaly context
+      const rollingAvg = counts.map((_, i) => {
+        const start = Math.max(0, i - 6);
+        const slice = counts.slice(start, i + 1);
+        const avg = slice.reduce((a, b) => a + b, 0) / slice.length;
+        return Math.round(avg * 10) / 10;
+      });
+
       volumeChart = createOrUpdateChart(
         volumeChart,
         ctx,
         "line",
         {
           labels,
-          datasets: [{
-            label: "News per day",
-            data: counts,
-            fill: false,
-          }],
+          datasets: [
+            {
+              label: "News per day",
+              data: counts,
+              fill: false,
+            },
+            {
+              label: "7-day avg",
+              data: rollingAvg,
+              fill: false,
+              borderDash: [5, 4],
+              pointRadius: 0,
+              borderWidth: 1.5,
+            },
+          ],
         },
         {
           responsive: true,
           maintainAspectRatio: false,
           scales: {
-            x: {
-              ticks: { maxTicksLimit: 10 },
-            },
-            y: {
-              beginAtZero: true,
-              ticks: { precision: 0 },
-            },
+            x: { ticks: { maxTicksLimit: 10 } },
+            y: { beginAtZero: true, ticks: { precision: 0 } },
           },
           plugins: {
-            legend: { display: false },
+            legend: { display: true, position: "top" },
+            tooltip: {
+              callbacks: {
+                afterLabel: (ctx) => {
+                  if (ctx.datasetIndex === 0) {
+                    const avg = rollingAvg[ctx.dataIndex] || 0;
+                    const val = counts[ctx.dataIndex] || 0;
+                    if (avg > 0 && val > avg * 1.5) return "⚠ Spike vs 7-day avg";
+                  }
+                  return undefined;
+                },
+              },
+            },
           },
         }
       );
@@ -661,16 +807,17 @@ permalink: /trend/
           responsive: true,
           maintainAspectRatio: false,
           scales: {
-            x: {
-              beginAtZero: true,
-              ticks: { precision: 0 },
-            },
+            x: { beginAtZero: true, ticks: { precision: 0 } },
           },
-          plugins: {
-            legend: { display: false },
+          plugins: { legend: { display: false } },
+          onClick: (_, elements, chart) => {
+            if (!elements.length) return;
+            const label = chart.data.labels[elements[0].index];
+            window.open(`${newsUrl}?q=${encodeURIComponent(label)}`, "_self");
           },
         }
       );
+      document.getElementById("keywordsChart").classList.add("chart-clickable");
     }
 
     function updateVendorChart(win) {
@@ -697,16 +844,17 @@ permalink: /trend/
           responsive: true,
           maintainAspectRatio: false,
           scales: {
-            x: {
-              beginAtZero: true,
-              ticks: { precision: 0 },
-            },
+            x: { beginAtZero: true, ticks: { precision: 0 } },
           },
-          plugins: {
-            legend: { display: false },
+          plugins: { legend: { display: false } },
+          onClick: (_, elements, chart) => {
+            if (!elements.length) return;
+            const label = chart.data.labels[elements[0].index];
+            window.open(`${newsUrl}?q=${encodeURIComponent(label)}`, "_self");
           },
         }
       );
+      document.getElementById("vendorChart").classList.add("chart-clickable");
     }
 
     function updateTrendChart(win) {
@@ -773,16 +921,17 @@ permalink: /trend/
           responsive: true,
           maintainAspectRatio: false,
           scales: {
-            x: {
-              beginAtZero: true,
-              ticks: { precision: 0 },
-            },
+            x: { beginAtZero: true, ticks: { precision: 0 } },
           },
-          plugins: {
-            legend: { display: false },
+          plugins: { legend: { display: false } },
+          onClick: (_, elements, chart) => {
+            if (!elements.length) return;
+            const label = chart.data.labels[elements[0].index];
+            window.open(`${newsUrl}?q=${encodeURIComponent(label)}`, "_self");
           },
         }
       );
+      document.getElementById("cveChart").classList.add("chart-clickable");
     }
 
     function updateThreatActorTimeline(win) {
@@ -928,7 +1077,9 @@ permalink: /trend/
 
     function renderPriorityNowPanel(win) {
       const payload = trendsData?.priority_now?.[win] || {};
-      const rows = Array.isArray(payload.items) ? payload.items.slice(0, 8) : [];
+      let rows = Array.isArray(payload.items) ? payload.items : [];
+      if (curatedOnly) rows = rows.filter(r => r.curated);
+      rows = rows.slice(0, 8);
       const summary = payload.summary || {};
       const summaryEl = document.getElementById("priority-now-summary");
       const listEl = document.getElementById("priority-now-list");
@@ -1080,6 +1231,129 @@ permalink: /trend/
       });
     }
 
+    function updateKeywordVelocityChart(win) {
+      const ctx = document.getElementById("keywordVelocityChart").getContext("2d");
+      const velocityData = (trendsData.keyword_velocity || {})[win] || [];
+      const top = velocityData.slice(0, 15);
+
+      const labels = top.map(d => {
+        const isNew = d.previous === 0;
+        return isNew ? `${d.keyword} ★` : d.keyword;
+      });
+      const values = top.map(d => Math.min(d.growth_pct, 500));
+
+      keywordVelocityChart = createOrUpdateChart(
+        keywordVelocityChart,
+        ctx,
+        "bar",
+        {
+          labels,
+          datasets: [{
+            label: "Growth %",
+            data: values,
+          }],
+        },
+        {
+          indexAxis: "y",
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: {
+              beginAtZero: true,
+              ticks: {
+                callback: (v) => `${v}%`,
+              },
+            },
+          },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => {
+                  const d = top[ctx.dataIndex];
+                  if (!d) return "";
+                  const label = d.previous === 0
+                    ? `New term — ${d.current} mentions`
+                    : `+${d.growth_pct}% (${d.previous} → ${d.current})`;
+                  return label;
+                },
+              },
+            },
+          },
+          onClick: (_, elements, chart) => {
+            if (!elements.length) return;
+            const raw = top[elements[0].index]?.keyword;
+            if (raw) window.open(`${newsUrl}?q=${encodeURIComponent(raw)}`, "_self");
+          },
+        }
+      );
+      document.getElementById("keywordVelocityChart").classList.add("chart-clickable");
+    }
+
+    function renderCooccurrencePanel(containerId, rows, leftKey, rightKey) {
+      const el = document.getElementById(containerId);
+      if (!el) return;
+      el.innerHTML = "";
+
+      const top = (rows || []).slice(0, 10);
+      if (!top.length) {
+        el.textContent = "No co-occurrence data for this window.";
+        return;
+      }
+
+      top.forEach((row) => {
+        const div = document.createElement("div");
+        div.className = "cooc-row";
+
+        const makeTag = (text) => {
+          const span = document.createElement("span");
+          span.className = "cooc-tag";
+          span.textContent = text;
+          span.title = `Search feed for "${text}"`;
+          span.addEventListener("click", () => {
+            window.open(`${newsUrl}?q=${encodeURIComponent(text)}`, "_self");
+          });
+          return span;
+        };
+
+        const leftVal = row[leftKey] || "?";
+        const rightVal = row[rightKey] || "?";
+
+        const pair = document.createElement("div");
+        pair.className = "cooc-pair";
+        pair.appendChild(makeTag(leftVal));
+        const arrow = document.createElement("span");
+        arrow.className = "cooc-arrow";
+        arrow.textContent = "×";
+        pair.appendChild(arrow);
+        pair.appendChild(makeTag(rightVal));
+
+        const count = document.createElement("span");
+        count.className = "cooc-count";
+        count.textContent = `${row.count}x`;
+
+        div.appendChild(pair);
+        div.appendChild(count);
+        el.appendChild(div);
+      });
+    }
+
+    function updateCooccurrencePanels(win) {
+      const cooc = trendsData.cooccurrence || {};
+      renderCooccurrencePanel(
+        "cooc-cve-vendor",
+        (cooc.cve_vendor || {})[win] || [],
+        "cve",
+        "vendor"
+      );
+      renderCooccurrencePanel(
+        "cooc-actor-malware",
+        (cooc.actor_malware || {})[win] || [],
+        "actor",
+        "malware"
+      );
+    }
+
     function updateAllCharts(win) {
       const w = getWindowSafe(win);
       currentWindow = w;
@@ -1092,6 +1366,8 @@ permalink: /trend/
       updateTrendChart(w);
       updateCveChart(w);
       updateThreatActorTimeline(w);
+      updateKeywordVelocityChart(w);
+      updateCooccurrencePanels(w);
       updateDeltaPanels(w);
       renderPriorityNowPanel(w);
       renderCampaignClustersPanel(w);
@@ -1105,6 +1381,14 @@ permalink: /trend/
         const win = btn.dataset.win;
         if (!trendsData) return;
         updateAllCharts(win);
+      });
+
+      // Curated toggle
+      document.getElementById("curated-only-toggle")?.addEventListener("change", (e) => {
+        curatedOnly = e.target.checked;
+        if (trendsData) {
+          renderPriorityNowPanel(currentWindow);
+        }
       });
 
       // Load trends.json

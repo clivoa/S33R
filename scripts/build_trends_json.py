@@ -1000,6 +1000,7 @@ def main() -> None:
     prev_window_vendors: Dict[str, Counter] = {w: Counter() for w in WINDOWS}
     prev_window_cves: Dict[str, Counter] = {w: Counter() for w in WINDOWS}
     prev_window_actors: Dict[str, Counter] = {w: Counter() for w in WINDOWS}
+    prev_window_keywords: Dict[str, Counter] = {w: Counter() for w in WINDOWS}
 
     # Co-ocorrência
     co_cve_vendor: Dict[str, Counter] = {w: Counter() for w in WINDOWS}
@@ -1100,6 +1101,8 @@ def main() -> None:
                         prev_window_cves[win][cve] += 1
                     for actor in actor_hits:
                         prev_window_actors[win][actor] += 1
+                    for t in tokens:
+                        prev_window_keywords[win][t] += 1
 
                     prev_priority = compute_operational_priority(
                         entry=entry,
@@ -1192,6 +1195,7 @@ def main() -> None:
                     "actors": actor_list[:4],
                     "malware": malware_list[:4],
                     "categories": category_list[:5],
+                    "curated": bool(entry.get("curated")),
                 }
             )
 
@@ -1259,6 +1263,29 @@ def main() -> None:
         win: counter_to_sorted_list(per_window_actors[win])
         for win in WINDOWS
     }
+
+    # Keyword velocity: keywords that grew most compared to the previous window
+    keyword_velocity_out: Dict[str, List[Any]] = {}
+    for win in WINDOWS:
+        cur = per_window_keywords[win]
+        prev = prev_window_keywords[win]
+        velocity_rows: List[Any] = []
+        for word, cur_count in cur.most_common(300):
+            if cur_count < 3:
+                continue
+            prev_count = int(prev.get(word, 0))
+            if prev_count == 0:
+                growth = float(cur_count * 2)
+            else:
+                growth = round((cur_count - prev_count) / max(1, prev_count) * 100.0, 1)
+            velocity_rows.append({
+                "keyword": word,
+                "current": int(cur_count),
+                "previous": int(prev_count),
+                "growth_pct": growth,
+            })
+        velocity_rows.sort(key=lambda x: x["growth_pct"], reverse=True)
+        keyword_velocity_out[win] = velocity_rows[:20]
 
     # Threat actor timeline com top_actors para tooltip
     threat_actor_daily = []
@@ -1408,6 +1435,7 @@ def main() -> None:
         "daily_volume": daily_volume,
         "categories": categories_out,
         "top_keywords": top_keywords_out,
+        "keyword_velocity": keyword_velocity_out,
         "vendors": vendors_out,
         "trending_terms": trending_terms_out,
         "top_cves": top_cves_out,

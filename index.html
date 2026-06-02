@@ -309,12 +309,16 @@ permalink: /
         return;
       }
       const rows = [
-        ["title", "source", "published", "type", "link", "summary"].map(escapeCsvCell).join(","),
+        ["title", "source", "published", "type", "smart_groups", "priority_score", "source_quality_score", "curated", "link", "summary"].map(escapeCsvCell).join(","),
         ...items.map((item) => [
           item.title || "",
           item.source || "",
           item.published_ts ? formatDate(item.published_ts) : "",
           item.type || "",
+          (item.smart_groups || []).join("; "),
+          item.priority_score != null ? Number(item.priority_score).toFixed(2) : "",
+          item.source_quality_score != null ? Number(item.source_quality_score).toFixed(2) : "",
+          item.curated ? "yes" : "no",
           item.link || "",
           item.summary || "",
         ].map(escapeCsvCell).join(","))
@@ -1060,6 +1064,23 @@ permalink: /
             item.type = item.type_label.toLowerCase().replace(/s+/g, "_");
           }
         });
+
+        // Apply URL query params (e.g. drill-down from trend.html)
+        const urlParams = new URLSearchParams(window.location.search);
+        const qParam = urlParams.get("q");
+        const catParam = urlParams.get("category");
+        if (qParam) {
+          state.search = qParam;
+          state.recentOnly = false;
+          document.getElementById("news-search-input").value = qParam;
+          document.getElementById("recent-only-checkbox").checked = false;
+        }
+        if (catParam) {
+          const validCats = Object.keys(TYPE_LABELS).concat(["all", "curated"]);
+          if (validCats.includes(catParam)) {
+            state.category = catParam;
+          }
+        }
 
         applyFilters(true);
         initEvents();

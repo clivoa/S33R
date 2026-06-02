@@ -853,7 +853,7 @@ def main() -> None:
                 if pub_ts is not None:
                     try:
                         existing_dt = datetime.fromtimestamp(float(pub_ts), tz=timezone.utc)
-                        if existing_dt < cutoff:
+                        if existing_dt < cutoff or existing_dt > now:
                             continue
                     except Exception:
                         pass
@@ -930,7 +930,7 @@ def main() -> None:
                 pub_iso = None
                 pub_ts = None
             else:
-                if pub_dt < cutoff:
+                if pub_dt < cutoff or pub_dt > now:
                     continue
                 pub_iso = pub_dt.isoformat()
                 pub_ts = int(pub_dt.timestamp())
