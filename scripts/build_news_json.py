@@ -368,6 +368,12 @@ TYPE_FALLBACK_GROUPS: Dict[str, Tuple[str, float]] = {
 
 
 STRONG_PROMO_PATTERNS: List[str] = [
+    # Event listings / contests from news sources (e.g. DarkReading)
+    "[virtual event]",
+    "name that toon",
+    "register & save",
+    "register now",
+    # General promo
     "black friday",
     "cyber monday",
     "prime day",
