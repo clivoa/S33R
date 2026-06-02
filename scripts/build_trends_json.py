@@ -16,6 +16,7 @@ Fonte de dados:
 """
 
 import json
+import math
 import re
 from collections import Counter, defaultdict
 from datetime import datetime, timedelta, timezone
@@ -759,6 +760,13 @@ def build_delta_rows(current: Counter, previous: Counter, limit: int = 25) -> Li
     return rows[:limit]
 
 
+def shannon_entropy(counter: Counter) -> float:
+    total = sum(counter.values())
+    if total == 0:
+        return 0.0
+    return -sum((c / total) * math.log2(c / total) for c in counter.values() if c > 0)
+
+
 def _sort_set(values: Iterable[str], limit: int = 4) -> List[str]:
     clean = sorted({str(v).strip() for v in values if str(v).strip()})
     if limit > 0:
@@ -1016,6 +1024,9 @@ def main() -> None:
     threat_actor_daily_counter = Counter()          # date_str -> qtd notícias com actor
     threat_actor_daily_names: Dict[str, Counter] = defaultdict(Counter)  # date_str -> Counter(actor_name)
 
+    # Per-source quality metrics
+    source_stats: Dict[str, Any] = {}
+
     threat_actor_compiled = [
         re.compile(pat, re.IGNORECASE) for pat in THREAT_ACTOR_PATTERNS
     ]
@@ -1090,6 +1101,27 @@ def main() -> None:
         cve_list = sorted(cve_hits)
         malware_list = sorted(malware_hits)
         category_list = sorted(set(cats))
+
+        # Per-source quality accumulation (window-independent)
+        _src = str(entry.get("source") or "Unknown").strip() or "Unknown"
+        if _src not in source_stats:
+            source_stats[_src] = {
+                "total": 0,
+                "curated": 0,
+                "priority_scores": [],
+                "cve_total": 0,
+                "sg_counts": Counter(),
+            }
+        _ss = source_stats[_src]
+        _ss["total"] += 1
+        if bool(entry.get("curated")):
+            _ss["curated"] += 1
+        _raw_ps = entry.get("priority_score")
+        if isinstance(_raw_ps, (int, float)):
+            _ss["priority_scores"].append(float(_raw_ps))
+        _ss["cve_total"] += len(cve_hits)
+        for _c in cats:
+            _ss["sg_counts"][_c] += 1
 
         # Aplicar em cada janela
         for win, days in WINDOWS.items():
@@ -1222,6 +1254,42 @@ def main() -> None:
         processed += 1
 
     print(f"[INFO] Processed entries: {processed}, skipped (no date): {skipped_no_date}")
+
+    # Build source quality ranking
+    source_quality_rows: List[Dict[str, Any]] = []
+    _max_entropy = 0.0
+    for _src, _ss in source_stats.items():
+        _total = _ss["total"]
+        if _total < 5:
+            continue
+        _curated_rate = round(_ss["curated"] / _total, 4)
+        _ps_list = _ss["priority_scores"]
+        _avg_ps = round(sum(_ps_list) / len(_ps_list), 2) if _ps_list else 0.0
+        _std_ps = round(
+            math.sqrt(sum((x - _avg_ps) ** 2 for x in _ps_list) / max(1, len(_ps_list))), 2
+        ) if len(_ps_list) > 1 else 0.0
+        _cve_density = round(_ss["cve_total"] / _total * 100, 2)
+        _entropy = round(shannon_entropy(_ss["sg_counts"]), 4)
+        _max_entropy = max(_max_entropy, _entropy)
+        source_quality_rows.append({
+            "source": _src,
+            "total_items": _total,
+            "curated_rate": _curated_rate,
+            "avg_priority": _avg_ps,
+            "std_priority": _std_ps,
+            "cve_density": _cve_density,
+            "topic_entropy": _entropy,
+            "quality_score": 0.0,
+        })
+
+    for _row in source_quality_rows:
+        _curated_c  = _row["curated_rate"] * 40.0
+        _priority_c = (_row["avg_priority"] / 100.0) * 30.0
+        _cve_c      = min(_row["cve_density"] / 30.0, 1.0) * 20.0
+        _entropy_c  = (_row["topic_entropy"] / max(_max_entropy, 1e-9)) * 10.0
+        _row["quality_score"] = round(_curated_c + _priority_c + _cve_c + _entropy_c, 2)
+
+    source_quality_rows.sort(key=lambda r: r["quality_score"], reverse=True)
 
     # daily_volume ordenado
     daily_volume = [
@@ -1445,6 +1513,7 @@ def main() -> None:
         "delta_analytics": delta_analytics,
         "priority_now": priority_now_out,
         "campaign_clusters": campaign_clusters_out,
+        "source_quality": source_quality_rows,
     }
 
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)

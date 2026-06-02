@@ -313,6 +313,55 @@ permalink: /trend/
       cursor: pointer;
     }
 
+    /* Feed quality table */
+    .fq-table-wrap { overflow-x: auto; }
+    .fq-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.82rem;
+    }
+    .fq-table th {
+      padding: 6px 10px;
+      text-align: left;
+      font-weight: 600;
+      border-bottom: 1px solid var(--line-strong);
+      color: var(--muted);
+      cursor: pointer;
+      white-space: nowrap;
+      user-select: none;
+    }
+    .fq-table th:hover { color: var(--text); }
+    .fq-table th.fq-sort-active { color: var(--primary); }
+    .fq-table td {
+      padding: 5px 10px;
+      border-bottom: 1px solid var(--line);
+      vertical-align: middle;
+    }
+    .fq-table tr:last-child td { border-bottom: none; }
+    .fq-table tr:hover td { background: var(--surface-2); }
+    .fq-rank { color: var(--muted); font-size: 0.75rem; }
+    .fq-curated-hi { color: var(--primary); font-weight: 600; }
+    .fq-score-wrap { display: flex; align-items: center; gap: 6px; min-width: 90px; }
+    .fq-score-bar {
+      flex: 1;
+      height: 6px;
+      border-radius: 3px;
+      background: var(--line);
+      overflow: hidden;
+    }
+    .fq-score-fill {
+      height: 100%;
+      border-radius: 3px;
+      background: var(--primary);
+    }
+    .fq-score-val {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--primary);
+      min-width: 28px;
+      text-align: right;
+    }
+
     .velocity-new {
       font-size: 10px;
       color: var(--success);
@@ -480,6 +529,30 @@ permalink: /trend/
             Threat actor and malware family pairs from the same news items. Click any tag to search the feed.
           </p>
           <div id="cooc-actor-malware" class="cooc-table"></div>
+        </article>
+
+        <article class="card">
+          <h2>Feed quality ranking</h2>
+          <p class="trend-note">
+            Per-source quality score: curated rate (40%) + avg priority (30%) + CVE density (20%) + topic entropy (10%). Computed over all available news items. Click any column header to sort.
+          </p>
+          <div class="fq-table-wrap">
+            <table class="fq-table" id="fq-table">
+              <thead>
+                <tr>
+                  <th data-col="rank">#</th>
+                  <th data-col="source">Source</th>
+                  <th data-col="total_items">Items</th>
+                  <th data-col="curated_rate">Curated %</th>
+                  <th data-col="avg_priority">Avg Priority</th>
+                  <th data-col="cve_density">CVE/100</th>
+                  <th data-col="topic_entropy">Entropy</th>
+                  <th data-col="quality_score" class="fq-sort-active">Quality Score</th>
+                </tr>
+              </thead>
+              <tbody id="fq-tbody"></tbody>
+            </table>
+          </div>
         </article>
 
         <article class="card">
@@ -1352,6 +1425,63 @@ permalink: /trend/
       );
     }
 
+    // Feed quality table
+    let fqSortCol = "quality_score";
+    let fqSortAsc = false;
+
+    function renderFeedQualityTable() {
+      const rows = (trendsData?.source_quality || []).slice();
+      if (!rows.length) return;
+
+      rows.sort((a, b) => {
+        const av = fqSortCol === "rank" ? 0 : (a[fqSortCol] ?? 0);
+        const bv = fqSortCol === "rank" ? 0 : (b[fqSortCol] ?? 0);
+        if (typeof av === "string") return fqSortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
+        return fqSortAsc ? av - bv : bv - av;
+      });
+
+      const tbody = document.getElementById("fq-tbody");
+      if (!tbody) return;
+      tbody.innerHTML = "";
+
+      rows.forEach((row, i) => {
+        const tr = document.createElement("tr");
+        const curatedPct = (row.curated_rate * 100).toFixed(1);
+        const isHighCurated = row.curated_rate >= 0.1;
+        const fillPct = Math.min(row.quality_score, 100);
+        tr.innerHTML =
+          `<td class="fq-rank">${i + 1}</td>` +
+          `<td>${row.source}</td>` +
+          `<td>${row.total_items}</td>` +
+          `<td class="${isHighCurated ? "fq-curated-hi" : ""}">${curatedPct}%</td>` +
+          `<td>${row.avg_priority.toFixed(1)}</td>` +
+          `<td>${row.cve_density.toFixed(1)}</td>` +
+          `<td>${row.topic_entropy.toFixed(2)}</td>` +
+          `<td><div class="fq-score-wrap">` +
+          `<div class="fq-score-bar"><div class="fq-score-fill" style="width:${fillPct}%"></div></div>` +
+          `<span class="fq-score-val">${row.quality_score.toFixed(1)}</span>` +
+          `</div></td>`;
+        tbody.appendChild(tr);
+      });
+
+      document.querySelectorAll("#fq-table th").forEach(th => {
+        th.classList.toggle("fq-sort-active", th.dataset.col === fqSortCol);
+      });
+    }
+
+    document.getElementById("fq-table")?.addEventListener("click", e => {
+      const th = e.target.closest("th[data-col]");
+      if (!th) return;
+      const col = th.dataset.col;
+      if (fqSortCol === col) {
+        fqSortAsc = !fqSortAsc;
+      } else {
+        fqSortCol = col;
+        fqSortAsc = col === "source";
+      }
+      if (trendsData) renderFeedQualityTable();
+    });
+
     function updateAllCharts(win) {
       const w = getWindowSafe(win);
       currentWindow = w;
@@ -1395,6 +1525,7 @@ permalink: /trend/
         .then(data => {
           trendsData = data;
           updateAllCharts(currentWindow);
+          renderFeedQualityTable();
         })
         .catch(err => {
           console.error("Failed to load trends.json", err);
