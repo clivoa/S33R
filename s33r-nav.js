@@ -16,6 +16,7 @@
     arch: '<polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/>',
     ovr: '<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>',
     src: '<path d="M5 12.5a11 11 0 0 1 14 0"/><path d="M1.5 9a16 16 0 0 1 21 0"/><circle cx="12" cy="20" r="1"/>',
+    github: '<path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.4 5.4 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.24-.82 2.18-.74.33-2.58.94-3.68-1.18 0 0-.68-1.23-2-1.32 0 0-1.28-.02-.09.8 0 0 .86.4 1.46 1.92 0 0 .77 2.57 4.27 1.7V22"/>',
   };
 
   // [key, label, standalone-href, jekyll-permalink (no leading slash), icon]
@@ -51,6 +52,7 @@
         `<a class="rail-link${key === active ? " on" : ""}" href="${hrefFor(htmlHref, perm)}"${key === active ? ' aria-current="page"' : ""}>${svg(icon)}${label}</a>`
       ).join("") +
       `<div class="rail-spacer"></div>` +
+      `<a class="rail-github" href="https://github.com/clivoa/S33R" target="_blank" rel="noopener noreferrer" title="Open S33R on GitHub" aria-label="Open S33R on GitHub">${svg("github")}</a>` +
       `<button class="rail-theme" id="rail-theme" title="Toggle theme (Shift+T)">◐</button>`;
     return nav;
   }
