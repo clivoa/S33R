@@ -6,702 +6,171 @@ permalink: /archive-overview/
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>S33R Archive – Year Overview</title>
-
-  <link rel="stylesheet" href="{{ '/styles.css' | relative_url }}" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>S33R — Archive Year Overview</title>
   <script src="{{ '/ui.js' | relative_url }}"></script>
-
+  <link rel="stylesheet" href="{{ '/s33r-feed.css' | relative_url }}" />
+  <link rel="stylesheet" href="{{ '/s33r-pages.css' | relative_url }}" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    .overview-container {
-      max-width: 980px;
-      margin: 0 auto;
-      padding: 32px 12px 40px;
-      text-align: center;
-    }
-
-    .overview-title {
-      font-size: 30px;
-      font-weight: 800;
-      margin-bottom: 6px;
-      color: var(--text-primary);
-    }
-
-    .overview-subtitle {
-      font-size: 14px;
-      color: var(--text-muted);
-      margin-bottom: 18px;
-    }
-
-    .overview-controls {
-      display: flex;
-      justify-content: center;
-      margin-bottom: 18px;
-      gap: 8px;
-      align-items: center;
-      flex-wrap: wrap;
-    }
-
-    .overview-controls select {
-      background: var(--bg-elevated);
-      border: 1px solid var(--border-color);
-      color: var(--text-primary);
-      padding: 6px 10px;
-      border-radius: var(--radius);
-      font-size: 14px;
-      min-width: 110px;
-    }
-
-    .overview-controls button {
-      background: var(--accent);
-      border: none;
-      color: #ffffff;
-      padding: 6px 10px;
-      border-radius: var(--radius);
-      font-size: 13px;
-      cursor: pointer;
-      font-weight: 600;
-    }
-
-    .overview-controls button:disabled {
-      opacity: 0.4;
-      cursor: default;
-    }
-
-    .overview-grid {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 16px;
-      text-align: left;
-    }
-
-    @media (min-width: 900px) {
-      .overview-grid {
-        grid-template-columns: 1.1fr 0.9fr;
-      }
-    }
-
-    .overview-card {
-      background: var(--bg-elevated);
-      border-radius: var(--radius-xl);
-      border: 1px solid var(--border-color);
-      box-shadow: var(--shadow-soft);
-      padding: 18px 20px 16px;
-    }
-
-    .overview-card-title {
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--text-secondary);
-      margin-bottom: 8px;
-    }
-
-    .overview-meta {
-      font-size: 12px;
-      color: var(--text-muted);
-      margin-bottom: 8px;
-      line-height: 1.5;
-    }
-
-    .overview-meta b {
-      color: var(--text-primary);
-    }
-
-    .overview-list,
-    .overview-list-full {
-      font-size: 12px;
-      color: var(--text-muted);
-      margin-top: 6px;
-      padding-left: 18px;
-    }
-
-    .overview-list li,
-    .overview-list-full li {
-      margin-bottom: 2px;
-    }
-
-    .sources-toggle-btn {
-      margin-top: 6px;
-      font-size: 11px;
-      background: transparent;
-      border: none;
-      color: var(--accent);
-      cursor: pointer;
-      padding: 0;
-    }
-
-    canvas {
-      width: 100%;
-      height: 260px;
-    }
-
-    @media (max-width: 640px) {
-      .overview-container {
-        padding-top: 40px;
-      }
-    }
-
-    /* Tooltip for charts */
-    #chart-tooltip {
-      position: absolute;
-      padding: 4px 8px;
-      font-size: 11px;
-      background: var(--surface);
-      color: var(--text-primary);
-      border-radius: 6px;
-      pointer-events: none;
-      display: none;
-      z-index: 50;
-      border: 1px solid var(--border-color);
-      white-space: nowrap;
-      box-shadow: var(--shadow-soft);
-    }
+    .ov-grid { display: grid; grid-template-columns: 1fr; gap: 14px; margin-top: 16px; }
+    @media (min-width: 920px) { .ov-grid { grid-template-columns: 1.1fr 0.9fr; } }
+    .ov-meta { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 16px; }
+    .ov-stat { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; box-shadow: var(--shadow); }
+    .ov-stat .lbl { font-family: var(--mono); font-size: 9.5px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--faint); }
+    .ov-stat .val { font-size: 28px; font-weight: 800; letter-spacing: -.03em; line-height: 1; margin-top: 8px; font-variant-numeric: tabular-nums; }
+    .ov-stat .sub { font-family: var(--mono); font-size: 10px; color: var(--dim); margin-top: 5px; }
+    .chart-container { height: 280px; }
+    .yearnav { display: flex; align-items: center; gap: 6px; }
+    .yearnav button.nav { width: 38px; height: 38px; display: inline-flex; align-items: center; justify-content: center; font-size: 16px; }
+    .src-list { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 6px; max-height: 220px; overflow-y: auto; }
+    .src-list li { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--text-2); border-bottom: 1px dashed var(--line); padding-bottom: 5px; }
+    .src-list li:last-child { border-bottom: none; }
+    .src-list .n { font-family: var(--mono); font-weight: 700; color: var(--brand); }
+    @media (max-width: 760px) { .ov-meta { grid-template-columns: repeat(2, 1fr); } }
   </style>
+
+  <script>window.S33R = { base: "{{ '/' | relative_url }}", data: "{{ '/data' | relative_url }}", feed: "{{ '/data/news_recent.json' | relative_url }}" };</script>
 </head>
-<body>
-
-  <!-- Minimal Navbar -->
-  <nav class="minimal-navbar" aria-label="Primary navigation">
-    <a href="{{ '/' | relative_url }}" class="nav-brand" aria-label="S33R Home">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-      S33R
-    </a>
-    <div class="nav-sep" aria-hidden="true"></div>
-    <a href="{{ '/' | relative_url }}" class="minimal-nav-link">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1"/></svg>
-      Feed
-    </a>
-    <a href="{{ '/morning/' | relative_url }}" class="minimal-nav-link">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
-      Morning
-    </a>
-    <a href="{{ '/trend/' | relative_url }}" class="minimal-nav-link">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
-      Trends
-    </a>
-    <a href="{{ '/history/' | relative_url }}" class="minimal-nav-link">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-      History
-    </a>
-    <a href="{{ '/briefs/' | relative_url }}" class="minimal-nav-link">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-      Briefs
-    </a>
-    <a href="{{ '/archive/' | relative_url }}" class="minimal-nav-link">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
-      Archive
-    </a>
-    <a href="{{ '/archive-overview/' | relative_url }}" class="minimal-nav-link" aria-current="page">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-      Overview
-    </a>
-    <a href="{{ '/sources/' | relative_url }}" class="minimal-nav-link">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1"/></svg>
-      Sources
-    </a>
-  </nav>
-
-  <div class="overview-container">
-    <h1 class="overview-title">S33R Archive – Year Overview</h1>
-    <p class="overview-subtitle">
-      Visual summary of archived security news per year: activity per month and top sources.
-    </p>
-
-    <div class="overview-controls">
-      <button id="prev-year-btn" title="Previous year">←</button>
-      <select id="year-select">
-        <option value="">Select year...</option>
-      </select>
-      <button id="next-year-btn" title="Next year">→</button>
-    </div>
-
-    <div id="overview-meta" class="overview-meta"></div>
-
-    <div class="overview-grid">
-      <div class="overview-card">
-        <div class="overview-card-title">Items per month</div>
-        <canvas id="monthly-chart" width="450" height="260"></canvas>
+<body data-page="overview">
+  <div class="app app--page" id="app">
+    <main class="page-main">
+      <div class="crumb">
+        <span class="lab">SECTION</span>
+        <span class="here">ARCHIVE OVERVIEW</span>
+        <span class="meta"><span id="crumb-year">—</span></span>
       </div>
 
-      <div class="overview-card">
-        <div class="overview-card-title">Top sources in year</div>
-        <canvas id="sources-chart" width="450" height="260"></canvas>
-        <ul id="sources-list" class="overview-list"></ul>
-        <button id="toggle-sources" class="sources-toggle-btn" type="button">
-          Show full list ▼
-        </button>
-        <ul id="sources-list-full" class="overview-list-full" style="display:none;"></ul>
+      <div class="page-wrap">
+        <header class="phead">
+          <div class="phead-l">
+            <span class="eyebrow">YEAR AT A GLANCE</span>
+            <h1>Archive <span>Overview</span></h1>
+            <p class="sub">Visual summary of archived security news per year — activity per month and the most active sources.</p>
+          </div>
+          <div class="phead-actions yearnav">
+            <button class="btn nav" id="prev-year-btn" title="Previous year">←</button>
+            <div class="select-wrap"><select id="year-select" aria-label="Year"><option value="">Select year…</option></select></div>
+            <button class="btn nav" id="next-year-btn" title="Next year">→</button>
+          </div>
+        </header>
+
+        <div class="ov-meta" id="ov-meta">
+          <div class="ov-stat"><div class="lbl">Total items</div><div class="val" id="m-total">—</div><div class="sub">archived this year</div></div>
+          <div class="ov-stat"><div class="lbl">Sources</div><div class="val" id="m-sources">—</div><div class="sub">distinct feeds</div></div>
+          <div class="ov-stat"><div class="lbl">Avg / month</div><div class="val" id="m-avg">—</div><div class="sub">items per month</div></div>
+          <div class="ov-stat"><div class="lbl">Peak month</div><div class="val" id="m-peak" style="font-size:20px">—</div><div class="sub" id="m-peak-sub">busiest period</div></div>
+        </div>
+
+        <div class="ov-grid">
+          <article class="card"><h2>Items per month</h2><p class="trend-note" id="month-note">From the archive index.</p><div class="chart-container"><canvas id="monthly-chart"></canvas></div></article>
+          <article class="card">
+            <h2>Top sources in year</h2>
+            <p class="trend-note" id="src-note">Aggregated from monthly archive files.</p>
+            <div class="chart-container"><canvas id="sources-chart"></canvas></div>
+            <ul id="sources-list" class="src-list"></ul>
+          </article>
+        </div>
+
+        <footer class="site-footer">S33R Security News Feed · Powered by JSON cache + public RSS sources</footer>
       </div>
-    </div>
-    <footer class="site-footer">
-      <p>
-        S33R Security News Feed<br>
-        <span class="muted">Powered by JSON cache + public RSS sources</span>
-      </p>
-    </footer>
+    </main>
   </div>
 
-  <!-- Tooltip -->
-  <div id="chart-tooltip"></div>
-
+  <script src="{{ '/s33r-nav.js' | relative_url }}"></script>
   <script>
-    const monthLabelsShort = ["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"];
-    const monthNames = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+    const MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    const MONTH_FULL = ["January","February","March","April","May","June","July","August","September","October","November","December"];
     const DATA_BASE_URL = "{{ '/data' | relative_url }}";
+    const $ = (id) => document.getElementById(id);
+    let archiveIndex = null, currentYear = null, availableYears = [], monthlyChart = null, sourcesChart = null;
+    const srcCache = {};
 
-    const yearCache = {};
-    let archiveIndex = null;
-    let currentYear = null;
-    let availableYears = [];
-    let monthlyCountsForTooltip = [];
-    const tooltipEl = document.getElementById("chart-tooltip");
+    function cssVar(n) { return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+    function chartBase() { return { text: cssVar("--text"), muted: cssVar("--chart-axis") || cssVar("--muted"), grid: cssVar("--chart-grid"), surface: cssVar("--surface"), border: cssVar("--line"), fillSoft: cssVar("--chart-fill-soft") }; }
+    function makeChart(ref, ctx, type, data, options) {
+      if (ref && ref.destroy) ref.destroy(); const th = chartBase();
+      const sd = { grid: { color: th.grid }, border: { color: th.grid }, ticks: { color: th.muted } };
+      const scales = {}; for (const [k, v] of Object.entries(options.scales || { x: {}, y: {} })) scales[k] = { ...sd, ...v, grid: { ...sd.grid, ...(v.grid || {}) }, ticks: { ...sd.ticks, ...(v.ticks || {}) } };
+      return new Chart(ctx, { type, data, options: { ...options, color: th.muted, scales, plugins: { legend: { display: false }, tooltip: { backgroundColor: th.surface, titleColor: th.text, bodyColor: th.text, borderColor: th.border, borderWidth: 1 }, ...(options.plugins || {}) } } });
+    }
 
-    const monthlyCanvas = document.getElementById("monthly-chart");
-    const sourcesCanvas = document.getElementById("sources-chart");
+    async function fetchJSON(p) { try { const r = await fetch(p, { cache: "no-store" }); return r.ok ? await r.json() : null; } catch { return null; } }
+    async function loadIndex() { const a = await fetchJSON(`${DATA_BASE_URL}/archive/archive_index.json`); if (a?.years) return (archiveIndex = a); const b = await fetchJSON(`${DATA_BASE_URL}/archive/index.json`); if (b?.years) return (archiveIndex = b); return null; }
 
-    const prevYearBtn = document.getElementById("prev-year-btn");
-    const nextYearBtn = document.getElementById("next-year-btn");
+    function yearMeta(year) { return archiveIndex?.years?.find((y) => Number(y.year) === Number(year)); }
 
-    async function fetchJSON(path) {
-      try {
-        const res = await fetch(path, { cache: "no-store" });
-        if (!res.ok) return null;
-        return await res.json();
-      } catch {
-        return null;
+    function renderMonthly(year) {
+      const meta = yearMeta(year); const counts = Array(12).fill(0);
+      (meta?.months || []).forEach((m) => { const idx = Number(m.month) - 1; if (idx >= 0 && idx < 12) counts[idx] = Number(m.item_count || 0); });
+      monthlyChart = makeChart(monthlyChart, $("monthly-chart").getContext("2d"), "bar",
+        { labels: MON, datasets: [{ label: "Items", data: counts, backgroundColor: cssVar("--brand"), maxBarThickness: 30, borderRadius: 3 }] },
+        { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }, plugins: { tooltip: { callbacks: { title: (i) => MONTH_FULL[i[0].dataIndex], label: (c) => `${c.formattedValue} items` } } } });
+      return counts;
+    }
+
+    async function aggregateSources(year) {
+      if (srcCache[year]) return srcCache[year];
+      const meta = yearMeta(year); const months = meta?.months || []; const counts = {};
+      $("src-note").textContent = `Aggregating ${months.length} monthly file${months.length !== 1 ? "s" : ""}…`;
+      for (const m of months) {
+        const data = await fetchJSON(`${DATA_BASE_URL}/archive/monthly/${year}/${year}-${String(m.month).padStart(2, "0")}.json`);
+        if (Array.isArray(data)) data.forEach((it) => { const s = it.source || "Unknown"; counts[s] = (counts[s] || 0) + 1; });
       }
+      $("src-note").textContent = "Aggregated from monthly archive files.";
+      srcCache[year] = counts; return counts;
     }
 
-    async function loadArchiveIndex() {
-      const primary = await fetchJSON(`${DATA_BASE_URL}/archive/archive_index.json`);
-      if (primary && Array.isArray(primary.years)) {
-        archiveIndex = primary;
-        return archiveIndex;
-      }
-      const fallback = await fetchJSON(`${DATA_BASE_URL}/archive/index.json`);
-      if (fallback && Array.isArray(fallback.years)) {
-        archiveIndex = fallback;
-        return archiveIndex;
-      }
-      archiveIndex = null;
-      return null;
+    async function renderSources(year) {
+      const counts = await aggregateSources(year);
+      if (currentYear !== year) return;
+      const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+      const top = entries.slice(0, 10);
+      sourcesChart = makeChart(sourcesChart, $("sources-chart").getContext("2d"), "bar",
+        { labels: top.map((e) => e[0]), datasets: [{ label: "Items", data: top.map((e) => e[1]), backgroundColor: cssVar("--cyan"), maxBarThickness: 16, borderRadius: 2 }] },
+        { indexAxis: "y", responsive: true, maintainAspectRatio: false, scales: { x: { beginAtZero: true, ticks: { precision: 0 } } } });
+      $("sources-list").innerHTML = entries.slice(0, 20).map(([s, c]) => `<li><span>${s}</span><span class="n">${c}</span></li>`).join("");
+      $("m-sources").textContent = entries.length.toLocaleString();
     }
 
-    async function loadYears() {
-      const select = document.getElementById("year-select");
-      let latest = null;
-
-      const idx = await loadArchiveIndex();
-      if (idx && Array.isArray(idx.years) && idx.years.length > 0) {
-        const years = idx.years
-          .map((y) => Number(y.year))
-          .filter((y) => Number.isInteger(y))
-          .sort((a, b) => a - b);
-
-        years.forEach((y) => {
-          availableYears.push(y);
-          const opt = document.createElement("option");
-          opt.value = y;
-          opt.textContent = y;
-          select.appendChild(opt);
-        });
-
-        if (idx.latest?.year) {
-          latest = Number(idx.latest.year);
-        } else if (years.length) {
-          latest = years[years.length - 1];
-        }
-      } else {
-        const current = new Date().getUTCFullYear();
-        for (let y = current + 1; y >= current - 12; y--) {
-          const data = await fetchJSON(`${DATA_BASE_URL}/archive/yearly/${y}.json`);
-          if (Array.isArray(data) && data.length > 0) {
-            yearCache[y] = data;
-            availableYears.push(y);
-            latest = y;
-          }
-        }
-
-        availableYears.sort((a, b) => a - b).forEach((y) => {
-          const opt = document.createElement("option");
-          opt.value = y;
-          opt.textContent = y;
-          select.appendChild(opt);
-        });
-      }
-
-      if (latest) {
-        select.value = latest;
-        currentYear = latest;
-        updateYearButtons();
-        updateYearOverview(latest);
-      } else {
-        updateYearButtons();
-      }
-    }
-
-    function extractYearStats(items) {
-      const monthlyCounts = Array(12).fill(0);
-      const sourceCounts = {};
-      let minTs = Infinity;
-      let maxTs = -Infinity;
-
-      items.forEach(item => {
-        let date = null;
-        if (typeof item.published_ts === "number") {
-          date = new Date(item.published_ts * 1000);
-        } else if (item.published) {
-          const d = new Date(item.published);
-          if (!isNaN(d.getTime())) date = d;
-        }
-        if (!date) return;
-
-        const m = date.getMonth(); // 0-11
-        monthlyCounts[m] += 1;
-
-        const src = item.source || "Unknown";
-        sourceCounts[src] = (sourceCounts[src] || 0) + 1;
-
-        const ts = date.getTime();
-        if (ts < minTs) minTs = ts;
-        if (ts > maxTs) maxTs = ts;
-      });
-
-      const topSources = Object.entries(sourceCounts)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 7);
-
-      const rangeStart = isFinite(minTs) ? new Date(minTs).toLocaleString() : "Unknown";
-      const rangeEnd = isFinite(maxTs) ? new Date(maxTs).toLocaleString() : "Unknown";
-
-      return {
-        monthlyCounts,
-        sourceCounts,
-        topSources,
-        totalItems: items.length,
-        totalSources: Object.keys(sourceCounts).length,
-        rangeStart,
-        rangeEnd
-      };
-    }
-
-    // ---------- Canvas helpers ----------
-
-    function clearCanvas(canvas) {
-      const ctx = canvas.getContext("2d");
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-    }
-
-    function overviewTheme() {
-      const cs = getComputedStyle(document.documentElement);
-      const get = (v, fallback) => (cs.getPropertyValue(v).trim() || fallback);
-      return {
-        axis: get("--chart-axis", "#6b7280"),
-        grid: get("--chart-grid", "#e5e7eb"),
-        barA: get("--chart-series-1", "#2563eb"),
-        barB: get("--chart-series-4", "#7c3aed"),
-        barC: get("--chart-series-2", "#0f766e"),
-        barD: get("--chart-series-3", "#b45309"),
-      };
-    }
-
-    function drawMonthlyChart(canvas, counts) {
-      const ctx = canvas.getContext("2d");
-      clearCanvas(canvas);
-      const theme = overviewTheme();
-
-      const labels = monthLabelsShort;
-      const padding = { top: 20, right: 16, bottom: 26, left: 26 };
-      const w = canvas.width;
-      const h = canvas.height;
-      const chartW = w - padding.left - padding.right;
-      const chartH = h - padding.top - padding.bottom;
-
-      const maxVal = Math.max(1, Math.max(...counts));
-      const slotWidth = chartW / counts.length;
-      const barWidth = slotWidth * 0.6;
-      const gap = slotWidth * 0.4;
-
-      ctx.font = "11px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
-      ctx.fillStyle = theme.axis;
-
-      // Y axis labels (0, max)
-      ctx.textAlign = "right";
-      ctx.textBaseline = "middle";
-      ctx.fillText("0", padding.left - 4, h - padding.bottom);
-      ctx.fillText(String(maxVal), padding.left - 4, padding.top);
-
-      // X axis labels + bars
-      counts.forEach((val, i) => {
-        const x = padding.left + i * slotWidth + gap * 0.2;
-        const barHeight = chartH * (val / maxVal);
-        const y = padding.top + (chartH - barHeight);
-
-        // bar gradient
-        const grad = ctx.createLinearGradient(0, y, 0, y + barHeight);
-        grad.addColorStop(0, theme.barB);
-        grad.addColorStop(1, theme.barA);
-        ctx.fillStyle = grad;
-        ctx.fillRect(x, y, barWidth, barHeight);
-
-        // x label
-        ctx.fillStyle = theme.axis;
-        ctx.textAlign = "center";
-        ctx.textBaseline = "top";
-        const labelX = x + barWidth / 2;
-        const labelY = h - padding.bottom + 4;
-        ctx.fillText(labels[i], labelX, labelY);
-      });
-
-      // axes
-      ctx.strokeStyle = theme.grid;
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(padding.left, padding.top);
-      ctx.lineTo(padding.left, h - padding.bottom);
-      ctx.lineTo(w - padding.right, h - padding.bottom);
-      ctx.stroke();
-    }
-
-    function drawSourcesChart(canvas, topSources) {
-      const ctx = canvas.getContext("2d");
-      clearCanvas(canvas);
-      const theme = overviewTheme();
-
-      if (!topSources || topSources.length === 0) return;
-
-      const padding = { top: 14, right: 10, bottom: 14, left: 80 };
-      const w = canvas.width;
-      const h = canvas.height;
-      const chartW = w - padding.left - padding.right;
-      const chartH = h - padding.top - padding.bottom;
-
-      const maxVal = Math.max(...topSources.map(s => s[1]));
-      const rowHeight = chartH / topSources.length;
-
-      ctx.font = "11px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
-      ctx.textAlign = "right";
-      ctx.textBaseline = "middle";
-      ctx.fillStyle = theme.axis;
-
-      topSources.forEach((entry, idx) => {
-        const [src, count] = entry;
-        const yCenter = padding.top + rowHeight * idx + rowHeight / 2;
-
-        // label
-        ctx.fillText(src, padding.left - 6, yCenter);
-
-        // bar
-        const width = chartW * (count / maxVal);
-        const x = padding.left;
-        const y = yCenter - 6;
-
-        const grad = ctx.createLinearGradient(x, 0, x + width, 0);
-        grad.addColorStop(0, theme.barA);
-        grad.addColorStop(1, theme.barC);
-        ctx.fillStyle = grad;
-        ctx.fillRect(x, y, width, 12);
-
-        // count
-        ctx.fillStyle = theme.axis;
-        ctx.textAlign = "left";
-        ctx.fillText(String(count), x + width + 4, yCenter);
-        ctx.fillStyle = theme.axis;
-        ctx.textAlign = "right";
-      });
-    }
-
-    function renderOverviewMeta(year, stats) {
-      const metaEl = document.getElementById("overview-meta");
-      if (!stats || stats.totalItems === 0) {
-        metaEl.textContent = "";
-        return;
-      }
-
-      const avg = Math.round(stats.totalItems / 12);
-      const maxMonthIdx = stats.monthlyCounts.indexOf(Math.max(...stats.monthlyCounts));
-      const mostActiveMonth = maxMonthIdx >= 0 ? monthNames[maxMonthIdx] : "N/A";
-
-      metaEl.innerHTML =
-        `Year <b>${year}</b>: ${stats.totalItems} items, ` +
-        `${stats.totalSources} sources, avg <b>${avg}</b> items/month<br>` +
-        `Most active month: <b>${mostActiveMonth}</b><br>` +
-        `Data range: ${stats.rangeStart} → ${stats.rangeEnd}`;
-    }
-
-    function renderSourcesList(topSources) {
-      const ul = document.getElementById("sources-list");
-      ul.innerHTML = "";
-      if (!topSources || topSources.length === 0) return;
-      topSources.forEach(([src, count]) => {
-        const li = document.createElement("li");
-        li.textContent = `${src}: ${count}`;
-        ul.appendChild(li);
-      });
-    }
-
-    function renderFullSourceList(sourceCounts) {
-      const ul = document.getElementById("sources-list-full");
-      ul.innerHTML = "";
-      if (!sourceCounts || Object.keys(sourceCounts).length === 0) return;
-
-      Object.entries(sourceCounts)
-        .sort((a, b) => b[1] - a[1])
-        .forEach(([src, count]) => {
-          const li = document.createElement("li");
-          li.textContent = `${src}: ${count}`;
-          ul.appendChild(li);
-        });
-    }
-
-    async function updateYearOverview(year) {
-      const canvasMonthly = monthlyCanvas;
-      const canvasSources = sourcesCanvas;
-      clearCanvas(canvasMonthly);
-      clearCanvas(canvasSources);
-      document.getElementById("sources-list").innerHTML = "";
-      document.getElementById("sources-list-full").innerHTML = "";
-      document.getElementById("overview-meta").textContent = "";
-
-      if (!year) return;
-
-      let data = yearCache[year];
-      if (!data) {
-        data = await fetchJSON(`${DATA_BASE_URL}/archive/yearly/${year}.json`);
-        if (Array.isArray(data)) {
-          yearCache[year] = data;
-        }
-      }
-
-      if (!Array.isArray(data) || data.length === 0) {
-        document.getElementById("overview-meta").textContent = "No data for this year.";
-        return;
-      }
-
-      const stats = extractYearStats(data);
-
-      // save monthly counts for tooltip calc
-      monthlyCountsForTooltip = stats.monthlyCounts.slice();
-
-      drawMonthlyChart(canvasMonthly, stats.monthlyCounts);
-      drawSourcesChart(canvasSources, stats.topSources);
-      renderOverviewMeta(year, stats);
-      renderSourcesList(stats.topSources);
-      renderFullSourceList(stats.sourceCounts);
+    async function updateYear(year) {
+      if (!year) return; currentYear = year; $("crumb-year").textContent = String(year);
+      const meta = yearMeta(year); const counts = renderMonthly(year);
+      const total = meta?.item_count || counts.reduce((a, b) => a + b, 0);
+      const monthsActive = (meta?.months || []).length || 1;
+      const peakIdx = counts.indexOf(Math.max(...counts));
+      $("m-total").textContent = total.toLocaleString();
+      $("m-avg").textContent = Math.round(total / monthsActive).toLocaleString();
+      $("m-peak").textContent = peakIdx >= 0 ? MON[peakIdx] : "—";
+      $("m-peak-sub").textContent = peakIdx >= 0 ? `${counts[peakIdx].toLocaleString()} items` : "busiest period";
+      $("m-sources").textContent = "…";
+      $("sources-list").innerHTML = "";
+      updateYearButtons();
+      renderSources(year);
     }
 
     function updateYearButtons() {
-      if (!currentYear || availableYears.length === 0) {
-        prevYearBtn.disabled = true;
-        nextYearBtn.disabled = true;
-        return;
-      }
       const idx = availableYears.indexOf(Number(currentYear));
-      prevYearBtn.disabled = idx <= 0;
-      nextYearBtn.disabled = idx === -1 || idx >= availableYears.length - 1;
+      $("prev-year-btn").disabled = idx <= 0;
+      $("next-year-btn").disabled = idx === -1 || idx >= availableYears.length - 1;
     }
 
-    document.getElementById("year-select").addEventListener("change", (e) => {
-      const y = e.target.value;
-      currentYear = y || null;
-      updateYearButtons();
-      if (!currentYear) {
-        document.getElementById("overview-meta").textContent = "";
-        clearCanvas(monthlyCanvas);
-        clearCanvas(sourcesCanvas);
-        document.getElementById("sources-list").innerHTML = "";
-        document.getElementById("sources-list-full").innerHTML = "";
-        return;
+    async function loadYears() {
+      const sel = $("year-select"); const idx = await loadIndex(); let latest = null;
+      if (idx?.years?.length) {
+        availableYears = idx.years.map((y) => Number(y.year)).filter(Number.isInteger).sort((a, b) => a - b);
+        availableYears.forEach((y) => { const o = document.createElement("option"); o.value = o.textContent = String(y); sel.appendChild(o); });
+        latest = idx.latest?.year ? Number(idx.latest.year) : availableYears[availableYears.length - 1];
       }
-      updateYearOverview(currentYear);
-    });
+      if (latest) { sel.value = String(latest); updateYear(latest); } else updateYearButtons();
+    }
 
-    prevYearBtn.addEventListener("click", () => {
-      if (!currentYear) return;
-      const idx = availableYears.indexOf(Number(currentYear));
-      if (idx > 0) {
-        const prev = availableYears[idx - 1];
-        currentYear = prev;
-        document.getElementById("year-select").value = prev;
-        updateYearButtons();
-        updateYearOverview(prev);
-      }
-    });
-
-    nextYearBtn.addEventListener("click", () => {
-      if (!currentYear) return;
-      const idx = availableYears.indexOf(Number(currentYear));
-      if (idx !== -1 && idx < availableYears.length - 1) {
-        const next = availableYears[idx + 1];
-        currentYear = next;
-        document.getElementById("year-select").value = next;
-        updateYearButtons();
-        updateYearOverview(next);
-      }
-    });
-
-    // Toggle full sources list
-    document.getElementById("toggle-sources").addEventListener("click", () => {
-      const full = document.getElementById("sources-list-full");
-      const btn = document.getElementById("toggle-sources");
-      if (full.style.display === "none" || full.style.display === "") {
-        full.style.display = "block";
-        btn.textContent = "Hide full list ▲";
-      } else {
-        full.style.display = "none";
-        btn.textContent = "Show full list ▼";
-      }
-    });
-
-    // Tooltip for monthly chart
-    monthlyCanvas.addEventListener("mousemove", (e) => {
-      if (!monthlyCountsForTooltip || monthlyCountsForTooltip.length === 0) {
-        tooltipEl.style.display = "none";
-        return;
-      }
-
-      const rect = monthlyCanvas.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
-
-      const padding = { top: 20, right: 16, bottom: 26, left: 26 };
-      const w = monthlyCanvas.width;
-      const h = monthlyCanvas.height;
-      const chartW = w - padding.left - padding.right;
-      const chartH = h - padding.top - padding.bottom;
-      const slotWidth = chartW / monthlyCountsForTooltip.length;
-      const barWidth = slotWidth * 0.6;
-      const gap = slotWidth * 0.4;
-
-      if (x < padding.left || x > w - padding.right || y < padding.top || y > h - padding.bottom) {
-        tooltipEl.style.display = "none";
-        return;
-      }
-
-      const idx = Math.floor((x - padding.left) / slotWidth);
-      if (idx < 0 || idx >= monthlyCountsForTooltip.length) {
-        tooltipEl.style.display = "none";
-        return;
-      }
-
-      const count = monthlyCountsForTooltip[idx];
-      const label = monthNames[idx];
-      tooltipEl.style.display = "block";
-      tooltipEl.textContent = `${label}: ${count} items`;
-      tooltipEl.style.left = (e.pageX + 12) + "px";
-      tooltipEl.style.top = (e.pageY + 12) + "px";
-    });
-
-    monthlyCanvas.addEventListener("mouseleave", () => {
-      tooltipEl.style.display = "none";
-    });
-
-    window.addEventListener("s33r:themechange", () => {
-      if (currentYear) updateYearOverview(currentYear);
-    });
+    $("year-select").addEventListener("change", (e) => { if (e.target.value) updateYear(Number(e.target.value)); });
+    $("prev-year-btn").addEventListener("click", () => { const i = availableYears.indexOf(Number(currentYear)); if (i > 0) { const y = availableYears[i - 1]; $("year-select").value = String(y); updateYear(y); } });
+    $("next-year-btn").addEventListener("click", () => { const i = availableYears.indexOf(Number(currentYear)); if (i !== -1 && i < availableYears.length - 1) { const y = availableYears[i + 1]; $("year-select").value = String(y); updateYear(y); } });
+    window.addEventListener("s33r:themechange", () => { if (currentYear) { renderMonthly(currentYear); renderSources(currentYear); } });
 
     loadYears();
   </script>
-
 </body>
 </html>

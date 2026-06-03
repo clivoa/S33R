@@ -6,820 +6,190 @@ permalink: /archive/
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>S33R Archive</title>
-
-  <link rel="stylesheet" href="{{ '/styles.css' | relative_url }}" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>S33R — Archive</title>
   <script src="{{ '/ui.js' | relative_url }}"></script>
-
+  <link rel="stylesheet" href="{{ '/s33r-feed.css' | relative_url }}" />
+  <link rel="stylesheet" href="{{ '/s33r-pages.css' | relative_url }}" />
   <style>
-    /* Layout geral archive */
-
-    .archive-container {
-      max-width: 980px;
-      margin: 0 auto;
-      padding: 32px 12px 40px;
-      text-align: center;
-    }
-
-    .archive-title {
-      font-size: 30px;
-      font-weight: 800;
-      margin-bottom: 6px;
-      color: var(--text-primary);
-    }
-
-    .archive-subtitle {
-      font-size: 14px;
-      color: var(--text-muted);
-      margin-bottom: 18px;
-    }
-
-    /* Card de controles (ano/mês + busca + toggle + stats) */
-
-    .archive-controls {
-      background: var(--bg-elevated);
-      border-radius: var(--radius-xl);
-      border: 1px solid var(--border-color);
-      padding: 14px 16px 12px;
-      margin-bottom: 20px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      text-align: left;
-    }
-
-    .archive-controls-top {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 10px;
-      justify-content: space-between;
-    }
-
-    .archive-selectors {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-
-    .archive-selectors select {
-      background: var(--bg-primary);
-      border: 1px solid var(--border-color);
-      color: var(--text-primary);
-      padding: 6px 10px;
-      border-radius: var(--radius);
-      font-size: 14px;
-      min-width: 90px;
-    }
-
-    .archive-tools {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      align-items: center;
-      justify-content: flex-start;
-      margin-top: 4px;
-    }
-
-    .archive-search-input {
-      min-width: 260px;
-      max-width: 360px;
-      width: 100%;
-      padding: 6px 10px;
-      border-radius: var(--radius);
-      border: 1px solid var(--border-color);
-      background: var(--bg-primary);
-      color: var(--text-primary);
-      font-size: 14px;
-    }
-
-    .archive-search-input::placeholder {
-      color: var(--text-muted);
-    }
-
-    .archive-group-toggle {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 13px;
-      color: var(--text-muted);
-      padding: 4px 10px;
-      border-radius: var(--radius-pill);
-      background: var(--bg-primary);
-      border: 1px solid var(--border-color);
-      cursor: pointer;
-      white-space: nowrap;
-    }
-
-    .archive-group-toggle input {
-      accent-color: var(--accent);
-      cursor: pointer;
-    }
-
-    /* Stats dentro do card */
-
-    #archive-stats {
-      margin-top: 4px;
-      font-size: 12px;
-      color: var(--text-muted);
-    }
-
-    .archive-stats-card {
-      background: var(--bg-soft);
-      border-radius: var(--radius-lg);
-      border: 1px solid var(--border-color);
-      padding: 8px 10px;
-    }
-
-    .archive-stats-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-      margin-bottom: 2px;
-    }
-
-    .archive-stats-row span {
-      white-space: nowrap;
-    }
-
-    .archive-stats-row strong {
-      font-weight: 600;
-      color: var(--text-secondary);
-    }
-
-    /* Lista de resultados */
-
-    #archive-results {
-      margin-top: 4px;
-      text-align: left;
-    }
-
-    .archive-item {
-      background: var(--bg-elevated);
-      border: 1px solid var(--border-color);
-      padding: 10px 12px;
-      border-radius: var(--radius-lg);
-      margin-bottom: 10px;
-    }
-
-    .archive-date {
-      font-size: 11px;
-      color: var(--text-muted);
-      margin-bottom: 4px;
-    }
-
-    .archive-item a {
-      text-decoration: none;
-      color: var(--accent);
-      font-weight: 600;
-      font-size: 14px;
-    }
-
-    .archive-item a:hover {
-      text-decoration: underline;
-    }
-
-    .archive-source {
-      font-size: 12px;
-      color: var(--text-muted);
-      margin-top: 3px;
-    }
-
-    .archive-summary {
-      font-size: 13px;
-      color: var(--text-secondary);
-      margin-top: 4px;
-    }
-
-    .archive-source-header {
-      margin-top: 14px;
-      margin-bottom: 4px;
-      font-size: 11px;
-      font-weight: 600;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-    }
-
-    /* Paginação */
-
-    .archive-pagination {
-      margin-top: 16px;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 10px;
-      font-size: 13px;
-      color: var(--text-muted);
-    }
-
-    .archive-page-btn {
-      padding: 4px 10px;
-      border-radius: var(--radius-pill);
-      border: 1px solid var(--border-color);
-      background: var(--bg-elevated);
-      color: var(--text-primary);
-      cursor: pointer;
-      font-size: 13px;
-      min-width: 70px;
-    }
-
-    .archive-page-btn:disabled {
-      opacity: 0.4;
-      cursor: default;
-    }
-
-    .archive-count {
-      font-size: 12px;
-      color: var(--text-muted);
-    }
-
-    @media (max-width: 640px) {
-      .archive-container {
-        padding-top: 40px;
-      }
-      .archive-controls-top {
-        flex-direction: column;
-        align-items: flex-start;
-      }
-      .archive-tools {
-        justify-content: flex-start;
-      }
-      .archive-search-input {
-        max-width: 100%;
-      }
-    }
+    .arch-controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 16px; }
+    .arch-controls .grow { flex: 1 1 240px; display: flex; align-items: center; gap: 9px; height: 38px; padding: 0 12px; background: var(--panel); border: 1px solid var(--line-2); border-radius: 10px; }
+    .arch-controls .grow:focus-within { border-color: var(--brand); }
+    .arch-controls .grow svg { width: 15px; height: 15px; color: var(--faint); flex: 0 0 auto; }
+    .arch-controls .grow input { flex: 1; border: none; background: none; outline: none; font-size: 13.5px; color: var(--text); min-width: 0; }
+    .arch-stats { margin-top: 12px; }
+    .arch-stats-card { background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--radius); padding: 11px 14px; font-family: var(--mono); font-size: 11px; color: var(--dim); line-height: 1.7; display: flex; flex-wrap: wrap; gap: 6px 20px; }
+    .arch-stats-card b { color: var(--text-2); font-weight: 600; }
+    #archive-results { margin-top: 14px; display: flex; flex-direction: column; gap: 9px; }
+    .archive-source-header { margin: 12px 0 2px; font-family: var(--mono); font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--cyan); }
+    .archive-item { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 13px 16px; box-shadow: var(--shadow); transition: border-color .14s, transform .14s; }
+    .archive-item:hover { border-color: var(--line-2); transform: translateY(-1px); }
+    .archive-date { font-family: var(--mono); font-size: 10px; color: var(--faint); letter-spacing: .04em; margin-bottom: 5px; }
+    .archive-item a.title { color: var(--text); font-size: 15px; font-weight: 700; line-height: 1.32; letter-spacing: -.01em; }
+    .archive-item a.title:hover { color: var(--brand); }
+    .archive-source { font-family: var(--mono); font-size: 10.5px; color: var(--cyan); margin-top: 6px; }
+    .archive-summary { font-size: 12.5px; color: var(--dim); margin-top: 6px; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .archive-pagination { margin-top: 16px; display: flex; justify-content: center; align-items: center; gap: 12px; font-family: var(--mono); font-size: 11px; color: var(--faint); }
+    .arch-empty { padding: 30px; text-align: center; color: var(--dim); font-size: 13px; border: 1px dashed var(--line-2); border-radius: var(--radius); }
   </style>
+
+  <script>window.S33R = { base: "{{ '/' | relative_url }}", data: "{{ '/data' | relative_url }}", feed: "{{ '/data/news_recent.json' | relative_url }}" };</script>
 </head>
-
-<body>
-
-  <!-- Minimal Navbar -->
-  <nav class="minimal-navbar" aria-label="Primary navigation">
-    <a href="{{ '/' | relative_url }}" class="nav-brand" aria-label="S33R Home">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-      S33R
-    </a>
-    <div class="nav-sep" aria-hidden="true"></div>
-    <a href="{{ '/' | relative_url }}" class="minimal-nav-link">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1"/></svg>
-      Feed
-    </a>
-    <a href="{{ '/morning/' | relative_url }}" class="minimal-nav-link">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
-      Morning
-    </a>
-    <a href="{{ '/trend/' | relative_url }}" class="minimal-nav-link">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
-      Trends
-    </a>
-    <a href="{{ '/history/' | relative_url }}" class="minimal-nav-link">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-      History
-    </a>
-    <a href="{{ '/briefs/' | relative_url }}" class="minimal-nav-link">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-      Briefs
-    </a>
-    <a href="{{ '/archive/' | relative_url }}" class="minimal-nav-link" aria-current="page">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
-      Archive
-    </a>
-    <a href="{{ '/archive-overview/' | relative_url }}" class="minimal-nav-link">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-      Overview
-    </a>
-    <a href="{{ '/sources/' | relative_url }}" class="minimal-nav-link">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1"/></svg>
-      Sources
-    </a>
-  </nav>
-
-
-  <div class="archive-container">
-    <h1 class="archive-title">S33R Archive</h1>
-    <p class="archive-subtitle">
-      Browse older security news by year and month, with search, grouping and basic analytics.
-    </p>
-
-    <div class="archive-controls">
-      <div class="archive-controls-top">
-        <div class="archive-selectors">
-          <select id="year-select">
-            <option value="">Select year...</option>
-          </select>
-          <select id="month-select" disabled>
-            <option value="">Select month...</option>
-          </select>
-        </div>
-
-        <div class="archive-tools">
-          <input
-            id="search-input"
-            class="archive-search-input"
-            type="text"
-            placeholder="Search in archive (title, summary, source)..."
-          />
-          <label class="archive-group-toggle">
-            <input type="checkbox" id="group-by-source" />
-            Group by source
-          </label>
-        </div>
+<body data-page="archive">
+  <div class="app app--page" id="app">
+    <main class="page-main">
+      <div class="crumb">
+        <span class="lab">SECTION</span>
+        <span class="here">ARCHIVE</span>
+        <span class="meta"><span id="crumb-sel">SELECT PERIOD</span></span>
       </div>
 
-      <div id="archive-stats"></div>
-    </div>
+      <div class="page-wrap">
+        <header class="phead">
+          <div class="phead-l">
+            <span class="eyebrow amber">COLD STORAGE</span>
+            <h1>News <span>Archive</span></h1>
+            <p class="sub">Browse older security news by year and month, with search, grouping and per-period analytics.</p>
+          </div>
+          <div class="phead-actions">
+            <div class="select-wrap"><select id="year-select" aria-label="Year"><option value="">Select year…</option></select></div>
+            <div class="select-wrap"><select id="month-select" aria-label="Month" disabled><option value="">Select month…</option></select></div>
+          </div>
+        </header>
 
-    <section class="analyst-tools" aria-label="Archive analyst tools">
-      <span class="toolbar-label">Archive Tools</span>
-      <div class="toolbar-inline">
-        <button id="archive-copy-page-links" class="btn-action" type="button" disabled>Copy page links</button>
-        <button id="archive-export-page-csv" class="btn-action" type="button" disabled>Export page CSV</button>
-        <button id="archive-search-cve" class="quick-chip" type="button">Search CVE</button>
-        <button id="archive-clear-search" class="quick-chip" type="button">Clear search</button>
+        <div class="arch-controls">
+          <div class="grow">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+            <input id="search-input" type="text" placeholder="Search archive (title, summary, source)…  ( press / )" autocomplete="off" />
+          </div>
+          <label class="archive-group-toggle"><input type="checkbox" id="group-by-source" /> Group by source</label>
+        </div>
+
+        <div id="archive-stats" class="arch-stats"></div>
+
+        <section class="analyst-tools" aria-label="Archive tools">
+          <span class="toolbar-label">Archive Tools</span>
+          <div class="toolbar-inline">
+            <button id="archive-copy-page-links" class="btn-action" type="button" disabled>Copy page links</button>
+            <button id="archive-export-page-csv" class="btn-action" type="button" disabled>Export page CSV</button>
+            <button id="archive-search-cve" class="btn-action" type="button">Search CVE</button>
+            <button id="archive-clear-search" class="btn-action" type="button">Clear search</button>
+          </div>
+          <span class="kbd-hint"><kbd>/</kbd> search</span>
+        </section>
+
+        <div id="archive-results"></div>
+        <div id="archive-pagination" class="archive-pagination"></div>
+        <footer class="site-footer">S33R Security News Feed · Powered by JSON cache + public RSS sources</footer>
       </div>
-      <div class="kbd-hint" aria-hidden="true"><span>Shortcut</span><kbd>/</kbd><span>search</span></div>
-    </section>
-
-    <div id="archive-results"></div>
-    <div id="archive-pagination" class="archive-pagination"></div>
-    <footer class="site-footer">
-      <p>
-        S33R Security News Feed<br>
-        <span class="muted">Powered by JSON cache + public RSS sources</span>
-      </p>
-    </footer>
+    </main>
   </div>
 
+  <script src="{{ '/s33r-nav.js' | relative_url }}"></script>
   <script>
-    /* ============================
-       Globals
-       ============================ */
     const PAGE_SIZE = 25;
     const DATA_BASE_URL = "{{ '/data' | relative_url }}";
-    let archiveIndex = null;
-    let currentYear = null;
-    let currentMonth = null;
-    let currentItems = [];
-    let filteredItems = [];
-    let currentPage = 1;
+    let archiveIndex = null, currentYear = null, currentMonth = null, currentItems = [], filteredItems = [], currentPage = 1;
+    const $ = (id) => document.getElementById(id);
 
-    function getCurrentPageItems() {
-      if (!filteredItems || filteredItems.length === 0) return [];
-      const startIdx = (currentPage - 1) * PAGE_SIZE;
-      const endIdx = startIdx + PAGE_SIZE;
-      let pageItems = filteredItems.slice(startIdx, endIdx);
-      const groupBySource = document.getElementById("group-by-source").checked;
-      if (groupBySource) {
-        pageItems = pageItems.slice().sort((a, b) => {
-          const sa = (a.source || "").localeCompare(b.source || "");
-          if (sa !== 0) return sa;
-          const tsA = a.published_ts || 0;
-          const tsB = b.published_ts || 0;
-          return tsB - tsA;
-        });
-      }
-      return pageItems;
+    function pageItems() {
+      if (!filteredItems.length) return [];
+      let p = filteredItems.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+      if ($("group-by-source").checked) p = p.slice().sort((a, b) => (a.source || "").localeCompare(b.source || "") || (b.published_ts || 0) - (a.published_ts || 0));
+      return p;
     }
-
-    function updateArchiveToolButtons() {
-      const hasItems = getCurrentPageItems().length > 0;
-      const copyBtn = document.getElementById("archive-copy-page-links");
-      const csvBtn = document.getElementById("archive-export-page-csv");
-      if (copyBtn) copyBtn.disabled = !hasItems;
-      if (csvBtn) csvBtn.disabled = !hasItems;
-    }
-
-    async function copyArchivePageLinks() {
-      const links = getCurrentPageItems().map((i) => i.link).filter(Boolean);
-      if (!links.length) return window.S33R_UI?.toast("No links on current page");
-      await window.S33R_UI?.copyText(links.join("\n"), `${links.length} archive links copied`);
-    }
-
-    function exportArchivePageCsv() {
-      const items = getCurrentPageItems();
-      if (!items.length) return window.S33R_UI?.toast("No items on current page");
-      const esc = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
-      const rows = [
-        ["title", "source", "published", "link", "summary"].map(esc).join(","),
-        ...items.map((item) => [
-          item.title || "",
-          item.source || "",
-          formatDateFromItem(item),
-          item.link || "",
-          item.summary || "",
-        ].map(esc).join(",")),
-      ];
-      const y = currentYear || "year";
-      const m = currentMonth || "month";
-      window.S33R_UI?.downloadText(`s33r_archive_${y}-${m}_page${currentPage}.csv`, rows.join("\n"), "text/csv;charset=utf-8");
+    function updateToolBtns() { const has = pageItems().length > 0; $("archive-copy-page-links").disabled = !has; $("archive-export-page-csv").disabled = !has; }
+    async function copyLinks() { const l = pageItems().map((i) => i.link).filter(Boolean); if (!l.length) return window.S33R_UI?.toast("No links on page"); await window.S33R_UI?.copyText(l.join("\n"), `${l.length} links copied`); }
+    function exportCsv() {
+      const items = pageItems(); if (!items.length) return window.S33R_UI?.toast("No items on page");
+      const e = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+      const rows = [["title","source","published","link","summary"].map(e).join(","), ...items.map((i) => [i.title || "", i.source || "", fmtDate(i), i.link || "", i.summary || ""].map(e).join(","))];
+      window.S33R_UI?.downloadText(`s33r_archive_${currentYear}-${currentMonth}_page${currentPage}.csv`, rows.join("\n"), "text/csv;charset=utf-8");
       window.S33R_UI?.toast("Archive CSV exported");
     }
 
-    /* ============================
-       Helpers
-       ============================ */
-
-    async function fetchJSON(path) {
-      try {
-        const res = await fetch(path, { cache: "no-store" });
-        if (!res.ok) return null;
-        return await res.json();
-      } catch {
-        return null;
-      }
-    }
-
-    async function loadArchiveIndex() {
-      const primary = await fetchJSON(`${DATA_BASE_URL}/archive/archive_index.json`);
-      if (primary && Array.isArray(primary.years)) {
-        archiveIndex = primary;
-        return archiveIndex;
-      }
-      const fallback = await fetchJSON(`${DATA_BASE_URL}/archive/index.json`);
-      if (fallback && Array.isArray(fallback.years)) {
-        archiveIndex = fallback;
-        return archiveIndex;
-      }
-      archiveIndex = null;
-      return null;
-    }
-
-    function formatDateFromItem(item) {
-      if (typeof item.published_ts === "number") {
-        return new Date(item.published_ts * 1000).toLocaleString();
-      }
-      if (item.published) {
-        const d = new Date(item.published);
-        if (!isNaN(d.getTime())) {
-          return d.toLocaleString();
-        }
-      }
-      return "Unknown date";
-    }
+    async function fetchJSON(p) { try { const r = await fetch(p, { cache: "no-store" }); return r.ok ? await r.json() : null; } catch { return null; } }
+    async function loadIndex() { const a = await fetchJSON(`${DATA_BASE_URL}/archive/archive_index.json`); if (a?.years) return (archiveIndex = a); const b = await fetchJSON(`${DATA_BASE_URL}/archive/index.json`); if (b?.years) return (archiveIndex = b); return (archiveIndex = null); }
+    function fmtDate(i) { if (typeof i.published_ts === "number") return new Date(i.published_ts * 1000).toLocaleString(); if (i.published) { const d = new Date(i.published); if (!isNaN(d)) return d.toLocaleString(); } return "Unknown date"; }
 
     function computeStats(items) {
-      const statsEl = document.getElementById("archive-stats");
-      if (!items || items.length === 0) {
-        statsEl.innerHTML = "";
-        return;
-      }
-
-      const total = items.length;
-      const sourcesCount = {};
-      let minTs = Infinity;
-      let maxTs = -Infinity;
-
-      items.forEach((item) => {
-        const src = item.source || "Unknown";
-        sourcesCount[src] = (sourcesCount[src] || 0) + 1;
-
-        let ts = null;
-        if (typeof item.published_ts === "number") {
-          ts = item.published_ts * 1000;
-        } else if (item.published) {
-          const d = new Date(item.published);
-          if (!isNaN(d.getTime())) ts = d.getTime();
-        }
-        if (ts !== null) {
-          if (ts < minTs) minTs = ts;
-          if (ts > maxTs) maxTs = ts;
-        }
-      });
-
-      const uniqueSources = Object.keys(sourcesCount).length;
-      const topSources = Object.entries(sourcesCount)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 5);
-
-      const rangeStart = isNaN(minTs) || !isFinite(minTs)
-        ? "Unknown"
-        : new Date(minTs).toLocaleString();
-      const rangeEnd = isNaN(maxTs) || !isFinite(maxTs)
-        ? "Unknown"
-        : new Date(maxTs).toLocaleString();
-
-      const topSourcesStr = topSources
-        .map(([src, count]) => `${src} (${count})`)
-        .join(", ");
-
-      statsEl.innerHTML = `
-        <div class="archive-stats-card">
-          <div class="archive-stats-row">
-            <span><strong>Total items:</strong> ${total}</span>
-            <span><strong>Sources:</strong> ${uniqueSources}</span>
-          </div>
-          <div class="archive-stats-row">
-            <span><strong>Date range:</strong> ${rangeStart} → ${rangeEnd}</span>
-          </div>
-          <div class="archive-stats-row">
-            <span><strong>Top sources:</strong> ${topSourcesStr || "N/A"}</span>
-          </div>
-        </div>
-      `;
+      const el = $("archive-stats"); if (!items.length) { el.innerHTML = ""; return; }
+      const sc = {}; let min = Infinity, max = -Infinity;
+      items.forEach((it) => { const s = it.source || "Unknown"; sc[s] = (sc[s] || 0) + 1; let ts = typeof it.published_ts === "number" ? it.published_ts * 1000 : (it.published ? new Date(it.published).getTime() : null); if (ts && !isNaN(ts)) { if (ts < min) min = ts; if (ts > max) max = ts; } });
+      const top = Object.entries(sc).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([s, c]) => `${s} (${c})`).join(", ");
+      el.innerHTML = `<div class="arch-stats-card"><span><b>Total items:</b> ${items.length}</span><span><b>Sources:</b> ${Object.keys(sc).length}</span><span><b>Range:</b> ${isFinite(min) ? new Date(min).toLocaleDateString() : "?"} → ${isFinite(max) ? new Date(max).toLocaleDateString() : "?"}</span><span style="flex-basis:100%"><b>Top sources:</b> ${top || "N/A"}</span></div>`;
     }
 
     function applyFilters() {
-      const searchTerm = document
-        .getElementById("search-input")
-        .value.trim()
-        .toLowerCase();
-
-      if (!currentItems || currentItems.length === 0) {
-        filteredItems = [];
-        return;
-      }
-
-      if (!searchTerm) {
-        filteredItems = currentItems.slice();
-      } else {
-        filteredItems = currentItems.filter((item) => {
-          const title = (item.title || "").toLowerCase();
-          const summary = (item.summary || "").toLowerCase();
-          const source = (item.source || "").toLowerCase();
-          return (
-            title.includes(searchTerm) ||
-            summary.includes(searchTerm) ||
-            source.includes(searchTerm)
-          );
-        });
-      }
-
-      filteredItems.sort((a, b) => {
-        const tsA = a.published_ts || 0;
-        const tsB = b.published_ts || 0;
-        return tsB - tsA;
-      });
-
+      const q = $("search-input").value.trim().toLowerCase();
+      filteredItems = !currentItems.length ? [] : !q ? currentItems.slice() : currentItems.filter((it) => [(it.title || ""), (it.summary || ""), (it.source || "")].join(" ").toLowerCase().includes(q));
+      filteredItems.sort((a, b) => (b.published_ts || 0) - (a.published_ts || 0));
       currentPage = 1;
     }
 
-    function renderResults() {
-      const container = document.getElementById("archive-results");
-      const groupBySource = document.getElementById("group-by-source").checked;
-
-      container.innerHTML = "";
-
-      if (!filteredItems || filteredItems.length === 0) {
-        container.innerHTML = "<p>No items for this selection.</p>";
-        document.getElementById("archive-pagination").innerHTML = "";
-        computeStats([]);
-        updateArchiveToolButtons();
-        return;
-      }
-
-      computeStats(filteredItems);
-
-      const totalPages = Math.max(1, Math.ceil(filteredItems.length / PAGE_SIZE));
-      if (currentPage > totalPages) currentPage = totalPages;
-
-      const startIdx = (currentPage - 1) * PAGE_SIZE;
-      const endIdx = startIdx + PAGE_SIZE;
-      let pageItems = filteredItems.slice(startIdx, endIdx);
-
-      if (groupBySource) {
-        pageItems = pageItems.slice().sort((a, b) => {
-          const sa = (a.source || "").localeCompare(b.source || "");
-          if (sa !== 0) return sa;
-          const tsA = a.published_ts || 0;
-          const tsB = b.published_ts || 0;
-          return tsB - tsA;
-        });
-
-        let lastSource = null;
-        pageItems.forEach((item) => {
-          const src = item.source || "Unknown";
-          if (src !== lastSource) {
-            const header = document.createElement("div");
-            header.className = "archive-source-header";
-            header.textContent = src;
-            container.appendChild(header);
-            lastSource = src;
-          }
-          container.appendChild(buildItemElement(item));
-        });
-      } else {
-        pageItems.forEach((item) => {
-          container.appendChild(buildItemElement(item));
-        });
-      }
-
-      renderPagination(filteredItems.length);
-      updateArchiveToolButtons();
-    }
-
-    function buildItemElement(item) {
-      const div = document.createElement("div");
-      div.className = "archive-item";
-
-      const dateStr = formatDateFromItem(item);
-      const src = item.source || "";
-      const summary = item.summary || "";
-
-      div.innerHTML = `
-        <div class="archive-date">${dateStr}</div>
-        <a href="${item.link}" target="_blank" rel="noopener noreferrer">${item.title}</a>
-        ${src ? `<div class="archive-source">${src}</div>` : ""}
-        ${summary ? `<div class="archive-summary">${summary}</div>` : ""}
-      `;
+    function buildItem(it) {
+      const div = document.createElement("div"); div.className = "archive-item";
+      div.innerHTML = `<div class="archive-date">${fmtDate(it)}</div><a class="title" href="${it.link}" target="_blank" rel="noopener">${it.title || "Untitled"}</a>${it.source ? `<div class="archive-source">${it.source}</div>` : ""}${it.summary ? `<div class="archive-summary">${it.summary}</div>` : ""}`;
       return div;
     }
 
-    function renderPagination(totalItems) {
-      const pagEl = document.getElementById("archive-pagination");
-      if (!totalItems || totalItems <= PAGE_SIZE) {
-        pagEl.innerHTML = "";
-        updateArchiveToolButtons();
-        return;
-      }
-
-      const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
-
-      pagEl.innerHTML = `
-        <button class="archive-page-btn" id="page-prev" ${
-          currentPage <= 1 ? "disabled" : ""
-        }>Previous</button>
-        <span>Page ${currentPage} / ${totalPages}</span>
-        <button class="archive-page-btn" id="page-next" ${
-          currentPage >= totalPages ? "disabled" : ""
-        }>Next</button>
-        <span class="archive-count">${totalItems} items</span>
-      `;
-
-      document.getElementById("page-prev").onclick = () => {
-        if (currentPage > 1) {
-          currentPage--;
-          renderResults();
-        }
-      };
-      document.getElementById("page-next").onclick = () => {
-        if (currentPage < totalPages) {
-          currentPage++;
-          renderResults();
-        }
-      };
+    function renderResults() {
+      const c = $("archive-results"), group = $("group-by-source").checked; c.innerHTML = "";
+      if (!filteredItems.length) { c.innerHTML = '<div class="arch-empty">No items for this selection.</div>'; $("archive-pagination").innerHTML = ""; computeStats([]); updateToolBtns(); return; }
+      computeStats(filteredItems);
+      const totalPages = Math.max(1, Math.ceil(filteredItems.length / PAGE_SIZE)); if (currentPage > totalPages) currentPage = totalPages;
+      let items = filteredItems.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+      if (group) { items = items.slice().sort((a, b) => (a.source || "").localeCompare(b.source || "") || (b.published_ts || 0) - (a.published_ts || 0)); let last = null; items.forEach((it) => { const s = it.source || "Unknown"; if (s !== last) { const h = document.createElement("div"); h.className = "archive-source-header"; h.textContent = s; c.appendChild(h); last = s; } c.appendChild(buildItem(it)); }); }
+      else items.forEach((it) => c.appendChild(buildItem(it)));
+      renderPagination(filteredItems.length); updateToolBtns();
     }
 
-    /* ============================
-       Year / month loading
-       ============================ */
+    function renderPagination(total) {
+      const el = $("archive-pagination"); if (total <= PAGE_SIZE) { el.innerHTML = ""; updateToolBtns(); return; }
+      const tp = Math.max(1, Math.ceil(total / PAGE_SIZE));
+      el.innerHTML = `<button class="btn-action" id="page-prev" ${currentPage <= 1 ? "disabled" : ""}>← Prev</button><span>Page ${currentPage} / ${tp} · ${total} items</span><button class="btn-action" id="page-next" ${currentPage >= tp ? "disabled" : ""}>Next →</button>`;
+      $("page-prev").onclick = () => { if (currentPage > 1) { currentPage--; renderResults(); } };
+      $("page-next").onclick = () => { if (currentPage < tp) { currentPage++; renderResults(); } };
+    }
 
     async function loadYears() {
-      const select = document.getElementById("year-select");
-      const idx = await loadArchiveIndex();
-
-      if (idx && Array.isArray(idx.years) && idx.years.length > 0) {
-        const years = idx.years
-          .map((y) => Number(y.year))
-          .filter((y) => Number.isInteger(y))
-          .sort((a, b) => b - a);
-        for (const y of years) {
-          const opt = document.createElement("option");
-          opt.value = String(y);
-          opt.textContent = String(y);
-          select.appendChild(opt);
-        }
-        return;
-      }
-
-      // fallback sem lista fixa de anos: tenta janela relativa ao ano atual
-      const currentYear = new Date().getUTCFullYear();
-      for (let y = currentYear + 1; y >= currentYear - 12; y--) {
-        const exists = await fetchJSON(`${DATA_BASE_URL}/archive/yearly/${y}.json`);
-        if (!exists) continue;
-        const opt = document.createElement("option");
-        opt.value = String(y);
-        opt.textContent = String(y);
-        select.appendChild(opt);
-      }
+      const sel = $("year-select"); const idx = await loadIndex();
+      if (idx?.years?.length) { idx.years.map((y) => Number(y.year)).filter(Number.isInteger).sort((a, b) => b - a).forEach((y) => { const o = document.createElement("option"); o.value = o.textContent = String(y); sel.appendChild(o); }); }
     }
-
     function loadMonths(year) {
-      const monthSelect = document.getElementById("month-select");
-      monthSelect.innerHTML = '<option value="">Select month...</option>';
-      const yearNum = Number(year);
-      const yearMeta = archiveIndex?.years?.find((y) => Number(y.year) === yearNum);
-
-      let months = [];
-      if (yearMeta && Array.isArray(yearMeta.months) && yearMeta.months.length > 0) {
-        months = yearMeta.months
-          .map((m) => ({ month: String(m.month).padStart(2, "0"), count: Number(m.item_count || 0) }))
-          .sort((a, b) => a.month.localeCompare(b.month));
-      } else {
-        months = [
-          { month: "01", count: null }, { month: "02", count: null }, { month: "03", count: null },
-          { month: "04", count: null }, { month: "05", count: null }, { month: "06", count: null },
-          { month: "07", count: null }, { month: "08", count: null }, { month: "09", count: null },
-          { month: "10", count: null }, { month: "11", count: null }, { month: "12", count: null }
-        ];
-      }
-
-      months.forEach(({ month, count }) => {
-        const opt = document.createElement("option");
-        opt.value = month;
-        opt.textContent = Number.isFinite(count) ? `${month} (${count})` : month;
-        monthSelect.appendChild(opt);
-      });
-
-      monthSelect.disabled = months.length === 0;
+      const ms = $("month-select"); ms.innerHTML = '<option value="">Select month…</option>';
+      const meta = archiveIndex?.years?.find((y) => Number(y.year) === Number(year));
+      let months = meta?.months?.length ? meta.months.map((m) => ({ month: String(m.month).padStart(2, "0"), count: Number(m.item_count || 0) })).sort((a, b) => a.month.localeCompare(b.month)) : [];
+      months.forEach(({ month, count }) => { const o = document.createElement("option"); o.value = month; o.textContent = Number.isFinite(count) ? `${month} (${count})` : month; ms.appendChild(o); });
+      ms.disabled = months.length === 0;
     }
-
     async function loadArchive(year, month) {
-      const container = document.getElementById("archive-results");
-      const statsEl = document.getElementById("archive-stats");
-      const pagEl = document.getElementById("archive-pagination");
-
-      container.innerHTML = "<p>Loading...</p>";
-      statsEl.innerHTML = "";
-      pagEl.innerHTML = "";
-
-      const path = `${DATA_BASE_URL}/archive/monthly/${year}/${year}-${month}.json`;
-      const data = await fetchJSON(path);
-
-      currentYear = year;
-      currentMonth = month;
-      currentItems = Array.isArray(data) ? data : [];
-      applyFilters();
-      renderResults();
+      const c = $("archive-results"); c.innerHTML = '<div class="loading"><div class="spinner"></div><span>Loading…</span></div>';
+      $("crumb-sel").textContent = `${year}-${month}`;
+      const data = await fetchJSON(`${DATA_BASE_URL}/archive/monthly/${year}/${year}-${month}.json`);
+      currentYear = year; currentMonth = month; currentItems = Array.isArray(data) ? data : [];
+      applyFilters(); renderResults();
     }
 
-    /* ============================
-       Event Listeners
-       ============================ */
+    $("year-select").addEventListener("change", (e) => { const y = e.target.value; if (!y) return; loadMonths(y); currentYear = y; currentMonth = null; currentItems = []; filteredItems = []; $("archive-results").innerHTML = ""; $("archive-stats").innerHTML = ""; $("archive-pagination").innerHTML = ""; });
+    $("month-select").addEventListener("change", (e) => { const m = e.target.value, y = $("year-select").value; if (y && m) loadArchive(y, m); });
+    $("search-input").addEventListener("input", () => { applyFilters(); renderResults(); });
+    $("group-by-source").addEventListener("change", renderResults);
+    $("archive-copy-page-links").addEventListener("click", copyLinks);
+    $("archive-export-page-csv").addEventListener("click", exportCsv);
+    $("archive-search-cve").addEventListener("click", () => { const el = $("search-input"); el.value = el.value.trim().toLowerCase() === "cve-" ? "" : "CVE-"; applyFilters(); renderResults(); el.focus(); });
+    $("archive-clear-search").addEventListener("click", () => { const el = $("search-input"); el.value = ""; applyFilters(); renderResults(); el.focus(); });
+    document.addEventListener("keydown", (e) => { if (e.key === "/" && !["INPUT","TEXTAREA","SELECT"].includes(document.activeElement?.tagName)) { e.preventDefault(); $("search-input").focus(); $("search-input").select(); } });
 
-    document.getElementById("year-select").addEventListener("change", (e) => {
-      const year = e.target.value;
-      if (!year) return;
-      loadMonths(year);
-      currentYear = year;
-      currentMonth = null;
-      currentItems = [];
-      filteredItems = [];
-      document.getElementById("archive-results").innerHTML = "";
-      document.getElementById("archive-stats").innerHTML = "";
-      document.getElementById("archive-pagination").innerHTML = "";
-    });
-
-    document.getElementById("month-select").addEventListener("change", (e) => {
-      const month = e.target.value;
-      const year = document.getElementById("year-select").value;
-      if (!year || !month) return;
-      loadArchive(year, month);
-    });
-
-    document.getElementById("search-input").addEventListener("input", () => {
-      applyFilters();
-      renderResults();
-    });
-
-    document.getElementById("group-by-source").addEventListener("change", () => {
-      renderResults();
-    });
-
-    document.getElementById("archive-copy-page-links").addEventListener("click", copyArchivePageLinks);
-    document.getElementById("archive-export-page-csv").addEventListener("click", exportArchivePageCsv);
-    document.getElementById("archive-search-cve").addEventListener("click", () => {
-      const el = document.getElementById("search-input");
-      el.value = el.value.trim().toLowerCase() === "cve-" ? "" : "CVE-";
-      applyFilters();
-      renderResults();
-      el.focus();
-      el.select();
-    });
-    document.getElementById("archive-clear-search").addEventListener("click", () => {
-      const el = document.getElementById("search-input");
-      el.value = "";
-      applyFilters();
-      renderResults();
-      el.focus();
-    });
-
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "/" && !e.metaKey && !e.ctrlKey && !e.altKey) {
-        const tag = document.activeElement?.tagName;
-        if (!["INPUT", "TEXTAREA", "SELECT"].includes(tag)) {
-          e.preventDefault();
-          const el = document.getElementById("search-input");
-          el.focus();
-          el.select();
-        }
-      }
-    });
-
-    /* Initial load */
-    updateArchiveToolButtons();
+    updateToolBtns();
     loadYears().then(async () => {
-      const yearSelect = document.getElementById("year-select");
+      const ys = $("year-select");
       if (archiveIndex?.latest?.year && archiveIndex?.latest?.month) {
-        yearSelect.value = String(archiveIndex.latest.year);
-        loadMonths(String(archiveIndex.latest.year));
-        const monthSelect = document.getElementById("month-select");
-        monthSelect.value = String(archiveIndex.latest.month).padStart(2, "0");
-        await loadArchive(String(archiveIndex.latest.year), String(archiveIndex.latest.month).padStart(2, "0"));
+        ys.value = String(archiveIndex.latest.year); loadMonths(String(archiveIndex.latest.year));
+        const m = String(archiveIndex.latest.month).padStart(2, "0"); $("month-select").value = m;
+        await loadArchive(String(archiveIndex.latest.year), m);
       }
     });
   </script>
-
 </body>
 </html>

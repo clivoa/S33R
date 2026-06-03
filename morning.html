@@ -4,652 +4,190 @@ permalink: /morning/
 ---
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <title>S33R – SOC Morning Call</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="stylesheet" href="{{ '/styles.css' | relative_url }}" />
-    <script src="{{ '/ui.js' | relative_url }}"></script>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>S33R — SOC Morning Call</title>
+  <script src="{{ '/ui.js' | relative_url }}"></script>
+  <link rel="stylesheet" href="{{ '/s33r-feed.css' | relative_url }}" />
+  <link rel="stylesheet" href="{{ '/s33r-pages.css' | relative_url }}" />
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <style>
+    .mc-grid { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 16px; align-items: start; margin-top: 16px; }
+    .mc-side { display: flex; flex-direction: column; gap: 12px; position: sticky; top: 18px; }
+    .mc-side .card { padding: 15px 16px; }
+    .mc-side h3 { font-family: var(--mono); font-size: 10px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--faint); margin: 0 0 9px; }
+    .mc-side ul { margin: 0; padding-left: 16px; color: var(--dim); font-size: 12px; line-height: 1.6; }
+    .mc-side p { margin: 0; color: var(--dim); font-size: 12px; line-height: 1.55; }
+    .hl-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+    .hl-list li { padding: 8px 0; border-bottom: 1px solid var(--line); }
+    .hl-list li:last-child { border-bottom: none; }
+    .hl-list a { color: var(--text); font-size: 12.5px; font-weight: 600; line-height: 1.35; }
+    .hl-list a:hover { color: var(--brand); }
+    .hl-list .src { display: block; font-family: var(--mono); font-size: 10px; color: var(--cyan); margin-top: 4px; letter-spacing: .03em; }
+    @media (max-width: 980px) { .mc-grid { grid-template-columns: minmax(0, 1fr); } .mc-side { position: static; } }
+    @media print { .rail, .crumb, .phead-actions, .analyst-tools, .mc-side, .site-footer { display: none !important; } .app.app--page { grid-template-columns: 1fr !important; } body { background: #fff; } }
+  </style>
 
-    <!-- Lightweight Markdown Renderer -->
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-
-    <style>
-      /* Destaques para labels tipo "What:", "Why it matters:" etc */
-      .mc-label {
-        display: inline-block;
-        padding: 1px 8px;
-        margin-right: 4px;
-        border-radius: 999px;
-        background: var(--accent-soft);
-        color: var(--accent);
-        font-size: 11px;
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
-        border: 1px solid var(--border-color);
-      }
-
-      /* Ajuste leve para o texto logo após a label */
-      .markdown-body li {
-        line-height: 1.6;
-      }
-
-      /* Se a label estiver no começo do parágrafo, dá um respiro */
-      .markdown-body p > .mc-label:first-child {
-        margin-right: 6px;
-      }
-
-      /* PRINT-FRIENDLY STYLES */
-      @media print {
-        :root {
-          /* força fundo claro no print */
-          color-scheme: light;
-        }
-
-        body {
-          background: #ffffff !important;
-          color: #000000 !important;
-        }
-
-        .page {
-          box-shadow: none !important;
-          background: #ffffff !important;
-          margin: 0;
-          padding: 0 18mm 18mm 18mm;
-          max-width: 100%;
-        }
-
-        /* Esconde elementos de navegação e controles */
-        .minimal-navbar,
-        .sidebar,
-        .filters-bar,
-        .analyst-tools,
-        .site-footer,
-        .loading,
-        #btn-load-latest,
-        #btn-load-previous,
-        #btn-print,
-        #previous-date {
-          display: none !important;
-        }
-
-        /* Layout em uma coluna somente conteúdo */
-        .layout {
-          display: block;
-        }
-
-        .main-content {
-          width: 100%;
-          margin: 0;
-          padding: 0;
-        }
-
-        .site-header {
-          padding-bottom: 8px;
-          border-bottom: 1px solid #ccc;
-          margin-bottom: 12px;
-        }
-
-        .site-title {
-          color: #000000 !important;
-        }
-
-        .site-subtitle {
-          color: #333333 !important;
-        }
-
-        .card {
-          background: #ffffff !important;
-          border-radius: 0;
-          box-shadow: none !important;
-          border: none;
-          padding: 0;
-          margin: 8px 0;
-        }
-
-        .card-top {
-          border-bottom: 1px solid #e0e0e0;
-          padding: 0 0 4px 0;
-          margin-bottom: 4px;
-        }
-
-        .card-source {
-          color: #000000 !important;
-          font-weight: 600;
-        }
-
-        .status-bar {
-          border: none;
-          background: transparent;
-          padding-left: 0;
-          padding-right: 0;
-        }
-
-        .status-title span,
-        .status-meta {
-          color: #000000 !important;
-        }
-
-        .markdown-body h1,
-        .markdown-body h2,
-        .markdown-body h3 {
-          color: #000000 !important;
-        }
-
-        .markdown-body p,
-        .markdown-body li {
-          color: #000000 !important;
-        }
-
-        a,
-        a:visited {
-          color: #0000ee !important;
-        }
-
-        /* Opcional: mostra URL após links no PDF */
-        .markdown-body a[href]::after,
-        #highlights-list a[href]::after {
-          content: " (" attr(href) ")";
-          font-size: 11px;
-        }
-
-        /* Evita quebrar linhas esquisitas em listas longas */
-        #highlights-card,
-        #morning-card {
-          page-break-inside: avoid;
-        }
-
-      }
-    </style>
-  </head>
-
-  <body>
-    <div class="page">
-  <!-- Minimal Navbar -->
-  <nav class="minimal-navbar" aria-label="Primary navigation">
-    <a href="{{ '/' | relative_url }}" class="nav-brand" aria-label="S33R Home">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-      S33R
-    </a>
-    <div class="nav-sep" aria-hidden="true"></div>
-    <a href="{{ '/' | relative_url }}" class="minimal-nav-link">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1"/></svg>
-      Feed
-    </a>
-    <a href="{{ '/morning/' | relative_url }}" class="minimal-nav-link" aria-current="page">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
-      Morning
-    </a>
-    <a href="{{ '/trend/' | relative_url }}" class="minimal-nav-link">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
-      Trends
-    </a>
-    <a href="{{ '/history/' | relative_url }}" class="minimal-nav-link">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-      History
-    </a>
-    <a href="{{ '/briefs/' | relative_url }}" class="minimal-nav-link">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-      Briefs
-    </a>
-    <a href="{{ '/archive/' | relative_url }}" class="minimal-nav-link">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
-      Archive
-    </a>
-    <a href="{{ '/archive-overview/' | relative_url }}" class="minimal-nav-link">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-      Overview
-    </a>
-    <a href="{{ '/sources/' | relative_url }}" class="minimal-nav-link">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1"/></svg>
-      Sources
-    </a>
-  </nav>
-
-      <!-- Header -->
-      <header class="site-header">
-        <div class="site-title-block">
-          <span class="badge badge-live">SOC briefing</span>
-          <h1 class="site-title">Daily SOC Morning Call</h1>
-          <p class="site-subtitle">
-            Curated, AI-assisted morning brief based on the last 24h of security news,
-            focused on operational impact for a critical SOC.
-          </p>
-        </div>
-      </header>
-
-      <!-- Layout principal: sidebar + conteúdo -->
-      <div class="layout">
-        <!-- Sidebar -->
-        <aside class="sidebar">
-          <section class="sidebar-section">
-            <h2 class="sidebar-title">How this works</h2>
-            <p class="sidebar-help">
-              This page reads the prebuilt
-              <code>morning_call_YYYY-MM-DD.json</code> files under
-              <code>data/archive/</code> — generated daily from curated news items —
-              and renders a SOC-oriented morning call.
-            </p>
-          </section>
-
-          <section class="sidebar-section">
-            <h2 class="sidebar-title">Scope</h2>
-            <p class="sidebar-help">The analysis focuses on:</p>
-            <ul class="sidebar-help" style="padding-left: 18px; margin-top: 6px;">
-              <li>Exploitable &amp; high-impact CVEs</li>
-              <li>Ransomware and active campaigns</li>
-              <li>Critical vendor advisories</li>
-              <li>Financial sector and infra threats</li>
-            </ul>
-          </section>
-
-          <section class="sidebar-section">
-            <h2 class="sidebar-title">Tips for analysts</h2>
-            <p class="sidebar-help">Use this brief as a starting point for:</p>
-            <ul class="sidebar-help" style="padding-left: 18px; margin-top: 6px;">
-              <li>Shift handover discussions</li>
-              <li>Prioritizing hunts &amp; detections</li>
-              <li>Escalation notes for management</li>
-            </ul>
-          </section>
-        </aside>
-
-        <!-- Conteúdo principal -->
-        <main class="main-content">
-          <div class="filters-bar">
-            <div class="filters-left">
-              <div class="filter-group">
-                <span class="filter-label">Data source</span>
-                <span class="status-meta">
-                  JSON: <code>data/archive/morning_call_YYYY-MM-DD.json</code><br />
-                  Alias: <code>data/archive/morning_call_latest.json</code>
-                </span>
-              </div>
-            </div>
-
-            <div class="filters-right">
-              <div class="filter-group">
-                <span class="filter-label">Latest</span>
-                <button id="btn-load-latest" class="btn-pill">🔄 Load latest</button>
-              </div>
-
-              <div class="filter-group">
-                <span class="filter-label">History</span>
-                <div class="search-input-wrapper">
-                  <input type="date" id="previous-date" class="filter-input" />
-                  <button id="btn-load-previous" class="btn-pill">📅 Load by date</button>
-                </div>
-              </div>
-
-              <div class="filter-group">
-                <span class="filter-label">Export</span>
-                <button id="btn-print" class="btn-pill btn-pill-secondary">
-                  🖨 Print / PDF
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Status -->
-          <div class="status-bar" id="morning-status" style="margin-top: 4px;">
-            <div class="status-left">
-              <div class="status-title">
-                <span id="status-analysis-date">No analysis loaded</span>
-              </div>
-              <div class="status-meta" id="status-meta-line">
-                Select a date or load the latest morning call.
-              </div>
-            </div>
-
-            <div class="status-right" id="status-counts"></div>
-          </div>
-
-          <section class="analyst-tools" aria-label="Morning call analyst tools">
-            <span class="toolbar-label">Analyst Handover</span>
-            <div class="toolbar-inline">
-              <button id="btn-copy-morning-text" class="btn-action" type="button" disabled>Copy brief text</button>
-              <button id="btn-copy-morning-md" class="btn-action" type="button" disabled>Copy markdown</button>
-              <button id="btn-copy-highlights-links" class="btn-action" type="button" disabled>Copy highlight links</button>
-              <button id="btn-export-morning-md" class="btn-action" type="button" disabled>Export .md</button>
-            </div>
-            <div class="kbd-hint" aria-hidden="true">
-              <span>Shortcut</span><kbd>Shift</kbd><kbd>T</kbd><span>theme</span>
-            </div>
-          </section>
-
-          <!-- Loading -->
-          <div class="loading" id="loading-block">
-            <div class="spinner"></div>
-            <span id="loading-text">Loading morning call…</span>
-          </div>
-
-
-
-          <!-- Conteúdo do Morning Call -->
-          <div class="card" id="morning-card" style="margin-top: 8px;">
-            <div class="card-top">
-              <div class="card-source" id="morning-header-subtitle">
-                Morning call content
-              </div>
-            </div>
-            <div class="card-body">
-              <div id="morning-content" class="markdown-body card-body-text">
-                <p>No analysis loaded yet. Click "Load latest analysis".</p>
-              </div>
-            </div>
-          </div>
-
-                    <!-- Highlights -->
-          <div class="card" id="highlights-card" style="display: none; margin-top: 4px;">
-            <div class="card-top">
-              <div class="card-source">Key highlights (from curated items)</div>
-            </div>
-            <div class="card-body">
-              <ul
-                id="highlights-list"
-                class="card-body-text"
-                style="padding-left: 18px; margin: 0;"
-              ></ul>
-            </div>
-          </div>
-
-          
-        </main>
+  <script>window.S33R = { base: "{{ '/' | relative_url }}", data: "{{ '/data' | relative_url }}", feed: "{{ '/data/news_recent.json' | relative_url }}" };</script>
+</head>
+<body data-page="morning">
+  <div class="app app--page" id="app">
+    <main class="page-main">
+      <div class="crumb">
+        <span class="lab">SECTION</span>
+        <span class="here">SOC MORNING CALL</span>
+        <span class="meta"><span id="crumb-window">LAST 24H</span><span>UPDATED <b id="crumb-updated">—</b></span></span>
       </div>
 
-      <!-- Footer -->
-      <footer class="site-footer">
-        <p>
-          Generated daily from curated security feeds • S33R Security News Feed – SOC Morning Call
-        </p>
-      </footer>
-    </div>
+      <div class="page-wrap">
+        <header class="phead">
+          <div class="phead-l">
+            <span class="eyebrow">SOC BRIEFING</span>
+            <h1>Daily <span>Morning Call</span></h1>
+            <p class="sub">Curated, AI-assisted brief over the last 24h of security news — focused on operational impact for a critical SOC.</p>
+          </div>
+          <div class="phead-actions">
+            <button class="btn" id="btn-reload"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>Reload</button>
+            <button class="btn" id="btn-md"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export .md</button>
+            <button class="btn primary" id="btn-print"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>Print / PDF</button>
+          </div>
+        </header>
 
-    <script>
-      const DATA_BASE_URL = "{{ '/data' | relative_url }}";
-      const LATEST_URL = `${DATA_BASE_URL}/morning_call_latest.json`;
+        <div class="status-bar" id="morning-status">
+          <div>
+            <div class="status-title" id="status-analysis-date">Loading morning call…</div>
+            <div class="status-meta" id="status-meta-line">Reading the latest SOC briefing.</div>
+          </div>
+          <div class="status-right" id="status-counts"></div>
+        </div>
 
-      const statusAnalysisDate = document.getElementById("status-analysis-date");
-      const statusMetaLine = document.getElementById("status-meta-line");
-      const statusCounts = document.getElementById("status-counts");
-      const loadingBlock = document.getElementById("loading-block");
-      const loadingText = document.getElementById("loading-text");
-      const morningContent = document.getElementById("morning-content");
-      const highlightsCard = document.getElementById("highlights-card");
-      const highlightsList = document.getElementById("highlights-list");
-      let lastMorningData = null;
+        <section class="analyst-tools" aria-label="Morning call analyst tools">
+          <span class="toolbar-label">Analyst Handover</span>
+          <div class="toolbar-inline">
+            <button id="btn-copy-text" class="btn-action" type="button" disabled>Copy brief text</button>
+            <button id="btn-copy-md" class="btn-action" type="button" disabled>Copy markdown</button>
+            <button id="btn-copy-hl" class="btn-action" type="button" disabled>Copy highlight links</button>
+          </div>
+          <span class="kbd-hint"><kbd>⇧T</kbd> theme</span>
+        </section>
 
-      function setMorningToolButtons(enabled) {
-        [
-          "btn-copy-morning-text",
-          "btn-copy-morning-md",
-          "btn-copy-highlights-links",
-          "btn-export-morning-md",
-        ].forEach((id) => {
-          const btn = document.getElementById(id);
-          if (btn) btn.disabled = !enabled;
-        });
-      }
+        <div class="loading" id="loading-block"><div class="spinner"></div><span id="loading-text">Loading morning call…</span></div>
 
-      async function copyMorningText() {
-        const text = (morningContent.innerText || "").trim();
-        if (!text) return window.S33R_UI?.toast("No brief loaded");
-        await window.S33R_UI?.copyText(text, "Morning call text copied");
-      }
+        <div class="mc-grid" id="mc-grid" style="display:none">
+          <div class="card" id="morning-card" style="padding:0">
+            <div class="card-top"><span class="card-source" id="morning-header-subtitle">Operational summary</span></div>
+            <div class="card-body"><div id="morning-content" class="markdown-body"></div></div>
+          </div>
+          <aside class="mc-side">
+            <div class="card" id="highlights-card" style="display:none">
+              <h3>Key highlights</h3>
+              <ul id="highlights-list" class="hl-list"></ul>
+            </div>
+            <div class="card">
+              <h3>Scope</h3>
+              <ul>
+                <li>Exploitable &amp; high-impact CVEs</li>
+                <li>Ransomware &amp; active campaigns</li>
+                <li>Critical vendor advisories</li>
+                <li>Financial sector &amp; infra threats</li>
+              </ul>
+            </div>
+            <div class="card">
+              <h3>Use it for</h3>
+              <ul>
+                <li>Shift handover discussions</li>
+                <li>Prioritizing hunts &amp; detections</li>
+                <li>Escalation notes for management</li>
+              </ul>
+            </div>
+          </aside>
+        </div>
 
-      async function copyMorningMarkdown() {
-        const md = (lastMorningData && lastMorningData.morning_call_markdown) || "";
-        if (!md) return window.S33R_UI?.toast("No markdown available");
-        await window.S33R_UI?.copyText(md, "Morning call markdown copied");
-      }
+        <footer class="site-footer">Generated daily from curated security feeds · S33R Security News Feed — SOC Morning Call</footer>
+      </div>
+    </main>
+  </div>
 
-      async function copyHighlightLinks() {
-        const links = (lastMorningData?.highlights || [])
-          .map((h) => h.link)
-          .filter(Boolean);
-        if (!links.length) return window.S33R_UI?.toast("No highlight links");
-        await window.S33R_UI?.copyText(links.join("\n"), `${links.length} highlight links copied`);
-      }
+  <script src="{{ '/s33r-nav.js' | relative_url }}"></script>
+  <script>
+    const LATEST_URL = "{{ '/data/morning_call_latest.json' | relative_url }}";
+    const $ = (id) => document.getElementById(id);
+    let lastData = null;
 
-      function exportMorningMarkdown() {
-        const md = (lastMorningData && lastMorningData.morning_call_markdown) || "";
-        if (!md) return window.S33R_UI?.toast("No markdown available");
-        const date = (lastMorningData.analysis_date || new Date().toISOString().slice(0, 10)).slice(0, 10);
-        window.S33R_UI?.downloadText(`morning_call_${date}.md`, md, "text/markdown;charset=utf-8");
-        window.S33R_UI?.toast("Markdown exported");
-      }
+    function setTools(on) { ["btn-copy-text","btn-copy-md","btn-copy-hl"].forEach((id) => { const b = $(id); if (b) b.disabled = !on; }); }
+    function showLoading(msg) { $("loading-block").style.display = "flex"; $("mc-grid").style.display = "none"; $("loading-text").textContent = msg || "Loading…"; }
+    function hideLoading() { $("loading-block").style.display = "none"; $("mc-grid").style.display = "grid"; }
+    function fmtDate(iso) { try { return new Date(iso).toISOString().slice(0, 10); } catch { return iso || "Unknown"; } }
 
-      function showLoading(msg) {
-        loadingBlock.classList.remove("hidden");
-        loadingBlock.style.display = "flex";
-        loadingText.textContent = msg || "Loading morning call…";
-      }
-
-      function hideLoading() {
-        loadingBlock.classList.add("hidden");
-        loadingBlock.style.display = "none";
-      }
-
-      function formatDateForDisplay(iso) {
-        if (!iso) return "Unknown date";
-        try {
-          return new Date(iso).toISOString().slice(0, 10);
-        } catch {
-          return iso;
-        }
-      }
-
-      async function fetchMorningCall(url) {
-        showLoading();
-        setMorningToolButtons(false);
-        lastMorningData = null;
-
-        try {
-          const resp = await fetch(url, { cache: "no-cache" });
-
-          if (!resp.ok) {
-            hideLoading();
-            morningContent.innerHTML =
-              "<p>No analysis available for this date.</p>";
-            statusAnalysisDate.textContent = "No analysis loaded";
-            statusMetaLine.textContent =
-              "Could not load analysis: HTTP " + resp.status;
-            statusCounts.textContent = "";
-            highlightsCard.style.display = "none";
-            setMorningToolButtons(false);
-            return;
-          }
-
-          const data = await resp.json();
-          lastMorningData = data;
-          hideLoading();
-
-          const analysisDate = data.analysis_date || "";
-          const generatedAt = data.generated_at || "";
-          const windowHours = data.window_hours || 24;
-          const totalAll = data.total_items_in_window_all ?? 0;
-          const totalCurated = data.total_items_in_window_curated ?? 0;
-
-          statusAnalysisDate.textContent =
-            "Morning call for " + formatDateForDisplay(analysisDate);
-          statusMetaLine.textContent =
-            `JSON generated at: ${generatedAt} (window: last ${windowHours}h)`;
-
-          statusCounts.textContent =
-            `Items in window: ${totalAll} total / ${totalCurated} curated`;
-
-          // Highlights
-          const highlights = data.highlights ?? [];
-          highlightsList.innerHTML = "";
-          if (highlights.length > 0) {
-            highlightsCard.style.display = "block";
-            highlights.forEach((h) => {
-              const li = document.createElement("li");
-              const title = h.title || "(no title)";
-              const link = h.link || "#";
-              const source = h.source || "";
-              li.innerHTML = `
-                <a href="${link}" target="_blank" class="card-title-link">
-                  ${title}
-                </a>
-                <span style="font-size:11px; color:var(--text-muted); margin-left:6px;">
-                  ${source ? "(" + source + ")" : ""}
-                </span>`;
-              highlightsList.appendChild(li);
-            });
-          } else {
-            highlightsCard.style.display = "none";
-          }
-
-          // Markdown → HTML
-          const md = data.morning_call_markdown || "No content available.";
-          morningContent.innerHTML = marked.parse(md);
-
-          // Depois de renderizar o markdown, destacamos labels SOC
-          highlightSocLabels();
-          setMorningToolButtons(true);
-        } catch (err) {
-          console.error(err);
-          hideLoading();
-          morningContent.innerHTML =
-            "<p>Error loading morning call JSON.</p>";
-          statusAnalysisDate.textContent = "No analysis loaded";
-          statusMetaLine.textContent = "Error fetching JSON.";
-          statusCounts.textContent = "";
-          highlightsCard.style.display = "none";
-          lastMorningData = null;
-          setMorningToolButtons(false);
-        }
-      }
-
-      document
-        .getElementById("btn-load-latest")
-        .addEventListener("click", () => {
-          fetchMorningCall(LATEST_URL);
-        });
-
-      document
-        .getElementById("btn-load-previous")
-        .addEventListener("click", () => {
-          const value = document.getElementById("previous-date").value;
-          if (!value) return alert("Select a date");
-
-          const [yyyy, mm] = value.split("-");
-
-          fetchMorningCall(`${DATA_BASE_URL}/archive/morning_call/${yyyy}/${mm}/morning_call_${value}.json`);
-        });
-
-      document.getElementById("btn-print").addEventListener("click", () => {
-        window.print();
-      });
-
-      document.getElementById("btn-copy-morning-text").addEventListener("click", copyMorningText);
-      document.getElementById("btn-copy-morning-md").addEventListener("click", copyMorningMarkdown);
-      document.getElementById("btn-copy-highlights-links").addEventListener("click", copyHighlightLinks);
-      document.getElementById("btn-export-morning-md").addEventListener("click", exportMorningMarkdown);
-      
-     function highlightSocLabels() {
-      const LABELS = [
-        "What",
-        "What happened",
-        "Why it matters",
-        "Why it matters operationally",
-        "Recommended immediate actions",
-        "Recommended actions",
-        "Log sources",
-        "Log source",
-        "Focus",
-      ];
-
-      const lis = morningContent.querySelectorAll("li");
-
-      function tryTransformLabel(container) {
-        if (!container || container.querySelector?.(".mc-label")) return false;
-
-        let firstNode = container.firstChild;
-        while (
-          firstNode &&
-          firstNode.nodeType === Node.TEXT_NODE &&
-          !(firstNode.textContent || "").trim()
-        ) {
-          firstNode = firstNode.nextSibling;
-        }
-
-        if (!firstNode) return false;
-
-        let labelCarrier = null;
-        let sourceText = "";
-        let isWrappedLabel = false;
-
-        if (firstNode.nodeType === Node.TEXT_NODE) {
-          labelCarrier = firstNode;
-          sourceText = firstNode.textContent || "";
-        } else if (
-          firstNode.nodeType === Node.ELEMENT_NODE &&
-          ["STRONG", "B"].includes(firstNode.nodeName)
-        ) {
-          labelCarrier = firstNode;
-          sourceText = firstNode.textContent || "";
-          isWrappedLabel = true;
-        } else {
-          return false;
-        }
-
-        const trimmed = sourceText.trim();
-        if (!trimmed) return false;
-
-        for (const baseLabel of LABELS) {
-          const pattern = new RegExp(
-            "^\\s*(" +
-              baseLabel.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") +
-              ")\\s*:?\\s*(.*)$",
-            "i"
-          );
-
-          const match = trimmed.match(pattern);
-          if (!match) continue;
-
-          const labelText = match[1];
-          const rest = match[2];
-
-          const labelSpan = document.createElement("span");
-          labelSpan.className = "mc-label";
-          labelSpan.textContent = labelText.toUpperCase() + ":";
-
-          if (isWrappedLabel) {
-            container.insertBefore(labelSpan, labelCarrier);
-            if (rest) {
-              container.insertBefore(document.createTextNode(" " + rest), labelCarrier);
-            }
-            labelCarrier.remove();
-          } else {
-            container.insertBefore(labelSpan, labelCarrier);
-            labelCarrier.textContent = rest ? " " + rest : "";
-          }
-
-          return true;
-        }
-
-        return false;
-      }
-
-      lis.forEach((li) => {
-        if (tryTransformLabel(li)) return;
-
-        // Alguns renderizadores podem envolver o conteúdo do <li> em <p>
-        const firstElement = li.firstElementChild;
-        if (firstElement && firstElement.tagName === "P") {
-          tryTransformLabel(firstElement);
+    const LABELS = ["What happened","What","Why it matters operationally","Why it matters","Recommended immediate actions","Recommended actions","Log sources","Log source","Focus"];
+    function highlightSocLabels(root) {
+      root.querySelectorAll("li").forEach((li) => {
+        const target = (li.firstElementChild && li.firstElementChild.tagName === "P") ? li.firstElementChild : li;
+        if (target.querySelector(".mc-label")) return;
+        let node = target.firstChild;
+        while (node && node.nodeType === Node.TEXT_NODE && !node.textContent.trim()) node = node.nextSibling;
+        if (!node) return;
+        const wrapped = node.nodeType === Node.ELEMENT_NODE && ["STRONG","B"].includes(node.nodeName);
+        if (node.nodeType !== Node.TEXT_NODE && !wrapped) return;
+        const text = (node.textContent || "").trim();
+        for (const base of LABELS) {
+          const m = text.match(new RegExp("^\\s*(" + base.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + ")\\s*:?\\s*(.*)$", "i"));
+          if (!m) continue;
+          const span = document.createElement("span");
+          span.className = "mc-label"; span.textContent = m[1].toUpperCase();
+          if (wrapped) { target.insertBefore(span, node); if (m[2]) target.insertBefore(document.createTextNode(" " + m[2]), node); node.remove(); }
+          else { target.insertBefore(span, node); node.textContent = m[2] ? " " + m[2] : ""; }
+          return;
         }
       });
     }
 
+    async function load() {
+      showLoading(); setTools(false); lastData = null;
+      try {
+        const resp = await fetch(LATEST_URL, { cache: "no-cache" });
+        if (!resp.ok) throw new Error("HTTP " + resp.status);
+        const data = await resp.json(); lastData = data; hideLoading();
 
+        const win = data.window_hours || 24;
+        $("crumb-window").textContent = "LAST " + win + "H";
+        $("status-analysis-date").textContent = "Morning call for " + fmtDate(data.analysis_date);
+        $("status-meta-line").innerHTML = "Generated " + (data.generated_at || "—") + " · window last " + win + "h";
+        $("status-counts").innerHTML = (data.total_items_in_window_all ?? 0) + " items in window<br>" + (data.total_items_in_window_curated ?? 0) + " curated";
+        if (data.generated_at) {
+          const diff = Math.floor((Date.now() - new Date(data.generated_at).getTime()) / 60000);
+          $("crumb-updated").textContent = diff < 60 ? diff + "m ago" : Math.floor(diff / 60) + "h ago";
+        }
+        $("morning-header-subtitle").textContent = "Operational summary · " + fmtDate(data.analysis_date);
 
-      window.addEventListener("DOMContentLoaded", () => {
-        setMorningToolButtons(false);
-        fetchMorningCall(LATEST_URL);
-      });
-    </script>
-  </body>
+        const hl = data.highlights || [];
+        if (hl.length) {
+          $("highlights-card").style.display = "block";
+          $("highlights-list").innerHTML = hl.map((h) =>
+            `<li><a href="${h.link || "#"}" target="_blank" rel="noopener">${(h.title || "(no title)")}</a>${h.source ? `<span class="src">${h.source}</span>` : ""}</li>`).join("");
+        } else { $("highlights-card").style.display = "none"; }
+
+        $("morning-content").innerHTML = marked.parse(data.morning_call_markdown || "No content available.");
+        highlightSocLabels($("morning-content"));
+        setTools(true);
+      } catch (err) {
+        console.error(err); hideLoading();
+        $("morning-content").innerHTML = "<p>Could not load the morning call.</p>";
+        $("status-analysis-date").textContent = "No analysis loaded";
+        $("status-meta-line").textContent = "Error fetching the briefing JSON.";
+      }
+    }
+
+    $("btn-reload").addEventListener("click", load);
+    $("btn-print").addEventListener("click", () => window.print());
+    $("btn-copy-text").addEventListener("click", () => window.S33R_UI?.copyText(($("morning-content").innerText || "").trim(), "Brief text copied"));
+    $("btn-copy-md").addEventListener("click", () => window.S33R_UI?.copyText((lastData?.morning_call_markdown) || "", "Markdown copied"));
+    $("btn-copy-hl").addEventListener("click", () => { const l = (lastData?.highlights || []).map((h) => h.link).filter(Boolean); if (!l.length) return window.S33R_UI?.toast("No highlight links"); window.S33R_UI?.copyText(l.join("\n"), l.length + " links copied"); });
+    function exportMd() { const md = lastData?.morning_call_markdown || ""; if (!md) return window.S33R_UI?.toast("No markdown"); window.S33R_UI?.downloadText(`morning_call_${fmtDate(lastData.analysis_date)}.md`, md, "text/markdown;charset=utf-8"); window.S33R_UI?.toast("Markdown exported"); }
+    $("btn-md").addEventListener("click", exportMd);
+
+    load();
+  </script>
+</body>
 </html>

@@ -6,602 +6,149 @@ permalink: /briefs/
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>S33R – Morning Call Archive</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="stylesheet" href="{{ '/styles.css' | relative_url }}" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>S33R — Morning Call Archive</title>
   <script src="{{ '/ui.js' | relative_url }}"></script>
+  <link rel="stylesheet" href="{{ '/s33r-feed.css' | relative_url }}" />
+  <link rel="stylesheet" href="{{ '/s33r-pages.css' | relative_url }}" />
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-
   <style>
-    .briefs-layout {
-      max-width: 860px;
-      margin: 0 auto;
-      padding: 4px 0 32px;
-    }
-
-    .briefs-header {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 0.75rem;
-      margin-bottom: 1.25rem;
-    }
-
-    .briefs-title {
-      font-size: 1.35rem;
-      font-weight: 700;
-      color: var(--text);
-    }
-
-    .briefs-meta {
-      font-size: 12px;
-      color: var(--muted);
-      margin-top: 4px;
-    }
-
-    /* Search bar */
-    .briefs-search-row {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 1rem;
-    }
-
-    .briefs-search-wrap {
-      position: relative;
-      flex: 1;
-    }
-
-    .briefs-search-icon {
-      position: absolute;
-      left: 10px;
-      top: 50%;
-      transform: translateY(-50%);
-      color: var(--muted);
-      font-size: 16px;
-      pointer-events: none;
-    }
-
-    .briefs-search-input {
-      width: 100%;
-      padding: 9px 12px 9px 34px;
-      border-radius: 10px;
-      border: 1px solid var(--line);
-      background: var(--surface-2);
-      color: var(--text);
-      font-size: 13px;
-      font-family: inherit;
-      box-sizing: border-box;
-    }
-
-    .briefs-search-input:focus {
-      outline: none;
-      border-color: var(--primary);
-    }
-
-    .briefs-clear-btn {
-      padding: 8px 14px;
-      border-radius: 10px;
-      border: 1px solid var(--line);
-      background: var(--surface-2);
-      color: var(--muted);
-      font-size: 13px;
-      cursor: pointer;
-      transition: background 0.12s, color 0.12s;
-    }
-
-    .briefs-clear-btn:hover {
-      background: var(--surface);
-      color: var(--text);
-    }
-
-    /* Month filter */
-    .month-filter {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      margin-bottom: 1rem;
-    }
-
-    .mf-btn {
-      padding: 3px 10px;
-      border-radius: 999px;
-      border: 1px solid var(--line);
-      background: var(--surface);
-      color: var(--muted);
-      font-size: 12px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background 0.12s, color 0.12s, border-color 0.12s;
-    }
-
-    .mf-btn:hover { background: var(--surface-2); color: var(--text); }
-
-    .mf-btn.active {
-      background: var(--accent-soft);
-      border-color: color-mix(in oklab, var(--primary) 34%, var(--line));
-      color: var(--primary);
-    }
-
-    /* Results info */
-    .briefs-results-info {
-      font-size: 12px;
-      color: var(--muted);
-      margin-bottom: 0.75rem;
-    }
-
-    /* Brief card */
-    .brief-card {
-      border: 1px solid var(--line);
-      border-radius: 14px;
-      background: var(--surface);
-      margin-bottom: 10px;
-      overflow: hidden;
-      transition: border-color 0.15s;
-    }
-
-    .brief-card:hover { border-color: var(--line-strong); }
-
-    .brief-card-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      padding: 12px 16px;
-      cursor: pointer;
-    }
-
-    .brief-date-block {
-      display: flex;
-      align-items: baseline;
-      gap: 10px;
-    }
-
-    .brief-date {
-      font-size: 14px;
-      font-weight: 700;
-      color: var(--text);
-    }
-
-    .brief-day-label {
-      font-size: 11px;
-      color: var(--muted);
-    }
-
-    .brief-chips {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 5px;
-      align-items: center;
-    }
-
-    .brief-chip {
-      font-size: 11px;
-      border: 1px solid var(--line);
-      border-radius: 999px;
-      padding: 2px 8px;
-      color: var(--text-2);
-      background: var(--surface-2);
-      white-space: nowrap;
-    }
-
-    .brief-chip.cve { border-color: color-mix(in oklab, var(--warning) 50%, var(--line)); color: var(--warning); }
-
-    .brief-expand-icon {
-      font-size: 16px;
-      color: var(--muted);
-      transition: transform 0.2s;
-      flex-shrink: 0;
-    }
-
-    .brief-card.expanded .brief-expand-icon { transform: rotate(180deg); }
-
-    .brief-summary {
-      padding: 0 16px 12px;
-      font-size: 13px;
-      color: var(--text-2);
-      line-height: 1.5;
-    }
-
-    .brief-summary mark {
-      background: color-mix(in oklab, var(--primary) 20%, transparent);
-      color: var(--text);
-      border-radius: 3px;
-      padding: 0 2px;
-    }
-
-    .brief-body {
-      display: none;
-      border-top: 1px solid var(--line);
-      padding: 16px;
-    }
-
-    .brief-card.expanded .brief-body { display: block; }
-
-    /* Rendered markdown styles */
-    .brief-markdown h3, .brief-markdown h2 {
-      font-size: 13px;
-      font-weight: 700;
-      color: var(--text);
-      margin: 1em 0 0.4em;
-      border-bottom: 1px dashed var(--line);
-      padding-bottom: 4px;
-    }
-
-    .brief-markdown h3:first-child { margin-top: 0; }
-
-    .brief-markdown ul, .brief-markdown ol {
-      padding-left: 1.2em;
-      margin: 0.4em 0;
-    }
-
-    .brief-markdown li {
-      font-size: 13px;
-      color: var(--text-2);
-      line-height: 1.55;
-      margin-bottom: 4px;
-    }
-
-    .brief-markdown p {
-      font-size: 13px;
-      color: var(--text-2);
-      line-height: 1.55;
-      margin: 0.4em 0;
-    }
-
-    .brief-markdown strong { color: var(--text); }
-
-    .brief-markdown code {
-      font-size: 11px;
-      background: var(--surface-2);
-      border: 1px solid var(--line);
-      border-radius: 4px;
-      padding: 1px 5px;
-      color: var(--primary);
-    }
-
-    .brief-markdown a {
-      color: var(--primary);
-      text-decoration: none;
-    }
-
-    .brief-markdown a:hover { text-decoration: underline; }
-
-    .brief-copy-btn {
-      margin-top: 12px;
-      padding: 6px 12px;
-      border-radius: 8px;
-      border: 1px solid var(--line);
-      background: var(--surface-2);
-      color: var(--muted);
-      font-size: 12px;
-      cursor: pointer;
-    }
-
-    .brief-copy-btn:hover { color: var(--text); }
-
-    .no-results {
-      text-align: center;
-      padding: 40px 16px;
-      color: var(--muted);
-      font-size: 14px;
-    }
-
-    .loading-briefs {
-      text-align: center;
-      padding: 40px 16px;
-      color: var(--muted);
-      font-size: 14px;
-    }
-
-    @media (max-width: 600px) {
-      .brief-chips { display: none; }
-    }
+    .briefs-tools { display: flex; gap: 10px; align-items: center; margin-top: 16px; flex-wrap: wrap; }
+    .briefs-search { flex: 1 1 280px; display: flex; align-items: center; gap: 9px; height: 38px; padding: 0 12px; background: var(--panel); border: 1px solid var(--line-2); border-radius: 10px; }
+    .briefs-search:focus-within { border-color: var(--brand); }
+    .briefs-search svg { width: 15px; height: 15px; color: var(--faint); flex: 0 0 auto; }
+    .briefs-search input { flex: 1; border: none; background: none; outline: none; font-size: 13.5px; color: var(--text); min-width: 0; }
+    .briefs-search input::placeholder { color: var(--faint); }
+    .month-filter { display: flex; flex-wrap: wrap; gap: 6px; margin: 14px 0 6px; }
+    .briefs-info { font-family: var(--mono); font-size: 10.5px; color: var(--faint); letter-spacing: .04em; margin: 8px 0 14px; }
+    #briefs-list { display: flex; flex-direction: column; gap: 9px; }
+    .brief-card { border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); box-shadow: var(--shadow); overflow: hidden; transition: border-color .14s; }
+    .brief-card:hover { border-color: var(--line-2); }
+    .brief-card.expanded { border-color: color-mix(in oklab, var(--brand) 28%, var(--line)); }
+    .bc-head { display: flex; align-items: center; gap: 14px; padding: 14px 16px; cursor: pointer; }
+    .bc-date { font-size: 14.5px; font-weight: 800; color: var(--text); letter-spacing: -.01em; white-space: nowrap; }
+    .bc-day { font-family: var(--mono); font-size: 10px; color: var(--faint); }
+    .bc-chips { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; margin-left: 6px; }
+    .bc-chip { font-family: var(--mono); font-size: 10px; letter-spacing: .03em; padding: 2px 8px; border-radius: 6px; color: var(--dim); background: var(--panel-2); border: 1px solid var(--line); white-space: nowrap; }
+    .bc-chip.cve { color: var(--red); border-color: color-mix(in oklab, var(--red) 32%, var(--line)); background: color-mix(in oklab, var(--red) 8%, transparent); }
+    .bc-exp { margin-left: auto; font-size: 14px; color: var(--faint); transition: transform .2s; flex-shrink: 0; }
+    .brief-card.expanded .bc-exp { transform: rotate(180deg); }
+    .bc-summary { padding: 0 16px 14px; font-size: 12.5px; color: var(--dim); line-height: 1.55; }
+    .bc-summary mark { background: var(--brand-soft); color: var(--text); border-radius: 3px; padding: 0 2px; }
+    .bc-body { display: none; border-top: 1px solid var(--line); padding: 16px 18px; }
+    .brief-card.expanded .bc-body { display: block; }
+    .no-results, .loading-briefs { text-align: center; padding: 44px 16px; color: var(--dim); font-size: 14px; }
+    @media (max-width: 620px) { .bc-chips { display: none; } }
   </style>
+
+  <script>window.S33R = { base: "{{ '/' | relative_url }}", data: "{{ '/data' | relative_url }}", feed: "{{ '/data/news_recent.json' | relative_url }}" };</script>
 </head>
-<body>
-  <nav class="minimal-navbar" aria-label="Primary navigation">
-    <a href="{{ '/' | relative_url }}" class="nav-brand" aria-label="S33R Home">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-      S33R
-    </a>
-    <div class="nav-sep" aria-hidden="true"></div>
-    <a href="{{ '/' | relative_url }}" class="minimal-nav-link">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1"/></svg>
-      Feed
-    </a>
-    <a href="{{ '/morning/' | relative_url }}" class="minimal-nav-link">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
-      Morning
-    </a>
-    <a href="{{ '/trend/' | relative_url }}" class="minimal-nav-link">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
-      Trends
-    </a>
-    <a href="{{ '/history/' | relative_url }}" class="minimal-nav-link">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-      History
-    </a>
-    <a href="{{ '/briefs/' | relative_url }}" class="minimal-nav-link" aria-current="page">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-      Briefs
-    </a>
-    <a href="{{ '/archive/' | relative_url }}" class="minimal-nav-link">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
-      Archive
-    </a>
-    <a href="{{ '/archive-overview/' | relative_url }}" class="minimal-nav-link">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-      Overview
-    </a>
-    <a href="{{ '/sources/' | relative_url }}" class="minimal-nav-link">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1"/></svg>
-      Sources
-    </a>
-  </nav>
-
-  <div class="page">
-    <header class="site-header">
-      <div class="site-title">S33R Security News Feed</div>
-    </header>
-
-    <main class="briefs-layout">
-      <section class="briefs-header">
-        <div>
-          <div class="briefs-title">Morning Call Archive</div>
-          <p class="briefs-meta" id="briefs-meta">Loading…</p>
-        </div>
-      </section>
-
-      <div class="briefs-search-row">
-        <div class="briefs-search-wrap">
-          <span class="briefs-search-icon" aria-hidden="true">⌕</span>
-          <input
-            id="briefs-search"
-            class="briefs-search-input"
-            type="text"
-            placeholder="Search across all briefings…"
-            autocomplete="off"
-          />
-        </div>
-        <button id="briefs-clear" class="briefs-clear-btn" type="button">Clear</button>
+<body data-page="briefs">
+  <div class="app app--page" id="app">
+    <main class="page-main">
+      <div class="crumb">
+        <span class="lab">SECTION</span>
+        <span class="here">MORNING CALL ARCHIVE</span>
+        <span class="meta"><span id="crumb-count">—</span><span>RANGE <b id="crumb-range">—</b></span></span>
       </div>
 
-      <div class="month-filter" id="monthFilter"></div>
+      <div class="page-wrap narrow">
+        <header class="phead">
+          <div class="phead-l">
+            <span class="eyebrow amber">DAILY BRIEFINGS</span>
+            <h1>Briefs <span>Archive</span></h1>
+            <p class="sub">Every AI-generated SOC morning call, searchable across all editions. Expand any day to read the full briefing.</p>
+          </div>
+        </header>
 
-      <p class="briefs-results-info" id="briefs-results-info"></p>
+        <div class="briefs-tools">
+          <div class="briefs-search">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+            <input id="briefs-search" type="text" placeholder="Search across all briefings…  ( press / )" autocomplete="off" />
+          </div>
+          <button id="briefs-clear" class="btn-action" type="button">Clear</button>
+        </div>
 
-      <div id="briefs-list">
-        <div class="loading-briefs">Loading briefings…</div>
+        <div class="month-filter" id="monthFilter"></div>
+        <p class="briefs-info" id="briefs-results-info"></p>
+
+        <div id="briefs-list"><div class="loading-briefs">Loading briefings…</div></div>
+
+        <footer class="site-footer">S33R Security News Feed · Daily AI-generated security briefings</footer>
       </div>
     </main>
-
-    <footer class="site-footer">
-      <p>
-        S33R Security News Feed<br>
-        <span class="muted">Daily AI-generated security briefings</span>
-      </p>
-    </footer>
   </div>
 
+  <script src="{{ '/s33r-nav.js' | relative_url }}"></script>
   <script>
     const indexUrl = "{{ '/data/morning_call_index.json' | relative_url }}";
-    const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-    const MONTHS_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const DAYS = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+    const MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    let allEntries = [], activeMonth = "all", searchQuery = "", deb = null;
+    const $ = (id) => document.getElementById(id);
 
-    let allEntries = [];
-    let activeMonth = "all";
-    let searchQuery = "";
-    let debounceTimer = null;
-
-    function formatDate(dateStr) {
-      const [y, m, d] = dateStr.split("-").map(Number);
-      const dt = new Date(Date.UTC(y, m - 1, d));
-      const day = DAYS[dt.getUTCDay()];
-      return `${day}, ${MONTHS_SHORT[m - 1]} ${d}, ${y}`;
-    }
-
-    function highlight(text, query) {
-      if (!query) return escHtml(text);
-      const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      const re = new RegExp(`(${escaped})`, "gi");
-      return escHtml(text).replace(re, "<mark>$1</mark>");
-    }
-
-    function escHtml(s) {
-      return (s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-    }
-
-    function getMonthKey(dateStr) { return dateStr.slice(0, 7); }
+    const escHtml = (s) => (s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    function fmtDate(d) { const [y, m, dd] = d.split("-").map(Number); const dt = new Date(Date.UTC(y, m - 1, dd)); return { full: `${MON[m - 1]} ${dd}, ${y}`, day: DAYS[dt.getUTCDay()] }; }
+    function highlight(text, q) { if (!q) return escHtml(text); const re = new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`, "gi"); return escHtml(text).replace(re, "<mark>$1</mark>"); }
+    const monthKey = (d) => d.slice(0, 7);
 
     function buildMonthFilter(entries) {
-      const months = [...new Set(entries.map((e) => getMonthKey(e.date)))].sort().reverse();
-      const container = document.getElementById("monthFilter");
-      container.innerHTML = "";
-
-      const allBtn = document.createElement("button");
-      allBtn.className = "mf-btn active";
-      allBtn.textContent = "All";
-      allBtn.dataset.month = "all";
-      container.appendChild(allBtn);
-
-      months.forEach((m) => {
-        const [y, mo] = m.split("-").map(Number);
-        const label = `${MONTHS_SHORT[mo - 1]} ${y}`;
-        const btn = document.createElement("button");
-        btn.className = "mf-btn";
-        btn.textContent = label;
-        btn.dataset.month = m;
-        container.appendChild(btn);
-      });
-
-      container.addEventListener("click", (e) => {
-        const btn = e.target.closest(".mf-btn");
-        if (!btn) return;
-        container.querySelectorAll(".mf-btn").forEach((b) => b.classList.remove("active"));
-        btn.classList.add("active");
-        activeMonth = btn.dataset.month;
-        renderList();
-      });
+      const months = [...new Set(entries.map((e) => monthKey(e.date)))].sort().reverse();
+      const c = $("monthFilter"); c.innerHTML = "";
+      const all = document.createElement("button"); all.className = "mf-btn active"; all.textContent = "All"; all.dataset.month = "all"; c.appendChild(all);
+      months.forEach((m) => { const [y, mo] = m.split("-").map(Number); const b = document.createElement("button"); b.className = "mf-btn"; b.textContent = `${MON[mo - 1]} ${y}`; b.dataset.month = m; c.appendChild(b); });
+      c.addEventListener("click", (e) => { const b = e.target.closest(".mf-btn"); if (!b) return; c.querySelectorAll(".mf-btn").forEach((x) => x.classList.remove("active")); b.classList.add("active"); activeMonth = b.dataset.month; render(); });
     }
 
-    function filterEntries() {
-      let result = allEntries;
-      if (activeMonth !== "all") {
-        result = result.filter((e) => getMonthKey(e.date) === activeMonth);
-      }
-      if (searchQuery) {
-        const q = searchQuery.toLowerCase();
-        result = result.filter((e) => {
-          const hay = [e.exec_summary || "", e.markdown || "", e.date].join(" ").toLowerCase();
-          return hay.includes(q);
-        });
-      }
-      return result;
+    function filter() {
+      let r = allEntries;
+      if (activeMonth !== "all") r = r.filter((e) => monthKey(e.date) === activeMonth);
+      if (searchQuery) { const q = searchQuery.toLowerCase(); r = r.filter((e) => [e.exec_summary || "", e.markdown || "", e.date].join(" ").toLowerCase().includes(q)); }
+      return r;
     }
 
-    function renderList() {
-      const entries = filterEntries();
-      const q = searchQuery;
-      const listEl = document.getElementById("briefs-list");
-      const info = document.getElementById("briefs-results-info");
-
-      info.textContent = `${entries.length} briefing${entries.length !== 1 ? "s" : ""}`;
-      listEl.innerHTML = "";
-
-      if (!entries.length) {
-        listEl.innerHTML = '<div class="no-results">No briefings match your search.</div>';
-        return;
-      }
-
+    function render() {
+      const entries = filter(), q = searchQuery, list = $("briefs-list");
+      $("briefs-results-info").textContent = `${entries.length} briefing${entries.length !== 1 ? "s" : ""}`;
+      list.innerHTML = "";
+      if (!entries.length) { list.innerHTML = '<div class="no-results">No briefings match your search.</div>'; return; }
       entries.forEach((entry) => {
-        const card = document.createElement("div");
-        card.className = "brief-card";
-
-        // Header (clickable)
-        const header = document.createElement("div");
-        header.className = "brief-card-header";
-
-        const dateBlock = document.createElement("div");
-        dateBlock.className = "brief-date-block";
-        const dateEl = document.createElement("span");
-        dateEl.className = "brief-date";
-        dateEl.textContent = formatDate(entry.date);
-        dateBlock.appendChild(dateEl);
-
-        const chips = document.createElement("div");
-        chips.className = "brief-chips";
-
-        if (entry.word_count) {
-          const wc = document.createElement("span");
-          wc.className = "brief-chip";
-          wc.textContent = `${entry.word_count} words`;
-          chips.appendChild(wc);
-        }
-
-        (entry.cves || []).slice(0, 3).forEach((cve) => {
-          const c = document.createElement("span");
-          c.className = "brief-chip cve";
-          c.textContent = cve;
-          chips.appendChild(c);
-        });
-
-        if ((entry.cves || []).length > 3) {
-          const more = document.createElement("span");
-          more.className = "brief-chip";
-          more.textContent = `+${entry.cves.length - 3} CVEs`;
-          chips.appendChild(more);
-        }
-
-        const icon = document.createElement("span");
-        icon.className = "brief-expand-icon";
-        icon.textContent = "▾";
-
-        header.appendChild(dateBlock);
-        header.appendChild(chips);
-        header.appendChild(icon);
-        card.appendChild(header);
-
-        // Summary (always visible)
-        const summary = document.createElement("div");
-        summary.className = "brief-summary";
-        summary.innerHTML = highlight(entry.exec_summary || "No executive summary.", q);
-        card.appendChild(summary);
-
-        // Body (markdown, hidden by default)
-        const body = document.createElement("div");
-        body.className = "brief-body";
-        let rendered = false;
-
-        header.addEventListener("click", () => {
-          const wasExpanded = card.classList.contains("expanded");
-          card.classList.toggle("expanded");
-          if (!wasExpanded && !rendered) {
-            const mdDiv = document.createElement("div");
-            mdDiv.className = "brief-markdown";
-            mdDiv.innerHTML = marked.parse(entry.markdown || "");
-            const copyBtn = document.createElement("button");
-            copyBtn.className = "brief-copy-btn";
-            copyBtn.type = "button";
-            copyBtn.textContent = "Copy markdown";
-            copyBtn.addEventListener("click", (ev) => {
-              ev.stopPropagation();
-              window.S33R_UI?.copyText(entry.markdown || "", "Markdown copied");
-            });
-            body.appendChild(mdDiv);
-            body.appendChild(copyBtn);
-            rendered = true;
+        const card = document.createElement("div"); card.className = "brief-card";
+        const d = fmtDate(entry.date);
+        const cves = (entry.cves || []);
+        const chips = [];
+        if (entry.word_count) chips.push(`<span class="bc-chip">${entry.word_count} words`); else if (entry.total_items) chips.push(`<span class="bc-chip">${entry.total_items} items</span>`);
+        cves.slice(0, 3).forEach((c) => chips.push(`<span class="bc-chip cve">${c}</span>`));
+        if (cves.length > 3) chips.push(`<span class="bc-chip">+${cves.length - 3} CVE</span>`);
+        card.innerHTML =
+          `<div class="bc-head"><span class="bc-date">${d.full}</span><span class="bc-day">${d.day}</span><span class="bc-chips">${chips.join("")}</span><span class="bc-exp">▾</span></div>` +
+          `<div class="bc-summary">${highlight(entry.exec_summary || "No executive summary.", q)}</div>` +
+          `<div class="bc-body"></div>`;
+        const body = card.querySelector(".bc-body"); let rendered = false;
+        card.querySelector(".bc-head").addEventListener("click", () => {
+          const was = card.classList.contains("expanded"); card.classList.toggle("expanded");
+          if (!was && !rendered) {
+            const md = document.createElement("div"); md.className = "brief-markdown"; md.innerHTML = marked.parse(entry.markdown || "");
+            const copy = document.createElement("button"); copy.className = "btn-action"; copy.style.marginTop = "12px"; copy.type = "button"; copy.textContent = "Copy markdown";
+            copy.addEventListener("click", (ev) => { ev.stopPropagation(); window.S33R_UI?.copyText(entry.markdown || "", "Markdown copied"); });
+            body.appendChild(md); body.appendChild(copy); rendered = true;
           }
         });
-
-        card.appendChild(body);
-        listEl.appendChild(card);
+        list.appendChild(card);
       });
     }
 
-    document.addEventListener("DOMContentLoaded", () => {
-      const searchInput = document.getElementById("briefs-search");
-      const clearBtn = document.getElementById("briefs-clear");
+    const searchInput = $("briefs-search");
+    searchInput.addEventListener("input", () => { clearTimeout(deb); deb = setTimeout(() => { searchQuery = searchInput.value.trim(); render(); }, 200); });
+    $("briefs-clear").addEventListener("click", () => { searchInput.value = ""; searchQuery = ""; render(); searchInput.focus(); });
+    document.addEventListener("keydown", (e) => { if (e.key === "/" && !["INPUT","TEXTAREA"].includes(document.activeElement?.tagName)) { e.preventDefault(); searchInput.focus(); } });
 
-      searchInput.addEventListener("input", () => {
-        clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(() => {
-          searchQuery = searchInput.value.trim();
-          renderList();
-        }, 200);
-      });
-
-      clearBtn.addEventListener("click", () => {
-        searchInput.value = "";
-        searchQuery = "";
-        renderList();
-        searchInput.focus();
-      });
-
-      // Keyboard shortcut: / to focus
-      document.addEventListener("keydown", (e) => {
-        if (e.key === "/" && !["INPUT", "TEXTAREA"].includes(document.activeElement?.tagName)) {
-          e.preventDefault();
-          searchInput.focus();
-        }
-      });
-
-      fetch(indexUrl, { cache: "no-store" })
-        .then((r) => r.json())
-        .then((data) => {
-          allEntries = data.entries || [];
-          const dr = data.date_range || {};
-          document.getElementById("briefs-meta").textContent =
-            `${data.total} briefings · ${dr.oldest || "?"} – ${dr.newest || "?"}`;
-          buildMonthFilter(allEntries);
-          renderList();
-        })
-        .catch((err) => {
-          console.error("Failed to load morning_call_index.json", err);
-          document.getElementById("briefs-list").innerHTML =
-            '<div class="no-results">Failed to load briefings.</div>';
-        });
-    });
+    fetch(indexUrl, { cache: "no-store" }).then((r) => r.json()).then((data) => {
+      allEntries = data.entries || []; const dr = data.date_range || {};
+      $("crumb-count").textContent = (data.total || allEntries.length) + " BRIEFS";
+      $("crumb-range").textContent = `${dr.oldest || "?"} → ${dr.newest || "?"}`;
+      buildMonthFilter(allEntries); render();
+    }).catch((err) => { console.error(err); $("briefs-list").innerHTML = '<div class="no-results">Failed to load briefings.</div>'; });
   </script>
 </body>
 </html>

@@ -1,0 +1,266 @@
+/* ============================================================
+   S33R — page chrome for the WARDEN redesign
+   Loaded AFTER s33r-feed.css (which provides the design tokens,
+   base reset and the activity rail). Adds: a page shell variant,
+   crumb strip, page headers, cards, forms, tables, markdown,
+   charts theming — plus a compatibility layer that maps the
+   legacy variable names used by the original pages onto WARDEN
+   tokens, so they recolor correctly in light & dark.
+   ============================================================ */
+
+/* ---- legacy variable compatibility (auto light/dark) ---- */
+:root {
+  --primary: var(--brand);
+  --secondary: var(--cyan);
+  --accent: var(--brand);
+  --accent-soft: var(--brand-soft);
+
+  --surface: var(--panel);
+  --surface-2: var(--panel-2);
+  --bg-primary: var(--panel);
+  --bg-elevated: var(--panel);
+  --bg-soft: var(--panel-2);
+
+  --border-color: var(--line);
+  --line-strong: var(--line-2);
+
+  --muted: var(--dim);
+  --text-muted: var(--faint);
+  --text-primary: var(--text);
+  --text-secondary: var(--text-2);
+
+  --success: var(--teal);
+  --danger: var(--red);
+  --warning: var(--amber);
+
+  --radius-lg: 12px;
+  --radius-xl: 14px;
+  --radius-pill: 999px;
+  --shadow-soft: var(--shadow);
+
+  --chart-series-1: var(--brand);
+  --chart-series-2: var(--cyan);
+  --chart-series-3: var(--teal);
+  --chart-series-4: var(--red);
+  --chart-grid: var(--line);
+  --chart-axis: var(--dim);
+  --chart-fill-soft: var(--brand-soft);
+}
+
+/* ============================================================
+   SHELL
+   ============================================================ */
+.app.app--page { grid-template-columns: 66px minmax(0, 1fr); }
+.page-main { min-width: 0; display: flex; flex-direction: column; }
+.page-wrap { width: 100%; max-width: 1200px; margin: 0 auto; padding: 0 28px 48px; }
+.page-wrap.narrow { max-width: 920px; }
+
+/* ---- crumb strip (mirrors the feed threat strip) ---- */
+.crumb {
+  display: flex; align-items: center; gap: 14px; height: 36px; padding: 0 28px;
+  background: linear-gradient(90deg, var(--brand-soft), transparent 56%);
+  border-bottom: 1px solid var(--line);
+  font-family: var(--mono); font-size: 10.5px; letter-spacing: .08em;
+}
+.crumb .lab { color: var(--faint); }
+.crumb .here { color: var(--brand); font-weight: 700; letter-spacing: .12em; }
+.crumb .meta { margin-left: auto; color: var(--faint); display: flex; gap: 16px; flex-wrap: wrap; }
+.crumb .meta b { color: var(--dim); font-weight: 400; }
+
+/* ---- page header ---- */
+.phead { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; padding: 26px 0 6px; flex-wrap: wrap; }
+.phead-l { min-width: 0; }
+.phead .eyebrow {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--mono); font-size: 9.5px; font-weight: 700; letter-spacing: .14em;
+  color: var(--teal); border: 1px solid color-mix(in oklab, var(--teal) 34%, var(--line));
+  background: color-mix(in oklab, var(--teal) 9%, transparent);
+  padding: 3px 9px; border-radius: 999px; margin-bottom: 13px;
+}
+.phead .eyebrow.amber { color: var(--brand); border-color: color-mix(in oklab, var(--brand) 34%, var(--line)); background: var(--brand-soft); }
+.phead .eyebrow::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; box-shadow: 0 0 7px currentColor; }
+.phead h1 { font-size: 26px; font-weight: 800; letter-spacing: -.02em; line-height: 1.04; margin: 0; }
+.phead h1 span { color: var(--brand); }
+.phead .sub { font-family: var(--mono); font-size: 11px; color: var(--faint); margin: 10px 0 0; letter-spacing: .04em; line-height: 1.5; max-width: 70ch; }
+.phead-actions { display: flex; gap: 8px; flex-wrap: wrap; flex: 0 0 auto; }
+
+/* ============================================================
+   CARDS
+   ============================================================ */
+.card {
+  background: var(--panel); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 18px 18px 16px; box-shadow: var(--shadow);
+}
+.card > h2 { font-size: 14.5px; font-weight: 700; letter-spacing: -.01em; margin: 0 0 4px; color: var(--text); }
+.card > h2:has(+ .trend-note) { margin-bottom: 2px; }
+.card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+.trend-note, .muted-note { font-size: 11.5px; color: var(--dim); line-height: 1.5; margin: 6px 0 12px; }
+.muted { color: var(--dim); }
+
+/* chart canvas containers get a faint inner surface */
+.chart-container, .chart-sm, .chart-md, .small-chart { position: relative; }
+
+/* ============================================================
+   FORMS / CONTROLS  (legacy class names, WARDEN look)
+   ============================================================ */
+.filters-bar, .sources-controls-bar {
+  display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; flex-wrap: wrap;
+  background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 13px 15px; margin-top: 4px;
+}
+.filters-left { display: flex; align-items: flex-end; gap: 14px; flex-wrap: wrap; }
+.filters-right { display: flex; align-items: flex-end; gap: 14px; flex-wrap: wrap; }
+.filter-group, .search-block { display: flex; flex-direction: column; gap: 6px; }
+.filter-label {
+  font-family: var(--mono); font-size: 9.5px; font-weight: 700; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--faint);
+}
+.filter-input, .archive-search-input, .cve-search-input, .briefs-search-input,
+.archive-selectors select, .overview-controls select {
+  height: 36px; padding: 0 12px; border-radius: 9px;
+  background: var(--panel); border: 1px solid var(--line-2); color: var(--text);
+  font-family: var(--sans); font-size: 13px; outline: none;
+}
+select.filter-input { font-family: var(--mono); font-size: 11.5px; color: var(--text-2); appearance: none; padding-right: 28px;
+  background-image: linear-gradient(45deg, transparent 50%, var(--faint) 50%), linear-gradient(135deg, var(--faint) 50%, transparent 50%);
+  background-position: calc(100% - 15px) 16px, calc(100% - 10px) 16px; background-size: 5px 5px, 5px 5px; background-repeat: no-repeat; }
+.filter-input:focus, .archive-search-input:focus, .cve-search-input:focus, .briefs-search-input:focus { border-color: var(--brand); }
+.search-field { position: relative; display: inline-flex; align-items: center; }
+.search-icon, .briefs-search-icon { position: absolute; left: 11px; color: var(--faint); font-size: 14px; pointer-events: none; }
+
+.btn-pill {
+  height: 36px; padding: 0 14px; border-radius: 9px;
+  font-family: var(--mono); font-size: 11.5px; letter-spacing: .03em;
+  color: var(--brand-ink); background: var(--brand); border: 1px solid var(--brand); font-weight: 700;
+  display: inline-flex; align-items: center; gap: 7px; transition: filter .14s;
+}
+.btn-pill:hover { filter: brightness(1.06); }
+.btn-pill-secondary { background: var(--panel); color: var(--text-2); border-color: var(--line-2); font-weight: 400; }
+.btn-pill-secondary:hover { border-color: var(--brand); color: var(--text); filter: none; }
+.search-input-wrapper { display: flex; gap: 8px; align-items: center; }
+
+/* analyst tool bar */
+.analyst-tools {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 11px 13px; background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--radius); margin-top: 10px;
+}
+.toolbar-label { font-family: var(--mono); font-size: 9.5px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--faint); }
+.toolbar-inline { display: flex; gap: 6px; flex-wrap: wrap; }
+.btn-action, .quick-chip, .archive-page-btn, .briefs-clear-btn, .month-btn, .mf-btn, .window-selector button {
+  font-family: var(--mono); font-size: 10.5px; letter-spacing: .03em; color: var(--text-2);
+  border: 1px solid var(--line-2); border-radius: 8px; padding: 6px 11px; background: var(--panel);
+  transition: border-color .12s, color .12s, background .12s;
+}
+.btn-action:hover:not(:disabled), .quick-chip:hover, .archive-page-btn:hover:not(:disabled),
+.briefs-clear-btn:hover, .month-btn:hover, .mf-btn:hover, .window-selector button:hover { border-color: var(--brand); color: var(--text); }
+.btn-action:disabled { opacity: .45; cursor: not-allowed; }
+.month-btn.active, .mf-btn.active, .window-selector button.active {
+  color: var(--brand); border-color: color-mix(in oklab, var(--brand) 36%, var(--line)); background: var(--brand-soft); font-weight: 600;
+}
+.kbd-hint { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; color: var(--faint); font-family: var(--mono); font-size: 10px; }
+.kbd-hint kbd { border: 1px solid var(--line-2); background: var(--panel); border-radius: 5px; padding: 1px 6px; font-size: 9.5px; color: var(--text-2); }
+.curated-toggle, .archive-group-toggle {
+  display: inline-flex; align-items: center; gap: 7px; font-family: var(--mono); font-size: 11px;
+  color: var(--dim); cursor: pointer; height: 36px; padding: 0 12px; border: 1px solid var(--line-2);
+  border-radius: 9px; background: var(--panel); white-space: nowrap;
+}
+.curated-toggle input, .archive-group-toggle input { accent-color: var(--brand); width: 14px; height: 14px; }
+
+/* ============================================================
+   STATUS BAR  (morning)
+   ============================================================ */
+.status-bar {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; flex-wrap: wrap;
+  padding: 13px 15px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); margin-top: 10px;
+}
+.status-title { font-size: 15px; font-weight: 700; color: var(--text); }
+.status-meta, .sources-meta-right { font-family: var(--mono); font-size: 10.5px; color: var(--faint); line-height: 1.6; margin-top: 4px; }
+.status-meta code { color: var(--text-2); }
+.status-right { font-family: var(--mono); font-size: 11px; color: var(--text-2); text-align: right; }
+
+/* loading + spinner */
+.loading { display: flex; align-items: center; gap: 10px; padding: 22px; color: var(--dim); font-family: var(--mono); font-size: 12px; }
+.spinner { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--line-2); border-top-color: var(--brand); animation: s33r-spin .8s linear infinite; }
+@keyframes s33r-spin { to { transform: rotate(360deg); } }
+
+/* ============================================================
+   TABLES  (sources + feed-quality)
+   ============================================================ */
+.sources-table-wrap, .fq-table-wrap { overflow-x: auto; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
+.sources-table, .fq-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.sources-table thead th, .fq-table thead th {
+  position: sticky; top: 0; background: var(--panel-2); text-align: left; padding: 10px 12px;
+  font-family: var(--mono); font-size: 9.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--faint); border-bottom: 1px solid var(--line-2); white-space: nowrap; cursor: pointer; user-select: none;
+}
+.fq-table thead th:hover, .sources-table thead th:hover { color: var(--text-2); }
+.fq-table th.fq-sort-active { color: var(--brand); }
+.sources-table td, .fq-table td { padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: middle; color: var(--text-2); }
+.sources-table tbody tr:hover td, .fq-table tbody tr:hover td { background: var(--panel-2); }
+.source-name { font-weight: 600; color: var(--text); font-size: 13px; }
+.fq-rank, .source-category { color: var(--faint); }
+
+.feed-status-badge { font-family: var(--mono); font-size: 9.5px; font-weight: 700; letter-spacing: .06em; padding: 2px 8px; border-radius: 6px; border: 1px solid var(--line-2); white-space: nowrap; }
+.status-ok { color: var(--teal); border-color: color-mix(in oklab, var(--teal) 36%, var(--line)); background: color-mix(in oklab, var(--teal) 9%, transparent); }
+.status-empty { color: var(--dim); }
+.status-error { color: var(--red); border-color: color-mix(in oklab, var(--red) 36%, var(--line)); background: color-mix(in oklab, var(--red) 8%, transparent); }
+.status-bozo { color: var(--brand); border-color: color-mix(in oklab, var(--brand) 36%, var(--line)); background: var(--brand-soft); }
+.grade-badge { font-family: var(--mono); font-size: 11px; font-weight: 800; width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; border-radius: 7px; border: 1px solid var(--line-2); }
+.grade-a { color: var(--teal); border-color: color-mix(in oklab, var(--teal) 40%, var(--line)); }
+.grade-b { color: var(--cyan); border-color: color-mix(in oklab, var(--cyan) 40%, var(--line)); }
+.grade-c { color: var(--brand); border-color: color-mix(in oklab, var(--brand) 40%, var(--line)); }
+.grade-d { color: var(--red); border-color: color-mix(in oklab, var(--red) 40%, var(--line)); }
+.grade-none { color: var(--faint); }
+.source-score-bar-wrap, .fq-score-wrap { display: flex; align-items: center; gap: 8px; min-width: 96px; }
+.source-score-bar-track, .fq-score-bar { flex: 1; height: 5px; border-radius: 3px; background: var(--line); overflow: hidden; }
+.source-score-bar-fill, .fq-score-fill { height: 100%; border-radius: 3px; background: var(--brand); }
+.source-score-num, .fq-score-val { font-family: var(--mono); font-size: 11.5px; font-weight: 700; color: var(--brand); min-width: 30px; text-align: right; }
+.sources-empty { padding: 28px; text-align: center; color: var(--dim); font-size: 13px; }
+
+/* ============================================================
+   MARKDOWN  (morning + briefs)
+   ============================================================ */
+.card-top { padding: 13px 16px; border-bottom: 1px solid var(--line); background: var(--panel-2); border-radius: var(--radius) var(--radius) 0 0; }
+.card-source { font-family: var(--mono); font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--faint); }
+.card-body { padding: 18px 20px 20px; }
+.markdown-body, .brief-markdown { color: var(--text-2); font-size: 13.5px; line-height: 1.62; }
+.markdown-body h1, .markdown-body h2, .markdown-body h3, .brief-markdown h2, .brief-markdown h3 {
+  color: var(--text); font-weight: 800; letter-spacing: -.01em; line-height: 1.2;
+}
+.markdown-body h1 { font-size: 20px; margin: 0 0 12px; }
+.markdown-body h2, .brief-markdown h2 { font-size: 16px; margin: 22px 0 8px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+.markdown-body h3, .brief-markdown h3 { font-size: 14px; margin: 18px 0 6px; }
+.brief-markdown h3:first-child, .markdown-body h2:first-child { margin-top: 0; }
+.markdown-body p, .brief-markdown p { margin: 8px 0; }
+.markdown-body ul, .markdown-body ol, .brief-markdown ul, .brief-markdown ol { padding-left: 20px; margin: 8px 0; }
+.markdown-body li, .brief-markdown li { margin-bottom: 6px; line-height: 1.6; }
+.markdown-body strong, .brief-markdown strong { color: var(--text); font-weight: 700; }
+.markdown-body a, .brief-markdown a { color: var(--cyan); text-decoration: none; border-bottom: 1px solid color-mix(in oklab, var(--cyan) 34%, transparent); }
+.markdown-body a:hover, .brief-markdown a:hover { color: var(--brand); }
+.markdown-body code, .brief-markdown code {
+  font-family: var(--mono); font-size: 11.5px; background: var(--panel-2);
+  border: 1px solid var(--line); border-radius: 5px; padding: 1px 6px; color: var(--brand);
+}
+.mc-label {
+  display: inline-block; font-family: var(--mono); font-size: 9.5px; font-weight: 700; letter-spacing: .08em;
+  padding: 2px 8px; margin-right: 6px; border-radius: 6px;
+  background: var(--brand-soft); color: var(--brand); border: 1px solid color-mix(in oklab, var(--brand) 30%, var(--line));
+}
+
+/* ============================================================
+   FOOTER + misc
+   ============================================================ */
+.site-footer { margin-top: 26px; padding-top: 16px; border-top: 1px solid var(--line); font-family: var(--mono); font-size: 10.5px; color: var(--faint); line-height: 1.6; }
+.site-footer code { color: var(--text-2); }
+.badge { display: inline-flex; align-items: center; font-family: var(--mono); font-size: 9.5px; font-weight: 700; letter-spacing: .12em; padding: 3px 9px; border-radius: 999px; }
+.cve-meta-chip { font-family: var(--mono); font-size: 11px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 4px 10px; color: var(--text-2); }
+.cve-meta-chip strong { color: var(--brand); }
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width: 880px) {
+  .app.app--page { grid-template-columns: 66px minmax(0, 1fr); }
+  .page-wrap { padding: 0 16px 40px; }
+  .phead { gap: 12px; }
+}

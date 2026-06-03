@@ -6,336 +6,161 @@ permalink: /sources/
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>S33R – Source Health Monitor</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="stylesheet" href="{{ '/styles.css' | relative_url }}" />
+  <title>S33R — Source Health Monitor</title>
   <script src="{{ '/ui.js' | relative_url }}"></script>
+  <link rel="stylesheet" href="{{ '/s33r-feed.css' | relative_url }}" />
+  <link rel="stylesheet" href="{{ '/s33r-pages.css' | relative_url }}" />
+  <style>
+    .src-table-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; margin: 14px 0 8px; }
+    .src-table-head .meta { font-family: var(--mono); font-size: 10.5px; color: var(--faint); letter-spacing: .04em; }
+    .sources-table th { font-size: 9px; }
+    .sources-table td { font-variant-numeric: tabular-nums; }
+    @media (max-width: 1100px) { .sources-table th:nth-child(n+8), .sources-table td:nth-child(n+8) { display: none; } }
+    @media (max-width: 760px) { .sources-table th:nth-child(n+6), .sources-table td:nth-child(n+6) { display: none; } }
+  </style>
+
+  <script>window.S33R = { base: "{{ '/' | relative_url }}", data: "{{ '/data' | relative_url }}", feed: "{{ '/data/news_recent.json' | relative_url }}" };</script>
 </head>
-<body>
-  <nav class="minimal-navbar" aria-label="Primary navigation">
-    <a href="{{ '/' | relative_url }}" class="nav-brand" aria-label="S33R Home">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-      S33R
-    </a>
-    <div class="nav-sep" aria-hidden="true"></div>
-    <a href="{{ '/' | relative_url }}" class="minimal-nav-link">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1"/></svg>
-      Feed
-    </a>
-    <a href="{{ '/morning/' | relative_url }}" class="minimal-nav-link">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
-      Morning
-    </a>
-    <a href="{{ '/trend/' | relative_url }}" class="minimal-nav-link">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
-      Trends
-    </a>
-    <a href="{{ '/history/' | relative_url }}" class="minimal-nav-link">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-      History
-    </a>
-    <a href="{{ '/briefs/' | relative_url }}" class="minimal-nav-link">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-      Briefs
-    </a>
-    <a href="{{ '/archive/' | relative_url }}" class="minimal-nav-link">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
-      Archive
-    </a>
-    <a href="{{ '/archive-overview/' | relative_url }}" class="minimal-nav-link">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-      Overview
-    </a>
-    <a href="{{ '/sources/' | relative_url }}" class="minimal-nav-link" aria-current="page">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1"/></svg>
-      Sources
-    </a>
-  </nav>
-
-  <div class="page sources-page">
-    <header class="site-header">
-      <div class="site-title-block">
-        <div class="badge badge-live">LIVE STATUS</div>
-        <h1 class="site-title">Source Health Monitor</h1>
-        <p class="site-subtitle muted">
-          All configured RSS feeds — freshness, volume, deduplication and noise scores.
-        </p>
+<body data-page="sources">
+  <div class="app app--page" id="app">
+    <main class="page-main">
+      <div class="crumb">
+        <span class="lab">SECTION</span>
+        <span class="here">SOURCE HEALTH MONITOR</span>
+        <span class="meta"><span id="sources-meta">—</span></span>
       </div>
-    </header>
 
-    <div class="sources-controls-bar">
-      <div class="filters-left">
-        <div class="search-block">
-          <label for="sources-search" class="filter-label">Filter sources</label>
-          <div class="search-field" style="min-width:280px">
-            <span class="search-icon" aria-hidden="true">⌕</span>
-            <input id="sources-search" type="text" class="filter-input" placeholder="Search source name…" autocomplete="off"
-              style="padding-left:30px; padding-right:8px; width:100%"/>
+      <div class="page-wrap">
+        <header class="phead">
+          <div class="phead-l">
+            <span class="eyebrow">LIVE STATUS</span>
+            <h1>Source <span>Health</span></h1>
+            <p class="sub">All configured RSS feeds — freshness, volume, deduplication and noise scores, graded by quality.</p>
+          </div>
+        </header>
+
+        <div class="sources-controls-bar">
+          <div class="filters-left">
+            <div class="search-block">
+              <span class="filter-label">Filter sources</span>
+              <div class="search-field" style="min-width:240px">
+                <span class="search-icon" aria-hidden="true">⌕</span>
+                <input id="sources-search" type="text" class="filter-input" placeholder="Search source name…" autocomplete="off" style="padding-left:30px; width:100%" />
+              </div>
+            </div>
+            <div class="filter-group">
+              <span class="filter-label">Status</span>
+              <select id="status-filter" class="filter-input">
+                <option value="all">All statuses</option><option value="ok">Active (ok)</option>
+                <option value="empty">Empty</option><option value="error">Error</option><option value="bozo">Bozo</option>
+              </select>
+            </div>
+            <div class="filter-group">
+              <span class="filter-label">Grade</span>
+              <select id="grade-filter" class="filter-input">
+                <option value="all">All grades</option><option value="A">A — Top tier (≥60)</option>
+                <option value="B">B — Good (45–59)</option><option value="C">C — Fair (30–44)</option>
+                <option value="D">D — Low (&lt;30)</option><option value="none">No score</option>
+              </select>
+            </div>
+            <div class="filter-group">
+              <span class="filter-label">Sort by</span>
+              <select id="sort-sources" class="filter-input">
+                <option value="rank">Rank</option><option value="score">Score (desc)</option><option value="name">Name (A–Z)</option>
+                <option value="status">Status</option><option value="items">Total items</option><option value="fresh">Fresh 48h</option>
+              </select>
+            </div>
           </div>
         </div>
 
-        <div class="filter-group">
-          <label for="status-filter" class="filter-label">Status</label>
-          <select id="status-filter" class="filter-input">
-            <option value="all">All statuses</option>
-            <option value="ok">Active (ok)</option>
-            <option value="empty">Empty</option>
-            <option value="error">Error</option>
-            <option value="bozo">Bozo</option>
-          </select>
+        <div class="src-table-head"><span class="filter-label">Feed roster</span></div>
+
+        <div class="sources-table-wrap">
+          <div id="sources-loading" class="loading" role="status"><div class="spinner"></div><span>Loading source data…</span></div>
+          <table class="sources-table" id="sources-table" style="display:none">
+            <thead><tr>
+              <th style="width:34px">#</th><th>Source</th><th>Status</th><th>Grade</th>
+              <th>Score</th><th>Items</th><th>Fresh 48h</th><th>Fresh 7d</th><th>Curated</th><th>Dupes</th><th>Noise</th>
+            </tr></thead>
+            <tbody id="sources-tbody"></tbody>
+          </table>
+          <div id="sources-empty" class="sources-empty hidden">No sources match the current filters.</div>
         </div>
 
-        <div class="filter-group">
-          <label for="grade-filter" class="filter-label">Grade</label>
-          <select id="grade-filter" class="filter-input">
-            <option value="all">All grades</option>
-            <option value="A">A — Top tier (≥ 60)</option>
-            <option value="B">B — Good (45–59)</option>
-            <option value="C">C — Fair (30–44)</option>
-            <option value="D">D — Low (&lt; 30)</option>
-            <option value="none">No score (inactive)</option>
-          </select>
-        </div>
-
-        <div class="filter-group">
-          <label for="sort-sources" class="filter-label">Sort by</label>
-          <select id="sort-sources" class="filter-input">
-            <option value="rank">Rank</option>
-            <option value="score">Score (desc)</option>
-            <option value="name">Name (A–Z)</option>
-            <option value="status">Status</option>
-            <option value="items">Total items</option>
-            <option value="fresh">Fresh items 48h</option>
-          </select>
-        </div>
+        <footer class="site-footer">S33R Source Health Monitor · Data from <code>news_recent.json</code> — source_quality + feed_attempts</footer>
       </div>
-
-      <div class="sources-meta-right" id="sources-meta">
-        —
-      </div>
-    </div>
-
-    <div class="sources-table-wrap">
-      <div id="sources-loading" class="loading" role="status">
-        <div class="spinner"></div>
-        <span>Loading source data…</span>
-      </div>
-      <table class="sources-table" id="sources-table" style="display:none">
-        <thead>
-          <tr>
-            <th style="width:36px">#</th>
-            <th>Source</th>
-            <th>Status</th>
-            <th>Grade</th>
-            <th class="source-score-bar-cell">Score</th>
-            <th>Total items</th>
-            <th>Fresh 48h</th>
-            <th>Fresh 7d</th>
-            <th>Curated</th>
-            <th>Duplicates</th>
-            <th>Noise</th>
-          </tr>
-        </thead>
-        <tbody id="sources-tbody"></tbody>
-      </table>
-      <div id="sources-empty" class="sources-empty hidden">No sources match the current filters.</div>
-    </div>
-
-    <footer class="site-footer" style="max-width:none">
-      <p>S33R Source Health Monitor &bull; <span class="muted">Data from <code>news_recent.json</code> · source_quality + feed_attempts</span></p>
-    </footer>
+    </main>
   </div>
 
+  <script src="{{ '/s33r-nav.js' | relative_url }}"></script>
   <script>
     const NEWS_JSON = "{{ '/data/news_recent.json' | relative_url }}";
+    let allSources = [], filtered = [];
+    const $ = (id) => document.getElementById(id);
+    const grade = (s) => s == null ? null : s >= 60 ? "A" : s >= 45 ? "B" : s >= 30 ? "C" : "D";
+    const gColor = (s) => s == null ? "var(--faint)" : s >= 60 ? "var(--teal)" : s >= 45 ? "var(--cyan)" : s >= 30 ? "var(--brand)" : "var(--red)";
 
-    let allSources = [];
-    let filtered = [];
-
-    function getGrade(score) {
-      if (score == null) return null;
-      if (score >= 60) return "A";
-      if (score >= 45) return "B";
-      if (score >= 30) return "C";
-      return "D";
+    function statusBadge(st) {
+      const map = { ok: ["Active","status-ok"], empty: ["Empty","status-empty"], error: ["Error","status-error"], bozo: ["Bozo","status-bozo"] };
+      const s = map[st] || [st || "?", "status-empty"];
+      return `<span class="feed-status-badge ${s[1]}">${s[0]}</span>`;
     }
 
-    function gradeColor(score) {
-      if (score == null) return "#6b7280";
-      if (score >= 60) return "#22c55e";
-      if (score >= 45) return "#60a5fa";
-      if (score >= 30) return "#f59e0b";
-      return "#f87171";
-    }
-
-    function statusBadge(status) {
-      const map = {
-        ok:    { label: "Active",  cls: "status-ok"    },
-        empty: { label: "Empty",   cls: "status-empty"  },
-        error: { label: "Error",   cls: "status-error"  },
-        bozo:  { label: "Bozo",    cls: "status-bozo"   },
-      };
-      const s = map[status] || { label: status || "?", cls: "status-empty" };
-      return `<span class="feed-status-badge ${s.cls}">${s.label}</span>`;
-    }
-
-    function renderRow(s, idx) {
-      const m = s.metrics || {};
-      const score = s.score;
-      const grade = getGrade(score);
-      const color = gradeColor(score);
-      const hasScore = score != null;
-      const pct = hasScore ? Math.max(0, Math.min(100, score)).toFixed(1) : "0";
-
-      const gradeHtml = grade
-        ? `<span class="grade-badge grade-${grade.toLowerCase()}">${grade}</span>`
-        : `<span class="grade-badge grade-none">—</span>`;
-
-      const scoreHtml = hasScore
-        ? `<div class="source-score-bar-wrap">
-             <div class="source-score-bar-track">
-               <div class="source-score-bar-fill" style="width:${pct}%;background:${color}"></div>
-             </div>
-             <span class="source-score-num">${score.toFixed(1)}</span>
-           </div>`
-        : `<span class="muted" style="font-size:11px">—</span>`;
-
+    function row(s, idx) {
+      const m = s.metrics || {}, score = s.score, g = grade(score), color = gColor(score), has = score != null;
+      const pct = has ? Math.max(0, Math.min(100, score)).toFixed(1) : "0";
+      const gHtml = g ? `<span class="grade-badge grade-${g.toLowerCase()}">${g}</span>` : `<span class="grade-badge grade-none">—</span>`;
+      const sHtml = has ? `<div class="source-score-bar-wrap"><div class="source-score-bar-track"><div class="source-score-bar-fill" style="width:${pct}%;background:${color}"></div></div><span class="source-score-num">${score.toFixed(1)}</span></div>` : `<span class="muted" style="font-size:11px">—</span>`;
       const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td class="muted" style="font-size:11px;font-variant-numeric:tabular-nums">${idx + 1}</td>
-        <td>
-          <div class="source-name" title="${(s.source||'').replace(/"/g,'&quot;')}">${s.source || "Unknown"}</div>
-          ${s.category ? `<div class="source-category muted" style="font-size:10px">${s.category}</div>` : ''}
-        </td>
-        <td>${statusBadge(s.status)}</td>
-        <td>${gradeHtml}</td>
-        <td class="source-score-bar-cell">${scoreHtml}</td>
-        <td style="font-variant-numeric:tabular-nums">${(m.total_items || 0).toLocaleString()}</td>
-        <td style="font-variant-numeric:tabular-nums">${(m.fresh_items_48h || 0).toLocaleString()}</td>
-        <td style="font-variant-numeric:tabular-nums">${(m.fresh_items_7d || 0).toLocaleString()}</td>
-        <td style="font-variant-numeric:tabular-nums">${(m.curated_items || 0).toLocaleString()}</td>
-        <td style="font-variant-numeric:tabular-nums;color:${(m.duplicates||0)>0?'var(--warning)':'inherit'}">${(m.duplicates || 0).toLocaleString()}</td>
-        <td style="font-variant-numeric:tabular-nums;color:${(m.noise_items||0)>0?'var(--danger)':'inherit'}">${(m.noise_items || 0).toLocaleString()}</td>
-      `;
+      tr.innerHTML =
+        `<td class="fq-rank" style="font-size:11px">${idx + 1}</td>` +
+        `<td><div class="source-name" title="${(s.source || "").replace(/"/g, "&quot;")}">${s.source || "Unknown"}</div>${s.category ? `<div class="source-category" style="font-size:10px">${s.category}</div>` : ""}</td>` +
+        `<td>${statusBadge(s.status)}</td><td>${gHtml}</td><td>${sHtml}</td>` +
+        `<td>${(m.total_items || 0).toLocaleString()}</td><td>${(m.fresh_items_48h || 0).toLocaleString()}</td>` +
+        `<td>${(m.fresh_items_7d || 0).toLocaleString()}</td><td>${(m.curated_items || 0).toLocaleString()}</td>` +
+        `<td style="color:${(m.duplicates || 0) > 0 ? "var(--amber)" : "inherit"}">${(m.duplicates || 0).toLocaleString()}</td>` +
+        `<td style="color:${(m.noise_items || 0) > 0 ? "var(--red)" : "inherit"}">${(m.noise_items || 0).toLocaleString()}</td>`;
       return tr;
     }
 
-    function applyFilters() {
-      const search   = (document.getElementById("sources-search").value || "").toLowerCase().trim();
-      const statusF  = document.getElementById("status-filter").value;
-      const grade    = document.getElementById("grade-filter").value;
-      const sortBy   = document.getElementById("sort-sources").value;
-
-      filtered = allSources.filter(s => {
-        if (search && !(s.source || "").toLowerCase().includes(search)) return false;
-        if (statusF !== "all" && s.status !== statusF) return false;
-        if (grade !== "all") {
-          const g = getGrade(s.score);
-          if (grade === "none" && g !== null) return false;
-          if (grade !== "none" && g !== grade) return false;
-        }
+    function apply() {
+      const q = ($("sources-search").value || "").toLowerCase().trim(), sf = $("status-filter").value, gf = $("grade-filter").value, sort = $("sort-sources").value;
+      filtered = allSources.filter((s) => {
+        if (q && !(s.source || "").toLowerCase().includes(q)) return false;
+        if (sf !== "all" && s.status !== sf) return false;
+        if (gf !== "all") { const g = grade(s.score); if (gf === "none" && g !== null) return false; if (gf !== "none" && g !== gf) return false; }
         return true;
       });
+      const so = { ok: 0, empty: 1, bozo: 2, error: 3 };
+      if (sort === "score") filtered.sort((a, b) => (b.score ?? -1) - (a.score ?? -1));
+      else if (sort === "name") filtered.sort((a, b) => (a.source || "").localeCompare(b.source || ""));
+      else if (sort === "status") filtered.sort((a, b) => (so[a.status] ?? 9) - (so[b.status] ?? 9));
+      else if (sort === "items") filtered.sort((a, b) => ((b.metrics || {}).total_items || 0) - ((a.metrics || {}).total_items || 0));
+      else if (sort === "fresh") filtered.sort((a, b) => ((b.metrics || {}).fresh_items_48h || 0) - ((a.metrics || {}).fresh_items_48h || 0));
+      else filtered.sort((a, b) => { if (a.status === "ok" && b.status !== "ok") return -1; if (a.status !== "ok" && b.status === "ok") return 1; if (a.status === "ok") return (a.rank || 999) - (b.rank || 999); return (a.source || "").localeCompare(b.source || ""); });
 
-      const statusOrder = { ok: 0, empty: 1, bozo: 2, error: 3 };
+      const tb = $("sources-tbody"); tb.innerHTML = "";
+      if (!filtered.length) { $("sources-empty").classList.remove("hidden"); $("sources-table").style.display = "none"; }
+      else { $("sources-empty").classList.add("hidden"); $("sources-table").style.display = ""; filtered.forEach((s, i) => tb.appendChild(row(s, i))); }
 
-      if (sortBy === "score")  filtered.sort((a, b) => (b.score ?? -1) - (a.score ?? -1));
-      else if (sortBy === "name")   filtered.sort((a, b) => (a.source || "").localeCompare(b.source || ""));
-      else if (sortBy === "status") filtered.sort((a, b) => (statusOrder[a.status]??9) - (statusOrder[b.status]??9));
-      else if (sortBy === "items")  filtered.sort((a, b) => ((b.metrics||{}).total_items||0) - ((a.metrics||{}).total_items||0));
-      else if (sortBy === "fresh")  filtered.sort((a, b) => ((b.metrics||{}).fresh_items_48h||0) - ((a.metrics||{}).fresh_items_48h||0));
-      else /* rank */ filtered.sort((a, b) => {
-        /* ok feeds first by rank, then inactive alphabetically */
-        if (a.status === "ok" && b.status !== "ok") return -1;
-        if (a.status !== "ok" && b.status === "ok") return 1;
-        if (a.status === "ok" && b.status === "ok") return (a.rank || 999) - (b.rank || 999);
-        return (a.source || "").localeCompare(b.source || "");
-      });
-
-      const tbody = document.getElementById("sources-tbody");
-      tbody.innerHTML = "";
-
-      if (!filtered.length) {
-        document.getElementById("sources-empty").classList.remove("hidden");
-        document.getElementById("sources-table").style.display = "none";
-      } else {
-        document.getElementById("sources-empty").classList.add("hidden");
-        document.getElementById("sources-table").style.display = "";
-        filtered.forEach((s, i) => tbody.appendChild(renderRow(s, i)));
-      }
-
-      const okCount    = filtered.filter(s => s.status === "ok").length;
-      const errorCount = filtered.filter(s => s.status === "error").length;
-      const emptyCount = filtered.filter(s => s.status === "empty" || s.status === "bozo").length;
-      document.getElementById("sources-meta").innerHTML =
-        `${filtered.length} of ${allSources.length} sources &bull; ` +
-        `<span style="color:var(--success)">Active: ${okCount}</span> · ` +
-        `<span style="color:var(--warning)">Empty: ${emptyCount}</span> · ` +
-        `<span style="color:var(--danger)">Error: ${errorCount}</span>`;
+      const ok = filtered.filter((s) => s.status === "ok").length, err = filtered.filter((s) => s.status === "error").length, em = filtered.filter((s) => s.status === "empty" || s.status === "bozo").length;
+      $("sources-meta").innerHTML = `${filtered.length}/${allSources.length} SOURCES · <span style="color:var(--teal)">OK ${ok}</span> · <span style="color:var(--amber)">EMPTY ${em}</span> · <span style="color:var(--red)">ERR ${err}</span>`;
     }
 
     async function init() {
       try {
-        const res = await fetch(NEWS_JSON);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const res = await fetch(NEWS_JSON); if (!res.ok) throw new Error("HTTP " + res.status);
         const data = await res.json();
-
-        /* Build quality lookup by source name */
-        const qualityMap = {};
-        if (Array.isArray(data.source_quality)) {
-          data.source_quality.forEach((q, i) => {
-            qualityMap[q.source] = { ...q, rank: i + 1 };
-          });
-        }
-
-        /* Build merged list from feed_attempts (all feeds) */
-        if (Array.isArray(data.feed_attempts) && data.feed_attempts.length > 0) {
-          allSources = data.feed_attempts.map(fa => {
-            const key = fa.feed_title;
-            const q   = qualityMap[key];
-            return {
-              source:   key,
-              status:   fa.status || "error",
-              category: fa.category || fa.type_slug || null,
-              xml_url:  fa.xml_url || null,
-              error:    fa.error || null,
-              /* quality data — only present for ok feeds */
-              score:    q ? q.score : null,
-              rank:     q ? q.rank  : null,
-              metrics:  q ? q.metrics : {},
-            };
-          });
-        } else {
-          /* Fallback: only source_quality data (old JSON without feed_attempts) */
-          allSources = (data.source_quality || []).map((q, i) => ({
-            source:   q.source,
-            status:   "ok",
-            category: null,
-            xml_url:  null,
-            error:    null,
-            score:    q.score,
-            rank:     i + 1,
-            metrics:  q.metrics || {},
-          }));
-        }
-
-        document.getElementById("sources-loading").classList.add("hidden");
-        document.getElementById("sources-table").style.display = "";
-
-        applyFilters();
-
-        document.getElementById("sources-search").addEventListener("input", applyFilters);
-        document.getElementById("status-filter").addEventListener("change", applyFilters);
-        document.getElementById("grade-filter").addEventListener("change", applyFilters);
-        document.getElementById("sort-sources").addEventListener("change", applyFilters);
-      } catch (err) {
-        console.error(err);
-        document.getElementById("sources-loading").innerHTML =
-          '<span style="color:var(--danger)">Failed to load source data.</span>';
-      }
+        const qmap = {}; (data.source_quality || []).forEach((q, i) => { qmap[q.source] = { ...q, rank: i + 1 }; });
+        if (Array.isArray(data.feed_attempts) && data.feed_attempts.length) {
+          allSources = data.feed_attempts.map((fa) => { const q = qmap[fa.feed_title]; return { source: fa.feed_title, status: fa.status || "error", category: fa.category || fa.type_slug || null, score: q ? q.score : null, rank: q ? q.rank : null, metrics: q ? q.metrics : {} }; });
+        } else { allSources = (data.source_quality || []).map((q, i) => ({ source: q.source, status: "ok", category: null, score: q.score, rank: i + 1, metrics: q.metrics || {} })); }
+        $("sources-loading").classList.add("hidden"); $("sources-table").style.display = ""; apply();
+        ["sources-search","status-filter","grade-filter","sort-sources"].forEach((id) => $(id).addEventListener(id === "sources-search" ? "input" : "change", apply));
+      } catch (err) { console.error(err); $("sources-loading").innerHTML = '<span style="color:var(--red)">Failed to load source data.</span>'; }
     }
-
-    document.addEventListener("DOMContentLoaded", init);
+    init();
   </script>
 </body>
 </html>

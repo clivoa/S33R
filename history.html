@@ -6,727 +6,92 @@ permalink: /history/
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>S33R – Historical Trends</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="stylesheet" href="{{ '/styles.css' | relative_url }}" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>S33R — Historical Trends</title>
   <script src="{{ '/ui.js' | relative_url }}"></script>
+  <link rel="stylesheet" href="{{ '/s33r-feed.css' | relative_url }}" />
+  <link rel="stylesheet" href="{{ '/s33r-pages.css' | relative_url }}" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
   <style>
-    .history-layout {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 4px 0 24px;
-    }
-
-    .history-header {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 1rem;
-      margin-bottom: 1.5rem;
-    }
-
-    .history-title {
-      font-size: 1.35rem;
-      font-weight: 700;
-      color: var(--text);
-    }
-
-    .history-meta {
-      font-size: 12px;
-      color: var(--muted);
-      margin-top: 4px;
-    }
-
-    .history-grid {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-      gap: 1rem;
-      margin-bottom: 1rem;
-    }
-
-    .history-full {
-      margin-bottom: 1rem;
-    }
-
-    .card h2 {
-      font-size: 1rem;
-      margin: 0 0 0.75rem;
-    }
-
-    .chart-container { height: 260px; }
-    .chart-sm       { height: 220px; }
-    .chart-md       { height: 300px; }
-
-    .trend-note {
-      margin: -4px 0 10px;
-      font-size: 12px;
-      color: var(--muted);
-      line-height: 1.45;
-    }
-
-    /* Month selector for deep-dive */
-    .month-selector {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      margin-bottom: 1rem;
-    }
-
-    .month-btn {
-      padding: 4px 10px;
-      border-radius: 999px;
-      border: 1px solid var(--line);
-      background: var(--surface);
-      color: var(--muted);
-      font-size: 12px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background 0.12s, color 0.12s, border-color 0.12s;
-    }
-
-    .month-btn:hover {
-      background: var(--surface-2);
-      color: var(--text);
-    }
-
-    .month-btn.active {
-      background: var(--accent-soft);
-      border-color: color-mix(in oklab, var(--primary) 34%, var(--line));
-      color: var(--primary);
-    }
-
-    .detail-grid {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 0.8rem;
-    }
-
-    .detail-block {
-      border: 1px solid var(--line);
-      border-radius: 12px;
-      padding: 10px 12px;
-      background: var(--surface-2);
-    }
-
-    .detail-block h3 {
-      margin: 0 0 8px;
-      font-size: 13px;
-      color: var(--text);
-    }
-
-    .detail-list {
-      list-style: none;
-      margin: 0;
-      padding: 0;
-      display: grid;
-      gap: 5px;
-    }
-
-    .detail-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 8px;
-      font-size: 12px;
-      color: var(--text-2);
-      border-bottom: 1px dashed var(--line);
-      padding-bottom: 4px;
-    }
-
+    .history-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; margin-top: 16px; }
+    .history-full { margin-top: 14px; }
+    .chart-container { height: 260px; } .chart-sm { height: 220px; } .chart-md { height: 300px; }
+    .month-selector { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 14px; }
+    .detail-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+    .detail-block { border: 1px solid var(--line); border-radius: 10px; padding: 11px 13px; background: var(--panel-2); }
+    .detail-block h3 { margin: 0 0 8px; font-size: 12.5px; color: var(--text); }
+    .detail-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 5px; }
+    .detail-item { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 11.5px; color: var(--text-2); border-bottom: 1px dashed var(--line); padding-bottom: 4px; }
     .detail-item:last-child { border-bottom: none; padding-bottom: 0; }
-
-    .detail-item a {
-      color: var(--text-2);
-      text-decoration: none;
-      cursor: pointer;
-    }
-
-    .detail-item a:hover { color: var(--primary); }
-
-    .detail-count {
-      font-size: 11px;
-      font-weight: 700;
-      color: var(--primary);
-      white-space: nowrap;
-    }
-
-    /* CVE Lifecycle Tracker */
-    .cve-search-row {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 1rem;
-    }
-
-    .cve-search-input {
-      flex: 1;
-      padding: 8px 12px;
-      border-radius: 8px;
-      border: 1px solid var(--line);
-      background: var(--surface-2);
-      color: var(--text);
-      font-size: 13px;
-      font-family: inherit;
-    }
-
-    .cve-search-input:focus {
-      outline: none;
-      border-color: var(--primary);
-    }
-
-    .cve-meta-row {
-      display: flex;
-      gap: 1rem;
-      flex-wrap: wrap;
-      margin-bottom: 0.75rem;
-    }
-
-    .cve-meta-chip {
-      font-size: 12px;
-      background: var(--surface-2);
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      padding: 3px 10px;
-      color: var(--text-2);
-    }
-
-    .cve-meta-chip strong {
-      color: var(--primary);
-    }
-
-    .cve-empty {
-      font-size: 13px;
-      color: var(--muted);
-      padding: 12px 0;
-    }
-
-    @media (max-width: 900px) {
-      .history-grid { grid-template-columns: minmax(0, 1fr); }
-      .detail-grid  { grid-template-columns: minmax(0, 1fr); }
-    }
+    .detail-item a { color: var(--text-2); cursor: pointer; } .detail-item a:hover { color: var(--brand); }
+    .detail-count { font-family: var(--mono); font-size: 11px; font-weight: 700; color: var(--brand); }
+    .cve-empty { font-size: 12.5px; color: var(--dim); padding: 10px 0; }
+    .cve-search-row { display: flex; gap: 8px; margin-bottom: 14px; }
+    .cve-search-input { flex: 1; }
+    .cve-meta-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+    .chart-clickable { cursor: pointer; }
+    @media (max-width: 900px) { .history-grid { grid-template-columns: minmax(0, 1fr); } .detail-grid { grid-template-columns: minmax(0, 1fr); } }
   </style>
+
+  <script>window.S33R = { base: "{{ '/' | relative_url }}", data: "{{ '/data' | relative_url }}", feed: "{{ '/data/news_recent.json' | relative_url }}" };</script>
 </head>
-<body>
-  <nav class="minimal-navbar" aria-label="Primary navigation">
-    <a href="{{ '/' | relative_url }}" class="nav-brand" aria-label="S33R Home">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-      S33R
-    </a>
-    <div class="nav-sep" aria-hidden="true"></div>
-    <a href="{{ '/' | relative_url }}" class="minimal-nav-link">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1"/></svg>
-      Feed
-    </a>
-    <a href="{{ '/morning/' | relative_url }}" class="minimal-nav-link">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
-      Morning
-    </a>
-    <a href="{{ '/trend/' | relative_url }}" class="minimal-nav-link">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
-      Trends
-    </a>
-    <a href="{{ '/history/' | relative_url }}" class="minimal-nav-link" aria-current="page">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-      History
-    </a>
-    <a href="{{ '/briefs/' | relative_url }}" class="minimal-nav-link">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-      Briefs
-    </a>
-    <a href="{{ '/archive/' | relative_url }}" class="minimal-nav-link">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
-      Archive
-    </a>
-    <a href="{{ '/archive-overview/' | relative_url }}" class="minimal-nav-link">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-      Overview
-    </a>
-    <a href="{{ '/sources/' | relative_url }}" class="minimal-nav-link">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1"/></svg>
-      Sources
-    </a>
-  </nav>
+<body data-page="history">
+  <div class="app app--page" id="app">
+    <main class="page-main">
+      <div class="crumb">
+        <span class="lab">SECTION</span>
+        <span class="here">HISTORICAL TRENDS</span>
+        <span class="meta"><span id="history-meta-crumb">MONTHLY ARCHIVE</span></span>
+      </div>
 
-  <div class="page">
-    <header class="site-header">
-      <div class="site-title">S33R Security News Feed</div>
-    </header>
+      <div class="page-wrap">
+        <header class="phead">
+          <div class="phead-l">
+            <span class="eyebrow">LONG-RANGE VIEW</span>
+            <h1>Historical <span>Trends</span></h1>
+            <p class="sub" id="history-meta">Loading archive data…</p>
+          </div>
+        </header>
 
-    <main class="history-layout">
-
-      <section class="history-header">
-        <div>
-          <div class="history-title">Historical Trends</div>
-          <p class="history-meta" id="history-meta">Loading archive data…</p>
+        <div class="history-grid">
+          <article class="card"><h2>News volume per month</h2><p class="trend-note">Total items and curated items collected per month.</p><div class="chart-container"><canvas id="volumeMonthChart"></canvas></div></article>
+          <article class="card"><h2>Unique CVEs per month</h2><p class="trend-note">Number of distinct CVEs mentioned across all news each month.</p><div class="chart-container"><canvas id="cveMonthChart"></canvas></div></article>
         </div>
-      </section>
 
-      <!-- Row 1: Volume + CVE count per month -->
-      <div class="history-grid">
-        <article class="card">
-          <h2>News volume per month</h2>
-          <p class="trend-note">Total items and curated items collected per month.</p>
-          <div class="chart-container">
-            <canvas id="volumeMonthChart"></canvas>
-          </div>
-        </article>
+        <div class="history-full">
+          <article class="card"><h2>Topic evolution over time</h2><p class="trend-note">How often ransomware, phishing, zero-day, supply chain and data breach appear in the news each month.</p><div class="chart-md"><canvas id="topicEvolutionChart"></canvas></div></article>
+        </div>
 
-        <article class="card">
-          <h2>Unique CVEs per month</h2>
-          <p class="trend-note">Number of distinct CVEs mentioned across all news in each month.</p>
-          <div class="chart-container">
-            <canvas id="cveMonthChart"></canvas>
-          </div>
-        </article>
+        <div class="history-full">
+          <article class="card">
+            <h2>Monthly deep-dive</h2>
+            <p class="trend-note">Click a month to see its top CVEs, vendors and smart groups. Click any CVE to populate the lifecycle tracker below.</p>
+            <div class="month-selector" id="monthSelector"></div>
+            <div class="detail-grid" id="monthDetailGrid"><div class="detail-block"><p class="cve-empty">Select a month above.</p></div></div>
+          </article>
+        </div>
+
+        <div class="history-full">
+          <article class="card">
+            <h2>CVE lifecycle tracker</h2>
+            <p class="trend-note">Search any CVE to see how many times it was mentioned each month. Top 20 all-time CVEs are below — click a bar to track it.</p>
+            <div class="cve-search-row">
+              <input id="cve-search-input" class="cve-search-input filter-input" type="text" placeholder="e.g. CVE-2026-41089" list="cve-datalist" autocomplete="off" />
+              <datalist id="cve-datalist"></datalist>
+            </div>
+            <div id="cve-meta-row" class="cve-meta-row" style="display:none"></div>
+            <div class="chart-sm"><canvas id="cveLifecycleChart"></canvas></div>
+            <h3 style="font-size:12.5px;margin:18px 0 8px;color:var(--text)">Top 20 CVEs all-time</h3>
+            <div class="chart-sm"><canvas id="cveAllTimeChart"></canvas></div>
+          </article>
+        </div>
+
+        <footer class="site-footer">S33R Security News Feed · Historical data from the monthly archive</footer>
       </div>
-
-      <!-- Row 2: Topic evolution -->
-      <div class="history-full">
-        <article class="card">
-          <h2>Topic evolution over time</h2>
-          <p class="trend-note">How often ransomware, phishing, zero-day, supply chain and data breach appear in the news each month.</p>
-          <div class="chart-md">
-            <canvas id="topicEvolutionChart"></canvas>
-          </div>
-        </article>
-      </div>
-
-      <!-- Row 3: Monthly deep-dive -->
-      <div class="history-full">
-        <article class="card">
-          <h2>Monthly deep-dive</h2>
-          <p class="trend-note">Click a month to see its top CVEs, vendors and smart groups. Click any CVE to populate the lifecycle tracker below.</p>
-          <div class="month-selector" id="monthSelector"></div>
-          <div class="detail-grid" id="monthDetailGrid">
-            <div class="detail-block"><p class="cve-empty">Select a month above.</p></div>
-          </div>
-        </article>
-      </div>
-
-      <!-- Row 4: CVE Lifecycle Tracker -->
-      <div class="history-full">
-        <article class="card">
-          <h2>CVE lifecycle tracker</h2>
-          <p class="trend-note">Search any CVE to see how many times it was mentioned each month. Top 20 all-time CVEs are shown below — click a bar to track it.</p>
-
-          <div class="cve-search-row">
-            <input
-              id="cve-search-input"
-              class="cve-search-input"
-              type="text"
-              placeholder="e.g. CVE-2025-55182"
-              list="cve-datalist"
-              autocomplete="off"
-            />
-            <datalist id="cve-datalist"></datalist>
-          </div>
-
-          <div id="cve-meta-row" class="cve-meta-row" style="display:none;"></div>
-
-          <div class="chart-sm">
-            <canvas id="cveLifecycleChart"></canvas>
-          </div>
-
-          <h3 style="font-size:13px;margin:1rem 0 0.5rem;">Top 20 CVEs all-time</h3>
-          <div class="chart-sm">
-            <canvas id="cveAllTimeChart"></canvas>
-          </div>
-        </article>
-      </div>
-
     </main>
-
-    <footer class="site-footer">
-      <p>
-        S33R Security News Feed<br>
-        <span class="muted">Historical data from monthly archive</span>
-      </p>
-    </footer>
   </div>
 
-  <script>
-    const histUrl = "{{ '/data/historical_trends.json' | relative_url }}";
-    const newsUrl = "{{ '/' | relative_url }}";
-
-    let histData = null;
-    let volumeChart = null;
-    let cveMonthChart = null;
-    let topicChart = null;
-    let cveLifecycleChart = null;
-    let cveAllTimeChart = null;
-    let selectedMonth = null;
-
-    const TOPIC_KEYS = ["ransomware", "phishing", "zero-day", "supply chain", "data breach"];
-    const TOPIC_LABELS = {
-      "ransomware": "Ransomware",
-      "phishing": "Phishing",
-      "zero-day": "Zero-day",
-      "supply chain": "Supply chain",
-      "data breach": "Data breach",
-    };
-
-    function cssVar(n) {
-      return getComputedStyle(document.documentElement).getPropertyValue(n).trim();
-    }
-
-    function palette() {
-      return [
-        cssVar("--chart-series-1"),
-        cssVar("--chart-series-2"),
-        cssVar("--chart-series-3"),
-        cssVar("--chart-series-4"),
-        cssVar("--primary"),
-        cssVar("--secondary"),
-      ].filter(Boolean);
-    }
-
-    function themeBase() {
-      return {
-        text:   cssVar("--text"),
-        muted:  cssVar("--chart-axis") || cssVar("--muted"),
-        grid:   cssVar("--chart-grid"),
-        border: cssVar("--line"),
-        surface: cssVar("--surface"),
-        fillSoft: cssVar("--chart-fill-soft"),
-      };
-    }
-
-    function makeChart(ref, ctx, type, data, options) {
-      if (ref && ref.destroy) ref.destroy();
-      const th = themeBase();
-      const pal = palette();
-
-      const datasets = (data.datasets || []).map((ds, i) => {
-        const color = pal[i % pal.length] || "#2563eb";
-        const next = { ...ds };
-        if (type === "line") {
-          next.borderColor = next.borderColor || color;
-          next.backgroundColor = next.backgroundColor || th.fillSoft;
-          next.tension = next.tension ?? 0.25;
-          next.borderWidth = next.borderWidth ?? 2;
-          next.pointRadius = next.pointRadius ?? 3;
-        } else {
-          next.backgroundColor = next.backgroundColor || color;
-          next.borderColor = next.borderColor || color;
-          next.borderWidth = next.borderWidth ?? 1;
-          next.maxBarThickness = next.maxBarThickness ?? 18;
-        }
-        return next;
-      });
-
-      const scaleDefaults = {
-        grid:   { color: th.grid },
-        border: { color: th.grid },
-        ticks:  { color: th.muted },
-      };
-
-      const scales = {};
-      for (const [k, v] of Object.entries(options.scales || { x: {}, y: {} })) {
-        scales[k] = { ...scaleDefaults, ...v,
-          grid:   { ...scaleDefaults.grid,   ...(v.grid   || {}) },
-          border: { ...scaleDefaults.border, ...(v.border || {}) },
-          ticks:  { ...scaleDefaults.ticks,  ...(v.ticks  || {}) },
-        };
-      }
-
-      return new Chart(ctx, {
-        type,
-        data:    { ...data, datasets },
-        options: {
-          ...options,
-          color: th.muted,
-          scales,
-          plugins: {
-            legend:  { labels: { color: th.muted }, ...(options.plugins?.legend || {}) },
-            tooltip: {
-              backgroundColor: th.surface,
-              titleColor: th.text,
-              bodyColor:  th.text,
-              borderColor: th.border,
-              borderWidth: 1,
-              ...(options.plugins?.tooltip || {}),
-            },
-            ...(options.plugins || {}),
-          },
-        },
-      });
-    }
-
-    // Filter to "valid" months: enough items, not future artifacts
-    function validMonths(data) {
-      const now = new Date();
-      const nowMonth = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
-      return (data.months || []).filter((m) => {
-        const st = data.monthly_stats[m];
-        return st && st.total_items >= 100 && m <= nowMonth;
-      });
-    }
-
-    function renderVolumeChart(data) {
-      const months = validMonths(data);
-      const labels = months.map((m) => data.monthly_stats[m].label);
-      const totals  = months.map((m) => data.monthly_stats[m].total_items);
-      const curated = months.map((m) => data.monthly_stats[m].curated_items);
-      volumeChart = makeChart(volumeChart, document.getElementById("volumeMonthChart").getContext("2d"), "bar", {
-        labels,
-        datasets: [
-          { label: "Total items", data: totals },
-          { label: "Curated",     data: curated },
-        ],
-      }, {
-        responsive: true, maintainAspectRatio: false,
-        scales: { x: { ticks: { maxTicksLimit: 12 } }, y: { beginAtZero: true, ticks: { precision: 0 } } },
-        plugins: { legend: { display: true, position: "top" } },
-      });
-    }
-
-    function renderCveMonthChart(data) {
-      const months = validMonths(data);
-      const labels = months.map((m) => data.monthly_stats[m].label);
-      const cves   = months.map((m) => data.monthly_stats[m].unique_cves);
-      cveMonthChart = makeChart(cveMonthChart, document.getElementById("cveMonthChart").getContext("2d"), "bar", {
-        labels,
-        datasets: [{ label: "Unique CVEs", data: cves }],
-      }, {
-        responsive: true, maintainAspectRatio: false,
-        scales: { x: { ticks: { maxTicksLimit: 12 } }, y: { beginAtZero: true, ticks: { precision: 0 } } },
-        plugins: { legend: { display: false } },
-      });
-    }
-
-    function renderTopicChart(data) {
-      const months = validMonths(data);
-      const labels = months.map((m) => data.monthly_stats[m].label);
-      const pal = palette();
-      const datasets = TOPIC_KEYS.map((key, i) => ({
-        label: TOPIC_LABELS[key],
-        data: months.map((m) => {
-          const tt = data.monthly_stats[m]?.trending_terms || {};
-          return (tt[key] || tt[key + "s"] || { count: 0 }).count || 0;
-        }),
-        borderColor: pal[i % pal.length],
-        backgroundColor: "transparent",
-        pointRadius: 3,
-        borderWidth: 2,
-        tension: 0.3,
-        fill: false,
-      }));
-      topicChart = makeChart(topicChart, document.getElementById("topicEvolutionChart").getContext("2d"), "line", {
-        labels, datasets,
-      }, {
-        responsive: true, maintainAspectRatio: false,
-        scales: { x: { ticks: { maxTicksLimit: 12 } }, y: { beginAtZero: true, ticks: { precision: 0 } } },
-        plugins: { legend: { display: true, position: "top" } },
-      });
-    }
-
-    function renderMonthSelector(data) {
-      const months = validMonths(data);
-      const container = document.getElementById("monthSelector");
-      container.innerHTML = "";
-      months.forEach((m) => {
-        const btn = document.createElement("button");
-        btn.className = "month-btn";
-        btn.textContent = data.monthly_stats[m].label;
-        btn.dataset.month = m;
-        btn.addEventListener("click", () => {
-          container.querySelectorAll(".month-btn").forEach((b) => b.classList.remove("active"));
-          btn.classList.add("active");
-          renderMonthDetail(data, m);
-        });
-        container.appendChild(btn);
-      });
-    }
-
-    function renderMonthDetail(data, month) {
-      selectedMonth = month;
-      const stats = data.monthly_stats[month];
-      const grid = document.getElementById("monthDetailGrid");
-      if (!stats) { grid.innerHTML = "<p>No data.</p>"; return; }
-
-      const makeList = (title, rows, onClickFn) => {
-        const block = document.createElement("div");
-        block.className = "detail-block";
-        const h3 = document.createElement("h3");
-        h3.textContent = title;
-        block.appendChild(h3);
-        const ul = document.createElement("ul");
-        ul.className = "detail-list";
-        rows.slice(0, 10).forEach(([name, count]) => {
-          const li = document.createElement("li");
-          li.className = "detail-item";
-          const a = document.createElement("a");
-          a.textContent = name;
-          if (onClickFn) {
-            a.addEventListener("click", () => onClickFn(name));
-          } else {
-            a.href = `${newsUrl}?q=${encodeURIComponent(name)}`;
-          }
-          const cnt = document.createElement("span");
-          cnt.className = "detail-count";
-          cnt.textContent = count;
-          li.appendChild(a);
-          li.appendChild(cnt);
-          ul.appendChild(li);
-        });
-        block.appendChild(ul);
-        return block;
-      };
-
-      grid.innerHTML = "";
-      grid.appendChild(makeList("Top CVEs", stats.top_cves, (cve) => populateCveTracker(data, cve)));
-      grid.appendChild(makeList("Top Vendors", stats.top_vendors));
-      grid.appendChild(makeList("Top Smart Groups", stats.top_smart_groups));
-    }
-
-    function renderCveAllTimeChart(data) {
-      const top20 = (data.top_cves_all_time || []).slice(0, 20);
-      const labels = top20.map((r) => r.cve);
-      const values = top20.map((r) => r.total);
-      cveAllTimeChart = makeChart(cveAllTimeChart, document.getElementById("cveAllTimeChart").getContext("2d"), "bar", {
-        labels,
-        datasets: [{ label: "Total mentions", data: values }],
-      }, {
-        indexAxis: "y",
-        responsive: true, maintainAspectRatio: false,
-        scales: { x: { beginAtZero: true, ticks: { precision: 0 } } },
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            callbacks: {
-              afterLabel: (ctx) => {
-                const r = top20[ctx.dataIndex];
-                return r ? `Months active: ${r.months_active} | First: ${r.first_seen} | Last: ${r.last_seen}` : "";
-              },
-            },
-          },
-        },
-        onClick: (_, elements, chart) => {
-          if (!elements.length) return;
-          const cve = chart.data.labels[elements[0].index];
-          populateCveTracker(data, cve);
-        },
-      });
-      document.getElementById("cveAllTimeChart").classList.add("chart-clickable");
-    }
-
-    function populateCveTracker(data, cveId) {
-      const input = document.getElementById("cve-search-input");
-      input.value = cveId;
-      renderCveLifecycle(data, cveId);
-      input.scrollIntoView({ behavior: "smooth", block: "center" });
-    }
-
-    function renderCveLifecycle(data, cveId) {
-      const upper = (cveId || "").toUpperCase().trim();
-      const lifecycle = data.cve_lifecycle[upper];
-      const metaRow = document.getElementById("cve-meta-row");
-      const ctx = document.getElementById("cveLifecycleChart").getContext("2d");
-
-      if (!lifecycle) {
-        metaRow.style.display = "none";
-        cveLifecycleChart = makeChart(cveLifecycleChart, ctx, "bar",
-          { labels: [], datasets: [{ label: "Mentions", data: [] }] },
-          { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
-        );
-        return;
-      }
-
-      const months = validMonths(data).filter((m) => lifecycle.monthly_counts[m] !== undefined);
-      const allMonthsWithData = Object.keys(lifecycle.monthly_counts).sort();
-      const labels = allMonthsWithData.map((m) => {
-        const st = data.monthly_stats[m];
-        return st ? st.label : m;
-      });
-      const values = allMonthsWithData.map((m) => lifecycle.monthly_counts[m] || 0);
-
-      metaRow.style.display = "flex";
-      metaRow.innerHTML = [
-        `<span class="cve-meta-chip"><strong>${upper}</strong></span>`,
-        `<span class="cve-meta-chip">Total mentions: <strong>${lifecycle.total}</strong></span>`,
-        `<span class="cve-meta-chip">Months active: <strong>${lifecycle.months_active}</strong></span>`,
-        `<span class="cve-meta-chip">First seen: <strong>${lifecycle.first_seen}</strong></span>`,
-        `<span class="cve-meta-chip">Last seen: <strong>${lifecycle.last_seen}</strong></span>`,
-      ].join("");
-
-      cveLifecycleChart = makeChart(cveLifecycleChart, ctx, "bar", {
-        labels,
-        datasets: [{ label: "Mentions", data: values }],
-      }, {
-        responsive: true, maintainAspectRatio: false,
-        scales: { x: {}, y: { beginAtZero: true, ticks: { precision: 0 } } },
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            callbacks: {
-              title: (items) => items[0] ? `${upper} – ${items[0].label}` : upper,
-            },
-          },
-        },
-      });
-    }
-
-    function buildCveDatalist(data) {
-      const dl = document.getElementById("cve-datalist");
-      (data.top_cves_all_time || []).slice(0, 100).forEach((r) => {
-        const opt = document.createElement("option");
-        opt.value = r.cve;
-        dl.appendChild(opt);
-      });
-    }
-
-    function initPage(data) {
-      histData = data;
-      const months = validMonths(data);
-      const oldest = months[0] ? data.monthly_stats[months[0]].label : "?";
-      const newest = months[months.length - 1] ? data.monthly_stats[months[months.length - 1]].label : "?";
-      document.getElementById("history-meta").textContent =
-        `${months.length} months · ${oldest} – ${newest} · ${(data.top_cves_all_time || []).length} unique CVEs tracked`;
-
-      renderVolumeChart(data);
-      renderCveMonthChart(data);
-      renderTopicChart(data);
-      renderMonthSelector(data);
-      renderCveAllTimeChart(data);
-      buildCveDatalist(data);
-
-      // Auto-select the most recent valid month for detail view
-      if (months.length) {
-        const lastMonth = months[months.length - 1];
-        const lastBtn = document.querySelector(`.month-btn[data-month="${lastMonth}"]`);
-        if (lastBtn) lastBtn.click();
-      }
-
-      // CVE search
-      const input = document.getElementById("cve-search-input");
-      let debounce = null;
-      input.addEventListener("input", () => {
-        clearTimeout(debounce);
-        debounce = setTimeout(() => renderCveLifecycle(data, input.value), 250);
-      });
-    }
-
-    document.addEventListener("DOMContentLoaded", () => {
-      fetch("{{ '/data/historical_trends.json' | relative_url }}", { cache: "no-store" })
-        .then((r) => r.json())
-        .then(initPage)
-        .catch((err) => {
-          console.error("Failed to load historical_trends.json", err);
-          document.getElementById("history-meta").textContent = "Failed to load historical data.";
-        });
-    });
-
-    window.addEventListener("s33r:themechange", () => {
-      if (!histData) return;
-      renderVolumeChart(histData);
-      renderCveMonthChart(histData);
-      renderTopicChart(histData);
-      renderCveAllTimeChart(histData);
-      const input = document.getElementById("cve-search-input");
-      if (input.value) renderCveLifecycle(histData, input.value);
-    });
-  </script>
+  <script src="{{ '/s33r-nav.js' | relative_url }}"></script>
+  <script src="{{ '/s33r-history.js' | relative_url }}"></script>
 </body>
 </html>
