@@ -1,144 +1,155 @@
 {
-  "generated_at": "2026-06-02T10:55:40.713441+00:00",
-  "analysis_date": "2026-06-02",
+  "generated_at": "2026-06-03T11:23:26.519796+00:00",
+  "analysis_date": "2026-06-03",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-06-02T09:16:28.974210+00:00",
+  "source_generated_at": "2026-06-03T09:35:32.113572+00:00",
   "source_days_back": 30,
-  "source_total_items": 8034,
-  "total_items_in_window_all": 295,
-  "total_items_in_window_curated": 90,
-  "morning_call_markdown": "### Executive Summary\n- Multiple **known-exploited edge/infra vulns** are trending: **Palo Alto PAN‑OS auth bypass**, **Oracle WebLogic**, and **Windows Netlogon RCE** (domain controllers) are reported **under active exploitation / attackers’ crosshairs**.\n- **Supply-chain risk spiked**: compromised **Red Hat npm packages** and other **malicious packages** stealing cloud creds/SSH keys—treat developer tooling and CI/CD as a current intrusion path.\n- **Identity pressure**: **Dashlane brute-force** activity caused lockouts and limited encrypted vault downloads; expect follow-on **credential stuffing** and MFA fatigue/social engineering attempts.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Edge/VPN firewall exploitation: Palo Alto PAN‑OS authentication bypass (KEV / active exploit)**\n- **What happened:** Reports indicate a **PAN‑OS auth bypass** vulnerability has been added to exploited lists and is seeing **active exploitation**.\n- **Why it matters operationally:** Internet-facing security appliances are high-leverage entry points leading to **initial access** and rapid lateral movement in enterprise networks.\n- **Recommended immediate actions for the SOC today:** Confirm exposure (internet-facing PAN‑OS/VPN portals), **prioritize emergency patch/mitigation**, and **review last 7 days** of PAN‑OS auth logs for anomalous admin/UI/API access.\n\n**2) Windows domain controller risk: Netlogon RCE (CVE-2026-41089) “exploited” / in crosshairs**\n- **What happened:** Multiple sources report a **critical Windows Netlogon RCE** with **active exploitation**, explicitly calling out **domain controllers**.\n- **Why it matters operationally:** DC compromise enables **domain-wide takeover**, credential theft, and ransomware staging; impacts are acute for financial services.\n- **Recommended immediate actions for the SOC today:** Inventory/confirm DC patch status and **expedite patching**; hunt for **new services/scheduled tasks**, unusual DC process launches, and unexpected inbound traffic to Netlogon-related services (assumption: exploitation involves network-triggered conditions).\n\n**3) Oracle stack: WebLogic flaw under active exploitation + Oracle monthly patch bundle**\n- **What happened:** CISA alerting references an **Oracle WebLogic Server flaw under active exploitation**; Oracle also released a **monthly patch set** with multiple critical fixes.\n- **Why it matters operationally:** WebLogic is often externally reachable in legacy app tiers; exploitation commonly leads to **RCE**, webshells, and footholds into backend networks.\n- **Recommended immediate actions for the SOC today:** Identify any WebLogic endpoints (including dev/test), **block/limit external access** where possible, and triage for post-exploitation signs (new deployments, suspicious JSPs, unusual outbound connections).\n\n**4) Software supply chain: Red Hat npm packages compromised + broader malicious package campaign**\n- **What happened:** Reports of **compromised Red Hat npm packages** distributing credential-stealing malware/worm behavior; additional reporting of **dozens of malicious packages** targeting cloud keys, wallets, and SSH creds.\n- **Why it matters operationally:** CI/CD and developer workstations can become an initial access vector to **cloud control planes**, source repos, and privileged secrets.\n- **Recommended immediate actions for the SOC today:** Alert DevOps to **freeze/verify npm dependencies** (lockfiles, package integrity), review build logs for unexpected package pulls, and monitor for **new cloud credential creation/usage spikes** tied to developer identities.\n\n**5) Identity & credential abuse: Dashlane brute-force and account lockouts**\n- **What happened:** Dashlane disclosed **brute-force attempts** causing account suspensions/lockouts; fewer than ~20 encrypted vaults reportedly downloaded (exact details vary by source).\n- **Why it matters operationally:** Even without plaintext vault access, this signals ongoing **credential stuffing** campaigns that may pivot to enterprise SSO, email, VPN, and IAM.\n- **Recommended immediate actions for the SOC today:** Monitor for **password-spray/stuffing** patterns against IdP/VPN, confirm MFA enforcement, and initiate targeted comms to users/admins to report lockouts and avoid “support” social engineering.\n\n---\n\n### Monitoring & detection recommendations\n- **PAN‑OS / VPN logs:** Hunt for anomalous authentication events, sudden config exports/changes, new admin accounts, and unusual management-plane access patterns (ATT&CK: **T1190 Exploit Public-Facing Application**).\n- **Windows DC telemetry (EDR + Security logs):** Watch for LSASS access, new services, scheduled tasks, and abnormal child processes of `lsass.exe`/`services.exe` on DCs (ATT&CK: **T1068 Privilege Escalation**, **T1003 Credential Dumping**).\n- **WebLogic / app server logs + EDR:** Look for new/modified `.jsp`/`.war` artifacts, suspicious command execution, and outbound connections from app servers to rare destinations (ATT&CK: **T1505.003 Server Software Component: Web Shell**).\n- **CI/CD + repo audit logs (GitHub/GitLab/Azure DevOps) + endpoint EDR:** Detect unexpected dependency downloads, pipeline modifications, and token use from new IPs/agents (ATT&CK: **T1552 Unsecured Credentials**, **T1195 Supply Chain Compromise**).\n- **Cloud control plane (AWS CloudTrail / Azure Activity / GCP Audit):** Alert on new access keys, role grants, and API calls from developer principals outside normal hours/geo (ATT&CK: **T1098 Account Manipulation**).\n- **IdP (Okta/Entra ID) + VPN + email:** Correlate password-spray indicators (many users / few attempts each), impossible travel, and repeated MFA prompts (ATT&CK: **T1110 Brute Force**).\n- **Mobile fleet (MDM/EDR):** For Android zero-day/device takeover + banking trojan overlay themes, monitor risky Accessibility Service enablement, unknown sideloaded apps, and device admin changes (ATT&CK: **T1407 Download New Code at Runtime**, **T1476 Deliver Malicious App**—IDs indicative; exact technique depends on observed behavior).\n\n---\n\n### Medium-term follow-ups\n- **Patch/hardening backlog review:** Include Oracle’s monthly critical fixes, any IBM WebSphere/MCP/Flowise/StrongDM items relevant to your estate; validate compensating controls for anything unpatchable.\n- **Reduce edge exposure:** Reconfirm which management interfaces (VPN/firewall/app servers) are internet-reachable; enforce admin access via jump hosts, MFA, and allowlisting.\n- **Supply-chain controls:** Implement/expand dependency allowlisting, artifact integrity verification, and “known-good” internal registries; add pipeline guardrails for secrets scanning and token scope minimization.\n- **Password manager resilience:** Ensure internal guidance for password-manager lockouts and recovery; verify that enterprise credentials are not reused and that MFA/conditional access policies reduce stuffing risk.\n- **Tabletop / IR readiness:** Incorporate “edge appliance exploit → DC compromise → ransomware” scenario; validate rapid isolation playbooks and privileged credential rotation steps.\n- **Mobile security posture:** Reassess Android patch compliance and MDM enforcement (block sideloading, restrict accessibility abuse, require timely security updates) given active exploitation reporting.",
+  "source_total_items": 8237,
+  "total_items_in_window_all": 288,
+  "total_items_in_window_curated": 80,
+  "morning_call_markdown": "### Executive Summary\n- CISA KEV-driven risk spike: Oracle WebLogic **CVE-2024-21182** confirmed actively exploited; treat any exposed WebLogic as “incident-prone” until patched/isolated.  \n- Broad exploitation surface: new “**HTTP/2 Bomb**” DoS technique impacts common edge stacks (nginx/Apache/IIS/Envoy/Pingora) → potential availability hit to customer-facing services.  \n- Credential theft & supply chain: **VS Code one-click token theft** + **malicious npm packages (“Miasma”)** increase risk of GitHub/CI secrets compromise and downstream deployment tampering.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Oracle WebLogic Server – CVE-2024-21182 (KEV / active exploitation)**\n- **What happened:** Multiple sources report **active exploitation** of Oracle WebLogic **CVE-2024-21182** and CISA added it to **Known Exploited Vulnerabilities**.  \n- **Why it matters operationally:** WebLogic is often internet-adjacent in legacy apps; exploitation commonly leads to **initial access → webshell/persistence → data theft/ransomware**.  \n- **Recommended immediate actions for the SOC today:** Confirm any WebLogic exposure (external scan + CMDB); prioritize **patch/mitigate or isolate** today; start targeted hunt for unusual WebLogic child processes and new files in app dirs.\n\n**2) Edge/service availability risk – “HTTP/2 Bomb” DoS against common web stacks**\n- **What happened:** Reports describe an HTTP/2-based DoS method affecting **nginx, Apache, IIS, Envoy, and Cloudflare Pingora** (and by extension many reverse proxies/load balancers).  \n- **Why it matters operationally:** Financial services are highly sensitive to **availability events**; attackers can blend DoS with intrusion attempts or extortion.  \n- **Recommended immediate actions for the SOC today:** Validate WAF/CDN protections and rate-limits for HTTP/2; coordinate with NetOps to review proxy/server configs for HTTP/2 limits; increase alerting on sudden HTTP/2 connection/session anomalies.\n\n**3) Developer/CI credential theft – VS Code “one-click” GitHub token theft**\n- **What happened:** A reported VS Code zero-day enables **stealing GitHub tokens** via a single user interaction (details may evolve; assume active weaponization is plausible).  \n- **Why it matters operationally:** Compromised GitHub tokens can enable **repo access, CI/CD tampering, secret exfiltration**, and supply-chain insertion impacting prod.  \n- **Recommended immediate actions for the SOC today:** Alert engineering to **rotate high-value GitHub tokens** (esp. classic PATs) and enforce SSO/short-lived tokens where possible; monitor for unusual GitHub OAuth/PAT usage and new runners/workflows.\n\n**4) Software supply chain – malicious npm “Miasma” campaign (Red Hat ecosystem)**\n- **What happened:** Microsoft/others detail a credential-stealing **npm package** campaign (“Miasma”) involving persistence and developer credential theft.  \n- **Why it matters operationally:** Supply-chain compromise can jump environments quickly (dev → CI → prod) and can bypass perimeter controls via “trusted” build pipelines.  \n- **Recommended immediate actions for the SOC today:** Ask AppSec/DevOps to identify whether affected packages (or suspicious new transitive deps) exist in builds; monitor CI hosts for unexpected outbound connections and new credential access patterns.\n\n**5) Network edge exposure – CISA flags exploited PAN-OS vulnerability (auth bypass)**\n- **What happened:** Reporting indicates a **PAN-OS authentication bypass** issue added to exploited-vuln tracking (exact CVE not provided in the snippet; assume real-world exploitation).  \n- **Why it matters operationally:** Firewall/VPN edge compromise is a common path to **domain compromise and ransomware staging**, especially in financial sector intrusion playbooks.  \n- **Recommended immediate actions for the SOC today:** Confirm PAN-OS versions and exposure; apply vendor-recommended fixes/mitigations ASAP; increase monitoring for anomalous admin/API auth events and unexpected config changes.\n\n---\n\n### Monitoring & detection recommendations\n- **WebLogic exploitation hunting (T1190):** EDR + application server logs + file integrity on WebLogic hosts; look for unusual JVM/WebLogic child processes (cmd/powershell/bash), new web-accessible artifacts, and spikes in 4xx/5xx followed by new processes.  \n- **Edge device compromise (T1133/T1190):** Firewall/VPN logs (PAN-OS) for abnormal authentication outcomes, new admin sessions from rare geos, config export events, and sudden policy changes outside change windows.  \n- **HTTP/2 Bomb DoS indicators:** WAF/CDN/proxy telemetry (nginx/Envoy/IIS/Apache) for sudden growth in concurrent HTTP/2 streams, rapid stream resets, high CPU on workers, and traffic shape changes; correlate with ISP/CDN alerts.  \n- **GitHub token abuse (T1528):** GitHub audit logs + IdP logs; alert on new OAuth app grants, PAT use from new IPs/ASNs, mass repo cloning, workflow file edits, and new self-hosted runner registrations.  \n- **CI/CD host monitoring (T1552/T1555):** EDR on build agents for credential store access, secrets file reads, and unusual outbound traffic right after `npm install`/build steps; proxy logs for new destinations from CI subnets.  \n- **Malicious npm dependency behavior:** DNS + egress proxy logs for developer/CI endpoints contacting newly-seen domains during package install; alert when package managers run in unusual contexts (prod servers).  \n- **Ransomware enablement behaviors (T1047/T1087/T1018):** AD telemetry + EDR for automated discovery, mass LDAP queries, remote service creation, and lateral movement attempts following an edge/app server alert.\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** Add **WebLogic CVE-2024-21182** and the exploited **PAN-OS** item to top of vulnerability SLA; validate compensating controls for any unpatchable legacy apps.  \n- **HTTP/2 hardening:** Standardize HTTP/2 rate/stream limits and connection timeouts across reverse proxies; ensure DDoS playbooks include HTTP/2-specific telemetry and thresholds.  \n- **Developer security posture:** Revisit VS Code extension policies, allowlisting, and sandboxing; require **least-privilege GitHub tokens** and routine rotation; tighten secrets scanning on repos.  \n- **Supply-chain controls:** Enforce dependency pinning/lockfiles, private registries/mirroring, and provenance checks for npm; improve detection coverage on build agents (egress controls + EDR tuning).  \n- **VoIP/endpoint exposure (HP Poly):** Inventory Poly devices and review patch status; ensure voice systems are segmented and management interfaces are restricted (risk includes foothold + social engineering/deepfake enablement).  \n- **Password manager breach readiness (Dashlane report):** Verify internal guidance for vault compromise scenarios (credential rotation priorities, privileged account monitoring, phishing watch) and confirm employee comms plan if vendor exposure impacts staff.",
   "highlights": [
     {
-      "title": "CISA Issues Alert on Oracle WebLogic Server Flaw Under Active Exploitation",
-      "link": "https://gbhackers.com/cisa-issues-alert-on-oracle-weblogic-server-flaw/",
-      "source": "GBHackers News",
-      "published": "2026-06-02T08:29:50+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Curated",
-        "Exploit / PoC",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Android Zero-Day Vulnerability Actively Exploited in Device Takeover Attacks",
-      "link": "https://gbhackers.com/android-zero-day-vulnerability-actively-exploited/",
-      "source": "GBHackers News",
-      "published": "2026-06-02T08:08:19+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "Mobile Security",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Dashlane Brute-Force Attack Leads to Limited Encrypted Vault Downloads",
-      "link": "https://www.securityweek.com/dashlane-brute-force-attack-leads-to-limited-encrypted-vault-downloads/",
-      "source": "SecurityWeek",
-      "published": "2026-06-02T08:07:41+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "34 Malicious Packages Steal Cloud Keys, Wallets, and SSH Credentials",
-      "link": "https://gbhackers.com/34-malicious-packages-steal-cloud-keys/",
-      "source": "GBHackers News",
-      "published": "2026-06-02T08:02:28+00:00",
-      "smart_groups": [
-        "Supply Chain / Software",
-        "Curated",
-        "Crypto / Web3",
-        "Exploit / PoC",
-        "Vulnerabilities / CVEs",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Android 0-Day Vulnerability Exploited in Attacks to Gain Complete Device Control",
-      "link": "https://cybersecuritynews.com/android-0-day-vulnerability-exploited-device/",
-      "source": "Cyber Security News (FeedBurner)",
-      "published": "2026-06-02T07:30:50+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "Threat Actors / APT",
-        "Exploit / PoC",
-        "Mobile Security",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Critical StrongDM Vulnerability Allows Attackers to Steal and Reuse Authentication",
-      "link": "https://cybersecuritynews.com/strongdm-vulnerability/",
-      "source": "Cyber Security News (FeedBurner)",
-      "published": "2026-06-02T07:15:21+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Curated",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Dashlane Password Manager User Accounts Locked Following Brute-Force Attacks",
-      "link": "https://cybersecuritynews.com/dashlane-accounts-locked/",
-      "source": "Cyber Security News (FeedBurner)",
-      "published": "2026-06-02T07:13:04+00:00",
-      "smart_groups": [
-        "Threat Actors / APT",
-        "Curated",
-        "Identity / Access",
-        "Vulnerabilities / CVEs",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Critical StrongDM Flaw Exposes Users to Authentication Token Theft and Reuse",
-      "link": "https://gbhackers.com/critical-strongdm-flaw-exposes-users/",
-      "source": "GBHackers News",
-      "published": "2026-06-02T07:06:33+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Curated",
-        "General Security"
-      ],
-      "curated": true
-    },
-    {
-      "title": "7 tabletop exercise mistakes that sabotage incident response",
-      "link": "https://www.csoonline.com/article/4179644/7-tabletop-exercise-mistakes-that-sabotage-incident-response.html",
+      "title": "Lessons from the Canvas cyberattack",
+      "link": "https://www.csoonline.com/article/4180194/lessons-from-the-canvas-cyberattack.html",
       "source": "CSO Online",
-      "published": "2026-06-02T07:00:00+00:00",
+      "published": "2026-06-03T09:00:00+00:00",
       "smart_groups": [
+        "Phishing / Social Engineering",
         "Curated",
-        "Crypto / Web3",
-        "Identity / Access",
-        "Network / OT / ICS",
+        "Data Protection / Privacy",
         "Ransomware",
         "Vulnerabilities / CVEs",
+        "Threat Actors / APT",
+        "Cloud / SaaS",
+        "Crypto / Web3",
+        "Exploit / PoC",
+        "Identity / Access",
+        "Network / OT / ICS",
         "General Security"
       ],
       "curated": true
     },
     {
-      "title": "Critical WP Maps Pro Vulnerability Allow Attackers to Create Administrator Account",
-      "link": "https://cybersecuritynews.com/wp-maps-pro-vulnerability/",
+      "title": "Scaling to $100M as the Security Weekly Index Hits an All Time High - Joshua Gould - BSW #450",
+      "link": "https://podcast.securityweekly.com/scaling-to-100m-as-the-security-weekly-index-hits-an-all-time-high-joshua-gould-bsw-450",
+      "source": "Security Weekly Podcast Network (Audio)",
+      "published": "2026-06-03T09:00:00+00:00",
+      "smart_groups": [
+        "Cloud / SaaS",
+        "Identity / Access",
+        "Crypto / Web3",
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Community / Briefing"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Oracle WebLogic CVE-2024–21182 Added to KEV Catalog After Active Exploitation",
+      "link": "https://lifeboat.com/blog/2026/06/oracle-weblogic-cve-2024-21182-added-to-kev-catalog-after-active-exploitation",
+      "source": "Lifeboat – Cybercrime & Malcode",
+      "published": "2026-06-03T07:26:54+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Curated",
+        "Exploit / PoC",
+        "Data Breaches / Leaks"
+      ],
+      "curated": true
+    },
+    {
+      "title": "HTTP/2 Bomb — Remote DoS Exploit Hits nginx, Apache, IIS, Envoy, and Cloudflare Pingora",
+      "link": "https://cybersecuritynews.com/http-2-bomb-remote-dos-exploit/",
       "source": "Cyber Security News (FeedBurner)",
-      "published": "2026-06-02T06:58:27+00:00",
+      "published": "2026-06-03T07:19:11+00:00",
+      "smart_groups": [
+        "Cloud / SaaS",
+        "Curated",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Designing Cloud Landing Zones by Traffic Flow: A Defence‑in‑Depth, DMZ‑First Architecture",
+      "link": "https://techcommunity.microsoft.com/t5/azure-network-security-blog/designing-cloud-landing-zones-by-traffic-flow-a-defence-in-depth/ba-p/4524280",
+      "source": "Azure Network Security Blog",
+      "published": "2026-06-03T07:18:18+00:00",
+      "smart_groups": [
+        "Detection Engineering",
+        "Cloud / SaaS",
+        "Crypto / Web3",
+        "Curated",
+        "Identity / Access",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "Vendors / Product Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Do containers still contain?",
+      "link": "https://raesene.github.io/blog/2026/06/03/do-containers-still-contain/",
+      "source": "https://raesene.github.io/feed.xml",
+      "published": "2026-06-03T07:00:00+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Curated",
+        "Linux / Unix",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "VS Code zero-day lets hackers steal GitHub tokens in one click",
+      "link": "https://www.bleepingcomputer.com/news/security/vs-code-zero-day-lets-hackers-steal-github-tokens-in-one-click/",
+      "source": "BleepingComputer",
+      "published": "2026-06-03T06:50:30+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Stay Ahead of Ransomware Livestream - June 2026",
+      "link": "https://www.youtube.com/watch?v=9NoZYiAqdhw",
+      "source": "SANS DFIR (YouTube)",
+      "published": "2026-06-03T06:10:51+00:00",
+      "smart_groups": [
+        "Ransomware",
+        "Curated",
+        "Network / OT / ICS",
+        "Detection Engineering"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Found Security Vulnerabilities in my university website",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1tvfxjp/found_security_vulnerabilities_in_my_university/",
+      "source": "/r/cybersecurity",
+      "published": "2026-06-03T05:32:16+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Curated",
+        "Web / API Security",
+        "Exploit / PoC",
+        "Windows / Microsoft",
+        "OSINT / Community"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Why an HP Poly VoIP Phones Bug Could Become an Enterprise Foothold",
+      "link": "https://securityaffairs.com/193045/security/why-an-hp-poly-voip-phones-bug-could-become-an-enterprise-foothold.html",
+      "source": "Security Affairs",
+      "published": "2026-06-03T05:03:30+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Curated",
