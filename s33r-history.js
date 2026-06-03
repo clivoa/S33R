@@ -106,7 +106,23 @@ function renderCveLifecycle(data, cveId) {
   if (!lifecycle) { metaRow.style.display = "none"; cveLifecycleChart = makeChart(cveLifecycleChart, ctx, "bar", { labels: [], datasets: [{ label: "Mentions", data: [] }] }, { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }); return; }
   const allMonths = Object.keys(lifecycle.monthly_counts).sort();
   metaRow.style.display = "flex";
-  metaRow.innerHTML = [`<span class="cve-meta-chip"><strong>${upper}</strong></span>`, `<span class="cve-meta-chip">Total: <strong>${lifecycle.total}</strong></span>`, `<span class="cve-meta-chip">Months active: <strong>${lifecycle.months_active}</strong></span>`, `<span class="cve-meta-chip">First: <strong>${lifecycle.first_seen}</strong></span>`, `<span class="cve-meta-chip">Last: <strong>${lifecycle.last_seen}</strong></span>`].join("");
+  metaRow.replaceChildren();
+  const chips = [
+    { label: "", value: upper },
+    { label: "Total: ", value: lifecycle.total },
+    { label: "Months active: ", value: lifecycle.months_active },
+    { label: "First: ", value: lifecycle.first_seen },
+    { label: "Last: ", value: lifecycle.last_seen }
+  ];
+  chips.forEach((chip) => {
+    const span = document.createElement("span");
+    span.className = "cve-meta-chip";
+    if (chip.label) span.append(document.createTextNode(chip.label));
+    const strong = document.createElement("strong");
+    strong.textContent = String(chip.value ?? "");
+    span.appendChild(strong);
+    metaRow.appendChild(span);
+  });
   cveLifecycleChart = makeChart(cveLifecycleChart, ctx, "bar",
     { labels: allMonths.map((m) => { const st = data.monthly_stats[m]; return st ? st.label : m; }), datasets: [{ label: "Mentions", data: allMonths.map((m) => lifecycle.monthly_counts[m] || 0) }] },
     { responsive: true, maintainAspectRatio: false, scales: { x: {}, y: { beginAtZero: true, ticks: { precision: 0 } } }, plugins: { legend: { display: false }, tooltip: { callbacks: { title: (items) => items[0] ? `${upper} – ${items[0].label}` : upper } } } });
