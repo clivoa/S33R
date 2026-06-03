@@ -843,6 +843,7 @@ def main() -> None:
 
     items_by_link: Dict[str, Dict[str, Any]] = {}
     promo_stats: Dict[str, Dict[str, Any]] = {}
+    feed_attempts: Dict[str, Dict[str, Any]] = {}  # key = xml_url
 
     if OUTPUT_PATH.exists():
         try:
@@ -905,17 +906,41 @@ def main() -> None:
 
         feed_stat = promo_stats[feed_key]
 
+        # Initialise attempt record for this feed
+        attempt: Dict[str, Any] = {
+            "feed_title": feed_title,
+            "xml_url": xml_url,
+            "category": type_label,
+            "type_slug": type_slug,
+            "status": "error",
+            "error": None,
+            "bozo": False,
+            "entries_in_feed": 0,
+            "entries_kept": 0,
+            "entries_too_old": 0,
+            "entries_promo": 0,
+            "entries_no_date": 0,
+        }
+        feed_attempts[feed_key] = attempt
+
         try:
             parsed = feedparser.parse(xml_url)
         except Exception as exc:
-            print(f"[WARN] Failed to fetch feed {feed_title} ({xml_url}): {exc!r}")
+            err_str = repr(exc)
+            print(f"[WARN] Failed to fetch feed {feed_title} ({xml_url}): {err_str}")
+            attempt["status"] = "error"
+            attempt["error"] = err_str
             continue
 
-        if getattr(parsed, "bozo", False) and getattr(parsed, "bozo_exception", None):
-            print(
-                f"[WARN] Bozo parsing feed {feed_title} ({xml_url}): "
-                f"{parsed.bozo_exception!r}"
-            )
+        bozo = getattr(parsed, "bozo", False)
+        bozo_exc = getattr(parsed, "bozo_exception", None)
+        if bozo and bozo_exc:
+            bozo_str = repr(bozo_exc)
+            print(f"[WARN] Bozo parsing feed {feed_title} ({xml_url}): {bozo_str}")
+            attempt["bozo"] = True
+            attempt["error"] = bozo_str
+
+        attempt["entries_in_feed"] = len(parsed.entries)
 
         for entry in parsed.entries:
             link = getattr(entry, "link", None)
@@ -927,6 +952,7 @@ def main() -> None:
 
             if is_promotional_entry(title, summary_raw):
                 feed_stat["promo_count"] += 1
+                attempt["entries_promo"] += 1
                 if len(feed_stat["examples"]) < 10:
                     feed_stat["examples"].append(title)
                 continue
@@ -935,8 +961,10 @@ def main() -> None:
             if not pub_dt:
                 pub_iso = None
                 pub_ts = None
+                attempt["entries_no_date"] += 1
             else:
                 if pub_dt < cutoff or pub_dt > now:
+                    attempt["entries_too_old"] += 1
                     continue
                 pub_iso = pub_dt.isoformat()
                 pub_ts = int(pub_dt.timestamp())
@@ -967,6 +995,23 @@ def main() -> None:
             else:
                 if (item["published_ts"] or 0) > (existing.get("published_ts") or 0):
                     items_by_link[link] = item
+
+            attempt["entries_kept"] += 1
+
+        # Resolve final status for this attempt
+        if attempt["status"] == "error" and attempt["entries_in_feed"] == 0 and not attempt["error"]:
+            attempt["status"] = "empty"
+        elif attempt["entries_kept"] > 0:
+            attempt["status"] = "ok"
+        elif attempt["bozo"] and attempt["entries_in_feed"] == 0:
+            attempt["status"] = "bozo"
+        elif attempt["entries_in_feed"] > 0 and attempt["entries_kept"] == 0:
+            # Had entries but all were filtered (too old, promo, no date)
+            attempt["status"] = "empty"
+        elif attempt["status"] == "error":
+            pass  # already set
+        else:
+            attempt["status"] = "empty"
 
     items_list = list(items_by_link.values())
 
@@ -1014,6 +1059,7 @@ def main() -> None:
             "classification_weight": 0.10,
         },
         "source_quality": source_quality_report,
+        "feed_attempts": list(feed_attempts.values()),
         "items": items_list,
     }
     OUTPUT_PATH.write_text(json.dumps(out_data, indent=2), encoding="utf-8")

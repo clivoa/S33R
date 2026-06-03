@@ -58,7 +58,7 @@ permalink: /sources/
         <div class="badge badge-live">LIVE STATUS</div>
         <h1 class="site-title">Source Health Monitor</h1>
         <p class="site-subtitle muted">
-          Quality metrics for all active RSS feeds — freshness, volume, deduplication and noise scores.
+          All configured RSS feeds — freshness, volume, deduplication and noise scores.
         </p>
       </div>
     </header>
@@ -75,13 +75,25 @@ permalink: /sources/
         </div>
 
         <div class="filter-group">
+          <label for="status-filter" class="filter-label">Status</label>
+          <select id="status-filter" class="filter-input">
+            <option value="all">All statuses</option>
+            <option value="ok">Active (ok)</option>
+            <option value="empty">Empty</option>
+            <option value="error">Error</option>
+            <option value="bozo">Bozo</option>
+          </select>
+        </div>
+
+        <div class="filter-group">
           <label for="grade-filter" class="filter-label">Grade</label>
           <select id="grade-filter" class="filter-input">
             <option value="all">All grades</option>
             <option value="A">A — Top tier (≥ 60)</option>
             <option value="B">B — Good (45–59)</option>
             <option value="C">C — Fair (30–44)</option>
-            <option value="D">D — Low (< 30)</option>
+            <option value="D">D — Low (&lt; 30)</option>
+            <option value="none">No score (inactive)</option>
           </select>
         </div>
 
@@ -91,6 +103,7 @@ permalink: /sources/
             <option value="rank">Rank</option>
             <option value="score">Score (desc)</option>
             <option value="name">Name (A–Z)</option>
+            <option value="status">Status</option>
             <option value="items">Total items</option>
             <option value="fresh">Fresh items 48h</option>
           </select>
@@ -112,6 +125,7 @@ permalink: /sources/
           <tr>
             <th style="width:36px">#</th>
             <th>Source</th>
+            <th>Status</th>
             <th>Grade</th>
             <th class="source-score-bar-cell">Score</th>
             <th>Total items</th>
@@ -128,7 +142,7 @@ permalink: /sources/
     </div>
 
     <footer class="site-footer" style="max-width:none">
-      <p>S33R Source Health Monitor &bull; <span class="muted">Data from <code>news_recent.json</code> · source_quality model</span></p>
+      <p>S33R Source Health Monitor &bull; <span class="muted">Data from <code>news_recent.json</code> · source_quality + feed_attempts</span></p>
     </footer>
   </div>
 
@@ -139,6 +153,7 @@ permalink: /sources/
     let filtered = [];
 
     function getGrade(score) {
+      if (score == null) return null;
       if (score >= 60) return "A";
       if (score >= 45) return "B";
       if (score >= 30) return "C";
@@ -146,38 +161,55 @@ permalink: /sources/
     }
 
     function gradeColor(score) {
-      if (score >= 60) return "#22c55e";   /* green */
-      if (score >= 45) return "#60a5fa";   /* blue */
-      if (score >= 30) return "#f59e0b";   /* amber */
-      return "#f87171";                    /* red */
+      if (score == null) return "#6b7280";
+      if (score >= 60) return "#22c55e";
+      if (score >= 45) return "#60a5fa";
+      if (score >= 30) return "#f59e0b";
+      return "#f87171";
+    }
+
+    function statusBadge(status) {
+      const map = {
+        ok:    { label: "Active",  cls: "status-ok"    },
+        empty: { label: "Empty",   cls: "status-empty"  },
+        error: { label: "Error",   cls: "status-error"  },
+        bozo:  { label: "Bozo",    cls: "status-bozo"   },
+      };
+      const s = map[status] || { label: status || "?", cls: "status-empty" };
+      return `<span class="feed-status-badge ${s.cls}">${s.label}</span>`;
     }
 
     function renderRow(s, idx) {
       const m = s.metrics || {};
-      const score = s.score || 0;
+      const score = s.score;
       const grade = getGrade(score);
       const color = gradeColor(score);
-      const pct = Math.max(0, Math.min(100, score)).toFixed(1);
+      const hasScore = score != null;
+      const pct = hasScore ? Math.max(0, Math.min(100, score)).toFixed(1) : "0";
+
+      const gradeHtml = grade
+        ? `<span class="grade-badge grade-${grade.toLowerCase()}">${grade}</span>`
+        : `<span class="grade-badge grade-none">—</span>`;
+
+      const scoreHtml = hasScore
+        ? `<div class="source-score-bar-wrap">
+             <div class="source-score-bar-track">
+               <div class="source-score-bar-fill" style="width:${pct}%;background:${color}"></div>
+             </div>
+             <span class="source-score-num">${score.toFixed(1)}</span>
+           </div>`
+        : `<span class="muted" style="font-size:11px">—</span>`;
 
       const tr = document.createElement("tr");
       tr.innerHTML = `
         <td class="muted" style="font-size:11px;font-variant-numeric:tabular-nums">${idx + 1}</td>
         <td>
           <div class="source-name" title="${(s.source||'').replace(/"/g,'&quot;')}">${s.source || "Unknown"}</div>
+          ${s.category ? `<div class="source-category muted" style="font-size:10px">${s.category}</div>` : ''}
         </td>
-        <td>
-          <span class="grade-badge grade-${grade.toLowerCase()}">
-            ${grade}
-          </span>
-        </td>
-        <td class="source-score-bar-cell">
-          <div class="source-score-bar-wrap">
-            <div class="source-score-bar-track">
-              <div class="source-score-bar-fill" style="width:${pct}%;background:${color}"></div>
-            </div>
-            <span class="source-score-num">${score.toFixed(1)}</span>
-          </div>
-        </td>
+        <td>${statusBadge(s.status)}</td>
+        <td>${gradeHtml}</td>
+        <td class="source-score-bar-cell">${scoreHtml}</td>
         <td style="font-variant-numeric:tabular-nums">${(m.total_items || 0).toLocaleString()}</td>
         <td style="font-variant-numeric:tabular-nums">${(m.fresh_items_48h || 0).toLocaleString()}</td>
         <td style="font-variant-numeric:tabular-nums">${(m.fresh_items_7d || 0).toLocaleString()}</td>
@@ -189,21 +221,36 @@ permalink: /sources/
     }
 
     function applyFilters() {
-      const search = (document.getElementById("sources-search").value || "").toLowerCase().trim();
-      const grade  = document.getElementById("grade-filter").value;
-      const sortBy = document.getElementById("sort-sources").value;
+      const search   = (document.getElementById("sources-search").value || "").toLowerCase().trim();
+      const statusF  = document.getElementById("status-filter").value;
+      const grade    = document.getElementById("grade-filter").value;
+      const sortBy   = document.getElementById("sort-sources").value;
 
       filtered = allSources.filter(s => {
         if (search && !(s.source || "").toLowerCase().includes(search)) return false;
-        if (grade !== "all" && getGrade(s.score || 0) !== grade) return false;
+        if (statusF !== "all" && s.status !== statusF) return false;
+        if (grade !== "all") {
+          const g = getGrade(s.score);
+          if (grade === "none" && g !== null) return false;
+          if (grade !== "none" && g !== grade) return false;
+        }
         return true;
       });
 
-      if (sortBy === "score")  filtered.sort((a, b) => (b.score || 0) - (a.score || 0));
-      else if (sortBy === "name")  filtered.sort((a, b) => (a.source || "").localeCompare(b.source || ""));
-      else if (sortBy === "items") filtered.sort((a, b) => ((b.metrics||{}).total_items||0) - ((a.metrics||{}).total_items||0));
-      else if (sortBy === "fresh") filtered.sort((a, b) => ((b.metrics||{}).fresh_items_48h||0) - ((a.metrics||{}).fresh_items_48h||0));
-      else filtered.sort((a, b) => (a.rank || 999) - (b.rank || 999));
+      const statusOrder = { ok: 0, empty: 1, bozo: 2, error: 3 };
+
+      if (sortBy === "score")  filtered.sort((a, b) => (b.score ?? -1) - (a.score ?? -1));
+      else if (sortBy === "name")   filtered.sort((a, b) => (a.source || "").localeCompare(b.source || ""));
+      else if (sortBy === "status") filtered.sort((a, b) => (statusOrder[a.status]??9) - (statusOrder[b.status]??9));
+      else if (sortBy === "items")  filtered.sort((a, b) => ((b.metrics||{}).total_items||0) - ((a.metrics||{}).total_items||0));
+      else if (sortBy === "fresh")  filtered.sort((a, b) => ((b.metrics||{}).fresh_items_48h||0) - ((a.metrics||{}).fresh_items_48h||0));
+      else /* rank */ filtered.sort((a, b) => {
+        /* ok feeds first by rank, then inactive alphabetically */
+        if (a.status === "ok" && b.status !== "ok") return -1;
+        if (a.status !== "ok" && b.status === "ok") return 1;
+        if (a.status === "ok" && b.status === "ok") return (a.rank || 999) - (b.rank || 999);
+        return (a.source || "").localeCompare(b.source || "");
+      });
 
       const tbody = document.getElementById("sources-tbody");
       tbody.innerHTML = "";
@@ -217,14 +264,14 @@ permalink: /sources/
         filtered.forEach((s, i) => tbody.appendChild(renderRow(s, i)));
       }
 
-      /* Update meta */
-      const aCount = filtered.filter(s => getGrade(s.score||0) === "A").length;
-      const bCount = filtered.filter(s => getGrade(s.score||0) === "B").length;
+      const okCount    = filtered.filter(s => s.status === "ok").length;
+      const errorCount = filtered.filter(s => s.status === "error").length;
+      const emptyCount = filtered.filter(s => s.status === "empty" || s.status === "bozo").length;
       document.getElementById("sources-meta").innerHTML =
         `${filtered.length} of ${allSources.length} sources &bull; ` +
-        `<span style="color:var(--success)">A: ${aCount}</span> · ` +
-        `<span style="color:var(--primary)">B: ${bCount}</span> · ` +
-        `<span style="color:var(--muted)">C/D: ${filtered.length - aCount - bCount}</span>`;
+        `<span style="color:var(--success)">Active: ${okCount}</span> · ` +
+        `<span style="color:var(--warning)">Empty: ${emptyCount}</span> · ` +
+        `<span style="color:var(--danger)">Error: ${errorCount}</span>`;
     }
 
     async function init() {
@@ -233,7 +280,44 @@ permalink: /sources/
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
 
-        allSources = Array.isArray(data.source_quality) ? data.source_quality : [];
+        /* Build quality lookup by source name */
+        const qualityMap = {};
+        if (Array.isArray(data.source_quality)) {
+          data.source_quality.forEach((q, i) => {
+            qualityMap[q.source] = { ...q, rank: i + 1 };
+          });
+        }
+
+        /* Build merged list from feed_attempts (all feeds) */
+        if (Array.isArray(data.feed_attempts) && data.feed_attempts.length > 0) {
+          allSources = data.feed_attempts.map(fa => {
+            const key = fa.feed_title;
+            const q   = qualityMap[key];
+            return {
+              source:   key,
+              status:   fa.status || "error",
+              category: fa.category || fa.type_slug || null,
+              xml_url:  fa.xml_url || null,
+              error:    fa.error || null,
+              /* quality data — only present for ok feeds */
+              score:    q ? q.score : null,
+              rank:     q ? q.rank  : null,
+              metrics:  q ? q.metrics : {},
+            };
+          });
+        } else {
+          /* Fallback: only source_quality data (old JSON without feed_attempts) */
+          allSources = (data.source_quality || []).map((q, i) => ({
+            source:   q.source,
+            status:   "ok",
+            category: null,
+            xml_url:  null,
+            error:    null,
+            score:    q.score,
+            rank:     i + 1,
+            metrics:  q.metrics || {},
+          }));
+        }
 
         document.getElementById("sources-loading").classList.add("hidden");
         document.getElementById("sources-table").style.display = "";
@@ -241,6 +325,7 @@ permalink: /sources/
         applyFilters();
 
         document.getElementById("sources-search").addEventListener("input", applyFilters);
+        document.getElementById("status-filter").addEventListener("change", applyFilters);
         document.getElementById("grade-filter").addEventListener("change", applyFilters);
         document.getElementById("sort-sources").addEventListener("change", applyFilters);
       } catch (err) {
