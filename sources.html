@@ -52,8 +52,10 @@ permalink: /sources/
             <div class="filter-group">
               <span class="filter-label">Status</span>
               <select id="status-filter" class="filter-input">
-                <option value="all">All statuses</option><option value="ok">Active (ok)</option>
-                <option value="empty">Empty</option><option value="error">Error</option><option value="bozo">Bozo</option>
+                <option value="all">All statuses</option><option value="active">Active upstream</option>
+                <option value="down">Inactive upstream</option><option value="rate_limited">Rate limited</option>
+                <option value="ok">Fetched ok</option><option value="empty">Empty</option>
+                <option value="error">Error</option><option value="bozo">Bozo</option><option value="unknown">Unknown</option>
               </select>
             </div>
             <div class="filter-group">
@@ -96,15 +98,21 @@ permalink: /sources/
   <script src="{{ '/s33r-nav.js' | relative_url }}"></script>
   <script>
     const NEWS_JSON = "{{ '/data/news_recent.json' | relative_url }}";
+    const SOURCE_CATALOG_JSON = "{{ '/data/source_catalog.json' | relative_url }}";
     let allSources = [], filtered = [];
     const $ = (id) => document.getElementById(id);
     const grade = (s) => s == null ? null : s >= 60 ? "A" : s >= 45 ? "B" : s >= 30 ? "C" : "D";
     const gColor = (s) => s == null ? "var(--faint)" : s >= 60 ? "var(--teal)" : s >= 45 ? "var(--cyan)" : s >= 30 ? "var(--brand)" : "var(--red)";
+    const esc = (value) => String(value ?? "").replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
 
     function statusBadge(st) {
-      const map = { ok: ["Active","status-ok"], empty: ["Empty","status-empty"], error: ["Error","status-error"], bozo: ["Bozo","status-bozo"] };
+      const map = {
+        active: ["Active","status-active"], down: ["Inactive","status-down"], rate_limited: ["Limited","status-rate-limited"],
+        unknown: ["Unknown","status-unknown"], ok: ["Fetched","status-ok"], empty: ["Empty","status-empty"],
+        error: ["Error","status-error"], bozo: ["Bozo","status-bozo"]
+      };
       const s = map[st] || [st || "?", "status-empty"];
-      return `<span class="feed-status-badge ${s[1]}">${s[0]}</span>`;
+      return `<span class="feed-status-badge ${s[1]}">${esc(s[0])}</span>`;
     }
 
     function row(s, idx) {
@@ -112,10 +120,11 @@ permalink: /sources/
       const pct = has ? Math.max(0, Math.min(100, score)).toFixed(1) : "0";
       const gHtml = g ? `<span class="grade-badge grade-${g.toLowerCase()}">${g}</span>` : `<span class="grade-badge grade-none">—</span>`;
       const sHtml = has ? `<div class="source-score-bar-wrap"><div class="source-score-bar-track"><div class="source-score-bar-fill" style="width:${pct}%;background:${color}"></div></div><span class="source-score-num">${score.toFixed(1)}</span></div>` : `<span class="muted" style="font-size:11px">—</span>`;
+      const details = [s.category, s.ingestStatus ? `ingest: ${s.ingestStatus}` : null, s.consecutiveFailures ? `failures: ${s.consecutiveFailures}` : null].filter(Boolean).join(" · ");
       const tr = document.createElement("tr");
       tr.innerHTML =
         `<td class="fq-rank" style="font-size:11px">${idx + 1}</td>` +
-        `<td><div class="source-name" title="${(s.source || "").replace(/"/g, "&quot;")}">${s.source || "Unknown"}</div>${s.category ? `<div class="source-category" style="font-size:10px">${s.category}</div>` : ""}</td>` +
+        `<td><div class="source-name" title="${esc(s.source || "")}">${esc(s.source || "Unknown")}</div>${details ? `<div class="source-category" style="font-size:10px">${esc(details)}</div>` : ""}</td>` +
         `<td>${statusBadge(s.status)}</td><td>${gHtml}</td><td>${sHtml}</td>` +
         `<td>${(m.total_items || 0).toLocaleString()}</td><td>${(m.fresh_items_48h || 0).toLocaleString()}</td>` +
         `<td>${(m.fresh_items_7d || 0).toLocaleString()}</td><td>${(m.curated_items || 0).toLocaleString()}</td>` +
@@ -127,12 +136,13 @@ permalink: /sources/
     function apply() {
       const q = ($("sources-search").value || "").toLowerCase().trim(), sf = $("status-filter").value, gf = $("grade-filter").value, sort = $("sort-sources").value;
       filtered = allSources.filter((s) => {
-        if (q && !(s.source || "").toLowerCase().includes(q)) return false;
-        if (sf !== "all" && s.status !== sf) return false;
+        const haystack = [s.source, s.category, s.xmlUrl].filter(Boolean).join(" ").toLowerCase();
+        if (q && !haystack.includes(q)) return false;
+        if (sf !== "all" && s.status !== sf && s.ingestStatus !== sf) return false;
         if (gf !== "all") { const g = grade(s.score); if (gf === "none" && g !== null) return false; if (gf !== "none" && g !== gf) return false; }
         return true;
       });
-      const so = { ok: 0, empty: 1, bozo: 2, error: 3 };
+      const so = { active: 0, ok: 1, rate_limited: 2, empty: 3, bozo: 4, error: 5, down: 6, unknown: 7 };
       if (sort === "score") filtered.sort((a, b) => (b.score ?? -1) - (a.score ?? -1));
       else if (sort === "name") filtered.sort((a, b) => (a.source || "").localeCompare(b.source || ""));
       else if (sort === "status") filtered.sort((a, b) => (so[a.status] ?? 9) - (so[b.status] ?? 9));
@@ -144,8 +154,18 @@ permalink: /sources/
       if (!filtered.length) { $("sources-empty").classList.remove("hidden"); $("sources-table").style.display = "none"; }
       else { $("sources-empty").classList.add("hidden"); $("sources-table").style.display = ""; filtered.forEach((s, i) => tb.appendChild(row(s, i))); }
 
-      const ok = filtered.filter((s) => s.status === "ok").length, err = filtered.filter((s) => s.status === "error").length, em = filtered.filter((s) => s.status === "empty" || s.status === "bozo").length;
-      $("sources-meta").innerHTML = `${filtered.length}/${allSources.length} SOURCES · <span style="color:var(--teal)">OK ${ok}</span> · <span style="color:var(--amber)">EMPTY ${em}</span> · <span style="color:var(--red)">ERR ${err}</span>`;
+      const active = filtered.filter((s) => s.status === "active").length, down = filtered.filter((s) => s.status === "down").length, limited = filtered.filter((s) => s.status === "rate_limited").length;
+      $("sources-meta").innerHTML = `${filtered.length}/${allSources.length} SOURCES · <span style="color:var(--teal)">ACTIVE ${active}</span> · <span style="color:var(--brand)">LIMITED ${limited}</span> · <span style="color:var(--red)">INACTIVE ${down}</span>`;
+    }
+
+    async function fetchJsonOptional(url) {
+      try {
+        const res = await fetch(url);
+        if (!res.ok) return null;
+        return await res.json();
+      } catch (_) {
+        return null;
+      }
     }
 
     async function init() {
@@ -153,9 +173,42 @@ permalink: /sources/
         const res = await fetch(NEWS_JSON); if (!res.ok) throw new Error("HTTP " + res.status);
         const data = await res.json();
         const qmap = {}; (data.source_quality || []).forEach((q, i) => { qmap[q.source] = { ...q, rank: i + 1 }; });
-        if (Array.isArray(data.feed_attempts) && data.feed_attempts.length) {
-          allSources = data.feed_attempts.map((fa) => { const q = qmap[fa.feed_title]; return { source: fa.feed_title, status: fa.status || "error", category: fa.category || fa.type_slug || null, score: q ? q.score : null, rank: q ? q.rank : null, metrics: q ? q.metrics : {} }; });
-        } else { allSources = (data.source_quality || []).map((q, i) => ({ source: q.source, status: "ok", category: null, score: q.score, rank: i + 1, metrics: q.metrics || {} })); }
+        const attemptsByUrl = {}, attemptsByTitle = {};
+        (data.feed_attempts || []).forEach((fa) => {
+          if (fa.xml_url) attemptsByUrl[fa.xml_url] = fa;
+          if (fa.feed_title) attemptsByTitle[fa.feed_title] = fa;
+        });
+
+        const catalog = await fetchJsonOptional(SOURCE_CATALOG_JSON);
+        if (catalog && Array.isArray(catalog.feeds) && catalog.feeds.length) {
+          const seen = new Set();
+          allSources = catalog.feeds.map((f) => {
+            const url = f.xml_url || f.url || "";
+            const fa = attemptsByUrl[url] || attemptsByTitle[f.title] || {};
+            const q = qmap[f.title] || qmap[fa.feed_title];
+            seen.add(url || f.title);
+            return {
+              source: f.title || fa.feed_title || url || "Unknown",
+              xmlUrl: url,
+              status: f.source_status || "unknown",
+              ingestStatus: fa.status || null,
+              category: f.category || fa.category || fa.type_slug || null,
+              consecutiveFailures: f.consecutive_failures || fa.external_consecutive_failures || 0,
+              score: q ? q.score : null,
+              rank: q ? q.rank : null,
+              metrics: q ? q.metrics : {}
+            };
+          });
+
+          Object.values(attemptsByUrl).forEach((fa) => {
+            const key = fa.xml_url || fa.feed_title;
+            if (!key || seen.has(key)) return;
+            const q = qmap[fa.feed_title];
+            allSources.push({ source: fa.feed_title, xmlUrl: fa.xml_url, status: fa.catalog_status || fa.status || "unknown", ingestStatus: fa.status || null, category: fa.category || fa.type_slug || null, consecutiveFailures: fa.external_consecutive_failures || 0, score: q ? q.score : null, rank: q ? q.rank : null, metrics: q ? q.metrics : {} });
+          });
+        } else if (Array.isArray(data.feed_attempts) && data.feed_attempts.length) {
+          allSources = data.feed_attempts.map((fa) => { const q = qmap[fa.feed_title]; return { source: fa.feed_title, xmlUrl: fa.xml_url, status: fa.catalog_status || fa.status || "error", ingestStatus: fa.status || null, category: fa.category || fa.type_slug || null, consecutiveFailures: fa.external_consecutive_failures || 0, score: q ? q.score : null, rank: q ? q.rank : null, metrics: q ? q.metrics : {} }; });
+        } else { allSources = (data.source_quality || []).map((q, i) => ({ source: q.source, xmlUrl: null, status: "ok", ingestStatus: "ok", category: null, consecutiveFailures: 0, score: q.score, rank: i + 1, metrics: q.metrics || {} })); }
         $("sources-loading").classList.add("hidden"); $("sources-table").style.display = ""; apply();
         ["sources-search","status-filter","grade-filter","sort-sources"].forEach((id) => $(id).addEventListener(id === "sources-search" ? "input" : "change", apply));
       } catch (err) { console.error(err); $("sources-loading").innerHTML = '<span style="color:var(--red)">Failed to load source data.</span>'; }

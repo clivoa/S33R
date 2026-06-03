@@ -28,6 +28,10 @@ jobs:
           python -m pip install --upgrade pip
           pip install feedparser
 
+      - name: Sync active feed catalog
+        run: |
+          python scripts/sync_feed_catalog.py
+
       - name: Build news_recent.json
         run: |
           python scripts/build_news_json.py
@@ -39,7 +43,7 @@ jobs:
           set -euo pipefail
           BRANCH="main"
           
-          CHANGED=$(git ls-files -m -o --exclude-standard data/** || true)
+          CHANGED=$(git ls-files -m -o --exclude-standard sec_feeds.xml data/** || true)
           [ -z "$CHANGED" ] && { echo "No changes detected."; exit 0; }
  
           for file in $CHANGED; do

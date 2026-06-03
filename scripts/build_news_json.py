@@ -44,6 +44,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 OPML_PATH = BASE_DIR / "sec_feeds.xml"
 OUTPUT_PATH = BASE_DIR / "data" / "news_recent.json"
 ARCHIVE_DIR = BASE_DIR / "data" / "archive"
+SOURCE_CATALOG_PATH = BASE_DIR / "data" / "source_catalog.json"
 SMART_GROUP_DICT_PATH = Path(
     os.environ.get("SMART_GROUP_DICT_PATH", str(BASE_DIR / "scripts" / "smart_group_dictionary.json"))
 )
@@ -558,6 +559,44 @@ def iter_opml_feeds(opml_path: Path) -> Iterable[Tuple[str, str, str]]:
             yield group_title, feed_title, xml_url
 
 
+def load_source_catalog(path: Path) -> Dict[str, Any]:
+    empty: Dict[str, Any] = {"path": str(path), "metadata": None, "by_url": {}}
+    if not path.exists():
+        return empty
+
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        print(f"[WARN] Could not load source catalog {path}: {exc!r}")
+        return empty
+
+    feeds = raw.get("feeds", [])
+    if not isinstance(feeds, list):
+        print(f"[WARN] Invalid source catalog format (feeds must be a list): {path}")
+        return empty
+
+    by_url: Dict[str, Dict[str, Any]] = {}
+    for feed in feeds:
+        if not isinstance(feed, dict):
+            continue
+        url = str(feed.get("xml_url") or feed.get("url") or "").strip()
+        if not url:
+            continue
+        by_url[url] = feed
+
+    metadata = {
+        "path": str(path),
+        "generated_at": raw.get("generated_at"),
+        "total_feeds": raw.get("total_feeds"),
+        "active_feeds": raw.get("active_feeds"),
+        "active_opml_feeds": raw.get("active_opml_feeds"),
+        "upstream": raw.get("upstream"),
+        "source": raw.get("source"),
+    }
+    print(f"[INFO] Loaded source catalog {path} ({len(by_url)} feeds)")
+    return {"path": str(path), "metadata": metadata, "by_url": by_url}
+
+
 def load_external_smart_group_rules(path: Path) -> Dict[str, Any]:
     out: Dict[str, Any] = {
         "path": str(path),
@@ -840,6 +879,8 @@ def main() -> None:
     now = datetime.now(timezone.utc)
     cutoff = now - timedelta(days=DAYS_BACK)
     external_rules = load_external_smart_group_rules(SMART_GROUP_DICT_PATH)
+    source_catalog = load_source_catalog(SOURCE_CATALOG_PATH)
+    source_catalog_by_url: Dict[str, Dict[str, Any]] = source_catalog.get("by_url", {})
 
     items_by_link: Dict[str, Dict[str, Any]] = {}
     promo_stats: Dict[str, Dict[str, Any]] = {}
@@ -895,6 +936,7 @@ def main() -> None:
         print(f"[INFO] Fetching feed: {feed_title} ({xml_url}) [{type_label}]")
 
         feed_key = xml_url or feed_title
+        catalog_feed = source_catalog_by_url.get(xml_url, {})
         if feed_key not in promo_stats:
             promo_stats[feed_key] = {
                 "feed_title": feed_title,
@@ -920,6 +962,13 @@ def main() -> None:
             "entries_too_old": 0,
             "entries_promo": 0,
             "entries_no_date": 0,
+            "catalog_status": catalog_feed.get("source_status"),
+            "ingest_enabled": catalog_feed.get("ingest_enabled", True),
+            "external_http_status": catalog_feed.get("http_status"),
+            "external_error": catalog_feed.get("error"),
+            "external_consecutive_failures": catalog_feed.get("consecutive_failures"),
+            "external_down_since": catalog_feed.get("down_since"),
+            "external_last_seen_active": catalog_feed.get("last_seen_active"),
         }
         feed_attempts[feed_key] = attempt
 
@@ -1013,6 +1062,35 @@ def main() -> None:
         else:
             attempt["status"] = "empty"
 
+    for url, feed in source_catalog_by_url.items():
+        if url in feed_attempts:
+            continue
+
+        category = str(feed.get("category") or "General").strip()
+        type_slug, type_label = normalize_category(category)
+        catalog_status = str(feed.get("source_status") or "unknown")
+        feed_attempts[url] = {
+            "feed_title": feed.get("title") or url,
+            "xml_url": url,
+            "category": type_label,
+            "type_slug": type_slug,
+            "status": catalog_status,
+            "error": feed.get("error"),
+            "bozo": feed.get("bozo"),
+            "entries_in_feed": int(feed.get("entries") or 0),
+            "entries_kept": 0,
+            "entries_too_old": 0,
+            "entries_promo": 0,
+            "entries_no_date": 0,
+            "catalog_status": catalog_status,
+            "ingest_enabled": bool(feed.get("ingest_enabled")),
+            "external_http_status": feed.get("http_status"),
+            "external_error": feed.get("error"),
+            "external_consecutive_failures": feed.get("consecutive_failures"),
+            "external_down_since": feed.get("down_since"),
+            "external_last_seen_active": feed.get("last_seen_active"),
+        }
+
     items_list = list(items_by_link.values())
 
     source_quality_map, source_quality_report = build_source_quality(items_list, now)
@@ -1058,6 +1136,7 @@ def main() -> None:
             "noise_weight": 0.14,
             "classification_weight": 0.10,
         },
+        "source_catalog": source_catalog.get("metadata"),
         "source_quality": source_quality_report,
         "feed_attempts": list(feed_attempts.values()),
         "items": items_list,

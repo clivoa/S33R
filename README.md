@@ -7,7 +7,7 @@
 
 A fully automated, open-source **cybersecurity news aggregation, classification, archiving, and analytics platform** designed to run entirely on **GitHub Pages + GitHub Actions** — no servers, no databases.
 
-S33R collects content from 700+ RSS feeds, classifies it using Smart Groups, scores and ranks every item, tracks feed health, generates historical archives, and delivers multiple front-end dashboards for analysts, researchers, and OSINT practitioners.
+S33R syncs its feed roster from [clivoa/awesome-security-feeds](https://github.com/clivoa/awesome-security-feeds), ingests only feeds marked active upstream, classifies content using Smart Groups, scores and ranks every item, tracks feed health, generates historical archives, and delivers multiple front-end dashboards for analysts, researchers, and OSINT practitioners.
 
 ---
 
@@ -19,7 +19,7 @@ S33R provides:
 - **Score bars** on every news card with configurable time windows (24h / 72h / 7d / All)
 - **Smart Group classification** for high-signal grouping
 - **Curated intelligence flags** on high-priority items
-- **Source Health Monitor** — all 700+ configured feeds with live status (Active / Empty / Error / Bozo), quality grades, and per-feed metrics
+- **Source Health Monitor** — full upstream feed catalog, including inactive feeds, with upstream status, quality grades, and per-feed metrics
 - **Trend analytics** (keywords, vendors, actor timelines, CVEs, daily volume)
 - **Historical archive engine** (monthly + yearly JSON)
 - **Signal-filtered monthly packs**
@@ -33,7 +33,7 @@ The system targets: cybersecurity analysts, threat intelligence teams, researche
 ## Architecture Overview
 
 ```
-RSS Feeds (702) → Python ETL → JSON Datasets → GitHub Pages → Dashboards (HTML/JS)
+awesome-security-feeds catalog → active OPML → Python ETL → JSON Datasets → GitHub Pages → Dashboards (HTML/JS)
 ```
 
 **Components:**
@@ -49,15 +49,20 @@ All functionality is delivered without servers or databases.
 ## Data Flow
 
 ```
-sec_feeds.xml (702 feeds)
+clivoa/awesome-security-feeds
+     ↓
+sync_feed_catalog.py
+     ↓  ── sec_feeds.xml (active feeds only, used for ingestion)
+     ↓  ── data/source_catalog.json (full roster, including inactive feeds)
+sec_feeds.xml
      ↓
 build_news_json.py
      ↓  ── items (scored, classified, deduped)
-     ↓  ── source_quality (220+ active feeds, graded A–D)
-     ↓  ── feed_attempts (all 702 feeds, status: ok/empty/error/bozo)
+     ↓  ── source_quality (feeds with collected items, graded A–D)
+     ↓  ── feed_attempts (ingested active feeds + synthetic inactive catalog records)
 data/news_recent.json
      ├── index.html         (War Room dashboard)
-     ├── sources.html       (Source Health Monitor, all 702 feeds)
+     ├── sources.html       (Source Health Monitor, full upstream catalog)
      │
      ├── build_news_archive.py → data/archive/monthly + yearly
      │        ↓
@@ -74,10 +79,14 @@ data/news_recent.json
 
 ```mermaid
 flowchart LR
-    A[702 RSS Feeds] --> B[build_news_json.py]
+    Z[awesome-security-feeds] --> A[sync_feed_catalog.py]
+    A --> A1[sec_feeds.xml active only]
+    A --> A2[data/source_catalog.json full roster]
+    A1 --> B[build_news_json.py]
     B --> C[data/news_recent.json]
     C --> D[index.html — War Room]
-    C --> E2[sources.html — Feed Health]
+    A2 --> E2[sources.html — Feed Health]
+    C --> E2
 
     C --> E[build_news_archive.py]
     E --> F[data/archive/monthly & yearly]
@@ -107,7 +116,8 @@ Primary data file, rebuilt hourly. Contains:
 | `total_items` | Total deduplicated items |
 | `items[]` | Normalized entries with smart groups, curated flag, priority score, source quality score |
 | `source_quality[]` | Quality report for ~220 active feeds (score 0–100, grade A–D, metrics) |
-| `feed_attempts[]` | Status record for **all 702 configured feeds** (status, entry counts, error info) |
+| `feed_attempts[]` | Ingestion attempt records for active feeds, plus synthetic records for inactive catalog feeds |
+| `source_catalog` | Metadata about the upstream feed catalog consumed by `sync_feed_catalog.py` |
 | `classification_stats` | Smart group coverage and confidence ratios |
 | `source_quality_model` | Weights used for each quality component |
 
@@ -119,6 +129,9 @@ Primary data file, rebuilt hourly. Contains:
 | `empty` | Feed parsed but all entries were filtered (too old, promotional, no date) |
 | `bozo` | Feed parsed with errors, no entries |
 | `error` | Feed fetch or parse failed entirely |
+| `active` | Upstream catalog marks the feed as active; S33R may ingest it |
+| `down` | Upstream catalog marks the feed inactive; S33R skips fetching it |
+| `rate_limited` | Upstream catalog observed rate limiting; S33R skips fetching it |
 
 ### `data/archive/*`
 
@@ -203,9 +216,9 @@ Curated items are optionally consumed by the morning call briefing generator.
 - Infinite scroll
 
 ### `sources.html` — Source Health Monitor
-- Shows **all 702 configured feeds** (not just the ~220 with collected items)
-- Status badges per feed: Active / Empty / Error / Bozo
-- Quality grade (A–D) and score bar for active feeds
+- Shows the **full upstream feed catalog**, including feeds that are inactive and skipped by ingestion
+- Status badges per feed: Active / Inactive / Rate Limited / Fetched / Empty / Error / Bozo
+- Quality grade (A–D) and score bar for feeds with collected items
 - Per-feed metrics: total items, fresh 48h/7d, curated, duplicates, noise
 - Filters: search, status, grade, sort (rank / score / name / status / items / fresh)
 
@@ -262,7 +275,8 @@ Example workflow env variable:
 ## GitHub Actions Automation
 
 ### `update_news_json.yml` (Hourly)
-- Fetches all 702 configured feeds
+- Syncs the upstream catalog and active-only OPML from `clivoa/awesome-security-feeds`
+- Fetches only feeds marked active upstream
 - Builds `news_recent.json` with items, `source_quality`, and `feed_attempts`
 - Creates signal-filtered promo fragment archive
 
@@ -286,7 +300,7 @@ All workflows run with standard GitHub Actions runners.
 S33R/
 │
 ├── index.html                  # War Room feed dashboard
-├── sources.html                # Source Health Monitor (all 702 feeds)
+├── sources.html                # Source Health Monitor (full upstream catalog)
 ├── trend.html                  # Trend analytics
 ├── archive.html                # Historical archive browser
 ├── archive-overview.html       # Archive overview
@@ -304,6 +318,7 @@ S33R/
 │
 ├── data/
 │   ├── news_recent.json        # Primary feed (rebuilt hourly)
+│   ├── source_catalog.json     # Full upstream feed roster + status
 │   ├── trends.json             # Analytics data
 │   ├── morning_call_latest.json
 │   ├── morning_call_index.json
@@ -316,6 +331,7 @@ S33R/
 │           └── monthly/
 │
 ├── scripts/
+│   ├── sync_feed_catalog.py        # Sync upstream active OPML + full source catalog
 │   ├── build_news_json.py          # Main ETL: fetch, classify, score, write JSON
 │   ├── build_news_archive.py       # Archive builder
 │   ├── build_trends_json.py        # Trend analytics builder
@@ -324,7 +340,7 @@ S33R/
 │   ├── build_historical_trends.py  # Historical trend computations
 │   └── smart_group_dictionary.json # Keyword rules for classification
 │
-├── sec_feeds.xml               # OPML feed list (702 feeds)
+├── sec_feeds.xml               # Active-only OPML generated from awesome-security-feeds
 │
 └── .github/
     └── workflows/
