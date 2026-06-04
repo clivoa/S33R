@@ -218,7 +218,7 @@ THREAT_ACTOR_NAMES = [
     "PROMETHIUM",
     "Patchwork",
     "PittyTiger",
-    "Play",
+    # "Play" intentionally omitted here — matched via CONTEXT_REQUIRED_ACTORS below
     "Poseidon Group",
     "Putter Panda",
     "RTM",
@@ -523,8 +523,19 @@ def build_threat_actor_patterns() -> List[str]:
 
 THREAT_ACTOR_PATTERNS = build_threat_actor_patterns()
 
-# Canonical map: lowercase -> official name
+# Canonical map: lowercase -> official name (include context-required actors too)
 CANONICAL_TA_MAP = {name.lower(): name for name in THREAT_ACTOR_NAMES}
+CANONICAL_TA_MAP.update({k.lower(): k for k in ["Play"]})
+
+# Actors whose names are common English words — only matched when a disambiguating
+# keyword appears in the same text (within ~300 chars is handled by full-text scan).
+CONTEXT_REQUIRED_ACTORS: Dict[str, re.Pattern] = {
+    "Play": re.compile(
+        r"\bPlay\s+(?:ransomware|group|gang|threat\s+actor|APT|actors?)\b"
+        r"|\bPlay\b.{0,80}(?:ransomware|encrypted|extortion|exfiltrat)",
+        re.IGNORECASE | re.DOTALL,
+    ),
+}
 
 # Single regex to extract threat actor names (without generic patterns)
 THREAT_ACTOR_NAME_REGEX = re.compile(
@@ -1059,6 +1070,10 @@ def main() -> None:
 
         # 2) Concrete name extraction for top_actors
         name_matches = set(m.group(0) for m in THREAT_ACTOR_NAME_REGEX.finditer(text))
+        # Also check context-required actors separately
+        for actor_name, ctx_pattern in CONTEXT_REQUIRED_ACTORS.items():
+            if ctx_pattern.search(text):
+                name_matches.add(actor_name)
         actor_hits = set()
         for raw_name in name_matches:
             canonical = CANONICAL_TA_MAP.get(raw_name.lower(), raw_name)
