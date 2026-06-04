@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 """
-Gera data/trends.json com métricas de tendências para o trend.html:
+Generates data/trends.json with trend metrics for trend.html:
 
-- Volume diário de notícias
-- Breakdown por categoria (smart_groups / tags)
-- Top keywords por janela (24h, 7d, 30d, 90d)
-- Contagem por vendor por janela
-- Tendências de termos de ataque (ransomware, supply chain, 0-day, etc.)
-- Top CVEs por janela (para o ranking de CVEs)
-- Linha do tempo de menções a threat actors (por dia),
-  incluindo os top_actors por dia para tooltip.
+- Daily news volume
+- Category breakdown (smart_groups / tags)
+- Top keywords by window (24h, 7d, 30d, 90d)
+- Vendor counts by window
+- Attack-term trends (ransomware, supply chain, 0-day, etc.)
+- Top CVEs by window (for the CVE ranking)
+- Threat actor mention timeline (by day),
+  including top_actors per day for tooltips.
 
-Fonte de dados:
+Data source:
 - data/news_recent.json
 """
 
@@ -27,7 +27,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 NEWS_RECENT_PATH = BASE_DIR / "data" / "news_recent.json"
 OUTPUT_PATH = BASE_DIR / "data" / "trends.json"
 
-# Janelas usadas pelo front
+# Windows used by the frontend
 WINDOWS = {
     "24h": 1,
     "7d": 7,
@@ -36,30 +36,30 @@ WINDOWS = {
 }
 
 STOPWORDS = {
-    # stopwords genéricas de linguagem
+    # Generic language stopwords
     "the", "and", "for", "with", "from", "this", "that", "have", "has",
     "into", "over", "under", "about", "your", "you", "are", "was", "were",
     "will", "their", "they", "them", "its", "our", "out", "but", "not",
     "can", "could", "would", "should", "may", "might", "than", "then",
     "after", "before", "more", "less", "also", "just", "into", "via",
-    # termos muito genéricos de segurança / notícia
+    # Very generic security/news terms
     "security", "cyber", "attack", "attacks", "threat", "threats",
     "vulnerability", "vulnerabilities", "report", "reports",
     "blog", "post", "news", "data",
-    # palavras vazias comuns do feed
+    # Common low-signal feed words
     "first", "all", "access", "based", "using", "used", "user", "users",
     "update", "updated", "updates", "detail", "details",
-    # pedaços de URL / protocolo
+    # URL / protocol fragments
     "http", "https", "www", "com",
 }
 
 KEYWORD_VENDOR_STOPWORDS = {
     "upguard",
-    # "kaspersky", "crowdstrike", etc. se começarem a poluir
+    # "kaspersky", "crowdstrike", etc. if they start polluting keywords
 }
 
 
-# Vendors simples (ajuste conforme necessário)
+# Simple vendors (adjust as needed)
 VENDOR_KEYWORDS = {
     "Microsoft": ["microsoft", "windows", "exchange", "azure"],
     "Cisco": ["cisco", "ios xe"],
@@ -74,7 +74,7 @@ VENDOR_KEYWORDS = {
     "Atlassian": ["atlassian", "jira", "confluence"],
 }
 
-# Termos de "attack trends" que aparecerão no gráfico Emerging attack trends
+# "Attack trends" terms shown in the Emerging attack trends chart
 TRENDING_TERMS = {
     "ransomware": "Ransomware",
     "double extortion": "Double extortion",
@@ -87,7 +87,7 @@ TRENDING_TERMS = {
     "credential stuffing": "Credential stuffing",
 }
 
-# Malware families / clusters usados para correlação Actor x Malware
+# Malware families / clusters used for Actor x Malware correlation
 MALWARE_KEYWORDS = {
     "Ransomware": ["ransomware", "raas", "double extortion", "locker"],
     "Infostealer": ["infostealer", "stealer", "credential stealer", "password stealer"],
@@ -102,7 +102,7 @@ MALWARE_KEYWORDS = {
 # =========================================================
 #  Threat actors
 # =========================================================
-# ⚠️ SUBSTITUA ESSA LISTA PELA SUA LISTA COMPLETA (threat_actors.txt)
+# TODO: Replace this list with the full threat_actors.txt list.
 THREAT_ACTOR_NAMES = [
     "APT-C-23",
     "APT-C-36",
@@ -500,9 +500,9 @@ THREAT_ACTOR_NAMES = [
 
 def build_threat_actor_patterns() -> List[str]:
     """
-    Constrói a lista de regexes para detecção de threat actors:
-    - padrões genéricos (APTxx, TAxxx, UNCxxx, Storm-xxxx, FINxx, Threat Group-xxxx)
-    - um padrão grande com todos os nomes conhecidos (THREAT_ACTOR_NAMES)
+    Builds the regex list for threat actor detection:
+    - generic patterns (APTxx, TAxxx, UNCxxx, Storm-xxxx, FINxx, Threat Group-xxxx)
+    - one large pattern with all known names (THREAT_ACTOR_NAMES)
     """
     generic_patterns = [
         r"\bAPT ?\d+\b",
@@ -523,10 +523,10 @@ def build_threat_actor_patterns() -> List[str]:
 
 THREAT_ACTOR_PATTERNS = build_threat_actor_patterns()
 
-# Mapa canônico: lowercase -> nome oficial
+# Canonical map: lowercase -> official name
 CANONICAL_TA_MAP = {name.lower(): name for name in THREAT_ACTOR_NAMES}
 
-# Regex único para extrair nomes de threat actors (sem padrões genéricos)
+# Single regex to extract threat actor names (without generic patterns)
 THREAT_ACTOR_NAME_REGEX = re.compile(
     r"\b(" + "|".join(re.escape(name) for name in THREAT_ACTOR_NAMES) + r")\b",
     re.IGNORECASE,
@@ -554,12 +554,12 @@ CLUSTER_TOP_K = 12
 
 
 # =========================================================
-#  Utilitários
+#  Utilities
 # =========================================================
 
 def parse_iso(date_str: str) -> datetime:
     """
-    Faz parse de uma string de data (ISO-ish) e retorna datetime com timezone UTC.
+    Parses an ISO-ish date string and returns a timezone-aware UTC datetime.
     """
     if not date_str:
         raise ValueError("empty date")
@@ -576,19 +576,19 @@ def parse_iso(date_str: str) -> datetime:
 
 def load_news() -> List[Dict[str, Any]]:
     """
-    Carrega news_recent.json aceitando diferentes formatos:
+    Loads news_recent.json while accepting different formats:
 
-    - Lista na raiz:
+    - Root list:
       [ {entry}, {entry}, ... ]
 
-    - Objeto com chave contendo lista:
+    - Object with a key containing a list:
       { "entries": [ ... ] } ou "items"/"news"/"results"/"data"
     """
     print(f"[INFO] Loading {NEWS_RECENT_PATH}...")
     raw = NEWS_RECENT_PATH.read_text(encoding="utf-8")
     data = json.loads(raw)
 
-    # Caso ideal: lista na raiz
+    # Ideal case: root list
     if isinstance(data, list):
         return data
 
@@ -597,18 +597,18 @@ def load_news() -> List[Dict[str, Any]]:
             if key in data and isinstance(data[key], list):
                 return data[key]
 
-        # fallback: qualquer valor que seja lista de dicts
+        # Fallback: any value that is a list of dicts
         for v in data.values():
             if isinstance(v, list) and (not v or isinstance(v[0], dict)):
                 return v
 
         raise RuntimeError(
-            "news_recent.json é um objeto, mas não encontrei uma lista de entradas "
-            "em 'entries', 'items', 'news', 'results' ou 'data'."
+            "news_recent.json is an object, but no entry list was found "
+            "under 'entries', 'items', 'news', 'results', or 'data'."
         )
 
     raise RuntimeError(
-        f"news_recent.json tem tipo raiz inesperado: {type(data).__name__}"
+        f"news_recent.json has an unexpected root type: {type(data).__name__}"
     )
 
 
@@ -623,32 +623,32 @@ def normalize_text(entry: Dict[str, Any]) -> str:
 
 def tokenize(text: str) -> Iterable[str]:
     """
-    Divide o texto em tokens simples, removendo:
+    Splits text into simple tokens, removing:
     - stopwords
-    - tokens muito curtos
-    - números puros / anos (2024, 2025)
-    - pedaços de URL (http, https, www, com)
-    - alguns vendors que já aparecem em outro gráfico
+    - very short tokens
+    - pure numbers / years (2024, 2025)
+    - URL fragments (http, https, www, com)
+    - some vendors already shown in another chart
     """
     for token in re.findall(r"[a-zA-Z0-9\-]+", text.lower()):
-        # tamanho mínimo um pouco maior pra pegar termos mais "ricos"
+        # Slightly larger minimum size to capture richer terms
         if len(token) < 4:
             continue
 
         if token in STOPWORDS:
             continue
 
-        # ignorar números e anos
+        # Ignore numbers and years
         if token.isdigit():
             continue
         if re.fullmatch(r"20\d{2}", token):
             continue
 
-        # pedaços de URL (já cobertos em STOPWORDS, mas por garantia)
+        # URL fragments (already covered in STOPWORDS, kept as a guard)
         if token in ("http", "https", "www", "com"):
             continue
 
-        # vendors que queremos ver só no gráfico de Vendors
+        # Vendors we only want to show in the Vendors chart
         if token in KEYWORD_VENDOR_STOPWORDS:
             continue
 
@@ -658,7 +658,7 @@ def tokenize(text: str) -> Iterable[str]:
 
 def get_categories(entry: Dict[str, Any]) -> List[str]:
     """
-    Tenta obter categorias / smart_groups da entrada.
+    Attempts to read categories / smart_groups from an entry.
     """
     cats: List[str] = []
 
@@ -900,7 +900,7 @@ def make_campaign_key(
     actor_key = ",".join(_sort_set(actors, limit=2))
     vendor_key = ",".join(_sort_set(vendors, limit=2))
     malware_key = ",".join(_sort_set(malware, limit=2))
-    # Se já temos sinal estrutural forte (CVE/actor), não usar malware para não fragmentar a mesma campanha.
+    # If we already have a strong structural signal (CVE/actor), avoid malware to prevent campaign fragmentation.
     if cve_key or actor_key:
         malware_key = ""
 
@@ -995,8 +995,8 @@ def main() -> None:
     news = load_news()
     now = datetime.now(timezone.utc)
 
-    # Contadores agregados
-    daily_counter = Counter()  # date_str -> total de notícias
+    # Aggregated counters
+    daily_counter = Counter()  # date_str -> total news items
     per_window_categories: Dict[str, Counter] = {w: Counter() for w in WINDOWS}
     per_window_keywords: Dict[str, Counter] = {w: Counter() for w in WINDOWS}
     per_window_vendors: Dict[str, Counter] = {w: Counter() for w in WINDOWS}
@@ -1004,13 +1004,13 @@ def main() -> None:
     per_window_cves: Dict[str, Counter] = {w: Counter() for w in WINDOWS}
     per_window_actors: Dict[str, Counter] = {w: Counter() for w in WINDOWS}
 
-    # Janela anterior para delta analytics
+    # Previous window for delta analytics
     prev_window_vendors: Dict[str, Counter] = {w: Counter() for w in WINDOWS}
     prev_window_cves: Dict[str, Counter] = {w: Counter() for w in WINDOWS}
     prev_window_actors: Dict[str, Counter] = {w: Counter() for w in WINDOWS}
     prev_window_keywords: Dict[str, Counter] = {w: Counter() for w in WINDOWS}
 
-    # Co-ocorrência
+    # Co-occurrence
     co_cve_vendor: Dict[str, Counter] = {w: Counter() for w in WINDOWS}
     co_actor_malware: Dict[str, Counter] = {w: Counter() for w in WINDOWS}
     co_category_category: Dict[str, Counter] = {w: Counter() for w in WINDOWS}
@@ -1021,7 +1021,7 @@ def main() -> None:
     campaign_previous: Dict[str, Dict[str, Dict[str, Any]]] = {w: {} for w in WINDOWS}
 
     # Threat actors
-    threat_actor_daily_counter = Counter()          # date_str -> qtd notícias com actor
+    threat_actor_daily_counter = Counter()          # date_str -> news count with actor
     threat_actor_daily_names: Dict[str, Counter] = defaultdict(Counter)  # date_str -> Counter(actor_name)
 
     # Per-source quality metrics
@@ -1049,15 +1049,15 @@ def main() -> None:
         date_only = dt.date().isoformat()
         text = normalize_text(entry)
 
-        # Volume diário
+        # Daily volume
         daily_counter[date_only] += 1
 
-        # 1) Detecção genérica de threat actor (APTxx, TAxxx, Storm-xxxx, etc.)
+        # 1) Generic threat actor detection (APTxx, TAxxx, Storm-xxxx, etc.)
         has_actor = any(p.search(text) for p in threat_actor_compiled)
         if has_actor:
             threat_actor_daily_counter[date_only] += 1
 
-        # 2) Extração de nomes concretos para top_actors
+        # 2) Concrete name extraction for top_actors
         name_matches = set(m.group(0) for m in THREAT_ACTOR_NAME_REGEX.finditer(text))
         actor_hits = set()
         for raw_name in name_matches:
@@ -1065,7 +1065,7 @@ def main() -> None:
             threat_actor_daily_names[date_only][canonical] += 1
             actor_hits.add(canonical)
 
-        # Categorias
+        # Categories
         cats = get_categories(entry)
 
         # Keywords
@@ -1088,7 +1088,7 @@ def main() -> None:
         # CVEs
         cve_hits = set(m.upper() for m in CVE_REGEX.findall(text))
 
-        # Malware labels para correlação Actor x Malware
+        # Malware labels for Actor x Malware correlation
         malware_hits = set()
         for label, patterns in MALWARE_KEYWORDS.items():
             for pat in patterns:
@@ -1123,7 +1123,7 @@ def main() -> None:
         for _c in cats:
             _ss["sg_counts"][_c] += 1
 
-        # Aplicar em cada janela
+        # Apply in each window
         for win, days in WINDOWS.items():
             if not within_window(dt, now, days):
                 if within_previous_window(dt, now, days):
@@ -1196,7 +1196,7 @@ def main() -> None:
                 for malware in malware_hits:
                     co_actor_malware[win][(actor, malware)] += 1
 
-            # Co-occurrence: Category x Category (pares únicos por item)
+            # Co-occurrence: Category x Category (unique pairs per item)
             unique_cats = sorted(set(cats))
             for i in range(len(unique_cats)):
                 for j in range(i + 1, len(unique_cats)):

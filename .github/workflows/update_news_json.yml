@@ -49,16 +49,16 @@ jobs:
           for file in $CHANGED; do
             echo "Processing $file"
  
-            # Conteúdo codificado SEM quebras de linha
+            # Content encoded WITHOUT line breaks.
             BASE64_CONTENT="$(base64 -w 0 "$file" | tr -d '\n')"
  
-            # SHA atual (se houver)
+            # Current SHA (if any).
             SHA=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
                      "https://api.github.com/repos/${{ github.repository }}/contents/$file?ref=$BRANCH" \
                      | jq -r .sha)
  
             if [ "${SHA:-null}" = "null" ] || [ -z "$SHA" ]; then
-              # ---------- ARQUIVO NOVO ----------
+              # ---------- NEW FILE ----------
               printf '%s\n' "$BASE64_CONTENT" \
                 | jq -Rs --arg msg "Add $file" --arg branch "$BRANCH" \
                     '{message:$msg, content:., branch:$branch}' \
@@ -67,7 +67,7 @@ jobs:
                         --data-binary @- \
                         "https://api.github.com/repos/${{ github.repository }}/contents/$file"
             else
-              # ---------- ATUALIZA EXISTENTE ----------
+              # ---------- UPDATE EXISTING ----------
               printf '%s\n' "$BASE64_CONTENT" \
                 | jq -Rs --arg msg "Update $file" --arg branch "$BRANCH" --arg sha "$SHA" \
                     '{message:$msg, content:., branch:$branch, sha:$sha}' \

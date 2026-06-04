@@ -50,10 +50,10 @@
     btn.type = 'button';
     btn.className = 'theme-toggle';
     btn.id = 'theme-toggle';
-    btn.setAttribute('aria-label', 'Alternar tema claro e escuro');
+    btn.setAttribute('aria-label', 'Toggle light and dark theme');
     btn.innerHTML = [
       '<span class="theme-toggle-icon" aria-hidden="true">◐</span>',
-      '<span class="theme-toggle-label">Tema</span>'
+      '<span class="theme-toggle-label">Theme</span>'
     ].join('');
 
     btn.addEventListener('click', toggleTheme);
@@ -64,7 +64,7 @@
     const btn = document.getElementById('theme-toggle');
     if (!btn) return;
     btn.dataset.theme = theme;
-    btn.title = theme === 'dark' ? 'Tema escuro ativo (clicar para claro)' : 'Tema claro ativo (clicar para escuro)';
+    btn.title = theme === 'dark' ? 'Dark theme active (click for light)' : 'Light theme active (click for dark)';
     btn.setAttribute('aria-pressed', theme === 'dark' ? 'true' : 'false');
     const label = btn.querySelector('.theme-toggle-label');
     if (label) label.textContent = theme === 'dark' ? 'Dark' : 'Light';
@@ -98,10 +98,10 @@
     if (!text) return false;
     try {
       await navigator.clipboard.writeText(text);
-      toast(okMessage || 'Copiado');
+      toast(okMessage || 'Copied');
       return true;
     } catch {
-      toast('Falha ao copiar');
+      toast('Copy failed');
       return false;
     }
   }

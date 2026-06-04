@@ -42,15 +42,21 @@
   const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   const cvesOf = (t) => [...new Set((String(t || "").match(/\bCVE-\d{4}-\d{4,7}\b/gi) || []).map((m) => m.toUpperCase()))];
   const cvesItem = (it) => cvesOf((it.title || "") + " " + (it.summary || ""));
+  const signalScore = (it) => Number(it.signal_score ?? it.priority_score ?? 0) || 0;
+  const signalTier = (it) => String(it.signal_tier || "").toLowerCase();
+  const isHighSignal = (it) => {
+    const tier = signalTier(it);
+    if (tier) return tier === "critical" || tier === "high";
+    return signalScore(it) >= 90 && !!it.curated;
+  };
 
   function heat(it) {
-    const hi = (it.smart_groups_high_confidence || []).length > 0;
-    const s = it.priority_score || 0;
-    if (s > 87 || (hi && s > 85)) return "hot";
-    if (s > 83 || hi) return "warm";
+    const tier = signalTier(it);
+    if (tier === "critical") return "hot";
+    if (tier === "high") return "warm";
     return "";
   }
-  const pct = (s) => Math.max(6, Math.min(100, ((s - 78) / (93 - 78)) * 100));
+  const pct = (s) => Math.max(6, Math.min(100, s));
 
   function tparts(ts) {
     if (!ts) return { t: "--:--", d: "—", ago: "" };
@@ -104,7 +110,7 @@
     const now = Date.now() / 1000;
     const items24 = state.all.filter((i) => (i.published_ts || 0) > now - 86400).length;
     const items7 = state.all.filter((i) => (i.published_ts || 0) > now - 7 * 86400).length;
-    const hot = state.all.filter((i) => (i.priority_score || 0) > 85 || (i.smart_groups_high_confidence || []).length).length;
+    const hot = state.all.filter(isHighSignal).length;
     const cveSet = new Set(); state.all.forEach((i) => cvesItem(i).forEach((c) => cveSet.add(c)));
 
     const hour = new Date().getHours();
@@ -166,6 +172,9 @@
   function rowHTML(it) {
     const h = heat(it); const tp = tparts(it.published_ts);
     const cv = cvesItem(it); const sg = (it.smart_groups || []).filter((g) => !/^curated$/i.test(g));
+    const ss = signalScore(it);
+    const tier = signalTier(it);
+    const label = tier === "critical" ? "CRITICAL" : tier === "high" ? "HIGH" : tier === "watch" ? "WATCH" : "SIGNAL";
     const chips = [];
     cv.slice(0, 3).forEach((c) => chips.push(`<span class="rchip cve">${c}</span>`));
     if (cv.length > 3) chips.push(`<span class="rchip more">+${cv.length - 3} CVE</span>`);
@@ -188,7 +197,7 @@
           <a class="rlink" href="${link}" target="_blank" rel="noopener noreferrer">Read full ↗</a>
         </div>
       </div>
-      <div class="score"><div class="n">${Math.round(it.priority_score || 0)}</div><div class="lab">${h === "hot" ? "CRITICAL" : h === "warm" ? "ELEVATED" : "PRIORITY"}</div><div class="track"><i style="width:${pct(it.priority_score || 0)}%"></i></div></div>
+      <div class="score"><div class="n">${Math.round(ss)}</div><div class="lab">${label}</div><div class="track"><i style="width:${pct(ss)}%"></i></div></div>
     </article>`;
   }
 
@@ -200,7 +209,7 @@
     let r = state.all.filter((it) => {
       if (!matchCat(it, state.category)) return false;
       if (cutoff > 0 && (it.published_ts || 0) < cutoff) return false;
-      if (state.highOnly && !(it.smart_groups_high_confidence || []).length) return false;
+      if (state.highOnly && !isHighSignal(it)) return false;
       if (s) {
         const hay = ((it.title || "") + " " + (it.summary || "") + " " + (it.source || "")).toLowerCase();
         if (!hay.includes(s)) return false;
@@ -210,7 +219,7 @@
     if (state.sort === "latest") r.sort((a, b) => (b.published_ts || 0) - (a.published_ts || 0));
     else if (state.sort === "oldest") r.sort((a, b) => (a.published_ts || 0) - (b.published_ts || 0));
     else if (state.sort === "source") r.sort((a, b) => (a.source || "").localeCompare(b.source || ""));
-    else r.sort((a, b) => (b.priority_score || 0) - (a.priority_score || 0));
+    else r.sort((a, b) => signalScore(b) - signalScore(a) || (b.priority_score || 0) - (a.priority_score || 0));
     state.filtered = r;
     if (reset) state.visible = Math.min(state.batch, r.length);
     renderList(); updateStatus();
@@ -246,8 +255,8 @@
   function escCsv(v) { return `"${String(v ?? "").replace(/"/g, '""')}"`; }
   function exportCsv() {
     const its = visibleItems(); if (!its.length) return S33R_UI.toast("No visible items");
-    const rows = [["title", "source", "published", "type", "smart_groups", "priority_score", "curated", "link", "summary"].map(escCsv).join(",")];
-    its.forEach((i) => rows.push([i.title || "", i.source || "", i.published_ts ? fullDate(i.published_ts) : "", i.type || "", (i.smart_groups || []).join("; "), i.priority_score ?? "", i.curated ? "yes" : "no", i.link || "", i.summary || ""].map(escCsv).join(",")));
+    const rows = [["title", "source", "published", "type", "smart_groups", "signal_tier", "signal_score", "priority_score", "curated", "link", "summary"].map(escCsv).join(",")];
+    its.forEach((i) => rows.push([i.title || "", i.source || "", i.published_ts ? fullDate(i.published_ts) : "", i.type || "", (i.smart_groups || []).join("; "), i.signal_tier || "", i.signal_score ?? "", i.priority_score ?? "", i.curated ? "yes" : "no", i.link || "", i.summary || ""].map(escCsv).join(",")));
     S33R_UI.downloadText(`s33r_${new Date().toISOString().slice(0, 10)}.csv`, rows.join("\n"), "text/csv;charset=utf-8");
     S33R_UI.toast("CSV exported");
   }
@@ -257,6 +266,7 @@
     its.forEach((it, i) => {
       lines.push(`## ${i + 1}. ${it.title || "Untitled"}`);
       lines.push(`- Source: ${it.source || "Unknown"} · ${it.published_ts ? fullDate(it.published_ts) : "Unknown"}`);
+      lines.push(`- Signal: ${it.signal_tier || "n/a"} (${Math.round(signalScore(it))})`);
       const cv = cvesItem(it); if (cv.length) lines.push(`- CVEs: ${cv.join(", ")}`);
       lines.push(`- Link: ${it.link || "#"}`);
       if (it.summary) lines.push(`- ${it.summary}`);

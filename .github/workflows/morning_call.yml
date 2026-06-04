@@ -2,8 +2,8 @@ name: Build SOC Morning Call
 
 on:
   schedule:
-    # Ajuste o horário como quiser (UTC):
-    # Exemplo: todo dia às 06:15 UTC
+    # Adjust the schedule as desired (UTC):
+    # Example: every day at 06:15 UTC
     - cron: "15 6 * * *"
   workflow_dispatch: {}
 
@@ -31,26 +31,26 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          # se você já usa requirements.txt para o projeto, use:
+          # If you already use requirements.txt for the project, use it:
           if [ -f requirements.txt ]; then
             pip install -r requirements.txt
           else
-            # fallback mínimo (caso ainda não tenha requirements)
+            # Minimal fallback if requirements.txt does not exist yet.
             pip install openai feedparser
           fi
 
       - name: Build SOC morning call JSON
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          # janela de análise (últimas N horas)
+          # Analysis window (last N hours).
           MORNING_CALL_WINDOW_HOURS: "24"
-          # limite de itens passados para o modelo
+          # Maximum items passed to the model.
           MORNING_CALL_MAX_ITEMS: "100"
-          # limite de tokens para a resposta
+          # Token limit for the response.
           MORNING_CALL_MAX_OUTPUT_TOKENS: "3000"
-          # modelo da OpenAI que você quer usar
+          # OpenAI model to use.
           MORNING_CALL_MODEL: "gpt-5.2"
-          # caminhos conforme seu script
+          # Paths expected by the script.
           NEWS_JSON_PATH: "data/news_recent.json"
           MORNING_CALL_OUTPUT_DIR: "data/archive"
         run: |
@@ -73,16 +73,16 @@ jobs:
           for file in $CHANGED; do
             echo "Processing $file"
  
-            # Conteúdo codificado SEM quebras de linha
+            # Content encoded WITHOUT line breaks.
             BASE64_CONTENT="$(base64 -w 0 "$file" | tr -d '\n')"
  
-            # SHA atual (se houver)
+            # Current SHA (if any).
             SHA=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
                      "https://api.github.com/repos/${{ github.repository }}/contents/$file?ref=$BRANCH" \
                      | jq -r .sha)
  
             if [ "${SHA:-null}" = "null" ] || [ -z "$SHA" ]; then
-              # ---------- ARQUIVO NOVO ----------
+              # ---------- NEW FILE ----------
               printf '%s\n' "$BASE64_CONTENT" \
                 | jq -Rs --arg msg "Add $file" --arg branch "$BRANCH" \
                     '{message:$msg, content:., branch:$branch}' \
@@ -91,7 +91,7 @@ jobs:
                         --data-binary @- \
                         "https://api.github.com/repos/${{ github.repository }}/contents/$file"
             else
-              # ---------- ATUALIZA EXISTENTE ----------
+              # ---------- UPDATE EXISTING ----------
               printf '%s\n' "$BASE64_CONTENT" \
                 | jq -Rs --arg msg "Update $file" --arg branch "$BRANCH" --arg sha "$SHA" \
                     '{message:$msg, content:., branch:$branch, sha:$sha}' \

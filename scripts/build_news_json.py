@@ -12,6 +12,7 @@ Build a consolidated JSON file with recent security news.
 - Enriches items with smart groups and per-group confidence
 - Computes source quality scores (freshness, useful volume, duplication, noise)
 - Computes priority_score per item for ranking use-cases
+- Computes operational signal tiers for high-signal filtering
 - Writes data/news_recent.json
 - Writes a report of filtered promotional items to data/archive/
 """
@@ -347,6 +348,59 @@ SMART_GROUP_REGEX_RULES: List[Tuple[str, str, float]] = [
     ("Supply Chain / Software", r"\\b(?:dependency confusion|typosquatting|sbom|malicious package)\\b", 0.8),
     ("Identity / Access", r"\\b(?:mfa fatigue|session hijack(?:ing)?|saml|oauth|openid connect)\\b", 0.8),
 ]
+
+
+OPERATIONAL_SIGNAL_VERSION = "operational-signal-v1"
+OPERATIONAL_HIGH_TIERS = {"critical", "high"}
+GENERIC_HIGH_CONF_GROUPS = {"Curated", "Vulnerabilities / CVEs", "General Security"}
+ACTIONABLE_GROUPS = {
+    "Exploit / PoC",
+    "Ransomware",
+    "Threat Actors / APT",
+    "Malware / Payloads",
+    "Data Breaches / Leaks",
+    "Supply Chain / Software",
+    "Identity / Access",
+    "Cloud / SaaS",
+    "Network / OT / ICS",
+    "Web / API Security",
+}
+
+ACTIVE_EXPLOIT_RE = re.compile(
+    r"\b(active(?:ly)? exploited|active exploitation|exploited in the wild|known exploited|cisa kev|kev catalog|under attack|weaponized)\b",
+    re.IGNORECASE,
+)
+ZERO_DAY_RE = re.compile(r"\b(zero[- ]day|0[- ]day|0day|zeroday)\b", re.IGNORECASE)
+CRITICAL_IMPACT_RE = re.compile(
+    r"\b(critical vulnerability|critical flaw|critical bug|remote code execution|rce|pre-auth|preauth|unauthenticated|authentication bypass|privilege escalation|wormable|cvss\s*(?:9|10)|patch now|emergency patch)\b",
+    re.IGNORECASE,
+)
+EXPLOIT_POC_RE = re.compile(
+    r"\b(poc|proof[- ]of[- ]concept|exploit code|exploit released|public exploit|exploit available|weaponized exploit)\b",
+    re.IGNORECASE,
+)
+RANSOMWARE_RE = re.compile(r"\b(ransomware|ransom gang|double extortion|ransom note|raas)\b", re.IGNORECASE)
+BREACH_RE = re.compile(
+    r"\b(data breach|data leak|leaked data|stolen data|records exposed|credential dump|customer data|compromised data)\b",
+    re.IGNORECASE,
+)
+SUPPLY_CHAIN_RE = re.compile(
+    r"\b(supply[- ]chain|malicious package|typosquat(?:ting)?|dependency confusion|trojanized package|compromised package|npm package|pypi package)\b",
+    re.IGNORECASE,
+)
+MALWARE_RE = re.compile(
+    r"\b(malware|backdoor|infostealer|stealer|loader|wiper|trojan|botnet|rootkit|remote access trojan)\b",
+    re.IGNORECASE,
+)
+THREAT_ACTOR_RE = re.compile(
+    r"\b(apt ?\d+|apt-\d+|ta\d+|unc\d+|storm-\d+|threat actor|state-sponsored|nation-state|campaign)\b",
+    re.IGNORECASE,
+)
+
+BULK_VULN_SOURCE_RE = re.compile(
+    r"\b(vuldb|vulners|msrc security update guide|cve \| threatint|ubuntu security notices|linuxsecurity advisories|debian security|security advisories?)\b",
+    re.IGNORECASE,
+)
 
 
 TYPE_FALLBACK_GROUPS: Dict[str, Tuple[str, float]] = {
@@ -868,6 +922,139 @@ def compute_priority_score(item: Dict[str, Any], source_quality_score: float, no
     return round(max(0.0, min(100.0, priority)), 2)
 
 
+def _signal_add(reasons: List[str], reason: str) -> None:
+    if reason not in reasons:
+        reasons.append(reason)
+
+
+def compute_operational_signal(item: Dict[str, Any], source_quality_score: float, now: datetime) -> Dict[str, Any]:
+    title = str(item.get("title") or "")
+    summary = str(item.get("summary") or "")
+    text = f"{title} {summary[:600]}"
+    high_conf_groups = set(item.get("smart_groups_high_confidence") or [])
+    source = str(item.get("source") or "")
+    cve_count = len(re.findall(r"\bCVE-\d{4}-\d{4,7}\b", text, flags=re.IGNORECASE))
+    is_bulk_vuln_source = bool(BULK_VULN_SOURCE_RE.search(source))
+
+    score = 0.0
+    reasons: List[str] = []
+
+    if ACTIVE_EXPLOIT_RE.search(text):
+        score += 40.0
+        _signal_add(reasons, "active exploitation / KEV signal")
+    if ZERO_DAY_RE.search(text):
+        score += 34.0
+        _signal_add(reasons, "zero-day signal")
+    if CRITICAL_IMPACT_RE.search(text):
+        score += 24.0
+        _signal_add(reasons, "critical impact language")
+    if EXPLOIT_POC_RE.search(text):
+        score += 18.0
+        _signal_add(reasons, "exploit or PoC signal")
+    if RANSOMWARE_RE.search(text):
+        score += 28.0
+        _signal_add(reasons, "ransomware signal")
+    if BREACH_RE.search(text):
+        score += 22.0
+        _signal_add(reasons, "breach or leak signal")
+    if SUPPLY_CHAIN_RE.search(text):
+        score += 24.0
+        _signal_add(reasons, "supply-chain signal")
+    if MALWARE_RE.search(text):
+        score += 14.0
+        _signal_add(reasons, "malware signal")
+    if THREAT_ACTOR_RE.search(text):
+        score += 14.0
+        _signal_add(reasons, "threat actor / campaign signal")
+
+    if cve_count:
+        score += min(14.0, 5.0 + (cve_count * 2.0))
+        _signal_add(reasons, f"{cve_count} CVE reference{'s' if cve_count != 1 else ''}")
+
+    actionable_high_conf = sorted((high_conf_groups & ACTIONABLE_GROUPS) - GENERIC_HIGH_CONF_GROUPS)
+    if actionable_high_conf:
+        score += min(10.0, 4.0 + len(actionable_high_conf) * 2.0)
+        _signal_add(reasons, "high-confidence actionable category")
+
+    ts = item.get("published_ts")
+    if isinstance(ts, (int, float)):
+        age_hours = max(0.0, (now.timestamp() - float(ts)) / 3600.0)
+        if age_hours <= 24.0:
+            score += 8.0
+            _signal_add(reasons, "fresh in the last 24h")
+        elif age_hours <= 72.0:
+            score += 4.0
+
+    if bool(item.get("curated")):
+        score += 5.0
+    score += min(6.0, max(0.0, source_quality_score) * 0.06)
+
+    has_action_context = any(
+        (
+            ACTIVE_EXPLOIT_RE.search(text),
+            ZERO_DAY_RE.search(text),
+            CRITICAL_IMPACT_RE.search(text),
+            EXPLOIT_POC_RE.search(text),
+            RANSOMWARE_RE.search(text),
+            BREACH_RE.search(text),
+            SUPPLY_CHAIN_RE.search(text),
+            MALWARE_RE.search(text),
+            THREAT_ACTOR_RE.search(text),
+        )
+    )
+    title_action_context = any(
+        (
+            ACTIVE_EXPLOIT_RE.search(title),
+            ZERO_DAY_RE.search(title),
+            CRITICAL_IMPACT_RE.search(title),
+            EXPLOIT_POC_RE.search(title),
+            RANSOMWARE_RE.search(title),
+            BREACH_RE.search(title),
+            SUPPLY_CHAIN_RE.search(title),
+            MALWARE_RE.search(title),
+            THREAT_ACTOR_RE.search(title),
+        )
+    )
+    direct_signal = title_action_context or cve_count > 0
+    bulk_strong_context = any(
+        (
+            ACTIVE_EXPLOIT_RE.search(text),
+            ZERO_DAY_RE.search(text),
+            EXPLOIT_POC_RE.search(text),
+            RANSOMWARE_RE.search(text),
+            BREACH_RE.search(text),
+            SUPPLY_CHAIN_RE.search(text),
+            MALWARE_RE.search(text),
+            THREAT_ACTOR_RE.search(text),
+        )
+    )
+
+    if is_bulk_vuln_source and not has_action_context:
+        score = min(score, 38.0)
+        _signal_add(reasons, "bulk vulnerability feed without exploitation context")
+    elif is_bulk_vuln_source and not bulk_strong_context:
+        score = min(score, 49.0)
+    elif not has_action_context and cve_count:
+        score = min(score, 44.0)
+
+    score = round(max(0.0, min(100.0, score)), 2)
+    if score >= 78.0 and has_action_context and direct_signal:
+        tier = "critical"
+    elif score >= 50.0 and has_action_context and direct_signal:
+        tier = "high"
+    elif score >= 28.0 or cve_count or high_conf_groups:
+        tier = "watch"
+    else:
+        tier = "low"
+
+    return {
+        "signal_score": score,
+        "signal_tier": tier,
+        "signal_reasons": reasons[:6],
+        "signal_model": OPERATIONAL_SIGNAL_VERSION,
+    }
+
+
 # -------------------------------
 # Main
 # -------------------------------
@@ -1100,9 +1287,11 @@ def main() -> None:
         source_score = source_quality_map.get(source_name, 50.0)
         item["source_quality_score"] = source_score
         item["priority_score"] = compute_priority_score(item, source_score, now)
+        item.update(compute_operational_signal(item, source_score, now))
 
     items_list.sort(
         key=lambda x: (
+            float(x.get("signal_score") or 0.0),
             float(x.get("priority_score") or 0.0),
             float(x.get("published_ts") or 0.0),
         ),
@@ -1112,6 +1301,9 @@ def main() -> None:
     total_items = len(items_list)
     with_groups = sum(1 for i in items_list if i.get("smart_groups"))
     with_high_conf = sum(1 for i in items_list if i.get("smart_groups_high_confidence"))
+    signal_tier_counts: Dict[str, int] = defaultdict(int)
+    for item in items_list:
+        signal_tier_counts[str(item.get("signal_tier") or "low")] += 1
 
     classification_stats = {
         "external_dictionary_path": str(SMART_GROUP_DICT_PATH),
@@ -1122,6 +1314,16 @@ def main() -> None:
         "coverage_ratio": round((with_groups / total_items), 4) if total_items else 0.0,
         "high_confidence_ratio": round((with_high_conf / total_items), 4) if total_items else 0.0,
     }
+    signal_stats = {
+        "model": OPERATIONAL_SIGNAL_VERSION,
+        "high_tiers": sorted(OPERATIONAL_HIGH_TIERS),
+        "tier_counts": dict(sorted(signal_tier_counts.items())),
+        "high_signal_items": sum(signal_tier_counts[tier] for tier in OPERATIONAL_HIGH_TIERS),
+        "high_signal_ratio": round(
+            (sum(signal_tier_counts[tier] for tier in OPERATIONAL_HIGH_TIERS) / total_items),
+            4,
+        ) if total_items else 0.0,
+    }
 
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     out_data = {
@@ -1129,6 +1331,7 @@ def main() -> None:
         "days_back": DAYS_BACK,
         "total_items": total_items,
         "classification_stats": classification_stats,
+        "signal_stats": signal_stats,
         "source_quality_model": {
             "freshness_weight": 0.32,
             "useful_volume_weight": 0.24,

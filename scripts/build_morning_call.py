@@ -113,7 +113,7 @@ def build_context_snippet(items: List[Dict[str, Any]]) -> str:
 
 def build_system_prompt() -> str:
     """
-    Persona do consultor para o modelo (SOC-friendly, mais conciso).
+    Consultant persona for the model (SOC-friendly and concise).
     """
     return (
         "You are a seasoned cybersecurity consultant and threat intelligence lead "
@@ -144,7 +144,7 @@ def build_system_prompt() -> str:
 
 def build_user_prompt(context_snippet: str, hours: int, total_items: int) -> str:
     """
-    Instruções detalhadas para o modelo, com foco em saída SOC-friendly e enxuta.
+    Detailed model instructions focused on concise SOC-friendly output.
     """
     return (
         f"The following list summarizes curated security-related news items collected during the last "
@@ -250,11 +250,11 @@ def call_openai_morning_call(model: str, system_prompt: str, user_prompt: str) -
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
             ],
-            # aumentamos para dar mais espaço para o texto
+            # Increased to give the model more room for the briefing text.
             max_output_tokens=int(os.getenv("MORNING_CALL_MAX_OUTPUT_TOKENS", "3000")),
         )
 
-        # Responses API: texto principal costuma vir aqui
+        # Responses API: the main text usually comes through here.
         try:
             text = resp.output[0].content[0].text.strip()
         except Exception:
@@ -266,7 +266,7 @@ def call_openai_morning_call(model: str, system_prompt: str, user_prompt: str) -
                 "No text returned by the model. Check API logs or try again with a smaller context window."
             )
 
-        # Heurística simples: se termina em heading/bullet quebrado, avisa que pode estar truncado
+        # Simple heuristic: a dangling heading/bullet may indicate truncation.
         if text.strip().endswith("-") or text.strip().endswith("–"):
             text += (
                 "\n\n---\n\n"
@@ -277,14 +277,14 @@ def call_openai_morning_call(model: str, system_prompt: str, user_prompt: str) -
         return text
 
     except Exception as e:
-        # se for quota, devolve mensagem amigável
+        # For quota errors, return a friendly message in the generated artifact.
         if hasattr(e, "code") and getattr(e, "code") == "insufficient_quota":
             print("[WARN] insufficient_quota from OpenAI")
             return (
                 "### Morning call unavailable\n\n"
                 "OpenAI API quota exceeded — morning call could not be generated today."
             )
-        # demais erros, deixa estourar
+        # Let other errors bubble up.
         raise
 
 
@@ -308,7 +308,7 @@ def save_output_json(
     date_str = now.date().isoformat()
     generated_at = now.isoformat()
 
-    archive_dir = OUTPUT_BASE_DIR  # continua default data/archive
+    archive_dir = OUTPUT_BASE_DIR  # Defaults to data/archive.
     archive_dir.mkdir(parents=True, exist_ok=True)
 
     daily_path = archive_dir / f"morning_call_{date_str}.json"

@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="brand/readme-banner.png" alt="S33R — Security Intelligence Feed" width="100%" />
+</p>
+
 # S33R Security News Feed
 
 [![Update News JSON](https://github.com/clivoa/S33R/actions/workflows/update_news_json.yml/badge.svg)](https://github.com/clivoa/S33R/actions/workflows/update_news_json.yml)
@@ -114,7 +118,7 @@ Primary data file, rebuilt hourly. Contains:
 |---|---|
 | `generated_at` | ISO timestamp of last build |
 | `total_items` | Total deduplicated items |
-| `items[]` | Normalized entries with smart groups, curated flag, priority score, source quality score |
+| `items[]` | Normalized entries with smart groups, curated flag, priority score, operational signal tier/score, source quality score |
 | `source_quality[]` | Quality report for ~220 active feeds (score 0–100, grade A–D, metrics) |
 | `feed_attempts[]` | Ingestion attempt records for active feeds, plus synthetic records for inactive catalog feeds |
 | `source_catalog` | Metadata about the upstream feed catalog consumed by `sync_feed_catalog.py` |
@@ -191,7 +195,7 @@ Each active feed receives a score (0–100) composed of weighted components:
 
 ## Curated Intelligence Layer
 
-S33R marks items as **curated** when they match high-signal heuristics:
+S33R marks items as **curated** when they match security-relevant heuristics:
 
 - 0-day vulnerabilities
 - Active exploitation reports
@@ -199,6 +203,8 @@ S33R marks items as **curated** when they match high-signal heuristics:
 - Supply-chain compromise
 - Large-scale cyberattacks
 - Cloud/SaaS breach reports
+
+High-signal filtering is handled separately through `signal_tier` and `signal_score`. Only `critical` and `high` tiers count as operational high signal, so generic CVE/advisory records remain visible without flooding the analyst view.
 
 Curated items are optionally consumed by the morning call briefing generator.
 
