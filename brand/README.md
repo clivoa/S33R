@@ -5,21 +5,21 @@
 
 # S33R — Brand Kit
 
-**The SEER.** S33R is leet for *SEER* (one who sees). The symbol is a technical eye scanning for threats: almond-shaped outline, radar-sweep iris, and targeting reticle. Amber palette (`#f5a623`) on a dark background (`#080a0e`), with a monospace stroke style that matches the UI.
+**The SEER.** S33R é leet para *SEER* (aquele que vê). A marca é **um vidente encapuzado** — um guardião do conhecimento que lê os sinais antes dos outros. Silhueta de capuz geométrica, barba clara e **um único olho âmbar que brilha** (`#f5a623`) sobre fundo escuro (`#080a0e`). Sem mira, sem escudo, sem cadeado — o personagem *é* a identidade. Wordmark monospace, coerente com a UI.
 
-## Files
+## Arquivos
 
-| File | Use |
+| Arquivo | Uso |
 |---|---|
-| `readme-banner.png` | README top banner (1280×320 @2x) |
-| `seer-mark.svg` | Standalone editable symbol (amber) |
-| `logo.svg` | Symbol + wordmark lockup (dark theme) |
-| `logo-light.svg` | Lockup for light backgrounds |
-| `favicon.svg` | Vector favicon (amber tile + eye) |
+| `readme-banner.png` | Banner do topo do README (2560×640 @2x) |
+| `seer-mark.svg` | Símbolo isolado, full-color (capuz + barba + olho) |
+| `logo.svg` | Lockup símbolo + wordmark (tema escuro) |
+| `logo-light.svg` | Lockup para fundo claro |
+| `favicon.svg` | Favicon vetorial (tile âmbar + Seer em tinta) |
 | `favicon-16.png` / `favicon-32.png` / `favicon-48.png` | Favicons raster |
-| `apple-touch-icon.png` | iOS icon (180×180) |
+| `apple-touch-icon.png` | Ícone iOS (180×180) |
 
-## README Banner
+## Banner no README
 
 ```markdown
 <p align="center">
@@ -27,7 +27,7 @@
 </p>
 ```
 
-## Favicon in `<head>`
+## Favicon no `<head>`
 
 ```html
 <link rel="icon" type="image/svg+xml" href="brand/favicon.svg" />
@@ -36,8 +36,12 @@
 <link rel="apple-touch-icon" href="brand/apple-touch-icon.png" />
 ```
 
-## Colors
+## Cores
 
-- Amber (brand): `#f5a623` - use `#c9790a` on light themes
-- Ink (on amber): `#1b1304`
-- Dark background: `#080a0e`
+- Âmbar (brand): `#f5a623` — em tema claro use `#c9790a`
+- Olho / acento: âmbar `#f5a623` (único ponto de cor quente)
+- Capuz (escuro): `#37425a` · Barba: `#e8edf4` · Sombra do rosto: `#0c0f16`
+- Ink (sobre âmbar): `#1b1304`
+- Fundo escuro: `#080a0e`
+
+> **Regra de ouro:** um — e apenas um — olho âmbar acende. O resto do mascote é neutro. Não multiplicar cores quentes.

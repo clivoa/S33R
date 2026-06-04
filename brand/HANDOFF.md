@@ -1,28 +1,28 @@
-# S33R - Brand Integration Handoff
+# S33R — Handoff de integração da marca
 
-Package with the **SEER** identity (surveillance eye). Below is exactly what to apply in the repo.
+Pacote com a identidade **SEER** — o vidente encapuzado de um olho. Abaixo, exatamente o que aplicar no repo. Substitui a pasta `brand/` antiga (que usava o olho/mira).
 
-## 1. Add the `brand/` folder
+## 1. Adicionar a pasta `brand/`
 
-Copy the entire `brand/` folder to the **repo root**. In the Jekyll site, it will be available at `/brand/`.
+Copie a pasta `brand/` inteira para a **raiz do repo** (no site Jekyll ela já fica acessível em `/brand/`).
 
 ```
 brand/
-├── seer-mark.svg          standalone symbol (amber, editable)
-├── logo.svg               symbol + wordmark lockup (dark theme)
-├── logo-light.svg         lockup for light backgrounds
-├── favicon.svg            vector favicon (amber tile + eye)
-├── favicon-16.png         favicon 16×16 (simplified version)
+├── seer-mark.svg          símbolo isolado, full-color (capuz + barba + olho)
+├── logo.svg               lockup símbolo + wordmark (tema escuro)
+├── logo-light.svg         lockup para fundo claro
+├── favicon.svg            favicon vetorial (tile âmbar + Seer em tinta)
+├── favicon-16.png         favicon 16×16
 ├── favicon-32.png         favicon 32×32
 ├── favicon-48.png         favicon 48×48
-├── apple-touch-icon.png   iOS icon 180×180
-├── readme-banner.png      1280×320 banner (@2x) for the README top
-└── README.md              brand sheet / snippets
+├── apple-touch-icon.png   ícone iOS 180×180
+├── readme-banner.png      banner 2560×640 (@2x) para o topo do README
+└── README.md              ficha da marca / snippets
 ```
 
-## 2. Repo README banner
+## 2. Banner no README do repo
 
-At the top of the main `README.md`:
+No topo do `README.md` principal:
 
 ```markdown
 <p align="center">
@@ -30,9 +30,9 @@ At the top of the main `README.md`:
 </p>
 ```
 
-## 3. Favicon in each page `<head>`
+## 3. Favicon no `<head>` de cada página
 
-**Standalone pages (`*.html`):**
+**Páginas standalone (`*.html`):**
 ```html
 <link rel="icon" type="image/svg+xml" href="brand/favicon.svg" />
 <link rel="icon" type="image/png" sizes="32x32" href="brand/favicon-32.png" />
@@ -40,7 +40,7 @@ At the top of the main `README.md`:
 <link rel="apple-touch-icon" href="brand/apple-touch-icon.png" />
 ```
 
-**Jekyll pages (using `relative_url`):**
+**Páginas Jekyll (usam `relative_url`):**
 ```html
 <link rel="icon" type="image/svg+xml" href="{{ '/brand/favicon.svg' | relative_url }}" />
 <link rel="icon" type="image/png" sizes="32x32" href="{{ '/brand/favicon-32.png' | relative_url }}" />
@@ -48,29 +48,30 @@ At the top of the main `README.md`:
 <link rel="apple-touch-icon" href="{{ '/brand/apple-touch-icon.png' | relative_url }}" />
 ```
 
-## 4. Replace the shield with the SEER eye in the rail
+## 4. Trocar o ícone do rail pelo Seer encapuzado
 
-The rail is mounted in **`s33r-nav.js`**. Two changes:
+O rail é montado em **`s33r-nav.js`**. O chip `.rail-logo` é âmbar com conteúdo em tinta — então o Seer entra como silhueta `currentColor` e o **olho é um furo** (`fill-rule:evenodd`) por onde o âmbar do chip aparece e "acende".
 
-**(a)** add the `seer` icon to the `ICONS` object:
+**(a)** adicione/atualize o ícone `seer` no objeto `ICONS` (viewBox 64):
 ```js
-seer: '<path d="M7 32 C18 18 46 18 57 32 C46 46 18 46 7 32 Z" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linejoin="round"/><circle cx="32" cy="32" r="9.5" fill="none" stroke="currentColor" stroke-width="3.6"/><path d="M32 32 L32 22.5 A9.5 9.5 0 0 1 40.7 27.6 Z" fill="currentColor"/><circle cx="32" cy="32" r="3.4" fill="currentColor"/>',
+seer: '<path fill="currentColor" fill-rule="evenodd" d="M11 59 C11 30 17 6 32 6 C47 6 53 30 53 59 Z M37 22 a3 3 0 1 0 0 6 a3 3 0 1 0 0 -6 Z"/>',
 ```
 
-**(b)** replace the `<a class="rail-logo">` so it uses the new icon (viewBox 64):
+**(b)** troque o `<a class="rail-logo">` para usar o novo ícone (note `fill`, sem `stroke`):
 ```js
-`<a class="rail-logo" href="${hrefFor("S33R Feed.html", "")}" title="S33R — the SEER"><svg width="25" height="25" viewBox="0 0 64 64" fill="none" stroke-linecap="round">${ICONS.seer}</svg></a>`
+`<a class="rail-logo" href="${hrefFor("S33R Feed.html", "")}" title="S33R — the SEER"><svg width="26" height="26" viewBox="0 0 64 64">${ICONS.seer}</svg></a>`
 ```
 
-For pages with an **inline** rail (for example the home `index.html`), replace the shield SVG inside `.rail-logo` / `.nav-brand` with the same `seer` content (viewBox `0 0 64 64`).
+Para páginas com o rail **inline** (ex.: `index.html` da home), substitua o SVG dentro de `.rail-logo` / `.nav-brand` pelo mesmo conteúdo do `seer` (viewBox `0 0 64 64`, `fill`).
 
-## 5. Colors
+## 5. Cores
 
-| Token | Value |
+| Token | Valor |
 |---|---|
-| Amber (brand) - dark theme | `#f5a623` |
-| Amber (brand) - light theme | `#c9790a` |
-| Ink (on amber) | `#1b1304` |
-| Dark background | `#080a0e` |
+| Âmbar (brand) — tema escuro | `#f5a623` |
+| Âmbar (brand) — tema claro | `#c9790a` |
+| Ink (sobre âmbar) | `#1b1304` |
+| Capuz / barba / sombra (mark full-color) | `#37425a` · `#e8edf4` · `#0c0f16` |
+| Fundo escuro | `#080a0e` |
 
-> Note: the 16px favicon uses a minimal eye drawing (without reticle/ring) so it reads well at that size; 32px+ show the full mark.
+> Obs.: o favicon usa o Seer em tinta sobre tile âmbar com o olho âmbar destacado — lê bem de 48px a 16px. **Um só olho acende; nada de multiplicar cores quentes.**
