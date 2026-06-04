@@ -8,7 +8,7 @@
 (function () {
   const ICONS = {
     shield: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
-    seer: '<path d="M7 32 C18 18 46 18 57 32 C46 46 18 46 7 32 Z" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linejoin="round"/><circle cx="32" cy="32" r="9.5" fill="none" stroke="currentColor" stroke-width="3.6"/><path d="M32 32 L32 22.5 A9.5 9.5 0 0 1 40.7 27.6 Z" fill="currentColor"/><circle cx="32" cy="32" r="3.4" fill="currentColor"/>',
+    seer: '<path d="M11 59 C11 30 17 6 32 6 C47 6 53 30 53 59 Z" fill="#37425a"/><path d="M22 30 C22 17 26 12 32 12 C38 12 42 17 42 30 C42 41 38 48 32 48 C26 48 22 41 22 30 Z" fill="#0c0f16"/><path d="M24 31 C25 41 28 49 32 51 C36 49 39 41 40 31 C36 36 28 36 24 31 Z" fill="#e8edf4"/><circle cx="37" cy="25" r="8.1" fill="#f5a623" opacity="0.10"/><circle cx="37" cy="25" r="4.9" fill="#f5a623" opacity="0.20"/><circle cx="37" cy="25" r="2.6" fill="#f5a623"/><circle cx="36.2" cy="24.2" r="1.05" fill="#fff" opacity="0.85"/>',
     feed: '<path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1"/>',
     am: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M5 5l1.5 1.5M17.5 17.5 19 19M2 12h2M20 12h2M5 19l1.5-1.5M17.5 6.5 19 5"/>',
     trend: '<polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/>',
@@ -48,7 +48,7 @@
     nav.className = "rail";
     nav.setAttribute("aria-label", "Sections");
     nav.innerHTML =
-      `<a class="rail-logo" href="${hrefFor("S33R Feed.html", "")}" title="S33R — the SEER"><svg width="25" height="25" viewBox="0 0 64 64" fill="none" stroke-linecap="round">${ICONS.seer}</svg></a>` +
+      `<a class="rail-logo" href="${hrefFor("S33R Feed.html", "")}" title="S33R — the SEER"><svg width="25" height="25" viewBox="0 0 64 64">${ICONS.seer}</svg></a>` +
       NAV.map(([key, label, htmlHref, perm, icon]) =>
         `<a class="rail-link${key === active ? " on" : ""}" href="${hrefFor(htmlHref, perm)}"${key === active ? ' aria-current="page"' : ""}>${svg(icon)}${label}</a>`
       ).join("") +
