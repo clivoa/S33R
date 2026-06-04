@@ -343,6 +343,9 @@
       state.all = (data.items || []).map((it) => { if (!it.type && it.type_label) it.type = it.type_label.toLowerCase().replace(/\s+/g, "_"); return it; });
       state.generatedAt = data.generated_at || null;
 
+      const feedCount = (data.source_catalog && data.source_catalog.active_feeds) || (data.feed_attempts && data.feed_attempts.length) || null;
+      if (feedCount) document.querySelectorAll(".js-feed-count").forEach((el) => (el.textContent = feedCount.toLocaleString()));
+
       const p = new URLSearchParams(location.search);
       if (p.get("q")) { state.search = p.get("q"); state.windowHours = 0; $("#search-input").value = state.search; document.querySelectorAll("#twin button").forEach((b) => b.classList.toggle("on", b.dataset.h === "0")); }
 
