@@ -1,0 +1,138 @@
+{
+  "generated_at": "2026-06-05T10:15:29.732711+00:00",
+  "analysis_date": "2026-06-05",
+  "model": "gpt-5.2",
+  "window_hours": 24,
+  "source_file": "data/news_recent.json",
+  "source_generated_at": "2026-06-05T10:02:17.756594+00:00",
+  "source_days_back": 30,
+  "source_total_items": 15099,
+  "total_items_in_window_all": 1970,
+  "total_items_in_window_curated": 1323,
+  "morning_call_markdown": "### Executive Summary\n- **Cisco SD-WAN 0-day is reportedly being exploited with no patch available (CVE-2026-20245)** — treat all internet-exposed SD-WAN management components as at-risk today.  \n- **Multiple web platform takeovers via WordPress/plugin backdoors & exploited flaws** — validate we have no exposed/forgotten WP assets and hunt for webshell/rogue admin activity.  \n- **Identity/automation & supply-chain risk rising** (Keycloak permission bypass + Ansible argument injection + “MCP” tooling risk) — prioritize monitoring for abnormal IdP reads/role changes and CI/CD execution anomalies.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Cisco SD-WAN 0-day exploited in the wild (CVE-2026-20245)**\n- **What happened:** Reporting indicates an exploited Cisco SD-WAN 0-day with **no patch available** at time of publication.  \n- **Why it matters operationally:** SD-WAN managers/edges are high-value pivots; compromise can enable network-wide access, traffic manipulation, and credential theft.  \n- **Recommended immediate actions for the SOC today:** Verify exposure and **restrict/disable internet access to SD-WAN management planes**; review last 7–14 days for unusual admin logins/config pushes and open an incident if anomalies are found.\n\n**2) WordPress ecosystem compromise risk (active exploitation + plugin backdoor)**\n- **What happened:** Active exploitation reported against a critical **Everest Forms Pro** flaw; additionally, **WordPress Product Slider Pro for WooCommerce < 3.5.3** flagged as a **backdoor vulnerability (CVE-2026-49777)**.  \n- **Why it matters operationally:** WP compromise is a common initial access vector leading to credential harvesting, malware staging, and lateral movement (especially if WP shares infra with internal apps).  \n- **Recommended immediate actions for the SOC today:** Confirm we have **no internet-facing WP** (including marketing microsites/vendors) outside inventory; if present, **block admin endpoints/WP XML-RPC where feasible and hunt for new admins, changed plugins/themes, and suspicious PHP drops**.\n\n**3) Identity & access control exposure: Keycloak permission bypass (CVE-2026-9088)**\n- **What happened:** Keycloak issue described as **information disclosure / permission bypass** tied to user profile or group/member access controls.  \n- **Why it matters operationally:** Even “read” bypasses can leak user attributes/group structure and accelerate targeted phishing, privilege discovery, and follow-on compromise in federated environments.  \n- **Recommended immediate actions for the SOC today:** Identify any Keycloak instances and **increase alerting on admin console access, group/member enumeration spikes, and token/session anomalies**; coordinate with IAM team on mitigations/patch window (assumption: fix availability depends on distro/vendor packaging).\n\n**4) Automation/CI/CD execution risk: Ansible argument injection (CVE-2026-11332)**\n- **What happened:** **ansible-core** issue: argument injection via `ansible-galaxy role install` can lead to arbitrary code execution.  \n- **Why it matters operationally:** CI/CD runners and automation hosts often hold secrets (SSH keys, cloud creds); compromise is a fast path to broad environment takeover.  \n- **Recommended immediate actions for the SOC today:** **Monitor CI/CD runners** for new outbound connections and unexpected process trees around Ansible; ask platform teams to **freeze untrusted Galaxy role installs / pin sources** until patched.\n\n---\n\n### Monitoring & detection recommendations\n- **Network edge / SD-WAN (CVE-2026-20245):** Firewall/IDS + SD-WAN manager logs — hunt for repeated auth failures, new admin sessions, config pushes, and unexpected management API calls (MITRE: **T1190 Exploit Public-Facing Application**, **T1078 Valid Accounts**).  \n- **Web compromise (WP/Everest Forms Pro + CVE-2026-49777 backdoor):** WAF/web server logs + file integrity monitoring — alert on `wp-admin` logins from new geos, POSTs to plugin endpoints, creation of new PHP files in uploads, and sudden outbound connections from web hosts (MITRE: **T1505.003 Web Shell**, **T1105 Ingress Tool Transfer**).  \n- **Privilege/identity reconnaissance (Keycloak CVE-2026-9088):** IdP/Keycloak audit logs — spikes in group membership reads, user profile queries, and token issuance anomalies; correlate with new service accounts or consent grants (MITRE: **T1087 Account Discovery**, **T1069 Permission Groups Discovery**).  \n- **CI/CD & automation (Ansible CVE-2026-11332):** EDR on runners/build agents + CI logs — detect `ansible-galaxy` executions followed by shell spawn, curl/wget, or archive extraction into workspace; watch for secrets access right after build steps (MITRE: **T1059 Command and Scripting Interpreter**, **T1552 Unsecured Credentials**).  \n- **Ransomware readiness (Vect 2.0 noted):** EDR + Windows/Linux telemetry — watch for rapid file renames/encryption patterns, shadow copy deletion attempts, and disabled security tools (MITRE: **T1486 Data Encrypted for Impact**, **T1562 Impair Defenses**).  \n- **General exploit/PoC churn (Linux kernel UAF, various PoCs):** Vulnerability scanner + EDR — prioritize alerts for exploitation-like primitives on servers (kernel crash spikes, privilege escalation indicators), especially on internet-facing Linux workloads (MITRE: **T1068 Exploitation for Privilege Escalation**).  \n- **Third-party remote access tooling exposure (Serv-U exploitation reference):** VPN/remote access + PAM logs — hunt for unusual file transfers, new accounts, and abnormal session durations; validate any Serv-U presence is patched/isolated (MITRE: **T1021 Remote Services**).\n\n---\n\n### Medium-term follow-ups\n- **Cisco SD-WAN:** Track vendor advisory/mitigations hourly; plan for emergency change window once a fix is released and document compensating controls applied today.  \n- **WordPress governance:** Enforce inventory/ownership of all WP assets (incl. vendor-hosted); mandate rapid plugin update SLAs and restrict admin access behind VPN/SSO.  \n- **IAM hardening (Keycloak):** Review least-privilege for group/member endpoints and admin APIs; ensure audit logging is enabled and forwarded to SIEM with retention for investigations.  \n- **CI/CD supply-chain controls:** Require pinned dependencies (Galaxy/registries), signed artifacts where possible, and egress restrictions from build agents; rotate secrets if runner compromise is suspected.  \n- **Go library DoS advisories (x/net/html, x/crypto/ssh*):** Ask app teams to identify services embedding these libs and schedule upgrades; add synthetic monitoring for crash/DoS symptoms in exposed services.  \n- **Kernel/package patch hygiene:** Confirm Linux kernel and common packages with public PoCs are within patch SLAs on perimeter systems; validate rollback plans for critical nodes.",
+  "highlights": [
+    {
+      "title": "Nvidia Clears ‘Big Three’ for Vera Rubin HBM4 Supply",
+      "link": "https://www.bloomberg.com/news/videos/2026-06-05/nvidia-clears-big-three-for-vera-rubin-hbm4-supply-video",
+      "source": "Bloomberg Technology",
+      "published": "2026-06-05T09:51:31+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Wikipedia:Requests for page protection/Increase",
+      "link": "https://en.wikipedia.org/w/index.php?title=Wikipedia:Requests_for_page_protection/Increase&diff=1357898187&oldid=1357894363",
+      "source": "Wikipedia - Recent changes [en]",
+      "published": "2026-06-05T09:48:14+00:00",
+      "smart_groups": [
+        "Crypto / Web3",
+        "Curated",
+        "Ransomware",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Electric motor",
+      "link": "https://en.wikipedia.org/w/index.php?title=Electric_motor&diff=1357898172&oldid=1354806080",
+      "source": "Wikipedia - Recent changes [en]",
+      "published": "2026-06-05T09:48:03+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Ciri",
+      "link": "https://en.wikipedia.org/w/index.php?title=Ciri&diff=1357898162&oldid=1357765298",
+      "source": "Wikipedia - Recent changes [en]",
+      "published": "2026-06-05T09:47:56+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Escalante massacre",
+      "link": "https://en.wikipedia.org/w/index.php?title=Escalante_massacre&diff=1357898156&oldid=1351142905",
+      "source": "Wikipedia - Recent changes [en]",
+      "published": "2026-06-05T09:47:53+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "List of people scheduled to be executed in the United States",
+      "link": "https://en.wikipedia.org/w/index.php?title=List_of_people_scheduled_to_be_executed_in_the_United_States&diff=1357898150&oldid=1357550608",
+      "source": "Wikipedia - Recent changes [en]",
+      "published": "2026-06-05T09:47:50+00:00",
+      "smart_groups": [
+        "Curated",
+        "Identity / Access",
+        "Network / OT / ICS",
+        "Ransomware",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Image Universe",
+      "link": "https://en.wikipedia.org/w/index.php?title=Image_Universe&diff=1357898139&oldid=1357898018",
+      "source": "Wikipedia - Recent changes [en]",
+      "published": "2026-06-05T09:47:40+00:00",
+      "smart_groups": [
+        "Curated",
+        "Identity / Access",
+        "Network / OT / ICS",
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true
+    },
+    {
+      "title": "OPEC+ Meets After UAE Exit",
+      "link": "https://www.bloomberg.com/news/videos/2026-06-05/opec-meets-after-uae-exit-video",
+      "source": "Bloomberg Technology",
+      "published": "2026-06-05T09:46:55+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Cross-border payment reconciliation: matching multi-currency, multi-acquirer settlement files",
+      "link": "https://dev.to/payneteasy/cross-border-payment-reconciliation-matching-multi-currency-multi-acquirer-settlement-files-301c",
+      "source": "DEV Community",
+      "published": "2026-06-05T09:44:44+00:00",
+      "smart_groups": [
+        "Crypto / Web3",
+        "Curated",
+        "Network / OT / ICS",
+        "Vulnerabilities / CVEs",
+        "OSINT / Community"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Market Consolidation 'Healthy,' Goldman Says",
+      "link": "https://www.bloomberg.com/news/videos/2026-06-05/market-consolidation-healthy-goldman-says-video",
+      "source": "Bloomberg Technology",
+      "published": "2026-06-05T09:30:38+00:00",
+      "smart_groups": [
+        "Curated",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true
+    }
+  ]
+}
