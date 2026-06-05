@@ -36,44 +36,26 @@ jobs:
         run: |
           python scripts/build_news_json.py
 
-      - name: Commit changes via GitHub API (branch main)
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Commit and push changes
         run: |
           set -euo pipefail
-          BRANCH="main"
-          
-          CHANGED=$(git ls-files -m -o --exclude-standard sec_feeds.xml data/** || true)
-          [ -z "$CHANGED" ] && { echo "No changes detected."; exit 0; }
- 
-          for file in $CHANGED; do
-            echo "Processing $file"
- 
-            # Content encoded WITHOUT line breaks.
-            BASE64_CONTENT="$(base64 -w 0 "$file" | tr -d '\n')"
- 
-            # Current SHA (if any).
-            SHA=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
-                     "https://api.github.com/repos/${{ github.repository }}/contents/$file?ref=$BRANCH" \
-                     | jq -r .sha)
- 
-            if [ "${SHA:-null}" = "null" ] || [ -z "$SHA" ]; then
-              # ---------- NEW FILE ----------
-              printf '%s\n' "$BASE64_CONTENT" \
-                | jq -Rs --arg msg "Add $file" --arg branch "$BRANCH" \
-                    '{message:$msg, content:., branch:$branch}' \
-                | curl -sS -X PUT -H "Authorization: token $GITHUB_TOKEN" \
-                        -H "Content-Type: application/json" \
-                        --data-binary @- \
-                        "https://api.github.com/repos/${{ github.repository }}/contents/$file"
-            else
-              # ---------- UPDATE EXISTING ----------
-              printf '%s\n' "$BASE64_CONTENT" \
-                | jq -Rs --arg msg "Update $file" --arg branch "$BRANCH" --arg sha "$SHA" \
-                    '{message:$msg, content:., branch:$branch, sha:$sha}' \
-                | curl -sS -X PUT -H "Authorization: token $GITHUB_TOKEN" \
-                        -H "Content-Type: application/json" \
-                        --data-binary @- \
-                        "https://api.github.com/repos/${{ github.repository }}/contents/$file"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add -A sec_feeds.xml data
+          git diff --cached --quiet && { echo "No changes detected."; exit 0; }
+          git commit -m "Update generated feed data"
+
+          for attempt in 1 2 3; do
+            if git push origin HEAD:main; then
+              exit 0
             fi
+
+            echo "Push failed on attempt ${attempt}; rebasing on latest main before retry."
+            git pull --rebase origin main
+            sleep 10
           done
+
+          echo "::error::Failed to push generated feed data after 3 attempts."
+          exit 1
