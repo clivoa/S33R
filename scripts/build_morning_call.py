@@ -4,8 +4,7 @@ scripts/build_morning_call.py
 
 Generates a SOC-oriented morning call from curated news items in data/news_recent.json.
 
-- Supports GPT-5.2 and GPT-4.1 models.
-- Handles multiple response formats (string, list-of-blocks, response_text).
+- Supports configurable providers: OpenAI (default), Anthropic/Claude, and Gemini.
 - Filters curated items only.
 - Saves:
     data/morning_call_latest.json
@@ -16,11 +15,12 @@ import json
 import os
 import sys
 import time
+import urllib.error
+import urllib.parse
+import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List
-
-from openai import OpenAI, APIError
+from typing import Any, Dict, List, Optional
 
 
 #
@@ -29,11 +29,44 @@ from openai import OpenAI, APIError
 # -------------------------
 #
 
+SUPPORTED_PROVIDERS = {"openai", "anthropic", "gemini"}
+PROVIDER_ALIASES = {
+    "openai": "openai",
+    "anthropic": "anthropic",
+    "claude": "anthropic",
+    "gemini": "gemini",
+    "google": "gemini",
+}
+DEFAULT_MODELS = {
+    "openai": "gpt-5.2",
+    "anthropic": "claude-sonnet-4-5",
+    "gemini": "gemini-2.5-pro",
+}
+
+
+def normalize_provider(value: str) -> str:
+    provider = (value or "openai").strip().lower()
+    provider = PROVIDER_ALIASES.get(provider, provider)
+    if provider not in SUPPORTED_PROVIDERS:
+        supported = ", ".join(sorted(SUPPORTED_PROVIDERS))
+        raise ValueError(f"Unsupported MORNING_CALL_PROVIDER={value!r}. Supported providers: {supported}")
+    return provider
+
+
 NEWS_RECENT_PATH = Path(os.getenv("NEWS_JSON_PATH", "data/news_recent.json"))
 
 DEFAULT_WINDOW_HOURS = int(os.getenv("MORNING_CALL_WINDOW_HOURS", "24"))
 MAX_ITEMS_FOR_CONTEXT = int(os.getenv("MORNING_CALL_MAX_ITEMS", "100"))
-OPENAI_MODEL = os.getenv("MORNING_CALL_MODEL", "gpt-5.2")
+MORNING_CALL_PROVIDER = normalize_provider(os.getenv("MORNING_CALL_PROVIDER", "openai"))
+MORNING_CALL_MODEL = os.getenv("MORNING_CALL_MODEL") or DEFAULT_MODELS[MORNING_CALL_PROVIDER]
+MORNING_CALL_MAX_OUTPUT_TOKENS = int(os.getenv("MORNING_CALL_MAX_OUTPUT_TOKENS", "3000"))
+MORNING_CALL_API_TIMEOUT_SECONDS = int(os.getenv("MORNING_CALL_API_TIMEOUT_SECONDS", "120"))
+ANTHROPIC_API_URL = os.getenv("ANTHROPIC_API_URL", "https://api.anthropic.com/v1/messages")
+ANTHROPIC_VERSION = os.getenv("ANTHROPIC_VERSION", "2023-06-01")
+GEMINI_API_URL_TEMPLATE = os.getenv(
+    "GEMINI_API_URL",
+    "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
+)
 OUTPUT_BASE_DIR = Path(os.getenv("MORNING_CALL_OUTPUT_DIR", "data/archive"))
 
 
@@ -196,50 +229,107 @@ def build_user_prompt(context_snippet: str, hours: int, total_items: int) -> str
 
 #
 # -------------------------
-# GPT-5.2 Safe Response Extractor
+# Model Provider Calls
 # -------------------------
 #
 
-def extract_text_from_response(resp) -> str:
-    """
-    GPT-5.2 may return:
-      - string in message.content
-      - list of {type: "text", text: "..."}
-      - or response_text field
-    """
-    choice = resp.choices[0]
 
-    # Case 1: message.content is string
-    if isinstance(choice.message.content, str):
-        return choice.message.content.strip()
+def require_env(name: str, fallback_names: Optional[List[str]] = None) -> str:
+    names = [name] + (fallback_names or [])
+    for candidate in names:
+        value = os.getenv(candidate)
+        if value:
+            return value
+    joined = " or ".join(names)
+    raise RuntimeError(f"{joined} not set")
 
-    # Case 2: list of blocks (GPT-5.x)
-    if isinstance(choice.message.content, list):
+
+def post_json(url: str, headers: Dict[str, str], payload: Dict[str, Any], provider_label: str) -> Dict[str, Any]:
+    body = json.dumps(payload).encode("utf-8")
+    request = urllib.request.Request(url, data=body, headers=headers, method="POST")
+
+    try:
+        with urllib.request.urlopen(request, timeout=MORNING_CALL_API_TIMEOUT_SECONDS) as response:
+            raw = response.read().decode("utf-8")
+    except urllib.error.HTTPError as exc:
+        error_body = exc.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"{provider_label} API HTTP {exc.code}: {error_body[:1000]}") from exc
+
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise RuntimeError(f"{provider_label} API returned non-JSON response: {raw[:1000]}") from exc
+
+    if isinstance(data, dict) and data.get("error"):
+        raise RuntimeError(f"{provider_label} API error: {data['error']}")
+
+    return data
+
+
+def unavailable_message(reason: str) -> str:
+    return (
+        "### Morning call unavailable\n\n"
+        f"{reason} Check API logs or try again with a smaller context window."
+    )
+
+
+def ensure_not_truncated(text: str) -> str:
+    if text.strip().endswith("-") or text.strip().endswith("–"):
+        text += (
+            "\n\n---\n\n"
+            "**[Note]** The morning call text may have been truncated due to output length limits. "
+            "Consider reducing the number of items in context or increasing `MORNING_CALL_MAX_OUTPUT_TOKENS`."
+        )
+    return text
+
+
+def extract_openai_text(resp: Any) -> str:
+    output_text = getattr(resp, "output_text", None)
+    if isinstance(output_text, str) and output_text.strip():
+        return output_text.strip()
+
+    try:
         parts = []
-        for block in choice.message.content:
-            if isinstance(block, dict) and block.get("type") == "text":
-                parts.append(block.get("text", ""))
+        for item in resp.output:
+            for content in getattr(item, "content", []) or []:
+                text = getattr(content, "text", None)
+                if isinstance(text, str):
+                    parts.append(text)
         return "\n".join(parts).strip()
-
-    # Case 3: response_text fallback
-    if hasattr(choice, "response_text"):
-        return choice.response_text.strip()
-
-    return ""
+    except Exception:
+        return ""
 
 
-#
-# -------------------------
-# GPT Call
-# -------------------------
-#
+def extract_anthropic_text(data: Dict[str, Any]) -> str:
+    parts = []
+    for block in data.get("content", []) or []:
+        if isinstance(block, dict) and block.get("type") == "text":
+            parts.append(str(block.get("text") or ""))
+    return "\n".join(parts).strip()
+
+
+def extract_gemini_text(data: Dict[str, Any]) -> str:
+    parts = []
+    for candidate in data.get("candidates", []) or []:
+        content = candidate.get("content") or {}
+        for part in content.get("parts", []) or []:
+            text = part.get("text")
+            if isinstance(text, str):
+                parts.append(text)
+    return "\n".join(parts).strip()
+
 
 def call_openai_morning_call(model: str, system_prompt: str, user_prompt: str) -> str:
-    api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key:
-        raise RuntimeError("OPENAI_API_KEY not set")
+    api_key = require_env("OPENAI_API_KEY")
 
-    client = OpenAI(api_key=api_key)
+    from openai import OpenAI
+
+    client_kwargs: Dict[str, Any] = {"api_key": api_key}
+    base_url = os.getenv("OPENAI_BASE_URL")
+    if base_url:
+        client_kwargs["base_url"] = base_url
+
+    client = OpenAI(**client_kwargs)
 
     print(f"[INFO] Calling OpenAI (Responses API) with model={model}...")
 
@@ -250,31 +340,14 @@ def call_openai_morning_call(model: str, system_prompt: str, user_prompt: str) -
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
             ],
-            # Increased to give the model more room for the briefing text.
-            max_output_tokens=int(os.getenv("MORNING_CALL_MAX_OUTPUT_TOKENS", "3000")),
+            max_output_tokens=MORNING_CALL_MAX_OUTPUT_TOKENS,
         )
 
-        # Responses API: the main text usually comes through here.
-        try:
-            text = resp.output[0].content[0].text.strip()
-        except Exception:
-            text = ""
-
+        text = extract_openai_text(resp)
         if not text:
-            return (
-                "### Morning call unavailable\n\n"
-                "No text returned by the model. Check API logs or try again with a smaller context window."
-            )
+            return unavailable_message("No text returned by the model.")
 
-        # Simple heuristic: a dangling heading/bullet may indicate truncation.
-        if text.strip().endswith("-") or text.strip().endswith("–"):
-            text += (
-                "\n\n---\n\n"
-                "**[Note]** The morning call text may have been truncated due to output length limits. "
-                "Consider reducing the number of items in context or increasing `max_output_tokens`."
-            )
-
-        return text
+        return ensure_not_truncated(text)
 
     except Exception as e:
         # For quota errors, return a friendly message in the generated artifact.
@@ -288,6 +361,66 @@ def call_openai_morning_call(model: str, system_prompt: str, user_prompt: str) -
         raise
 
 
+def call_anthropic_morning_call(model: str, system_prompt: str, user_prompt: str) -> str:
+    api_key = require_env("ANTHROPIC_API_KEY")
+    print(f"[INFO] Calling Anthropic Messages API with model={model}...")
+
+    data = post_json(
+        ANTHROPIC_API_URL,
+        {
+            "Content-Type": "application/json",
+            "x-api-key": api_key,
+            "anthropic-version": ANTHROPIC_VERSION,
+        },
+        {
+            "model": model,
+            "max_tokens": MORNING_CALL_MAX_OUTPUT_TOKENS,
+            "system": system_prompt,
+            "messages": [{"role": "user", "content": user_prompt}],
+        },
+        "Anthropic",
+    )
+
+    text = extract_anthropic_text(data)
+    if not text:
+        return unavailable_message("No text returned by the model.")
+    return ensure_not_truncated(text)
+
+
+def call_gemini_morning_call(model: str, system_prompt: str, user_prompt: str) -> str:
+    api_key = require_env("GEMINI_API_KEY", ["GOOGLE_API_KEY"])
+    print(f"[INFO] Calling Gemini generateContent API with model={model}...")
+
+    model_path = urllib.parse.quote(model, safe="")
+    url = GEMINI_API_URL_TEMPLATE.format(model=model_path)
+    separator = "&" if "?" in url else "?"
+    url = f"{url}{separator}key={urllib.parse.quote(api_key, safe='')}"
+
+    data = post_json(
+        url,
+        {"Content-Type": "application/json"},
+        {
+            "systemInstruction": {"parts": [{"text": system_prompt}]},
+            "contents": [{"role": "user", "parts": [{"text": user_prompt}]}],
+            "generationConfig": {"maxOutputTokens": MORNING_CALL_MAX_OUTPUT_TOKENS},
+        },
+        "Gemini",
+    )
+
+    text = extract_gemini_text(data)
+    if not text:
+        return unavailable_message("No text returned by the model.")
+    return ensure_not_truncated(text)
+
+
+def call_morning_call_model(provider: str, model: str, system_prompt: str, user_prompt: str) -> str:
+    if provider == "openai":
+        return call_openai_morning_call(model, system_prompt, user_prompt)
+    if provider == "anthropic":
+        return call_anthropic_morning_call(model, system_prompt, user_prompt)
+    if provider == "gemini":
+        return call_gemini_morning_call(model, system_prompt, user_prompt)
+    raise ValueError(f"Unsupported provider: {provider}")
 
 
 #
@@ -338,7 +471,8 @@ def save_output_json(
     payload = {
         "generated_at": generated_at,
         "analysis_date": date_str,
-        "model": OPENAI_MODEL,
+        "provider": MORNING_CALL_PROVIDER,
+        "model": MORNING_CALL_MODEL,
         "window_hours": window_hours,
         "source_file": str(NEWS_RECENT_PATH),
         "source_generated_at": meta.get("generated_at"),
@@ -390,7 +524,8 @@ def main():
     sys_prompt = build_system_prompt()
     user_prompt = build_user_prompt(context, window_hours, len(curated))
 
-    morning_call = call_openai_morning_call(OPENAI_MODEL, sys_prompt, user_prompt)
+    print(f"[INFO] Morning call provider={MORNING_CALL_PROVIDER}, model={MORNING_CALL_MODEL}")
+    morning_call = call_morning_call_model(MORNING_CALL_PROVIDER, MORNING_CALL_MODEL, sys_prompt, user_prompt)
 
     save_output_json(
         morning_call=morning_call,

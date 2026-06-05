@@ -78,6 +78,7 @@ def main() -> None:
         entries.append({
             "date": date,
             "generated_at": d.get("generated_at"),
+            "provider": d.get("provider", "openai" if d.get("model") else ""),
             "model": d.get("model", ""),
             "window_hours": d.get("window_hours", 24),
             "total_items": d.get("total_items_in_window_all") or d.get("source_total_items", 0),

@@ -79,36 +79,7 @@ CATEGORY_SLUGS = {
 }
 
 
-CURATED_KEYWORDS: List[str] = [
-    "zero-day",
-    "zeroday",
-    "0day",
-    "critical vulnerability",
-    "exploit",
-    "cve-",
-    "backdoor",
-    "rce",
-    "remote code execution",
-    "privilege escalation",
-    "trojan",
-    "wormable",
-    "trojanized",
-    "supply chain attack",
-    "software supply chain",
-    "supply-chain attack",
-    "major breach",
-    "data leak",
-    "data leaks",
-    "massive leak",
-    "ransom gang",
-    "ransomware",
-    "double extortion",
-    "ransom note",
-]
-
-
 SMART_GROUP_RULES: List[Tuple[str, List[str]]] = [
-    ("Curated", CURATED_KEYWORDS),
     (
         "Ransomware",
         [
@@ -352,7 +323,11 @@ SMART_GROUP_REGEX_RULES: List[Tuple[str, str, float]] = [
 
 OPERATIONAL_SIGNAL_VERSION = "operational-signal-v1"
 OPERATIONAL_HIGH_TIERS = {"critical", "high"}
-GENERIC_HIGH_CONF_GROUPS = {"Curated", "Vulnerabilities / CVEs", "General Security"}
+GENERIC_HIGH_CONF_GROUPS = {"Vulnerabilities / CVEs", "General Security"}
+CURATION_POLICY_VERSION = "curated-auto-v2"
+CURATED_MIN_SIGNAL_SCORE = float(os.environ.get("CURATED_MIN_SIGNAL_SCORE", "65"))
+CURATED_MAX_AGE_HOURS = float(os.environ.get("CURATED_MAX_AGE_HOURS", str(24 * 7)))
+CURATED_BULK_SOURCE_MIN_SIGNAL_SCORE = float(os.environ.get("CURATED_BULK_SOURCE_MIN_SIGNAL_SCORE", "85"))
 ACTIONABLE_GROUPS = {
     "Exploit / PoC",
     "Ransomware",
@@ -399,6 +374,11 @@ THREAT_ACTOR_RE = re.compile(
 
 BULK_VULN_SOURCE_RE = re.compile(
     r"\b(vuldb|vulners|msrc security update guide|cve \| threatint|ubuntu security notices|linuxsecurity advisories|debian security|security advisories?)\b",
+    re.IGNORECASE,
+)
+
+CURATION_NOISE_RE = re.compile(
+    r"\b(black hat|conference|summit|webinar|workshop|training|course|certification|podcast|episode|newsletter|roundup|recap|interview|award|call for papers|cfp|register|save your seat)\b",
     re.IGNORECASE,
 )
 
@@ -681,6 +661,10 @@ def load_external_smart_group_rules(path: Path) -> Dict[str, Any]:
     for group_name, block in groups.items():
         if not isinstance(group_name, str) or not group_name.strip():
             continue
+        group_label = group_name.strip()
+        if group_label.lower() == "curated":
+            print("[WARN] Ignoring reserved external smart group 'Curated'; curation is computed from signal policy")
+            continue
         if not isinstance(block, dict):
             continue
 
@@ -702,7 +686,7 @@ def load_external_smart_group_rules(path: Path) -> Dict[str, Any]:
             if not term:
                 continue
 
-            out["keywords"].append((group_name.strip(), term.lower(), clamp01(conf)))
+            out["keywords"].append((group_label, term.lower(), clamp01(conf)))
 
         for regex_entry in block.get("regex", []):
             pattern = None
@@ -725,10 +709,10 @@ def load_external_smart_group_rules(path: Path) -> Dict[str, Any]:
             try:
                 compiled = re.compile(pattern, re.IGNORECASE)
             except re.error as exc:
-                print(f"[WARN] Invalid external regex '{pattern}' for group '{group_name}': {exc}")
+                print(f"[WARN] Invalid external regex '{pattern}' for group '{group_label}': {exc}")
                 continue
 
-            out["regex"].append((group_name.strip(), compiled, clamp01(conf)))
+            out["regex"].append((group_label, compiled, clamp01(conf)))
 
     print(
         "[INFO] Loaded external smart group dictionary "
@@ -985,8 +969,6 @@ def compute_operational_signal(item: Dict[str, Any], source_quality_score: float
         elif age_hours <= 72.0:
             score += 4.0
 
-    if bool(item.get("curated")):
-        score += 5.0
     score += min(6.0, max(0.0, source_quality_score) * 0.06)
 
     has_action_context = any(
@@ -1055,6 +1037,85 @@ def compute_operational_signal(item: Dict[str, Any], source_quality_score: float
     }
 
 
+def compute_curated_status(item: Dict[str, Any], source_quality_score: float, now: datetime) -> Dict[str, Any]:
+    title = str(item.get("title") or "")
+    summary = str(item.get("summary") or "")
+    source = str(item.get("source") or "")
+    text = f"{title} {summary[:600]}"
+    tier = str(item.get("signal_tier") or "").lower()
+
+    try:
+        signal_score = float(item.get("signal_score") or 0.0)
+    except (TypeError, ValueError):
+        signal_score = 0.0
+
+    if tier not in OPERATIONAL_HIGH_TIERS or signal_score < CURATED_MIN_SIGNAL_SCORE:
+        return {"curated": False, "curation_reasons": [], "curation_policy": CURATION_POLICY_VERSION}
+
+    ts = item.get("published_ts")
+    if not isinstance(ts, (int, float)):
+        return {"curated": False, "curation_reasons": [], "curation_policy": CURATION_POLICY_VERSION}
+
+    age_hours = max(0.0, (now.timestamp() - float(ts)) / 3600.0)
+    if age_hours > CURATED_MAX_AGE_HOURS:
+        return {"curated": False, "curation_reasons": [], "curation_policy": CURATION_POLICY_VERSION}
+
+    if CURATION_NOISE_RE.search(f"{source} {title}"):
+        return {"curated": False, "curation_reasons": [], "curation_policy": CURATION_POLICY_VERSION}
+
+    if BULK_VULN_SOURCE_RE.search(source) and signal_score < CURATED_BULK_SOURCE_MIN_SIGNAL_SCORE:
+        return {"curated": False, "curation_reasons": [], "curation_policy": CURATION_POLICY_VERSION}
+
+    title_has_action_context = any(
+        (
+            ACTIVE_EXPLOIT_RE.search(title),
+            ZERO_DAY_RE.search(title),
+            CRITICAL_IMPACT_RE.search(title),
+            EXPLOIT_POC_RE.search(title),
+            RANSOMWARE_RE.search(title),
+            BREACH_RE.search(title),
+            SUPPLY_CHAIN_RE.search(title),
+            MALWARE_RE.search(title),
+            THREAT_ACTOR_RE.search(title),
+        )
+    )
+    title_has_cve = bool(re.search(r"\bCVE-\d{4}-\d{4,7}\b", title, flags=re.IGNORECASE))
+    if not title_has_action_context and not (title_has_cve and signal_score >= 75.0):
+        return {"curated": False, "curation_reasons": [], "curation_policy": CURATION_POLICY_VERSION}
+
+    reasons: List[str] = []
+    if ACTIVE_EXPLOIT_RE.search(text):
+        _signal_add(reasons, "active exploitation / KEV")
+    if ZERO_DAY_RE.search(text):
+        _signal_add(reasons, "zero-day")
+    if EXPLOIT_POC_RE.search(text):
+        _signal_add(reasons, "exploit or PoC")
+    if RANSOMWARE_RE.search(text):
+        _signal_add(reasons, "ransomware")
+    if BREACH_RE.search(text):
+        _signal_add(reasons, "breach or leak")
+    if SUPPLY_CHAIN_RE.search(text):
+        _signal_add(reasons, "supply-chain")
+    if CRITICAL_IMPACT_RE.search(title):
+        _signal_add(reasons, "critical impact")
+    if MALWARE_RE.search(title) and signal_score >= 75.0:
+        _signal_add(reasons, "malware")
+    if THREAT_ACTOR_RE.search(title) and signal_score >= 75.0:
+        _signal_add(reasons, "threat actor / campaign")
+
+    if not reasons:
+        return {"curated": False, "curation_reasons": [], "curation_policy": CURATION_POLICY_VERSION}
+
+    if source_quality_score < 20.0 and signal_score < 85.0:
+        return {"curated": False, "curation_reasons": [], "curation_policy": CURATION_POLICY_VERSION}
+
+    return {
+        "curated": True,
+        "curation_reasons": reasons[:4],
+        "curation_policy": CURATION_POLICY_VERSION,
+    }
+
+
 # -------------------------------
 # Main
 # -------------------------------
@@ -1102,10 +1163,9 @@ def main() -> None:
                 item["smart_group_confidence"] = classification["smart_group_confidence"]
                 item["smart_groups_high_confidence"] = classification["smart_groups_high_confidence"]
                 item["smart_group_max_confidence"] = classification["smart_group_max_confidence"]
-                item["curated"] = (
-                    classification["smart_group_confidence"].get("Curated", 0.0) >= 0.55
-                    or bool(item.get("curated"))
-                )
+                item["curated"] = False
+                item["curation_reasons"] = []
+                item["curation_policy"] = CURATION_POLICY_VERSION
 
                 items_by_link[link] = item
                 kept_existing += 1
@@ -1207,7 +1267,6 @@ def main() -> None:
 
             summary = clean_html_summary(summary_raw)
             classification = classify_smart_groups(title, summary, type_slug, external_rules)
-            curated_conf = classification["smart_group_confidence"].get("Curated", 0.0)
 
             item = {
                 "title": title,
@@ -1222,7 +1281,9 @@ def main() -> None:
                 "smart_group_confidence": classification["smart_group_confidence"],
                 "smart_groups_high_confidence": classification["smart_groups_high_confidence"],
                 "smart_group_max_confidence": classification["smart_group_max_confidence"],
-                "curated": curated_conf >= 0.55,
+                "curated": False,
+                "curation_reasons": [],
+                "curation_policy": CURATION_POLICY_VERSION,
             }
 
             existing = items_by_link.get(link)
@@ -1286,8 +1347,11 @@ def main() -> None:
         source_name = str(item.get("source") or "Unknown")
         source_score = source_quality_map.get(source_name, 50.0)
         item["source_quality_score"] = source_score
-        item["priority_score"] = compute_priority_score(item, source_score, now)
         item.update(compute_operational_signal(item, source_score, now))
+        item.update(compute_curated_status(item, source_score, now))
+        item["priority_score"] = compute_priority_score(item, source_score, now)
+
+    _, source_quality_report = build_source_quality(items_list, now)
 
     items_list.sort(
         key=lambda x: (
@@ -1301,6 +1365,7 @@ def main() -> None:
     total_items = len(items_list)
     with_groups = sum(1 for i in items_list if i.get("smart_groups"))
     with_high_conf = sum(1 for i in items_list if i.get("smart_groups_high_confidence"))
+    curated_count = sum(1 for i in items_list if bool(i.get("curated")))
     signal_tier_counts: Dict[str, int] = defaultdict(int)
     for item in items_list:
         signal_tier_counts[str(item.get("signal_tier") or "low")] += 1
@@ -1313,6 +1378,14 @@ def main() -> None:
         "items_with_high_confidence_smart_groups": with_high_conf,
         "coverage_ratio": round((with_groups / total_items), 4) if total_items else 0.0,
         "high_confidence_ratio": round((with_high_conf / total_items), 4) if total_items else 0.0,
+    }
+    curation_stats = {
+        "policy": CURATION_POLICY_VERSION,
+        "curated_items": curated_count,
+        "curated_ratio": round((curated_count / total_items), 4) if total_items else 0.0,
+        "min_signal_score": CURATED_MIN_SIGNAL_SCORE,
+        "max_age_hours": CURATED_MAX_AGE_HOURS,
+        "bulk_source_min_signal_score": CURATED_BULK_SOURCE_MIN_SIGNAL_SCORE,
     }
     signal_stats = {
         "model": OPERATIONAL_SIGNAL_VERSION,
@@ -1331,6 +1404,7 @@ def main() -> None:
         "days_back": DAYS_BACK,
         "total_items": total_items,
         "classification_stats": classification_stats,
+        "curation_stats": curation_stats,
         "signal_stats": signal_stats,
         "source_quality_model": {
             "freshness_weight": 0.32,

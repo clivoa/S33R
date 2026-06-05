@@ -27,7 +27,7 @@ S33R provides:
 - **Trend analytics** (keywords, vendors, actor timelines, CVEs, daily volume)
 - **Historical archive engine** (monthly + yearly JSON)
 - **Signal-filtered monthly packs**
-- Optional **automated morning call briefing** (LLM-agnostic) with full archive
+- Optional **provider-configurable morning call briefing** with full archive
 - 100% static deployment compatible with GitHub Pages
 
 The system targets: cybersecurity analysts, threat intelligence teams, researchers and educators, OSINT practitioners, and community threat monitoring projects.
@@ -118,8 +118,9 @@ Primary data file, rebuilt hourly. Contains:
 |---|---|
 | `generated_at` | ISO timestamp of last build |
 | `total_items` | Total deduplicated items |
-| `items[]` | Normalized entries with smart groups, curated flag, priority score, operational signal tier/score, source quality score |
-| `source_quality[]` | Quality report for ~220 active feeds (score 0–100, grade A–D, metrics) |
+| `items[]` | Normalized entries with smart groups, curated flag/reasons, priority score, operational signal tier/score, source quality score |
+| `curation_stats` | Policy metadata and counts for the automatic curated selection |
+| `source_quality[]` | Quality report for feeds that produced collected items (score 0–100, grade A–D, metrics) |
 | `feed_attempts[]` | Ingestion attempt records for active feeds, plus synthetic records for inactive catalog feeds |
 | `source_catalog` | Metadata about the upstream feed catalog consumed by `sync_feed_catalog.py` |
 | `classification_stats` | Smart group coverage and confidence ratios |
@@ -154,7 +155,7 @@ Holds pre-computed analytics:
 
 ### `data/morning_call_latest.json` / `data/morning_call_index.json`
 
-LLM-generated daily briefings and their archive index. Optional.
+Provider-generated daily briefings and their archive index. Optional. Morning call artifacts include the configured `provider` and `model`.
 
 ---
 
@@ -179,7 +180,7 @@ These categories power both the News Board and Trend Analytics dashboards.
 
 ## Source Quality Model
 
-Each active feed receives a score (0–100) composed of weighted components:
+Each feed that produces collected items receives a score (0–100) composed of weighted components:
 
 | Component | Weight | Description |
 |---|---|---|
@@ -195,16 +196,11 @@ Each active feed receives a score (0–100) composed of weighted components:
 
 ## Curated Intelligence Layer
 
-S33R marks items as **curated** when they match security-relevant heuristics:
+S33R marks items as **curated** only after operational scoring. The curated flag is reserved for recent `critical` or `high` items that cross the curated signal threshold, contain actionable context in the title, and are not event/training/roundup noise or weak bulk-CVE entries.
 
-- 0-day vulnerabilities
-- Active exploitation reports
-- Ransomware group announcements
-- Supply-chain compromise
-- Large-scale cyberattacks
-- Cloud/SaaS breach reports
+Curated items include `curation_policy` and `curation_reasons`, while aggregate policy metadata is written to `curation_stats`.
 
-High-signal filtering is handled separately through `signal_tier` and `signal_score`. Only `critical` and `high` tiers count as operational high signal, so generic CVE/advisory records remain visible without flooding the analyst view.
+High-signal filtering is handled separately through `signal_tier` and `signal_score`. Generic CVE/advisory records remain visible without flooding the curated analyst view.
 
 Curated items are optionally consumed by the morning call briefing generator.
 
@@ -215,7 +211,7 @@ Curated items are optionally consumed by the morning call briefing generator.
 ### `index.html` — War Room Feed
 - **War Room header** with 4 live metric cards: 24h items, 7d items, hot items (high priority), CVEs
 - Time-of-day greeting with last-updated timestamp
-- **Score bars** on each card, normalized to the observed priority score range
+- **Signal score bars** on each card, based on `signal_score`
 - Hot items highlighted with a distinct border
 - **Time window buttons**: 24h / 72h / 7d / All
 - Search, Smart Group filter, category filter, curated-only toggle
@@ -245,7 +241,7 @@ Curated items are optionally consumed by the morning call briefing generator.
 - Browsable historical data timeline
 
 ### `morning.html` — Morning Call (Optional)
-- Renders the latest LLM-generated daily briefing
+- Renders the latest provider-generated daily briefing
 - No AI provider required by default
 
 ### `morning-archive.html` — Morning Call Archive (Optional)
@@ -253,13 +249,16 @@ Curated items are optionally consumed by the morning call briefing generator.
 
 ---
 
-## Optional: Automated Morning Call (LLM-agnostic)
+## Optional: Automated Morning Call
 
 S33R supports an optional module for generating a **cybersecurity daily briefing**:
 
 - Disabled by default
-- Works with **any** LLM provider (OpenAI, Anthropic, Gemini, local models, etc.)
-- Developers define the persona, structure, tone, and summary rules via `persona.txt`
+- Defaults to OpenAI to preserve existing behavior
+- Supports `openai`, `anthropic` / `claude`, and `gemini` / `google`
+- Supports OpenAI-compatible endpoints through `OPENAI_BASE_URL`
+- Uses curated items from `data/news_recent.json` as model context
+- The SOC-focused prompt, structure, tone, and summary rules are defined in `build_morning_call.py`
 - Friendly for research, newsletters, or automated reporting workflows
 
 Outputs:
@@ -269,11 +268,22 @@ data/archive/morning_call/<YYYY>/<MM>/morning_call_YYYY-MM-DD.json
 data/morning_call_index.json
 ```
 
-Example workflow env variable:
+Provider configuration examples:
 ```yaml
-# Optional — only needed if using build_morning_call.py
-# LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
-# LLM_MODEL: "provider/model-name"
+# OpenAI (default)
+# MORNING_CALL_PROVIDER: "openai"
+# OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+# MORNING_CALL_MODEL: "gpt-5.2"
+
+# Claude / Anthropic
+# MORNING_CALL_PROVIDER: "anthropic"
+# ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+# MORNING_CALL_MODEL: "claude-sonnet-4-5"
+
+# Gemini
+# MORNING_CALL_PROVIDER: "gemini"
+# GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+# MORNING_CALL_MODEL: "gemini-2.5-pro"
 ```
 
 ---
@@ -293,7 +303,7 @@ Example workflow env variable:
 - Optionally rebuilds morning call index
 
 ### `morning_call.yml` (Optional, configurable schedule)
-- Runs an LLM-powered SOC morning call if `LLM_API_KEY` is configured
+- Runs a provider-configurable SOC morning call if the selected provider API key is configured
 - Stores output in daily archive structure
 
 All workflows run with standard GitHub Actions runners.
@@ -320,7 +330,6 @@ S33R/
 ├── _config.yml
 ├── _config.local.yml           # Local-only override (not committed to production)
 ├── Gemfile / Gemfile.lock
-├── persona.txt                 # LLM persona definition for morning call
 │
 ├── data/
 │   ├── news_recent.json        # Primary feed (rebuilt hourly)
@@ -341,7 +350,7 @@ S33R/
 │   ├── build_news_json.py          # Main ETL: fetch, classify, score, write JSON
 │   ├── build_news_archive.py       # Archive builder
 │   ├── build_trends_json.py        # Trend analytics builder
-│   ├── build_morning_call.py       # LLM briefing generator (optional)
+│   ├── build_morning_call.py       # Provider-configurable briefing generator (optional)
 │   ├── build_morning_call_index.py # Morning call archive indexer
 │   ├── build_historical_trends.py  # Historical trend computations
 │   └── smart_group_dictionary.json # Keyword rules for classification

@@ -175,6 +175,7 @@
     const ss = signalScore(it);
     const tier = signalTier(it);
     const label = tier === "critical" ? "CRITICAL" : tier === "high" ? "HIGH" : tier === "watch" ? "WATCH" : "SIGNAL";
+    const curationTitle = Array.isArray(it.curation_reasons) && it.curation_reasons.length ? ` title="${esc("Curated: " + it.curation_reasons.join(", "))}"` : "";
     const chips = [];
     cv.slice(0, 3).forEach((c) => chips.push(`<span class="rchip cve">${c}</span>`));
     if (cv.length > 3) chips.push(`<span class="rchip more">+${cv.length - 3} CVE</span>`);
@@ -187,7 +188,7 @@
         <div class="rmeta">
           <span class="src">${esc(it.source || "Unknown")}</span>
           <span class="typ">${esc(TYPE_SHORT[it.type] || it.type || "feed")}</span>
-          ${it.curated ? `<span class="cur">CURATED</span>` : ""}
+          ${it.curated ? `<span class="cur"${curationTitle}>CURATED</span>` : ""}
         </div>
         <h2 class="ttl"><a href="${link}" target="_blank" rel="noopener noreferrer">${esc(it.title || "Untitled")}</a></h2>
         <p class="dsc">${esc(it.summary || "No summary available.")}</p>
