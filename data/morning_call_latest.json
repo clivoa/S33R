@@ -1,142 +1,63 @@
 {
-  "generated_at": "2026-06-05T20:26:30.447029+00:00",
-  "analysis_date": "2026-06-05",
+  "generated_at": "2026-06-06T08:47:14.948707+00:00",
+  "analysis_date": "2026-06-06",
   "provider": "openai",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-06-05T19:58:35.697761+00:00",
+  "source_generated_at": "2026-06-06T07:05:01.462228+00:00",
   "source_days_back": 30,
-  "source_total_items": 15716,
-  "total_items_in_window_all": 2232,
-  "total_items_in_window_curated": 1518,
-  "morning_call_markdown": "### Executive Summary\n- **Active exploitation:** CISA reports attackers are now exploiting a **SolarWinds Serv-U flaw to crash servers (DoS)**—treat any exposed Serv-U as at-risk and validate internet exposure immediately.\n- **Supply-chain malware risk:** Reports of **“Miasma” malware inserted into 32 Red Hat packages via a compromised GitHub account**—prioritize integrity checks and unusual package/update activity on Linux fleets.\n- **Patch wave for SOC tooling & cloud/dev:** Multiple **Elastic Kibana CVEs (path traversal/SSRF/DoS/token handling)** plus a large set of **AWS security bulletins (drivers/SDKs/agents/IDE tooling)**—quickly inventory where we run these components and reduce exposure.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) SolarWinds Serv-U exploitation (DoS/crash activity reported by CISA)**\n- **What happened:** CISA says threat actors are exploiting a SolarWinds Serv-U vulnerability to **crash servers** (availability impact).\n- **Why it matters operationally:** Serv-U often sits **internet-facing** (file transfer); crashes can cause **business interruption** and may be a precursor to follow-on intrusion attempts.\n- **Recommended immediate actions for the SOC today:** Confirm any **Serv-U external exposure** (scan/CMDB), review WAF/firewall logs for spikes to Serv-U endpoints, and **escalate to patch/mitigate** or temporarily restrict access.\n\n**2) Linux supply-chain compromise: “Miasma” malware in Red Hat packages (via compromised GitHub account)**\n- **What happened:** Reporting indicates **32 Red Hat packages** were impacted by malware after a **compromised GitHub account** was used in the build/source chain.\n- **Why it matters operationally:** Financial orgs run Red Hat widely; this is a **trusted-update execution path** (high impact) and can bypass perimeter controls.\n- **Recommended immediate actions for the SOC today:** Identify hosts pulling updates from affected repos/build pipelines; hunt for **recent unexpected package installs/upgrades** and suspicious post-install execution; isolate any systems showing anomalous update behavior and engage IR.\n\n**3) Elastic Kibana: multiple CVEs incl. path traversal and SSRF + several DoS/resource consumption issues**\n- **What happened:** Multiple Kibana CVEs disclosed (notably **path traversal** and **outbound request SSRF**, plus several **resource-consumption/DoS** and **token-expiration handling** issues) across versions up to ~8.19.15 / 9.3.x (per items listed).\n- **Why it matters operationally:** Kibana is often reachable from admin networks (sometimes internet/VPN); SSRF/path traversal can enable **data access/pivoting**, and DoS can degrade SOC visibility.\n- **Recommended immediate actions for the SOC today:** Inventory Kibana instances and **confirm exposure** (internet vs internal), apply vendor fixes/mitigations ASAP, and in the interim **restrict access** (IP allowlists/VPN-only) and monitor for anomalous Kibana admin/API activity.\n\n**4) AWS bulletins: multiple RCE/priv-esc issues across drivers/SDKs/agents and dev tooling (Redshift drivers, ECS agent, QnABot, WorkSpaces, encryption SDK)**\n- **What happened:** AWS published numerous security bulletins including **RCE vectors (e.g., Redshift JDBC/Python driver, QnABot sandbox bypass)** and **priv-esc/token handling issues** in several AWS clients/agents.\n- **Why it matters operationally:** These components commonly run in **build systems, app servers, and developer endpoints**; exploitation can lead to **credential theft, lateral movement, and cloud control-plane abuse**.\n- **Recommended immediate actions for the SOC today:** Pull an inventory of AWS-related components in use (drivers/agents/SDKs) and prioritize patching in **CI/CD, bastions, and data platforms**; increase alerting on **unusual AWS API calls** from those environments (new access keys, role assumptions, unusual Redshift connections).\n\n---\n\n### Monitoring & detection recommendations\n- **Serv-U exposure/exploitation:** Firewall/WAF + server logs for Serv-U hosts; alert on **request spikes, repeated malformed requests, and service restarts/crash loops** (ATT&CK: T1499 Endpoint DoS).\n- **Linux supply-chain tampering:** EDR + Linux auditd/journald; hunt for **rpm/dnf/yum install/upgrade events** followed by unexpected child processes or network beacons (ATT&CK: T1195 Supply Chain Compromise, T1105 Ingress Tool Transfer).\n- **Kibana exploitation attempts:** Reverse proxy/WAF + Kibana logs; look for **path traversal patterns** and unexpected outbound connections from Kibana server (SSRF) (ATT&CK: T1190 Exploit Public-Facing App).\n- **SSRF egress from “admin tools”:** Network proxy/DNS logs; alert on **Kibana (and similar tooling) making requests to link-local/metadata IPs** or internal-only ranges (ATT&CK: T1552.001 Cloud Instance Metadata API).\n- **AWS control plane anomalies post-exploit:** CloudTrail + GuardDuty; hunt for **new IAM users/keys, unusual AssumeRole chains, permission changes, and access from new geos** (ATT&CK: T1078 Valid Accounts, T1098 Account Manipulation).\n- **CI/CD and build system monitoring (AWS CodeBuild/SDK related):** CI logs + EDR on runners; flag **new outbound destinations, secret access bursts, and artifact integrity check failures** (ATT&CK: T1552 Unsecured Credentials).\n- **Endpoint/dev tooling risks (Kiro IDE / Q Developer prompts mentioned in bulletins):** EDR + application logs; monitor for **suspicious child processes** spawned by IDEs/CLI tools and unexpected writes to execution paths (ATT&CK: T1204 User Execution, T1059 Command and Scripting Interpreter).\n\n---\n\n### Medium-term follow-ups\n- **Patch & exposure governance:** Ensure **Kibana** is never internet-exposed by default; enforce standard **reverse-proxy + SSO + IP allowlist** patterns for admin consoles.\n- **Supply-chain controls:** Validate repo/package trust controls—enforce **signed packages, pinned repositories, SBOM intake**, and restrict who can change build inputs; review third-party GitHub dependency risk.\n- **AWS component lifecycle:** Create/refresh an internal list of **AWS drivers/agents/SDKs** (Redshift, ECS agent, WorkSpaces, encryption clients) with owners and patch SLAs; add them to vuln scanning exceptions handling.\n- **Cloud logging readiness:** Confirm **CloudTrail (all regions), GuardDuty, VPC Flow Logs** are enabled and retained for IR timelines; validate alerts for IAM privilege escalation patterns.\n- **Resilience checks for availability attacks:** For file-transfer and edge services (Serv-U and equivalents), review **rate limiting, autoscaling, and restart thresholds** to reduce DoS blast radius.\n- **Threat hunting playbooks:** Add a lightweight hunt for **“unexpected package update → new service/process → outbound traffic”** on Linux to the weekly schedule until the Red Hat package story is fully clarified (assumption: affected package names/versions not yet confirmed in the provided feed).",
+  "source_total_items": 16358,
+  "total_items_in_window_all": 1857,
+  "total_items_in_window_curated": 4,
+  "morning_call_markdown": "### Executive Summary\n- Active exploitation reported against **Cisco Catalyst SD-WAN Manager** plus additional “critical exploits” across **IIS / SolarWinds / WordPress plugin / npm supply chain**; assume rapid weaponization and opportunistic scanning.\n- Highest near-term risk for financial services: **internet-facing management planes** (SD-WAN/VPN/IIS) and **software supply chain** (CI/CD, build agents, developer endpoints).\n- SOC today: prioritize **exposure validation + exploit telemetry hunts** (web logs/EDR) and **dependency tampering detection** (CI logs, package integrity, unusual outbound).\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Cisco Catalyst SD-WAN Manager – actively exploited vulnerability (per SCWorld)**\n- **What happened:** Another bug in Cisco Catalyst SD-WAN Manager is reported as **actively exploited** in the wild.\n- **Why it matters operationally:** Internet-facing SD-WAN managers are high-value; compromise can enable **network pivoting**, credential theft, and broad enterprise access.\n- **Recommended immediate actions for the SOC today:** Confirm if we run affected versions + whether it’s internet-exposed; fast-track vendor mitigations/patches; hunt for unusual admin logins/config changes and new sessions from atypical geos.\n\n**2) Internet-facing server exploitation wave (IIS / SolarWinds mentioned in “critical exploits” roundup)**\n- **What happened:** A briefing aggregates **active exploits/PoCs** targeting common enterprise components including **IIS** and **SolarWinds** (details not fully provided in the feed—assume multiple concurrently exploited paths).\n- **Why it matters operationally:** These platforms often sit in **DMZ/management tiers**; exploitation typically leads to **webshells**, service account abuse, and lateral movement into sensitive segments.\n- **Recommended immediate actions for the SOC today:** Identify externally reachable IIS/SolarWinds hosts and validate patch/hardening status; review last 7 days of web/server logs for exploitation patterns (suspicious POSTs, new ASPX/PS1 drops, unexpected child processes).\n\n**3) Software supply chain risk (npm + WordPress plugin in “critical exploits” roundup)**\n- **What happened:** Reporting highlights **supply chain abuse** via **npm packages** and **WordPress plugins** (likely malicious updates/typosquats or plugin vulns; specifics not included).\n- **Why it matters operationally:** Supply chain compromises bypass perimeter controls, landing in **developer workstations, CI runners, and web servers**; can lead to credential theft and backdoored releases.\n- **Recommended immediate actions for the SOC today:** Alert on new/rare npm dependencies and unexpected install scripts in CI; inventory WordPress instances/plugins and restrict admin access; monitor for unusual outbound from build agents/web servers to new domains.\n\n**4) “Binary choice” exploit/researcher vs threat actor chatter (community content; limited technical detail)**\n- **What happened:** Community video discusses whether activity is researcher testing or threat actor exploitation (insufficient specifics; treat as **situational awareness** only).\n- **Why it matters operationally:** Content may correlate with **active scanning/exploitation** that appears “noisy” and can be mis-triaged as benign testing.\n- **Recommended immediate actions for the SOC today:** Keep triage strict—validate intent via telemetry (payloads, persistence attempts) not assumptions; escalate any confirmed exploit chain indicators (file drops, credential access) regardless of “research” narrative.\n\n---\n\n### Monitoring & detection recommendations\n- **SD-WAN / network management planes:** Monitor SD-WAN Manager auth logs + firewall/VPN logs for new admin sessions, failed-login bursts, and logins from new geos (T1078 Valid Accounts).\n- **Web exploitation (IIS):** In IIS logs + WAF, hunt for abnormal URIs, high-entropy query strings, suspicious POST bodies, and spikes in 404/500 around sensitive paths; correlate with EDR web server process spawning `cmd.exe/powershell` (T1505.003 Web Shell, T1059).\n- **SolarWinds / monitoring servers:** On EDR, alert on monitoring platform services spawning shells, creating new scheduled tasks/services, or dumping creds; review Windows Security logs 4624/4672/4697/7045 near SolarWinds hosts (T1053, T1543).\n- **Supply chain (npm):** From CI/CD logs (GitHub Actions/Jenkins/Azure DevOps) detect new dependency additions, `npm postinstall` script execution, and builds making first-seen outbound connections; pivot to proxy/DNS logs for new destinations (T1195 Supply Chain Compromise).\n- **WordPress estate:** On web logs, watch for plugin upload/install events, admin logins outside normal patterns, and new PHP files in upload/plugin directories; file integrity monitoring if available (T1505.003).\n- **Egress validation:** In proxy/DNS, flag build agents and web servers reaching newly registered domains / rare ASNs; baseline per host role (T1071.001 Web Protocols).\n- **Post-exploitation signals:** Across EDR, hunt for credential dumping attempts (LSASS access), discovery commands, and lateral movement tooling shortly after web/management-plane alerts (T1003, T1087, T1021).\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** Create/refresh an “internet-facing management plane” SLA (SD-WAN/VPN/IIS/monitoring tools) with 24–72h patch/mitigation targets for exploited-in-the-wild items.\n- **Exposure reduction:** Ensure SD-WAN/SolarWinds management interfaces are not internet-accessible; enforce IP allowlisting + MFA where supported; review segmentation to prevent management-tier to core lateral movement.\n- **Supply chain controls:** Implement dependency allowlisting, lockfiles enforcement, private registries, and routine scans for typosquats/malicious packages; require provenance/signing where feasible.\n- **Web platform hardening:** Standardize WordPress hardening (least-privileged admin, plugin update process, disable file editor, restrict `/wp-admin`); add file integrity monitoring on web roots.\n- **Detection engineering:** Convert today’s hunts into durable rules (webserver-child-process, new admin from new geo, CI outbound anomalies) and add runbooks for rapid containment.\n- **Threat intel follow-up:** Pull vendor advisories/details for the Cisco SD-WAN CVE and the referenced IIS/SolarWinds items (assumption: multiple CVEs); update internal watchlists once concrete IOCs/versions are confirmed.",
   "highlights": [
     {
-      "title": "Magnificent Humanity, Building Cities, and a Special Announcement!",
-      "link": "https://dev.to/jenlooper/magnificent-humanity-building-cities-and-a-special-announcement-54pf",
-      "source": "DEV Community",
-      "published": "2026-06-05T19:37:39+00:00",
+      "title": "Critical Exploits: npm Supply Chain, WordPress Plugin, SolarWinds, IIS Attacks",
+      "link": "https://defend.network/briefings/npm-wordpress-solarwinds-iot-active-exploits-2026-06-06.html",
+      "source": "defend.network",
+      "published": "2026-06-06T06:30:00+00:00",
       "smart_groups": [
-        "Curated",
-        "Network / OT / ICS",
-        "Ransomware",
         "Vulnerabilities / CVEs",
-        "OSINT / Community"
-      ],
-      "curated": true
-    },
-    {
-      "title": "CVE-2026-42399 | Elastic Kibana up to 8.19.15/9.3.4 resource consumption (Nessus ID 318721 / WID-SEC-2026-1734)",
-      "link": "https://vuldb.com/vuln/366940",
-      "source": "VulDB Updates",
-      "published": "2026-06-05T19:37:29+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": true
-    },
-    {
-      "title": "CVE-2026-33463 | Elastic Kibana up to 8.19.15/9.3.4 Access Token operation after expiration (EUVD-2026-33011 / Nessus ID 318721)",
-      "link": "https://vuldb.com/vuln/366850",
-      "source": "VulDB Updates",
-      "published": "2026-06-05T19:37:29+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": true
-    },
-    {
-      "title": "CVE-2026-33462 | Elastic Kibana up to 8.19.15/9.3.4 path traversal (EUVD-2026-33009 / Nessus ID 318721)",
-      "link": "https://vuldb.com/vuln/366851",
-      "source": "VulDB Updates",
-      "published": "2026-06-05T19:37:29+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": true
-    },
-    {
-      "title": "CVE-2026-33464 | Elastic Kibana up to 8.19.15/9.3.4/9.4.0 resource consumption (EUVD-2026-33010 / Nessus ID 318723)",
-      "link": "https://vuldb.com/vuln/366855",
-      "source": "VulDB Updates",
-      "published": "2026-06-05T19:37:28+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": true
-    },
-    {
-      "title": "CVE-2026-49093 | Elastic Kibana up to 9.3.2 Outbound Requests server-side request forgery (EUVD-2026-33035 / Nessus ID 318722)",
-      "link": "https://vuldb.com/vuln/366946",
-      "source": "VulDB Updates",
-      "published": "2026-06-05T19:37:28+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": true
-    },
-    {
-      "title": "Sources: AI coding startup Lovable is in talks to raise funding at a $12B valuation, up from $6.6B in December 2025 (Rashi Shrivastava/Forbes)",
-      "link": "https://www.techmeme.com/260605/p27#a260605p27",
-      "source": "Techmeme",
-      "published": "2026-06-05T19:35:36+00:00",
-      "smart_groups": [
-        "Curated",
-        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Supply Chain / Software",
         "General Security"
       ],
       "curated": true
     },
     {
-      "title": "ParadeDB NPM Package Seeks Feedback on Simplifying Postgres Integration with JavaScript via Drizzle ORM",
-      "link": "https://dev.to/pavkode/paradedb-npm-package-seeks-feedback-on-simplifying-postgres-integration-with-javascript-via-drizzle-4pje",
-      "source": "DEV Community",
-      "published": "2026-06-05T19:35:31+00:00",
+      "title": "How are people supposed to defend against both supply chain attack and zero-day vulnerabilities at the same time?",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1txvm2i/how_are_people_supposed_to_defend_against_both/",
+      "source": "/r/cybersecurity",
+      "published": "2026-06-05T19:55:40+00:00",
       "smart_groups": [
-        "Crypto / Web3",
         "Vulnerabilities / CVEs",
-        "Web / API Security",
-        "Supply Chain / Software",
-        "Curated",
-        "Ransomware",
         "OSINT / Community"
       ],
       "curated": true
     },
     {
-      "title": "How to Verify Shopify Webhooks Correctly (And Stop Getting It Wrong)",
-      "link": "https://dev.to/masadashraf/how-to-verify-shopify-webhooks-correctly-and-stop-getting-it-wrong-1mbm",
-      "source": "DEV Community",
-      "published": "2026-06-05T19:35:27+00:00",
+      "title": "Another Cisco Catalyst SD-WAN Manager bug actively exploited",
+      "link": "https://www.scworld.com/news/another-cisco-catalyst-sd-wan-manager-bug-actively-exploited",
+      "source": "SCM feed for Latest",
+      "published": "2026-06-05T18:55:24+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Curated",
-        "Web / API Security",
-        "OSINT / Community"
+        "Exploit / PoC",
+        "General Security"
       ],
       "curated": true
     },
     {
-      "title": "GitHub, Demystified",
-      "link": "https://dev.to/mlh/github-demystified-4mkd",
-      "source": "DEV Community",
-      "published": "2026-06-05T19:32:48+00:00",
+      "title": "Binary Choice Researcher Or Threat Actor",
+      "link": "https://www.youtube.com/shorts/2ldvrHxqrjk",
+      "source": "Security Weekly",
+      "published": "2026-06-05T14:00:35+00:00",
       "smart_groups": [
-        "Curated",
-        "Network / OT / ICS",
+        "Exploit / PoC",
         "Vulnerabilities / CVEs",
-        "OSINT / Community"
+        "Threat Actors / APT",
+        "Community / Briefing"
       ],
       "curated": true
     }
