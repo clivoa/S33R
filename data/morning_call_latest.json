@@ -1,63 +1,98 @@
 {
-  "generated_at": "2026-06-06T08:47:14.948707+00:00",
-  "analysis_date": "2026-06-06",
+  "generated_at": "2026-06-07T09:34:31.683423+00:00",
+  "analysis_date": "2026-06-07",
   "provider": "openai",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-06-06T07:05:01.462228+00:00",
+  "source_generated_at": "2026-06-07T08:35:47.759294+00:00",
   "source_days_back": 30,
-  "source_total_items": 16358,
-  "total_items_in_window_all": 1857,
-  "total_items_in_window_curated": 4,
-  "morning_call_markdown": "### Executive Summary\n- Active exploitation reported against **Cisco Catalyst SD-WAN Manager** plus additional “critical exploits” across **IIS / SolarWinds / WordPress plugin / npm supply chain**; assume rapid weaponization and opportunistic scanning.\n- Highest near-term risk for financial services: **internet-facing management planes** (SD-WAN/VPN/IIS) and **software supply chain** (CI/CD, build agents, developer endpoints).\n- SOC today: prioritize **exposure validation + exploit telemetry hunts** (web logs/EDR) and **dependency tampering detection** (CI logs, package integrity, unusual outbound).\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Cisco Catalyst SD-WAN Manager – actively exploited vulnerability (per SCWorld)**\n- **What happened:** Another bug in Cisco Catalyst SD-WAN Manager is reported as **actively exploited** in the wild.\n- **Why it matters operationally:** Internet-facing SD-WAN managers are high-value; compromise can enable **network pivoting**, credential theft, and broad enterprise access.\n- **Recommended immediate actions for the SOC today:** Confirm if we run affected versions + whether it’s internet-exposed; fast-track vendor mitigations/patches; hunt for unusual admin logins/config changes and new sessions from atypical geos.\n\n**2) Internet-facing server exploitation wave (IIS / SolarWinds mentioned in “critical exploits” roundup)**\n- **What happened:** A briefing aggregates **active exploits/PoCs** targeting common enterprise components including **IIS** and **SolarWinds** (details not fully provided in the feed—assume multiple concurrently exploited paths).\n- **Why it matters operationally:** These platforms often sit in **DMZ/management tiers**; exploitation typically leads to **webshells**, service account abuse, and lateral movement into sensitive segments.\n- **Recommended immediate actions for the SOC today:** Identify externally reachable IIS/SolarWinds hosts and validate patch/hardening status; review last 7 days of web/server logs for exploitation patterns (suspicious POSTs, new ASPX/PS1 drops, unexpected child processes).\n\n**3) Software supply chain risk (npm + WordPress plugin in “critical exploits” roundup)**\n- **What happened:** Reporting highlights **supply chain abuse** via **npm packages** and **WordPress plugins** (likely malicious updates/typosquats or plugin vulns; specifics not included).\n- **Why it matters operationally:** Supply chain compromises bypass perimeter controls, landing in **developer workstations, CI runners, and web servers**; can lead to credential theft and backdoored releases.\n- **Recommended immediate actions for the SOC today:** Alert on new/rare npm dependencies and unexpected install scripts in CI; inventory WordPress instances/plugins and restrict admin access; monitor for unusual outbound from build agents/web servers to new domains.\n\n**4) “Binary choice” exploit/researcher vs threat actor chatter (community content; limited technical detail)**\n- **What happened:** Community video discusses whether activity is researcher testing or threat actor exploitation (insufficient specifics; treat as **situational awareness** only).\n- **Why it matters operationally:** Content may correlate with **active scanning/exploitation** that appears “noisy” and can be mis-triaged as benign testing.\n- **Recommended immediate actions for the SOC today:** Keep triage strict—validate intent via telemetry (payloads, persistence attempts) not assumptions; escalate any confirmed exploit chain indicators (file drops, credential access) regardless of “research” narrative.\n\n---\n\n### Monitoring & detection recommendations\n- **SD-WAN / network management planes:** Monitor SD-WAN Manager auth logs + firewall/VPN logs for new admin sessions, failed-login bursts, and logins from new geos (T1078 Valid Accounts).\n- **Web exploitation (IIS):** In IIS logs + WAF, hunt for abnormal URIs, high-entropy query strings, suspicious POST bodies, and spikes in 404/500 around sensitive paths; correlate with EDR web server process spawning `cmd.exe/powershell` (T1505.003 Web Shell, T1059).\n- **SolarWinds / monitoring servers:** On EDR, alert on monitoring platform services spawning shells, creating new scheduled tasks/services, or dumping creds; review Windows Security logs 4624/4672/4697/7045 near SolarWinds hosts (T1053, T1543).\n- **Supply chain (npm):** From CI/CD logs (GitHub Actions/Jenkins/Azure DevOps) detect new dependency additions, `npm postinstall` script execution, and builds making first-seen outbound connections; pivot to proxy/DNS logs for new destinations (T1195 Supply Chain Compromise).\n- **WordPress estate:** On web logs, watch for plugin upload/install events, admin logins outside normal patterns, and new PHP files in upload/plugin directories; file integrity monitoring if available (T1505.003).\n- **Egress validation:** In proxy/DNS, flag build agents and web servers reaching newly registered domains / rare ASNs; baseline per host role (T1071.001 Web Protocols).\n- **Post-exploitation signals:** Across EDR, hunt for credential dumping attempts (LSASS access), discovery commands, and lateral movement tooling shortly after web/management-plane alerts (T1003, T1087, T1021).\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** Create/refresh an “internet-facing management plane” SLA (SD-WAN/VPN/IIS/monitoring tools) with 24–72h patch/mitigation targets for exploited-in-the-wild items.\n- **Exposure reduction:** Ensure SD-WAN/SolarWinds management interfaces are not internet-accessible; enforce IP allowlisting + MFA where supported; review segmentation to prevent management-tier to core lateral movement.\n- **Supply chain controls:** Implement dependency allowlisting, lockfiles enforcement, private registries, and routine scans for typosquats/malicious packages; require provenance/signing where feasible.\n- **Web platform hardening:** Standardize WordPress hardening (least-privileged admin, plugin update process, disable file editor, restrict `/wp-admin`); add file integrity monitoring on web roots.\n- **Detection engineering:** Convert today’s hunts into durable rules (webserver-child-process, new admin from new geo, CI outbound anomalies) and add runbooks for rapid containment.\n- **Threat intel follow-up:** Pull vendor advisories/details for the Cisco SD-WAN CVE and the referenced IIS/SolarWinds items (assumption: multiple CVEs); update internal watchlists once concrete IOCs/versions are confirmed.",
+  "source_total_items": 17048,
+  "total_items_in_window_all": 1160,
+  "total_items_in_window_curated": 6,
+  "morning_call_markdown": "### Executive Summary\n- **Active network edge exploitation:** Ongoing exploitation reported for **PAN-OS CVE-2026-0257**; treat internet-facing firewalls/VPN as high-risk until verified patched/mitigated.  \n- **Exploit availability increasing:** Public exploit code circulating for an **auth-bypass in Sangoma FreePBX**; likely to drive opportunistic scanning and initial access.  \n- **Endpoint/supply-chain risk signals:** Community reporting on **BadUSB credential theft** and a possible **“IronWorm” supply-chain style malware**; prioritize identity telemetry and USB/endpoint controls.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) PAN-OS CVE-2026-0257 (ongoing exploitation)**\n- **What happened:** Reporting indicates **in-the-wild exploitation** of PAN-OS **CVE-2026-0257** (details in source; assume internet-edge targeting).  \n- **Why it matters operationally:** Compromise of perimeter devices can enable **credential theft, traffic interception, lateral movement, and stealthy persistence** with limited endpoint visibility.  \n- **Recommended immediate actions for the SOC today:** Confirm patch/hotfix status + any vendor mitigations on all exposed PAN-OS; hunt for suspicious admin logins/config changes and unusual outbound sessions from the firewall.\n\n**2) Network/telephony auth bypass exploit code: Sangoma FreePBX**\n- **What happened:** **Public exploit(s)** published for an **authentication bypass via alternate path/channel** in **Sangoma FreePBX** (duplicate exploit postings).  \n- **Why it matters operationally:** FreePBX/VoIP systems are frequently **internet-exposed**; compromise can lead to **fraud (toll), pivoting into internal networks, and credential capture**.  \n- **Recommended immediate actions for the SOC today:** Identify any FreePBX instances (internal + edge), validate version/exposure, and restrict management interfaces (IP allowlist/VPN); monitor for spikes in auth attempts and new/unknown admin sessions.\n\n**3) Cisco SD-WAN 0-day exploited (situational awareness / edge devices)**\n- **What happened:** Week-in-review notes a **Cisco SD-WAN 0-day being exploited** (no additional specifics provided in the curated item).  \n- **Why it matters operationally:** SD-WAN sits at **branch connectivity and routing control**; exploitation can yield broad access and facilitate ransomware staging across sites.  \n- **Recommended immediate actions for the SOC today:** Inventory Cisco SD-WAN footprint and verify any interim mitigations/patch guidance; prioritize monitoring of SD-WAN admin activity, config pushes, and unexpected tunnel/route changes.\n\n**4) Physical-to-credential attack: “BadUSB” device (Attack Shark R85 HE)**\n- **What happened:** Community PSA alleges a consumer USB device is a **BadUSB credential harvester** (confirmed malware per post; details unverified by vendor advisories).  \n- **Why it matters operationally:** Enables **rapid credential collection** and potential ransomware enablement via **local execution/keystroke injection**; risk is higher in shared desks, trading floors, and contractors.  \n- **Recommended immediate actions for the SOC today:** Reinforce “no unknown USB” guidance to desks/IT; ensure EDR policy alerts on new HID/USB device insertion and suspicious scripted keystrokes/powershell activity.\n\n---\n\n### Monitoring & detection recommendations\n- **PAN-OS edge compromise hunts:** PAN-OS system logs + auth logs + config logs; look for new admin users, failed→successful admin logins, config export, policy/NAT changes (ATT&CK: T1078, T1098).  \n- **Perimeter egress anomalies:** Firewall/netflow/proxy logs; alert on unusual outbound from firewall management plane to rare IPs/ASNs, long-lived sessions, or DNS beacons (ATT&CK: T1071).  \n- **FreePBX exploitation patterns:** Web server/access logs on FreePBX, SIP/VoIP logs; watch for abnormal request paths, auth bypass indicators (sudden admin session creation without preceding login), and brute-force bursts.  \n- **VoIP fraud signals:** CDR/call accounting + SBC logs; detect spikes in international/after-hours calls, new dial-plan changes, or repeated short-duration calls (potential toll fraud).  \n- **SD-WAN control-plane monitoring:** SD-WAN controller audit logs; alert on new devices joining, certificate/key changes, unexpected template/config deployment, or route/tunnel flaps.  \n- **BadUSB / keystroke-injection behaviors:** EDR + Windows Security logs; correlate USB/HID insert events with immediate execution of `powershell`, `cmd`, `wscript`, or credential access attempts (ATT&CK: T1204, T1059, T1555).  \n- **Identity-first detections (cross-cutting):** IdP (Entra/Okta) + VPN + PAM logs; look for new MFA device enrollments, “impossible travel,” token replay-like patterns, and privileged group changes (ATT&CK: T1566/T1078/T1556 where applicable).\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** Confirm upcoming Patch Tuesday priorities; pre-stage change windows for perimeter/remote-access gear and any VoIP platforms.  \n- **Exposure reduction:** Ensure FreePBX and similar admin interfaces are **not internet-accessible**; enforce VPN + IP allowlisting + MFA where supported.  \n- **Edge-device IR playbooks:** Validate procedures for suspected firewall/SD-WAN compromise (config snapshot, integrity validation, credential resets, cert/key rotation).  \n- **USB device controls:** Review endpoint hardening (device control/allowlisting), and update physical security procedures for high-risk areas (contractors, visitors).  \n- **Supply-chain intake:** For “IronWorm” (details unclear), review third-party software update channels and signing validation; ensure EDR coverage for build/deploy hosts and SaaS admin accounts.",
   "highlights": [
     {
-      "title": "Critical Exploits: npm Supply Chain, WordPress Plugin, SolarWinds, IIS Attacks",
-      "link": "https://defend.network/briefings/npm-wordpress-solarwinds-iot-active-exploits-2026-06-06.html",
-      "source": "defend.network",
-      "published": "2026-06-06T06:30:00+00:00",
+      "title": "Week in review: Cisco SD-WAN 0-day exploited, Patch Tuesday forecast",
+      "link": "https://www.helpnetsecurity.com/2026/06/07/week-in-review-cisco-sd-wan-0-day-exploited-june-2026-patch-tuesday-forecast/",
+      "source": "Help Net Security",
+      "published": "2026-06-07T08:00:37+00:00",
       "smart_groups": [
-        "Vulnerabilities / CVEs",
         "Exploit / PoC",
-        "Supply Chain / Software",
+        "Vulnerabilities / CVEs",
         "General Security"
       ],
       "curated": true
     },
     {
-      "title": "How are people supposed to defend against both supply chain attack and zero-day vulnerabilities at the same time?",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1txvm2i/how_are_people_supposed_to_defend_against_both/",
+      "title": "IronWorm Malware",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1tz26ie/ironworm_malware/",
       "source": "/r/cybersecurity",
-      "published": "2026-06-05T19:55:40+00:00",
+      "published": "2026-06-07T04:24:46+00:00",
       "smart_groups": [
+        "Supply Chain / Software",
+        "Malware / Payloads",
+        "Identity / Access",
+        "Detection Engineering",
+        "Cloud / SaaS",
+        "Ransomware",
         "Vulnerabilities / CVEs",
         "OSINT / Community"
       ],
       "curated": true
     },
     {
-      "title": "Another Cisco Catalyst SD-WAN Manager bug actively exploited",
-      "link": "https://www.scworld.com/news/another-cisco-catalyst-sd-wan-manager-bug-actively-exploited",
-      "source": "SCM feed for Latest",
-      "published": "2026-06-05T18:55:24+00:00",
+      "title": "PSA: Attack Shark R85 HE (FREEWOLF US / Amazon) — BadUSB credential harvester, confirmed malware",
+      "link": "https://www.reddit.com/r/netsec/comments/1tyyprr/psa_attack_shark_r85_he_freewolf_us_amazon_badusb/",
+      "source": "/r/netsec",
+      "published": "2026-06-07T01:32:08+00:00",
       "smart_groups": [
-        "Vulnerabilities / CVEs",
+        "Malware / Payloads",
+        "Windows / Microsoft",
         "Exploit / PoC",
-        "General Security"
+        "Identity / Access",
+        "Ransomware",
+        "Web / API Security",
+        "OSINT / Community"
       ],
       "curated": true
     },
     {
-      "title": "Binary Choice Researcher Or Threat Actor",
-      "link": "https://www.youtube.com/shorts/2ldvrHxqrjk",
-      "source": "Security Weekly",
-      "published": "2026-06-05T14:00:35+00:00",
+      "title": "Exploit for Authentication Bypass Using an Alternate Path or Channel in Sangoma Freepbx",
+      "link": "https://vulners.com/githubexploit/087C6F77-A5E1-5344-AD41-F986E6855C8A?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-06-07T00:54:28+00:00",
       "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Web / API Security",
         "Exploit / PoC",
+        "Linux / Unix"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Exploit for Authentication Bypass Using an Alternate Path or Channel in Sangoma Freepbx",
+      "link": "https://vulners.com/githubexploit/C859A543-A5A3-5864-8659-9856045D369A?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-06-06T20:49:03+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Web / API Security",
+        "Exploit / PoC",
+        "Malware / Payloads"
+      ],
+      "curated": true
+    },
+    {
+      "title": "Cyber threat alert: Ongoing exploitation of PAN-OS CVE-2026-0257 vulnerability",
+      "link": "https://qfeeds.com/cyber-threat-alert-ongoing-exploitation-of-pan-os-cve-2026-0257-vulnerability/",
+      "source": "Q-Feeds",
+      "published": "2026-06-06T13:02:41+00:00",
+      "smart_groups": [
         "Vulnerabilities / CVEs",
         "Threat Actors / APT",
-        "Community / Briefing"
+        "Exploit / PoC",
+        "Data Breaches / Leaks"
       ],
       "curated": true
     }
