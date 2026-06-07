@@ -1,11 +1,75 @@
 {
-  "generated_at": "2026-06-06T08:47:15.219342+00:00",
-  "total": 178,
+  "generated_at": "2026-06-07T09:34:32.070316+00:00",
+  "total": 179,
   "date_range": {
     "oldest": "2025-12-10",
-    "newest": "2026-06-05"
+    "newest": "2026-06-06"
   },
   "entries": [
+    {
+      "date": "2026-06-06",
+      "generated_at": "2026-06-06T08:47:14.948707+00:00",
+      "provider": "openai",
+      "model": "gpt-5.2",
+      "window_hours": 24,
+      "total_items": 1857,
+      "curated_items": 4,
+      "exec_summary": "Active exploitation reported against Cisco Catalyst SD-WAN Manager plus additional “critical exploits” across IIS / SolarWinds / WordPress plugin / npm supply chain; assume rapid weaponization and opportunistic scanning. - Highest near-term risk for financial services: internet-facing management planes (SD-WAN/VPN/IIS) and software supply chain (CI/CD, build agents, developer endpoints). - SOC today: prioritize exposure validation + exploit telemetry hunts (web logs/EDR) and dependency tampering",
+      "cves": [],
+      "highlights": [
+        {
+          "title": "Critical Exploits: npm Supply Chain, WordPress Plugin, SolarWinds, IIS Attacks",
+          "link": "https://defend.network/briefings/npm-wordpress-solarwinds-iot-active-exploits-2026-06-06.html",
+          "source": "defend.network",
+          "published": "2026-06-06T06:30:00+00:00",
+          "smart_groups": [
+            "Vulnerabilities / CVEs",
+            "Exploit / PoC",
+            "Supply Chain / Software",
+            "General Security"
+          ],
+          "curated": true
+        },
+        {
+          "title": "How are people supposed to defend against both supply chain attack and zero-day vulnerabilities at the same time?",
+          "link": "https://www.reddit.com/r/cybersecurity/comments/1txvm2i/how_are_people_supposed_to_defend_against_both/",
+          "source": "/r/cybersecurity",
+          "published": "2026-06-05T19:55:40+00:00",
+          "smart_groups": [
+            "Vulnerabilities / CVEs",
+            "OSINT / Community"
+          ],
+          "curated": true
+        },
+        {
+          "title": "Another Cisco Catalyst SD-WAN Manager bug actively exploited",
+          "link": "https://www.scworld.com/news/another-cisco-catalyst-sd-wan-manager-bug-actively-exploited",
+          "source": "SCM feed for Latest",
+          "published": "2026-06-05T18:55:24+00:00",
+          "smart_groups": [
+            "Vulnerabilities / CVEs",
+            "Exploit / PoC",
+            "General Security"
+          ],
+          "curated": true
+        },
+        {
+          "title": "Binary Choice Researcher Or Threat Actor",
+          "link": "https://www.youtube.com/shorts/2ldvrHxqrjk",
+          "source": "Security Weekly",
+          "published": "2026-06-05T14:00:35+00:00",
+          "smart_groups": [
+            "Exploit / PoC",
+            "Vulnerabilities / CVEs",
+            "Threat Actors / APT",
+            "Community / Briefing"
+          ],
+          "curated": true
+        }
+      ],
+      "markdown": "### Executive Summary\n- Active exploitation reported against **Cisco Catalyst SD-WAN Manager** plus additional “critical exploits” across **IIS / SolarWinds / WordPress plugin / npm supply chain**; assume rapid weaponization and opportunistic scanning.\n- Highest near-term risk for financial services: **internet-facing management planes** (SD-WAN/VPN/IIS) and **software supply chain** (CI/CD, build agents, developer endpoints).\n- SOC today: prioritize **exposure validation + exploit telemetry hunts** (web logs/EDR) and **dependency tampering detection** (CI logs, package integrity, unusual outbound).\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Cisco Catalyst SD-WAN Manager – actively exploited vulnerability (per SCWorld)**\n- **What happened:** Another bug in Cisco Catalyst SD-WAN Manager is reported as **actively exploited** in the wild.\n- **Why it matters operationally:** Internet-facing SD-WAN managers are high-value; compromise can enable **network pivoting**, credential theft, and broad enterprise access.\n- **Recommended immediate actions for the SOC today:** Confirm if we run affected versions + whether it’s internet-exposed; fast-track vendor mitigations/patches; hunt for unusual admin logins/config changes and new sessions from atypical geos.\n\n**2) Internet-facing server exploitation wave (IIS / SolarWinds mentioned in “critical exploits” roundup)**\n- **What happened:** A briefing aggregates **active exploits/PoCs** targeting common enterprise components including **IIS** and **SolarWinds** (details not fully provided in the feed—assume multiple concurrently exploited paths).\n- **Why it matters operationally:** These platforms often sit in **DMZ/management tiers**; exploitation typically leads to **webshells**, service account abuse, and lateral movement into sensitive segments.\n- **Recommended immediate actions for the SOC today:** Identify externally reachable IIS/SolarWinds hosts and validate patch/hardening status; review last 7 days of web/server logs for exploitation patterns (suspicious POSTs, new ASPX/PS1 drops, unexpected child processes).\n\n**3) Software supply chain risk (npm + WordPress plugin in “critical exploits” roundup)**\n- **What happened:** Reporting highlights **supply chain abuse** via **npm packages** and **WordPress plugins** (likely malicious updates/typosquats or plugin vulns; specifics not included).\n- **Why it matters operationally:** Supply chain compromises bypass perimeter controls, landing in **developer workstations, CI runners, and web servers**; can lead to credential theft and backdoored releases.\n- **Recommended immediate actions for the SOC today:** Alert on new/rare npm dependencies and unexpected install scripts in CI; inventory WordPress instances/plugins and restrict admin access; monitor for unusual outbound from build agents/web servers to new domains.\n\n**4) “Binary choice” exploit/researcher vs threat actor chatter (community content; limited technical detail)**\n- **What happened:** Community video discusses whether activity is researcher testing or threat actor exploitation (insufficient specifics; treat as **situational awareness** only).\n- **Why it matters operationally:** Content may correlate with **active scanning/exploitation** that appears “noisy” and can be mis-triaged as benign testing.\n- **Recommended immediate actions for the SOC today:** Keep triage strict—validate intent via telemetry (payloads, persistence attempts) not assumptions; escalate any confirmed exploit chain indicators (file drops, credential access) regardless of “research” narrative.\n\n---\n\n### Monitoring & detection recommendations\n- **SD-WAN / network management planes:** Monitor SD-WAN Manager auth logs + firewall/VPN logs for new admin sessions, failed-login bursts, and logins from new geos (T1078 Valid Accounts).\n- **Web exploitation (IIS):** In IIS logs + WAF, hunt for abnormal URIs, high-entropy query strings, suspicious POST bodies, and spikes in 404/500 around sensitive paths; correlate with EDR web server process spawning `cmd.exe/powershell` (T1505.003 Web Shell, T1059).\n- **SolarWinds / monitoring servers:** On EDR, alert on monitoring platform services spawning shells, creating new scheduled tasks/services, or dumping creds; review Windows Security logs 4624/4672/4697/7045 near SolarWinds hosts (T1053, T1543).\n- **Supply chain (npm):** From CI/CD logs (GitHub Actions/Jenkins/Azure DevOps) detect new dependency additions, `npm postinstall` script execution, and builds making first-seen outbound connections; pivot to proxy/DNS logs for new destinations (T1195 Supply Chain Compromise).\n- **WordPress estate:** On web logs, watch for plugin upload/install events, admin logins outside normal patterns, and new PHP files in upload/plugin directories; file integrity monitoring if available (T1505.003).\n- **Egress validation:** In proxy/DNS, flag build agents and web servers reaching newly registered domains / rare ASNs; baseline per host role (T1071.001 Web Protocols).\n- **Post-exploitation signals:** Across EDR, hunt for credential dumping attempts (LSASS access), discovery commands, and lateral movement tooling shortly after web/management-plane alerts (T1003, T1087, T1021).\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** Create/refresh an “internet-facing management plane” SLA (SD-WAN/VPN/IIS/monitoring tools) with 24–72h patch/mitigation targets for exploited-in-the-wild items.\n- **Exposure reduction:** Ensure SD-WAN/SolarWinds management interfaces are not internet-accessible; enforce IP allowlisting + MFA where supported; review segmentation to prevent management-tier to core lateral movement.\n- **Supply chain controls:** Implement dependency allowlisting, lockfiles enforcement, private registries, and routine scans for typosquats/malicious packages; require provenance/signing where feasible.\n- **Web platform hardening:** Standardize WordPress hardening (least-privileged admin, plugin update process, disable file editor, restrict `/wp-admin`); add file integrity monitoring on web roots.\n- **Detection engineering:** Convert today’s hunts into durable rules (webserver-child-process, new admin from new geo, CI outbound anomalies) and add runbooks for rapid containment.\n- **Threat intel follow-up:** Pull vendor advisories/details for the Cisco SD-WAN CVE and the referenced IIS/SolarWinds items (assumption: multiple CVEs); update internal watchlists once concrete IOCs/versions are confirmed.",
+      "word_count": 817
+    },
     {
       "date": "2026-06-05",
       "generated_at": "2026-06-05T20:26:30.447029+00:00",
