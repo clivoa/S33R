@@ -2,10 +2,10 @@
 """
 scripts/build_morning_call.py
 
-Generates a SOC-oriented morning call from curated news items in data/news_recent.json.
+Generates a SOC-oriented morning call from high-signal news items in data/news_recent.json.
 
 - Supports configurable providers: OpenAI (default), Anthropic/Claude, and Gemini.
-- Filters curated items only.
+- Builds a high-signal context led by curated items, with critical/high/watch fallbacks.
 - Saves:
     data/morning_call_latest.json
     data/archive/morning_call_YYYY-MM-DD.json   (flat; later moved by build_news_archive.py)
@@ -20,7 +20,7 @@ import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 
 #
@@ -57,6 +57,11 @@ NEWS_RECENT_PATH = Path(os.getenv("NEWS_JSON_PATH", "data/news_recent.json"))
 
 DEFAULT_WINDOW_HOURS = int(os.getenv("MORNING_CALL_WINDOW_HOURS", "24"))
 MAX_ITEMS_FOR_CONTEXT = int(os.getenv("MORNING_CALL_MAX_ITEMS", "100"))
+MIN_ITEMS_FOR_CONTEXT = int(os.getenv("MORNING_CALL_MIN_ITEMS", "40"))
+MORNING_CALL_MIN_SIGNAL_SCORE = float(os.getenv("MORNING_CALL_MIN_SIGNAL_SCORE", "50"))
+MORNING_CALL_MIN_WATCH_SIGNAL_SCORE = float(os.getenv("MORNING_CALL_MIN_WATCH_SIGNAL_SCORE", "35"))
+MORNING_CALL_MIN_PRIORITY_SCORE = float(os.getenv("MORNING_CALL_MIN_PRIORITY_SCORE", "55"))
+MORNING_CALL_SUMMARY_CHARS = int(os.getenv("MORNING_CALL_SUMMARY_CHARS", "360"))
 MORNING_CALL_PROVIDER = normalize_provider(os.getenv("MORNING_CALL_PROVIDER", "openai"))
 MORNING_CALL_MODEL = os.getenv("MORNING_CALL_MODEL") or DEFAULT_MODELS[MORNING_CALL_PROVIDER]
 MORNING_CALL_MAX_OUTPUT_TOKENS = int(os.getenv("MORNING_CALL_MAX_OUTPUT_TOKENS", "3000"))
@@ -68,6 +73,9 @@ GEMINI_API_URL_TEMPLATE = os.getenv(
     "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
 )
 OUTPUT_BASE_DIR = Path(os.getenv("MORNING_CALL_OUTPUT_DIR", "data/archive"))
+MORNING_CALL_SELECTION_POLICY = "curated-plus-operational-signal-v1"
+HIGH_SIGNAL_TIERS = {"critical", "high"}
+WATCH_SIGNAL_TIERS = {"watch"}
 
 
 #
@@ -111,6 +119,119 @@ def filter_curated_only(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     return curated
 
 
+def to_float(value: Any, default: float = 0.0) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def compact_text(value: Any, limit: int) -> str:
+    text = " ".join(str(value or "").split())
+    if limit > 0 and len(text) > limit:
+        return text[: max(0, limit - 3)].rstrip() + "..."
+    return text
+
+
+def item_identity(item: Dict[str, Any]) -> str:
+    return str(item.get("link") or item.get("title") or id(item))
+
+
+def signal_tier_rank(item: Dict[str, Any]) -> int:
+    tier = str(item.get("signal_tier") or "").lower()
+    return {
+        "critical": 4,
+        "high": 3,
+        "watch": 2,
+        "low": 1,
+    }.get(tier, 0)
+
+
+def morning_call_sort_key(item: Dict[str, Any]) -> Tuple[int, float, float, float, float, float]:
+    ts = item.get("_published_ts") or item.get("published_ts")
+    return (
+        signal_tier_rank(item),
+        to_float(item.get("signal_score")),
+        1.0 if item.get("curated") else 0.0,
+        to_float(item.get("priority_score")),
+        to_float(item.get("source_quality_score")),
+        to_float(ts),
+    )
+
+
+def is_morning_call_candidate(item: Dict[str, Any]) -> bool:
+    tier = str(item.get("signal_tier") or "").lower()
+    signal_score = to_float(item.get("signal_score"))
+    return bool(item.get("curated")) or tier in HIGH_SIGNAL_TIERS or signal_score >= MORNING_CALL_MIN_SIGNAL_SCORE
+
+
+def is_watch_fallback_candidate(item: Dict[str, Any]) -> bool:
+    tier = str(item.get("signal_tier") or "").lower()
+    signal_score = to_float(item.get("signal_score"))
+    priority_score = to_float(item.get("priority_score"))
+    return (
+        tier in WATCH_SIGNAL_TIERS
+        or signal_score >= MORNING_CALL_MIN_WATCH_SIGNAL_SCORE
+        or priority_score >= MORNING_CALL_MIN_PRIORITY_SCORE
+    )
+
+
+def select_morning_call_items(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    candidates = [it for it in items if is_morning_call_candidate(it)]
+    selected: List[Dict[str, Any]] = []
+    seen = set()
+
+    def add(item: Dict[str, Any]) -> None:
+        if len(selected) >= MAX_ITEMS_FOR_CONTEXT:
+            return
+        key = item_identity(item)
+        if key in seen:
+            return
+        seen.add(key)
+        selected.append(item)
+
+    for item in sorted(candidates, key=morning_call_sort_key, reverse=True):
+        add(item)
+
+    minimum_context = min(MAX_ITEMS_FOR_CONTEXT, max(0, MIN_ITEMS_FOR_CONTEXT))
+    if len(selected) < minimum_context:
+        print(
+            "[INFO] Morning call context below target; adding watch/high-priority fallback items "
+            f"({len(selected)}/{minimum_context})."
+        )
+        fallback_pool = [
+            it
+            for it in items
+            if item_identity(it) not in seen and is_watch_fallback_candidate(it)
+        ]
+        for item in sorted(fallback_pool, key=morning_call_sort_key, reverse=True):
+            add(item)
+            if len(selected) >= minimum_context:
+                break
+
+    if len(selected) < minimum_context:
+        print(
+            "[INFO] Morning call context still below target; adding best remaining recent items "
+            f"({len(selected)}/{minimum_context})."
+        )
+        remaining_pool = [it for it in items if item_identity(it) not in seen]
+        for item in sorted(remaining_pool, key=morning_call_sort_key, reverse=True):
+            add(item)
+            if len(selected) >= minimum_context:
+                break
+
+    if not selected and items:
+        print("[WARN] No high-signal morning call candidates found; falling back to newest items.")
+        for item in sorted(items, key=morning_call_sort_key, reverse=True):
+            add(item)
+
+    print(
+        "[INFO] Morning call context selection: "
+        f"policy={MORNING_CALL_SELECTION_POLICY}, candidates={len(candidates)}, selected={len(selected)}"
+    )
+    return selected
+
+
 def build_context_snippet(items: List[Dict[str, Any]]) -> str:
     lines = []
     for idx, it in enumerate(items, start=1):
@@ -124,17 +245,33 @@ def build_context_snippet(items: List[Dict[str, Any]]) -> str:
         title = it.get("title") or "(no title)"
         source = it.get("source") or "Unknown"
         link = it.get("link") or "N/A"
+        signal_tier = it.get("signal_tier") or "n/a"
+        signal_score = it.get("signal_score")
+        priority_score = it.get("priority_score")
         groups = it.get("smart_groups") or []
         if isinstance(groups, list):
             groups_str = ", ".join(groups[:5])
         else:
             groups_str = str(groups)
+        reasons = it.get("curation_reasons") or it.get("signal_reasons") or []
+        if isinstance(reasons, list):
+            reasons_str = ", ".join(str(r) for r in reasons[:4])
+        else:
+            reasons_str = str(reasons)
+        summary = compact_text(it.get("summary"), MORNING_CALL_SUMMARY_CHARS)
 
-        lines.append(
+        item_lines = [
             f"[{idx}] {published_str} | {source} | {title}\n"
             f"    Link: {link}\n"
+            f"    Signal: tier={signal_tier}, score={signal_score}, priority={priority_score}, "
+            f"curated={'yes' if it.get('curated') else 'no'}\n"
             f"    Tags: {groups_str}"
-        )
+        ]
+        if reasons_str:
+            item_lines.append(f"    Reasons: {reasons_str}")
+        if summary:
+            item_lines.append(f"    Summary: {summary}")
+        lines.append("\n".join(item_lines))
     return "\n".join(lines)
 
 
@@ -175,15 +312,24 @@ def build_system_prompt() -> str:
 
 
 
-def build_user_prompt(context_snippet: str, hours: int, total_items: int) -> str:
+def build_user_prompt(
+    context_snippet: str,
+    hours: int,
+    selected_items: int,
+    total_window_items: int,
+    curated_items: int,
+) -> str:
     """
     Detailed model instructions focused on concise SOC-friendly output.
     """
     return (
-        f"The following list summarizes curated security-related news items collected during the last "
+        f"The following list summarizes selected high-signal security news items collected during the last "
         f"{hours} hours.\n"
-        f"There are {total_items} curated items in that time window. A subset of them is listed below.\n\n"
-        "NEWS CONTEXT (each item includes timestamp, source, title, link and tags):\n"
+        f"There are {total_window_items} total items and {curated_items} curated items in that time window. "
+        f"The {selected_items} items below were selected for briefing context using "
+        f"`{MORNING_CALL_SELECTION_POLICY}`: curated items plus critical/high operational-signal items, "
+        "with watch-level fallbacks if the context would otherwise be too small.\n\n"
+        "NEWS CONTEXT (each item includes timestamp, source, title, link, signal, tags and summary):\n"
         "------------------------------------------------------------\n"
         f"{context_snippet}\n"
         "------------------------------------------------------------\n\n"
@@ -431,8 +577,9 @@ def call_morning_call_model(provider: str, model: str, system_prompt: str, user_
 
 def save_output_json(
     morning_call: str,
-    curated_items: List[Dict[str, Any]],
+    context_items: List[Dict[str, Any]],
     total_items_all: int,
+    total_items_curated: int,
     window_hours: int,
     meta: Dict[str, Any],
 ) -> Path:
@@ -450,7 +597,7 @@ def save_output_json(
 
 
     highlights = []
-    for it in curated_items[:10]:
+    for it in context_items[:10]:
         ts = it.get("_published_ts")
         if ts:
             ts_iso = datetime.fromtimestamp(ts, tz=timezone.utc).isoformat()
@@ -465,6 +612,9 @@ def save_output_json(
                 "published": ts_iso,
                 "smart_groups": it.get("smart_groups") or [],
                 "curated": bool(it.get("curated")),
+                "signal_tier": it.get("signal_tier"),
+                "signal_score": it.get("signal_score"),
+                "priority_score": it.get("priority_score"),
             }
         )
 
@@ -479,7 +629,9 @@ def save_output_json(
         "source_days_back": meta.get("days_back"),
         "source_total_items": meta.get("total_items"),
         "total_items_in_window_all": total_items_all,
-        "total_items_in_window_curated": len(curated_items),
+        "total_items_in_window_curated": total_items_curated,
+        "total_items_in_window_selected": len(context_items),
+        "context_selection_policy": MORNING_CALL_SELECTION_POLICY,
         "morning_call_markdown": morning_call,
         "highlights": highlights,
     }
@@ -504,7 +656,6 @@ def save_output_json(
 def main():
     news = load_news_recent(NEWS_RECENT_PATH)
     items = news["items"]
-    all_items_count = len(items)
 
     window_hours = DEFAULT_WINDOW_HOURS
 
@@ -513,24 +664,27 @@ def main():
     total_window_all = len(window_items)
 
     curated = filter_curated_only(window_items)
-    if not curated:
-        print("[WARN] No curated items found — falling back to all items.")
-        curated = window_items
+    context_items = select_morning_call_items(window_items)
+    print(f"[INFO] Using {len(context_items)} selected items for model context.")
 
-    subset = curated[:MAX_ITEMS_FOR_CONTEXT]
-    print(f"[INFO] Using {len(subset)} curated items for model context.")
-
-    context = build_context_snippet(subset)
+    context = build_context_snippet(context_items)
     sys_prompt = build_system_prompt()
-    user_prompt = build_user_prompt(context, window_hours, len(curated))
+    user_prompt = build_user_prompt(
+        context_snippet=context,
+        hours=window_hours,
+        selected_items=len(context_items),
+        total_window_items=total_window_all,
+        curated_items=len(curated),
+    )
 
     print(f"[INFO] Morning call provider={MORNING_CALL_PROVIDER}, model={MORNING_CALL_MODEL}")
     morning_call = call_morning_call_model(MORNING_CALL_PROVIDER, MORNING_CALL_MODEL, sys_prompt, user_prompt)
 
     save_output_json(
         morning_call=morning_call,
-        curated_items=curated,
+        context_items=context_items,
         total_items_all=total_window_all,
+        total_items_curated=len(curated),
         window_hours=window_hours,
         meta=news,
     )

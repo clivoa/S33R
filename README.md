@@ -257,7 +257,7 @@ S33R supports an optional module for generating a **cybersecurity daily briefing
 - Defaults to OpenAI to preserve existing behavior
 - Supports `openai`, `anthropic` / `claude`, and `gemini` / `google`
 - Supports OpenAI-compatible endpoints through `OPENAI_BASE_URL`
-- Uses curated items from `data/news_recent.json` as model context
+- Uses a high-signal context from `data/news_recent.json`: curated items, critical/high operational-signal items, and watch/high-priority fallbacks when the curated set is too small
 - The SOC-focused prompt, structure, tone, and summary rules are defined in `build_morning_call.py`
 - Friendly for research, newsletters, or automated reporting workflows
 
