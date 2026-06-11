@@ -1,0 +1,178 @@
+{
+  "generated_at": "2026-06-10T10:22:16.321905+00:00",
+  "analysis_date": "2026-06-10",
+  "provider": "openai",
+  "model": "gpt-5.2",
+  "window_hours": 24,
+  "source_file": "data/news_recent.json",
+  "source_generated_at": "2026-06-10T10:13:11.435642+00:00",
+  "source_days_back": 30,
+  "source_total_items": 23596,
+  "total_items_in_window_all": 3321,
+  "total_items_in_window_curated": 16,
+  "total_items_in_window_selected": 49,
+  "context_selection_policy": "curated-plus-operational-signal-v1",
+  "morning_call_markdown": "### Executive Summary\n- Multiple **actively exploited edge/endpoint issues**: Check Point VPN auth bypass (Qilin-linked), Chrome V8 zero-day, and additional edge-device exploitation signals (Cisco SD-WAN, PAN-OS, CISA KEV adds).\n- **Patch/mitigate now on internet-facing infrastructure** (VPN/SD-WAN/firewall) and **accelerate browser updates**; assume opportunistic scanning and rapid ransomware follow-on where access is gained.\n- **Supply-chain and SaaS exposure risk** remains elevated: ongoing GitHub/PyPI compromises and a ServiceNow customer-data exposure incident—prioritize dependency hygiene and SaaS audit checks.\n\n### High-priority items (immediate attention)\n\n**1) Check Point VPN auth bypass zero-day (CVE-2026-50751) — active exploitation / ransomware-linked**\n- What happened: Actively exploited Check Point VPN flaw enables **unauthenticated VPN session establishment** (notably in IKEv1 scenarios); linked to **Qilin** activity and added to **CISA KEV**.\n- Why it matters operationally: Direct **perimeter access → rapid ransomware-style intrusion** path; high likelihood of broad scanning for exposed gateways.\n- Recommended immediate actions for the SOC today: **Confirm hotfix/patch applied** on all Check Point gateways + **disable/retire IKEv1 where possible**; **hunt for anomalous VPN session creation/auth-bypass patterns** and triage any new external-access footholds.\n\n**2) Chrome V8 zero-day (CVE-2026-11645) — exploited in the wild**\n- What happened: Google shipped emergency Chrome updates for an actively exploited **V8 OOB read/write** zero-day (Stable ~149.0.7827.102/.103).\n- Why it matters operationally: High-risk **initial access via web** (phishing/malvertising/drive-by) leading to payload execution and credential/session theft on user endpoints.\n- Recommended immediate actions for the SOC today: **Force-update Chrome/Chromium-based browsers** (incl. VDI/jump hosts) and validate version compliance; **raise alerting for post-browser-exploit behavior** (new child processes, LOLBins, credential access) on endpoints.\n\n**3) Cisco SD-WAN zero-day under attack (CVE-2026-20245) — no patch yet (per reporting)**\n- What happened: Reporting indicates another **Cisco SD-WAN** zero-day is being exploited; vendor patch not yet available (details may evolve).\n- Why it matters operationally: SD-WAN is a high-value **network edge control plane**; compromise can enable traffic interception, lateral movement, or remote access expansion.\n- Recommended immediate actions for the SOC today: **Inventory exposed SD-WAN components and restrict management-plane exposure** (ACLs/VPN-only, geo/IP allowlisting); **monitor for new admin sessions/config changes** and unusual device-to-internet egress from SD-WAN controllers.\n\n**4) “RoguePlanet” Microsoft Defender local SYSTEM PoC (zero-day claim; details unclear)**\n- What happened: A public PoC (“RoguePlanet”) claims a Windows Defender race-condition can yield **SYSTEM shell**; reliability described as “hit or miss” (assume PoC maturity may improve quickly).\n- Why it matters operationally: Low-barrier **privilege escalation** can turn an initial foothold into full host takeover; useful for ransomware operators post-compromise.\n- Recommended immediate actions for the SOC today: **Treat as post-exploitation escalator**—tighten detection on suspicious local privilege escalation chains; **prioritize IR triage** for any endpoint showing simultaneous Defender tamper attempts + new SYSTEM-level processes.\n\n**5) SaaS + supply-chain risk burst (ServiceNow incident + GitHub/PyPI compromises)**\n- What happened: ServiceNow disclosed a customer data exposure via an unauthenticated API flaw; separate reporting highlights ongoing **GitHub repo compromises** and a **PyPI trojanized wheel** campaign.\n- Why it matters operationally: **Credential/session/token exposure** and **dependency-based code execution** can bypass perimeter controls and land directly in dev/automation pipelines.\n- Recommended immediate actions for the SOC today: **Engage SaaS owners** to confirm whether our ServiceNow instance is affected and review recent API access; **scan CI/CD and dev hosts** for unexpected dependency changes and new outbound connections from build agents.\n\n### Monitoring & detection recommendations\n- **VPN/edge gateways (Check Point/PAN-OS/SD-WAN):** monitor for **new or unusual remote sessions**, repeated failed auth followed by success, and configuration changes (ATT&CK: External Remote Services **T1133**, Valid Accounts **T1078**).\n- **Firewall/VPN logs + NetFlow:** hunt for **scanning and exploitation patterns** against VPN/management interfaces (spikes in IKE/IPsec, admin UI hits, unusual source geos); correlate with **new internal pivots** immediately after.\n- **EDR on user endpoints (Chrome zero-day theme):** alert on browser processes spawning **cmd/powershell/mshta/rundll32/regsvr32** and unusual DLL loads from user-writable paths (ATT&CK: Command & Scripting Interpreter **T1059**, User Execution **T1204**).\n- **EDR on servers/build agents (supply-chain theme):** detect **new Python startup hooks / .pth usage**, unexpected `pip install` activity in CI, and new scheduled tasks/services after builds (ATT&CK: Scheduled Task/Job **T1053**).\n- **ServiceNow / SaaS audit logs:** review for **unauthenticated API access anomalies**, unusual bulk queries/exports, and new OAuth app grants; ensure logs are forwarding to SIEM.\n- **Identity provider (Entra/Okta) + VPN auth:** look for **MFA bypass indicators**, impossible travel, token replay-like patterns, and new device registrations following suspected edge compromise (ATT&CK: Modify Authentication Process **T1556**).\n- **Ransomware early-warning telemetry:** watch for **mass file renames/encryption patterns**, VSS deletion, and rapid lateral admin tool usage (PsExec/WMI/WinRM) shortly after edge access (ATT&CK: Inhibit System Recovery **T1490**, Remote Services **T1021**).\n\n### Medium-term follow-ups\n- **Patch governance:** accelerate rollouts for **June Microsoft Patch Tuesday** (large volume) with priority on internet-facing and privilege-escalation paths; validate that “zero-day/publicly disclosed” items are explicitly risk-accepted or patched.\n- **Edge hardening:** enforce **management-plane isolation** (allowlist/admin VPN-only), disable legacy protocols (e.g., **IKEv1**), and ensure configs/backups are protected and monitored for tampering.\n- **Browser posture:** implement **minimum-version compliance** and rapid browser update rings (including VDI, kiosk, and admin workstations); consider tightening download and scripting policies for high-risk user groups.\n- **Supply-chain controls:** require **dependency pinning + allowlisted registries**, block unknown package sources, and add CI guardrails (SBOM checks, signed artifacts, secret scanning).\n- **SaaS incident readiness:** confirm **ServiceNow logging/auditing coverage**, review API exposure, and ensure rapid credential/token revocation procedures are rehearsed.\n- **Threat hunting playbooks:** update hunts for **edge compromise → ransomware** chains (initial access → privilege escalation → lateral movement → data staging), using recent KEV-driven TTPs rather than static IOCs.",
+  "highlights": [
+    {
+      "title": "Check Point Warning: Actively Exploited VPN Zero-Day Linked to Qilin Ransomware",
+      "link": "https://www.techrepublic.com/article/news-checkpoint-vpn-zero-day-ransomware/",
+      "source": "Security on TechRepublic",
+      "published": "2026-06-09T17:34:29+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Ransomware",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 100.0,
+      "priority_score": 87.9
+    },
+    {
+      "title": "Chrome V8 Zero-Day CVE-2026-11645 Exploited in the Wild - Patch Now",
+      "link": "https://vulners.com/thn/THN:DC1B2039550E0D682CE54988D57D409D?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-06-09T11:58:00+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Linux / Unix",
+        "Network / OT / ICS",
+        "Windows / Microsoft"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 100.0,
+      "priority_score": 86.25
+    },
+    {
+      "title": "Chrome V8 Zero-Day CVE-2026-11645 Exploited in the Wild - Patch Now",
+      "link": "https://thehackernews.com/2026/06/chrome-v8-zero-day-cve-2026-11645.html",
+      "source": "The Hacker News",
+      "published": "2026-06-09T11:58:49+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 100.0,
+      "priority_score": 82.91
+    },
+    {
+      "title": "CVE-2026-11645: Chrome Zero-Day Vulnerability Exploited in the Wild",
+      "link": "https://socprime.com/blog/cve-2026-11645-chrome-zero-day-vulnerability-exploited-in-the-wild/",
+      "source": "SOC Prime Blog",
+      "published": "2026-06-09T18:44:17+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Linux / Unix",
+        "Windows / Microsoft",
+        "Vendors / Product Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 95.25,
+      "priority_score": 87.04
+    },
+    {
+      "title": "Google fixes the fifth actively exploited Chrome zero-day of 2026",
+      "link": "https://securityaffairs.com/193371/hacking/google-fixes-fifth-actively-exploited-chrome-zero-day-of-2026.html",
+      "source": "Security Affairs",
+      "published": "2026-06-09T10:38:32+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 94.99,
+      "priority_score": 83.58
+    },
+    {
+      "title": "Google releases emergency update for fifth Chrome zero-day exploited in the wild this year",
+      "link": "https://www.scworld.com/brief/google-releases-emergency-update-for-fifth-chrome-zero-day-exploited-in-the-wild-this-year",
+      "source": "SCM feed for Latest",
+      "published": "2026-06-09T14:17:00+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 92.62,
+      "priority_score": 82.73
+    },
+    {
+      "title": "CISA KEV Highlights LiteLLM RCE (CVE-2026-42271) & Check Point VPN Auth Bypass (CVE-2026-50751)",
+      "link": "https://socradar.io/blog/cisa-kev-litellm-cve-2026-42271-check-point-cve-2026-50751/",
+      "source": "SOCRadar® Cyber Intelligence Inc.",
+      "published": "2026-06-09T14:30:42+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 90.33,
+      "priority_score": 86.12
+    },
+    {
+      "title": "Check Point warns of ransomware-linked attacks exploiting outdated VPN protocol",
+      "link": "https://www.csoonline.com/article/4182898/check-point-warns-of-ransomware-linked-attacks-exploiting-outdated-vpn-protocol.html",
+      "source": "CSO Online",
+      "published": "2026-06-09T11:59:17+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Ransomware",
+        "Cloud / SaaS",
+        "Exploit / PoC",
+        "Identity / Access",
+        "Mobile Security",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 86.2,
+      "priority_score": 85.04
+    },
+    {
+      "title": "Cisco customers encounter another SD-WAN zero-day under attack",
+      "link": "https://cyberscoop.com/cisco-sdwan-zero-day-vulnerability-exploited-cve202620245/",
+      "source": "CyberScoop",
+      "published": "2026-06-09T14:03:30+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 86.19,
+      "priority_score": 83.81
+    },
+    {
+      "title": "Google Chrome 0-Day Vulnerability Exploited in the Wild — Update Now",
+      "link": "https://cybersecuritynews.com/google-chrome-0-day-vulnerability-exploited-in-the-wild-update-now/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-06-09T14:20:55+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Linux / Unix",
+        "Windows / Microsoft",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 85.88,
+      "priority_score": 83.84
+    }
+  ]
+}
