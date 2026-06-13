@@ -1,180 +1,182 @@
 {
-  "generated_at": "2026-06-12T10:41:04.042554+00:00",
-  "analysis_date": "2026-06-12",
+  "generated_at": "2026-06-13T09:34:02.660718+00:00",
+  "analysis_date": "2026-06-13",
   "provider": "openai",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-06-12T09:07:39.286416+00:00",
+  "source_generated_at": "2026-06-13T07:59:55.982221+00:00",
   "source_days_back": 30,
-  "source_total_items": 26886,
-  "total_items_in_window_all": 2108,
-  "total_items_in_window_curated": 12,
+  "source_total_items": 28473,
+  "total_items_in_window_all": 2112,
+  "total_items_in_window_curated": 4,
   "total_items_in_window_selected": 40,
   "context_selection_policy": "curated-plus-operational-signal-v1",
-  "morning_call_markdown": "### Executive Summary\n- Active exploitation reported for multiple internet-facing enterprise platforms: **Oracle PeopleSoft (CVE-2026-35273) zero-day RCE**, **Check Point Remote Access VPN (CVE-2026-50751) auth bypass**, and **Ivanti Sentry (CVE-2026-10520) command injection (KEV/BOD-driven urgency)**.\n- Ransomware/extortion pressure is increasing: **ShinyHunters/UNC6240** using PeopleSoft for compromise + data theft; **Qilin** observed post-compromise off Check Point VPN; “**Gentlemen**” ransomware claims worm-like spreading (details still limited).\n- Endpoint and supply-chain noise to watch: **BitLocker bypass technique via XML** (0-day claim/PoC-style reporting), plus **macOS weaponized DMGs** and **package/repo supply-chain campaigns** impacting developer workstations/CI.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Oracle PeopleSoft PeopleTools zero-day RCE (CVE-2026-35273) used for extortion/data theft**\n- **What happened:** Oracle issued out-of-band mitigations for a critical **unauthenticated RCE** in PeopleSoft; Mandiant/GTIG attributes active exploitation to **UNC6240 (ShinyHunters)**.\n- **Why it matters operationally:** Direct takeover risk of **ERP/app servers** (high-value data + lateral movement potential); exploitation is in-the-wild and consistent with **steal-then-extort** playbooks.\n- **Recommended immediate actions for the SOC today:** Confirm any PeopleSoft exposure (internet-facing, VPN-published, reverse proxies) and **apply Oracle mitigations/controls now**; hunt last 14 days for unusual PeopleSoft webshell/process activity and **new privileged accounts** around PeopleSoft hosts.\n\n**2) Remote access/VPN appliance exploitation: Check Point VPN auth bypass (CVE-2026-50751)**\n- **What happened:** CISA warns **active exploitation in ransomware campaigns**; reporting indicates an IKEv1/VendorID-related auth-bypass path used by at least one **Qilin** affiliate.\n- **Why it matters operationally:** VPN compromise is a common initial access vector to **domain-wide impact** (credential theft, persistence, ransomware staging).\n- **Recommended immediate actions for the SOC today:** Identify all Check Point gateways with Remote Access VPN and **prioritize patch/hotfix + IKEv1 exposure review**; immediately review VPN auth logs for anomalous unauthenticated sessions, odd geo/time patterns, and **new tunnels followed by AD reconnaissance**.\n\n**3) Ivanti Sentry OS command injection (CVE-2026-10520) — active exploitation + 3-day federal patch mandate**\n- **What happened:** Exploitation surged after PoC release; CISA added to **KEV** and issued urgent remediation expectations (BOD-style timelines referenced in coverage).\n- **Why it matters operationally:** Sentry is often **internet-reachable** for MDM/mobile email access; exploitation can enable footholds bridging into internal networks.\n- **Recommended immediate actions for the SOC today:** Inventory Ivanti Sentry instances and **expedite patch/mitigation within 24–72h** (treat as emergency); hunt for web requests/process execution anomalies on Sentry appliances and **new outbound connections** from Sentry to internal admin services.\n\n**4) Ransomware / extortion ops trending (ShinyHunters + “Gentlemen” worm-like claims)**\n- **What happened:** ShinyHunters campaign tied to PeopleSoft compromise; “Gentlemen” ransomware claims large victim count and worm-like propagation (claims not independently validated in provided items).\n- **Why it matters operationally:** Financial sector impact is typically via **initial access + rapid lateral movement**, then AD/backup targeting and data exfiltration.\n- **Recommended immediate actions for the SOC today:** Increase alerting for **lateral movement and mass encryption precursors** (remote service creation, PsExec/WMIC, SMB fan-out); validate backup immutability and monitor for **sudden backup job failures/disablement**.\n\n**5) Endpoint/user compromise vectors: macOS weaponized DMGs + Windows BitLocker bypass reporting**\n- **What happened:** Ongoing macOS infostealer delivery via fake/weaponized **DMG installers**; separate reporting claims a Windows **BitLocker bypass** technique involving XML files (details/impact assumptions vary).\n- **Why it matters operationally:** Infostealers drive **credential/token theft** (IdP, VPN, SaaS) and can seed follow-on intrusions; BitLocker bypass increases risk from **stolen/lost devices** and insider handling of recovery material.\n- **Recommended immediate actions for the SOC today:** Heighten monitoring for macOS installer execution + credential store access and **browser credential exfil patterns**; remind IT to ensure **secure escrow of recovery keys** and review endpoint disk-encryption posture for high-risk user groups.\n\n---\n\n### Monitoring & detection recommendations\n- **PeopleSoft exploitation hunting (T1190 Exploit Public-Facing Application):** WAF/reverse proxy + PeopleSoft web/app logs for unusual POSTs, new endpoints, odd User-Agents; EDR on PeopleSoft servers for **unexpected child processes** (cmd/powershell/java spawning shells), new services, scheduled tasks (T1053).\n- **Check Point VPN anomaly detection (T1133 External Remote Services):** VPN/auth logs + firewall telemetry for spikes in IKEv1 negotiations, unusual VendorID patterns (if logged), **new remote-access sessions** followed by SMB/RDP to many hosts.\n- **Ivanti Sentry compromise signals (T1190):** Sentry appliance logs + network IDS for command injection indicators (URI patterns/parameter anomalies) and **new outbound connections** from Sentry to AD, file shares, or management subnets.\n- **Ransomware precursor hunts (T1021, T1047, T1569):** EDR + Windows Security logs for remote service creation, PsExec, WMI bursts, rapid admin share access; correlate with **new VPN logins** and privilege escalations (4688/7045/4624/4672).\n- **macOS infostealer tradecraft (T1204 User Execution, T1555 Credentials from Password Stores):** macOS EDR for `osascript`, `security` CLI access, browser credential DB reads, LaunchAgent persistence (T1543.001); web proxy for new/rare download domains for DMGs.\n- **Supply-chain/dev endpoint watch (Atomic Arch/AUR + malicious npm dependency):** EDR + CI logs for unexpected `npm install` script execution, new registry endpoints, and build jobs reaching unusual domains; audit developer workstation package installs and privileged build runners.\n- **Microsoft patch-cycle triage:** Vulnerability scanner + endpoint management dashboards to confirm rapid coverage of **actively exploited** Windows CVEs referenced in Patch Tuesday reporting; prioritize internet-facing servers and remote access stacks.\n\n---\n\n### Medium-term follow-ups\n- **Patch/mitigation governance:** Align internal SLAs to a KEV-style model (3–7 days for internet-facing KEV/active-exploit items); ensure exception handling is documented and risk-accepted formally.\n- **Remote access hardening:** Reduce/disable legacy VPN/IKEv1 where possible; enforce MFA, conditional access, device posture checks, and tighter geo/time policies for privileged access.\n- **PeopleSoft defensive improvements:** Ensure WAF rules/virtual patching are in place, segment PeopleSoft tiers, and validate least-privilege service accounts; add canary tokens or file integrity monitoring on web/app directories.\n- **Ransomware resilience:** Re-validate restore drills, immutable/offline backups, and rapid isolation playbooks; confirm EDR tamper protection and admin-tier separation.\n- **Developer/CI supply-chain controls:** Enforce lockfiles, private registries/proxying, script execution controls, and signed artifacts; review Arch/AUR usage policies for corporate assets.\n- **Disk encryption assurance:** Review BitLocker key escrow and device theft response procedures; ensure recovery keys are protected (IdP conditional access, privileged access workflows) and audit key access events.",
+  "morning_call_markdown": "### Executive Summary\n- **Oracle PeopleSoft (CVE-2026-35273) is under active exploitation and is now in CISA KEV**; patch/mitigate immediately and hunt for post-exploitation in PeopleSoft tiers.\n- **Check Point Remote Access VPN auth bypass (CVE-2026-50751) now has public PoC/artifact tooling**; expect fast-moving opportunistic exploitation against internet-facing gateways.\n- **Supply-chain risk is elevated (Arch AUR mass compromise + ongoing npm/PyPI “Shai-Hulud” evolution)**; focus on dev endpoints/CI runners and outbound credential theft signals.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Oracle PeopleSoft zero-day / KEV (CVE-2026-35273)**\n- **What happened:** Oracle issued an out-of-band patch for a critical PeopleSoft PeopleTools Updates Environment Management flaw; multiple reports of active exploitation linked to ShinyHunters.\n- **Why it matters operationally:** Unauthenticated remote compromise path into a common enterprise app stack (HR/Finance-adjacent); high likelihood of rapid mass scanning and data theft/ransom follow-on.\n- **Recommended immediate actions for the SOC today:** Verify patch status / emergency change on all PeopleSoft tiers; hunt for anomalous PeopleSoft web/app server activity and new admin/service accounts.\n\n**2) Check Point Remote Access VPN & Mobile Access auth bypass (CVE-2026-50751) – PoC now public**\n- **What happened:** Researchers released technical details and a “detection artefact generator” for an actively exploited Check Point VPN authentication bypass.\n- **Why it matters operationally:** Internet-facing remote access is a top initial-access vector; public tooling increases likelihood of widespread exploitation and credential/session abuse.\n- **Recommended immediate actions for the SOC today:** Confirm gateways are patched/hotfixed and management access is restricted; review VPN auth logs for abnormal patterns (new geos, sudden spikes, unusual client/user-agent).\n\n**3) Ivanti Sentry actively exploited (CVE-2026-10520, CVSS 10.0; KEV-driven urgency)**\n- **What happened:** Ivanti Sentry vulnerability is in active exploitation per CISA KEV-related reporting; patch deadline pressure noted in public advisories.\n- **Why it matters operationally:** Sentry often fronts MDM/Email access; compromise can enable credential theft, device enrollment abuse, and lateral movement into identity/email.\n- **Recommended immediate actions for the SOC today:** Validate Sentry patch level and external exposure; hunt for suspicious admin actions/config changes and unusual API/auth activity against Sentry.\n\n**4) Linux/dev supply-chain activity (Arch AUR compromise + npm/PyPI “Shai-Hulud” evolution)**\n- **What happened:** >400 Arch AUR packages reportedly compromised to deliver infostealers/rootkit-style payloads; “Shai-Hulud” supply-chain tradecraft continues expanding (CI/CD and package ecosystems).\n- **Why it matters operationally:** Highest risk to developer workstations, build agents, and CI runners—leading to cloud/API token theft and downstream software compromise.\n- **Recommended immediate actions for the SOC today:** Identify any Arch Linux usage in dev/build fleets and freeze AUR installs/updates pending verification; monitor dev endpoints/runners for credential store access and unusual outbound traffic from build tooling.\n\n---\n\n### Monitoring & detection recommendations\n- **PeopleSoft exploitation hunting:** WAF/reverse-proxy + app server logs (WebLogic/WebSphere/Tomcat as applicable) for unusual requests to PeopleSoft admin/update management paths; correlate with new processes on app servers (ATT&CK: T1190, T1059).\n- **Check Point VPN anomaly detection:** VPN gateway logs for auth bypass indicators (failed→successful patterns without MFA, new IP reputation hits, spikes in sessions); monitor for creation of new VPN users/roles (T1078).\n- **Ivanti Sentry telemetry:** Sentry/admin audit logs + IdP (Entra/Okta) sign-ins for new device enrollments, unusual admin actions, and token issuance anomalies; watch for mailbox access changes if integrated (T1098, T1550).\n- **Post-initial-access behaviors (common follow-on):** EDR for credential dumping and discovery from newly compromised perimeter-adjacent hosts (lsass access, net.exe/adfind usage) (T1003, T1087, T1018).\n- **Data theft staging/exfil:** Proxy/DNS + firewall for large outbound uploads from app/VPN/Sentry subnets to uncommon destinations; alert on new cloud storage usage from server accounts (T1567).\n- **Supply-chain/dev endpoint behaviors:** EDR on dev workstations/CI runners for access to SSH keys, npm/pip caches, .env files, cloud credential files; monitor process trees spawned by package managers/build scripts (T1552, T1059).\n- **Linux kernel local LPE chatter (nftables UAF PoC):** For Linux server fleets, watch EDR/auditd for unusual nft/nftables rule manipulation and privilege escalation traces on multi-tenant hosts (T1068).\n\n---\n\n### Medium-term follow-ups\n- **Asset exposure validation:** Reconfirm inventory and internet exposure for PeopleSoft, Check Point VPN, and Ivanti Sentry; ensure accurate ownership and patch SLAs for perimeter systems.\n- **Hardening controls:** Enforce MFA/conditional access for VPN/remote access; restrict admin interfaces to jump hosts; ensure WAF rules and rate-limiting are enabled for enterprise apps.\n- **Supply-chain governance:** Tighten allowlists for package sources (block/limit AUR on corp assets, enforce private registries/proxying for npm/pip); require signed artifacts where feasible.\n- **Credential protection:** Rotate potentially exposed secrets in dev/build contexts (SSH keys, CI tokens, cloud API keys) and reduce token scopes; ensure secrets scanning in repos and pipelines.\n- **Detection content updates:** Add/refresh SIEM rules for PeopleSoft/VPN/Sentry exploitation patterns and for “developer credential access” behaviors; run tabletop on perimeter-compromise → ransomware playbook.\n- **Awareness (targeted):** Brief dev/IT ops on current package ecosystem threats and safe update procedures; remind helpdesk to treat VPN/MFA fatigue + smishing as high-risk even without new institution-specific IOCs.",
   "highlights": [
     {
-      "title": "Critical: Oracle PeopleSoft Zero-Day, Windows BitLocker Bypass, Gentlemen Ransomware",
-      "link": "https://defend.network/briefings/oracle-peoplesoft-windows-bitlocker-gentlemen-ransomwar-2026-06-12.html",
-      "source": "defend.network",
-      "published": "2026-06-12T06:30:00+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "Ransomware",
-        "Windows / Microsoft",
-        "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 100.0,
-      "priority_score": 90.15
-    },
-    {
-      "title": "Oracle mitigates PeopleSoft zero-day exploited in data theft attacks",
-      "link": "https://www.bleepingcomputer.com/news/security/oracle-mitigates-peoplesoft-zero-day-exploited-in-data-theft-attacks/",
-      "source": "BleepingComputer",
-      "published": "2026-06-11T19:39:53+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 100.0,
-      "priority_score": 84.69
-    },
-    {
-      "title": "CISA Warns of Check Point Security Gateway Vulnerability Actively Exploited in Ransomware Attacks",
-      "link": "https://cybersecuritynews.com/cisa-check-point-security-gateway-vulnerability/",
-      "source": "Cyber Security News (FeedBurner)",
-      "published": "2026-06-11T15:47:03+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Threat Actors / APT",
-        "Exploit / PoC",
-        "Ransomware",
-        "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 100.0,
-      "priority_score": 84.47
-    },
-    {
-      "title": "Oracle PeopleSoft servers under attack, Oracle pushes out-of-band security alert",
-      "link": "https://www.helpnetsecurity.com/2026/06/11/oracle-peoplesoft-under-attack-cve-2026-35273/",
-      "source": "Help Net Security",
-      "published": "2026-06-11T12:41:37+00:00",
+      "title": "Active Exploitation of Oracle PeopleSoft Zero-Day (CVE-2026-35273)",
+      "link": "https://www.rapid7.com/blog/post/etr-active-exploitation-of-oracle-peoplesoft-zero-day-cve-2026-35273",
+      "source": "Rapid7 Cybersecurity Blog",
+      "published": "2026-06-12T13:43:04+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Cloud / SaaS",
+        "Data Breaches / Leaks",
         "Exploit / PoC",
+        "Identity / Access",
+        "Linux / Unix",
+        "Malware / Payloads",
+        "Web / API Security",
+        "Windows / Microsoft"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 100.0,
+      "priority_score": 86.67
+    },
+    {
+      "title": "Researchers release details, PoC for exploited Check Point VPN flaw (CVE-2026-50751)",
+      "link": "https://www.helpnetsecurity.com/2026/06/12/cve-2026-50751-poc-exploit/",
+      "source": "Help Net Security",
+      "published": "2026-06-12T12:14:40+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Mobile Security",
         "General Security"
       ],
       "curated": true,
       "signal_tier": "critical",
       "signal_score": 100.0,
-      "priority_score": 84.16
+      "priority_score": 83.49
     },
     {
-      "title": "ShinyHunters Exploits Oracle PeopleSoft Zero-Day (CVE-2026-35273) to Breach Universities",
-      "link": "https://vulners.com/thn/THN:752B90FA61064ECC5D562EA512CCEC15?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "title": "Oracle fixes PeopleSoft flaw exploited by ShinyHunters",
+      "link": "https://www.computerweekly.com/news/366644375/Oracle-fixes-PeopleSoft-flaw-exploited-by-ShinyHunters",
+      "source": "ComputerWeekly",
+      "published": "2026-06-12T12:22:00+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Ransomware",
+        "Threat Actors / APT",
+        "Data Protection / Privacy",
+        "Crypto / Web3",
+        "Exploit / PoC",
+        "Network / OT / ICS",
+        "Phishing / Social Engineering",
+        "General Security"
+      ],
+      "curated": false,
+      "signal_tier": "critical",
+      "signal_score": 97.32,
+      "priority_score": 76.36
+    },
+    {
+      "title": "Oracle PeopleSoft RCE Flaw Used as Zero-Day in Ongoing ShinyHunters Campaign",
+      "link": "https://securityaffairs.com/193543/cyber-crime/oracle-peoplesoft-rce-flaw-used-as-zero-day-in-ongoing-shinyhunters-campaign.html",
+      "source": "Security Affairs",
+      "published": "2026-06-12T10:49:15+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 83.98,
+      "priority_score": 84.01
+    },
+    {
+      "title": "CVE-2022-34303 | Microsoft Windows up to Server 2022 Crypto Pro Boot Loader privilege escalation (EUVD-2022-37260 / WID-SEC-2023-1185)",
+      "link": "https://vuldb.com/vuln/205907",
+      "source": "VulDB Updates",
+      "published": "2026-06-12T21:42:21+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Malware / Payloads",
+        "Windows / Microsoft"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 77.93,
+      "priority_score": 81.69
+    },
+    {
+      "title": "CVE-2022-34301 | Microsoft Windows up to Server 2022 Eurosoft Boot Loader privilege escalation (EUVD-2022-37258 / WID-SEC-2023-1185)",
+      "link": "https://vuldb.com/vuln/205905",
+      "source": "VulDB Updates",
+      "published": "2026-06-12T18:14:46+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Malware / Payloads",
+        "Windows / Microsoft"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 77.93,
+      "priority_score": 80.77
+    },
+    {
+      "title": "Exploit for CVE-2026-53646",
+      "link": "https://vulners.com/githubexploit/73145169-506F-578D-AE1C-380D0AB428CB?utm_source=rss&utm_medium=rss&utm_campaign=rss",
       "source": "Vulners.com RSS Feed",
-      "published": "2026-06-11T20:29:00+00:00",
+      "published": "2026-06-12T10:20:37+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC"
       ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 93.19,
-      "priority_score": 87.59
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 71.16,
+      "priority_score": 74.79
     },
     {
-      "title": "Oracle PeopleSoft 0-Day RCE Vulnerability Exploited in Attacks by ShinyHunters",
-      "link": "https://cybersecuritynews.com/oracle-peoplesoft-0-day-rce-vulnerability/",
-      "source": "Cyber Security News",
-      "published": "2026-06-12T03:21:08+00:00",
+      "title": "400+ Arch Linux AUR Packages Compromised in a Supply Chain Attack Deploying Infostealers",
+      "link": "https://cybersecuritynews.com/arch-linux-aur-packages-compromised/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-06-12T13:39:26+00:00",
       "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Threat Actors / APT",
-        "Exploit / PoC",
-        "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 91.73,
-      "priority_score": 92.15
-    },
-    {
-      "title": "Analyzing CVE-2026-32743: PX4 MAVLink Buffer Overflow DoS",
-      "link": "https://infosecwriteups.com/analyzing-cve-2026-32743-px4-mavlink-buffer-overflow-dos-bda648238293?source=rss----7b722bfd1b8d---4",
-      "source": "InfoSec Write-ups - Medium",
-      "published": "2026-06-11T18:40:21+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Crypto / Web3",
-        "Exploit / PoC",
+        "Malware / Payloads",
         "Linux / Unix",
-        "Network / OT / ICS",
-        "Ransomware",
         "General Security"
       ],
       "curated": true,
       "signal_tier": "high",
-      "signal_score": 75.67,
-      "priority_score": 89.47
+      "signal_score": 69.92,
+      "priority_score": 84.36
     },
     {
-      "title": "Hackers Use Weaponized DMG Files to Target macOS Users With Infostealer Malware",
-      "link": "https://cybersecuritynews.com/hackers-use-weaponized-dmg-files/",
-      "source": "Cyber Security News (FeedBurner)",
-      "published": "2026-06-11T15:43:53+00:00",
-      "smart_groups": [
-        "Malware / Payloads",
-        "Exploit / PoC",
-        "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "high",
-      "signal_score": 73.87,
-      "priority_score": 83.78
-    },
-    {
-      "title": "Check Point VPN Authentication Bypass (CVE-2026-50751): Client-Controlled IKEv1 Auth Flipped by Ransomware Affiliate",
-      "link": "https://latesthackingnews.com/2026/06/12/check-point-vpn-authentication-bypass-cve-2026-50751-client-controlled-ikev1-auth-flipped-by-ransomware-affiliate/",
-      "source": "Latest Hacking News",
-      "published": "2026-06-12T06:18:40+00:00",
+      "title": "SANS Stormcast Friday, June 12th, 2026: Bitlocker Trouble; Ivanti and Oracle Exploited; macOS Malicious Installers",
+      "link": "https://isc.sans.edu/podcastdetail/9970",
+      "source": "SANS Internet Stormcenter Daily Cyber Security Podcast (Stormcast)",
+      "published": "2026-06-12T12:30:10+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
+        "Malware / Payloads",
         "Exploit / PoC",
-        "Ransomware",
-        "General Security"
+        "Community / Briefing"
       ],
-      "curated": true,
+      "curated": false,
       "signal_tier": "high",
-      "signal_score": 72.41,
-      "priority_score": 85.71
+      "signal_score": 65.87,
+      "priority_score": 73.98
     },
     {
-      "title": "OceanLotus APT Compromises FireAnt MetaKit in Supply-Chain Attack on Stock Investors",
-      "link": "https://cybersecuritynews.com/oceanlotus-apt-compromises-fireant-metakit/",
-      "source": "Cyber Security News (FeedBurner)",
-      "published": "2026-06-11T17:15:23+00:00",
+      "title": "CVE-2022-34482 | Mozilla Firefox up to 101 Drag/Drop Remote Code Execution (Bug 845880 / EUVD-2022-37437)",
+      "link": "https://vuldb.com/vuln/209972",
+      "source": "VulDB Updates",
+      "published": "2026-06-12T22:26:00+00:00",
       "smart_groups": [
-        "Threat Actors / APT",
-        "Malware / Payloads",
-        "Network / OT / ICS",
-        "Supply Chain / Software",
-        "General Security"
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
       ],
-      "curated": true,
+      "curated": false,
       "signal_tier": "high",
-      "signal_score": 69.87,
-      "priority_score": 82.75
+      "signal_score": 63.93,
+      "priority_score": 81.93
     }
   ]
 }
