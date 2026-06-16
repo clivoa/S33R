@@ -1,168 +1,170 @@
 {
-  "generated_at": "2026-06-15T12:41:17.781581+00:00",
-  "analysis_date": "2026-06-15",
+  "generated_at": "2026-06-16T11:34:01.570469+00:00",
+  "analysis_date": "2026-06-16",
   "provider": "openai",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-06-15T06:37:19.869845+00:00",
+  "source_generated_at": "2026-06-16T10:19:22.342013+00:00",
   "source_days_back": 30,
-  "source_total_items": 29584,
-  "total_items_in_window_all": 878,
-  "total_items_in_window_curated": 2,
+  "source_total_items": 31933,
+  "total_items_in_window_all": 2368,
+  "total_items_in_window_curated": 7,
   "total_items_in_window_selected": 40,
   "context_selection_policy": "curated-plus-operational-signal-v1",
-  "morning_call_markdown": "### Executive Summary\n- **Active exploitation observed against Palo Alto PAN-OS GlobalProtect (CVE-2026-0257)** → treat as potential perimeter compromise risk; prioritize patch + hunting on all internet-facing portals/gateways.\n- **Multiple supply-chain alerts (Arch Linux AUR + malicious PyPI packages)** → risk of developer/build pipeline infection and downstream credential theft/backdoors.\n- **Fresh exploit/PoC activity for internet software (NGINX “Rift” CVE-2026-42945; WordPress plugin auth bypass CVE-2026-10795)** → validate exposure in external services and increase WAF/EDR monitoring.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Palo Alto PAN-OS GlobalProtect auth bypass – active exploitation (CVE-2026-0257)**\n- **What happened:** Palo Alto reports **active exploitation** of an auth bypass impacting GlobalProtect portal/gateway access.\n- **Why it matters operationally:** Internet-facing VPN compromise is a common initial access path to **credential theft, lateral movement, and ransomware** in financial orgs.\n- **Recommended immediate actions for the SOC today:** **Confirm patch status/exposure now** (all PAN-OS/Prisma Access/Cloud NGFW GP endpoints); **hunt for anomalous GlobalProtect admin/portal access and new sessions** since disclosure window; escalate any suspicious access for containment.\n\n**2) Palo Alto management plane command injection (CVE-2026-0273) + “perimeter appliance persistence” reality**\n- **What happened:** New critical issue reported affecting **Palo Alto management web interface** (os command injection), plus broader reminder that patching may not remove prior footholds.\n- **Why it matters operationally:** If management interfaces are reachable (even internally), attackers can pivot to **device-level control** and stealthy persistence beyond typical endpoint telemetry.\n- **Recommended immediate actions for the SOC today:** **Verify management interfaces are not internet-exposed** and restricted to jump hosts; **review device admin activity/config changes** (new admins, policy changes, unexpected commits) in last 7–14 days; isolate and IR any device showing suspicious admin actions.\n\n**3) Linux supply-chain compromise (Arch Linux AUR / “Atomic Arch”)**\n- **What happened:** Reporting indicates a **large-scale Arch Linux package ecosystem compromise** (malicious AUR/user packages; “~1,900 packages” referenced in briefing).\n- **Why it matters operationally:** Dev workstations and CI runners pulling untrusted packages can introduce **rootkit-like persistence**, credential theft, and backdoored builds.\n- **Recommended immediate actions for the SOC today:** **Identify any Arch-based endpoints/CI runners** and block/limit AUR usage; **hunt for recent package install spikes** and suspicious post-install execution (new services/cron/systemd units); quarantine affected build agents pending review.\n\n**4) Malicious PyPI packages (generatellm / llamagenerator)**\n- **What happened:** Two PyPI packages flagged as **malicious**, attempting to download and execute a payload during installation.\n- **Why it matters operationally:** Direct impact to developer laptops/automation using `pip` can lead to **credential/token theft** (cloud keys, repo tokens) and supply-chain propagation.\n- **Recommended immediate actions for the SOC today:** **Search software inventory/CI logs for installs** of these packages; **monitor egress from build/dev networks** for unusual download/exec patterns following `pip install`; rotate exposed secrets if any install is confirmed.\n\n**5) Public exploit/PoC momentum: NGINX “Rift” RCE (CVE-2026-42945) + WordPress UpdraftPlus/UpdraftCentral auth bypass (CVE-2026-10795)**\n- **What happened:** A reverse-shell–oriented PoC appears for an NGINX heap overflow, and a lab/PoC exists for a WordPress plugin auth bypass chained to plugin installation.\n- **Why it matters operationally:** Even if your core estate is hardened, **edge web infrastructure and third-party marketing sites** are often softer targets used for phishing, watering holes, or internal pivoting.\n- **Recommended immediate actions for the SOC today:** **Validate whether any internet-facing NGINX/WordPress assets are in scope** (including subsidiaries/vendors); increase WAF/IDS scrutiny for abnormal rewrite/module behavior and WordPress admin/plugin installation actions; fast-track patch/mitigation where exposed.\n\n---\n\n### Monitoring & detection recommendations\n- **PAN-OS / GlobalProtect logs + firewall telemetry:** Hunt for **unusual portal/gateway access patterns**, unexpected geo/ASN, spikes in failed/successful auth, new device enrollments (ATT&CK: Valid Accounts **T1078**, Exploit Public-Facing App **T1190**).\n- **Palo Alto management plane auditing (PAN-OS config logs, admin audit, commit history):** Alert on **new admin accounts, role changes, config exports, policy commits outside change windows** (ATT&CK: Account Manipulation **T1098**).\n- **EDR on VPN-accessible server segments:** Watch for **post-auth behavior** consistent with perimeter breach: `cmd`, `powershell`, credential dumping attempts, remote service creation (ATT&CK: Command and Scripting Interpreter **T1059**, Lateral Movement tooling).\n- **Dev/CI telemetry (CI runner logs, artifact pipelines, package registries):** Flag **new dependency introductions**, `pip install`/`pacman`/AUR helper usage spikes, and build jobs reaching unusual external hosts right after dependency install (ATT&CK: Supply Chain Compromise **T1195**).\n- **Linux endpoint telemetry (systemd, cron, auth logs):** Detect **new services/timers**, modifications under `/etc/systemd/`, `/etc/cron*`, and unexpected privileged binary drops following package installs (ATT&CK: Scheduled Task/Job **T1053**, Persistence).\n- **Web/WAF logs (NGINX/WordPress):** Monitor for **anomalous requests to admin/plugin endpoints**, unexpected file writes under web roots, and suspicious rewrite-triggered request patterns (ATT&CK: Web Shell **T1505.003**).\n- **Egress/network monitoring:** Focus on **new outbound connections from build agents/dev subnets** and from perimeter appliances to uncommon destinations shortly after admin events or package installs (ATT&CK: Exfiltration Over C2 Channel **T1041**).\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** Ensure PAN-OS/Prisma Access/Cloud NGFW patch SLAs explicitly treat **VPN/auth bypass and management-plane bugs** as “same-day / emergency” in financial environments.\n- **Post-patch assurance:** For perimeter appliances, add a standard **“compromise check” playbook** (config diffs, admin audit review, unusual outbound, integrity checks) rather than assuming patching = clean.\n- **Supply-chain controls:** Enforce **dependency allowlists**, internal mirrors, and SCA gating for Python/npm; explicitly restrict AUR usage on corp/dev assets and CI runners.\n- **Secrets hygiene:** Expand detection and response for **potential token exposure** (repo PATs, cloud access keys) when malicious package installation is suspected; pre-stage rapid rotation procedures.\n- **External asset discovery:** Reconcile inventory for **internet-facing NGINX and WordPress** (including third parties) and ensure they’re in vulnerability scanning + WAF coverage.\n- **Linux kernel update planning:** Several new kernel privilege escalation CVEs were published (local/network-adjacent conditions); schedule kernel baseline review for **servers in shared/bastion/CI environments** where lateral movement risk is highest.",
+  "morning_call_markdown": "### Executive Summary\n- **Actively exploited zero-days now in CISA KEV:** Cisco Catalyst SD-WAN Manager (vManage) **CVE-2026-20262** and LiteSpeed cPanel plugin **CVE-2026-54420** — treat as **internet-facing compromise risk** until proven otherwise.\n- **Enterprise app exploitation continues post-patch:** Langflow file upload/path traversal being actively attacked months after fix; validate exposure in internal dev/AI environments.\n- **Supply-chain + PRC tradecraft signals:** Ongoing WordPress plugin/CDN supply-chain activity and reporting on **long-dwell PRC-nexus intrusions** (credential theft/auth bypass via backdoored PAM) reinforce need for privileged access monitoring.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Cisco Catalyst SD-WAN Manager (vManage) KEV / zero-day exploitation — CVE-2026-20262**\n- **What happened:** Cisco disclosed and patched **CVE-2026-20262** (arbitrary file write in web UI) with evidence of **active exploitation**; added to **CISA KEV**.\n- **Why it matters operationally:** Management-plane compromise can lead to **network-wide control** and potential **root escalation**; high blast radius in enterprise/branch networks.\n- **Recommended immediate actions for the SOC today:** Confirm any vManage instances (prod/lab/DR) + internet exposure; **expedite patch/mitigation** and start **retro-hunt** for suspicious file writes/config changes and unexpected admin activity.\n\n**2) LiteSpeed cPanel user-end plugin KEV — CVE-2026-54420 (root escalation)**\n- **What happened:** **CVE-2026-54420** in LiteSpeed cPanel user-end plugin is **actively exploited** and listed in **CISA KEV**; escalation to **root** under certain conditions.\n- **Why it matters operationally:** Shared hosting-style stacks (including outsourced/vendor web hosting) are common footholds; root access enables **webshells, credential theft, lateral movement**.\n- **Recommended immediate actions for the SOC today:** Identify any LiteSpeed/cPanel usage (including **third-party hosted marketing sites**) and push urgent patch/mitigation; hunt for **new root-level users, cron/systemd persistence, modified plugin files** on Linux web servers.\n\n**3) Langflow active exploitation (post-patch) — path traversal / file write leading to RCE**\n- **What happened:** Langflow file upload/path traversal flaw is being **actively exploited** despite a fix being available for months.\n- **Why it matters operationally:** AI/dev orchestration tools often run with broad access (tokens, repos, internal APIs); compromise can expose **secrets** and enable **internal pivoting**.\n- **Recommended immediate actions for the SOC today:** Inventory Langflow deployments (dev, PoCs, data science) and enforce patching; monitor for **unexpected file writes in app directories**, abnormal outbound traffic, and suspicious process spawning from Langflow hosts/containers.\n\n**4) WordPress plugin/CDN supply-chain activity (watch → potential web compromise)**\n- **What happened:** Reports of **malicious code injected into legitimate JS** delivered via trusted CDN infrastructure affecting widely used WordPress plugins (notably OptinMonster/related ecosystem per reporting).\n- **Why it matters operationally:** Even if core banking is unaffected, compromised public web properties can be used for **credential phishing**, **watering-hole**, and brand abuse against customers.\n- **Recommended immediate actions for the SOC today:** Validate integrity of WordPress plugin assets on any bank-managed sites; add temporary monitoring for **unexpected script changes**, new admin users, and anomalous outbound calls from web pages (assume details incomplete until vendor confirmations).\n\n---\n\n### Monitoring & detection recommendations\n- **Cisco SD-WAN Manager/vManage:** Monitor appliance/app logs + reverse proxy/WAF for unusual admin sessions and **unexpected file operations** from the web UI; correlate with identity events (**T1078 Valid Accounts**, **T1505.003 Web Shell** if web artifacts appear).\n- **Internet-facing management planes (general hardening hunt):** From firewall/VPN/proxy logs, alert on new inbound exposure, scanning spikes, and auth anomalies to management interfaces (SD-WAN, cPanel, GlobalProtect); focus on **new source geos + repeated failed logins** (**T1110 Brute Force**).\n- **Linux privilege escalation / persistence (LiteSpeed/cPanel and PRC-style PAM backdoors):** EDR + OSQuery/Auditd: watch for changes to `/etc/pam.d/*`, `/lib*/security/*pam*.so`, `/etc/ld.so.preload`, new SUID files, and new system users (**T1543 Create/Modify System Process**, **T1548 Abuse Elevation Control Mechanism**).\n- **Web server compromise indicators:** WAF + web server logs for unusual POSTs to upload endpoints, traversal patterns, and creation of new PHP files in writable dirs; EDR for web worker spawning shells (**T1190 Exploit Public-Facing Application**, **T1059 Command and Scripting Interpreter**).\n- **Langflow hosts/containers:** Cloud/container runtime logs + EDR: alert on Langflow service spawning `bash/sh/python -c`, writing to app/config paths, or unexpected network egress to pastebins/object storage (**T1105 Ingress Tool Transfer**, **T1552 Unsecured Credentials**).\n- **Customer-facing web supply-chain monitoring:** File integrity monitoring (FIM) on WordPress plugin directories and CDN-loaded JS allowlisting; browser-side telemetry (if available) for new third-party script domains (assumption: only if your org has RUM/JS monitoring).\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** Treat **CVE-2026-20262** and **CVE-2026-54420** as “24–48h SLA” items across all environments (prod + DR + labs); ensure exception process requires compensating controls and sign-off.\n- **Exposure management:** Re-validate that management planes (SD-WAN, VPN, admin portals) are not internet-exposed or are locked behind ZTNA/VPN + MFA; document owners and emergency access paths.\n- **Vendor/third-party assurance:** Ask hosting/web vendors to attest patch status for LiteSpeed/cPanel stacks and provide integrity checks for WP plugin/CDN incident; require notification if compromise suspected.\n- **Privileged access monitoring uplift:** Add recurring hunts for PAM/SSH tampering and long-dwell behaviors (backdoored auth modules, stealth credential access); ensure golden-image baselines for Linux auth components.\n- **Ransomware readiness:** Given ecosystem consolidation (LockBit-alumni style regrouping), confirm offline backups, immutable storage, and tested restore paths for critical services; validate IR playbooks for rapid containment of management-plane compromise.",
   "highlights": [
     {
-      "title": "Palo Alto Warns of Active Exploitation of PAN-OS GlobalProtect VPN Flaw",
-      "link": "https://vulners.com/thn/THN:23F3604E6D0C0EDC18C5C8E4FF76DDC8?utm_source=rss&utm_medium=rss&utm_campaign=rss",
-      "source": "Vulners.com RSS Feed",
-      "published": "2026-06-15T06:17:00+00:00",
+      "title": "LiteSpeed cPanel Plugin 0-Day Vulnerability Actively Exploited in the Wild",
+      "link": "https://cybersecuritynews.com/litespeed-cpanel-plugin-0-day-vulnerability-exploit/",
+      "source": "Cyber Security News",
+      "published": "2026-06-16T06:15:40+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 100.0,
+      "priority_score": 91.12
+    },
+    {
+      "title": "Cisco SD-WAN vManage Vulnerability Exploited in Zero-Day Attacks",
+      "link": "https://cybersecuritynews.com/cisco-sd-wan-vmanage-vulnerability-exploit/",
+      "source": "Cyber Security News",
+      "published": "2026-06-16T05:38:32+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 93.44,
+      "priority_score": 90.89
+    },
+    {
+      "title": "Exploit for UNIX Symbolic Link Following in Litespeedtech Litespeed_Cpanel_Plugin",
+      "link": "https://vulners.com/githubexploit/B1BB8CF9-0BFD-571E-8152-2D53A8245793?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-06-16T07:39:09+00:00",
+      "smart_groups": [
+        "Exploit / PoC",
+        "Vulnerabilities / CVEs",
+        "Linux / Unix",
+        "Identity / Access"
+      ],
+      "curated": false,
+      "signal_tier": "critical",
+      "signal_score": 88.86,
+      "priority_score": 78.3
+    },
+    {
+      "title": "Cisco SD-WAN make-me-root bug under attack",
+      "link": "https://www.theregister.com/patches/2026/06/15/cisco-sd-wan-make-me-root-bug-under-attack/5255916",
+      "source": "The Register - Security",
+      "published": "2026-06-15T21:48:25+00:00",
+      "smart_groups": [
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": false,
+      "signal_tier": "critical",
+      "signal_score": 85.23,
+      "priority_score": 66.85
+    },
+    {
+      "title": "Langflow RCE under active attack months after a patch was shipped",
+      "link": "https://www.csoonline.com/article/4185063/langflow-rce-under-active-attack-months-after-a-patch-was-shipped.html",
+      "source": "CSO Online",
+      "published": "2026-06-15T12:48:31+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
         "Threat Actors / APT",
-        "Exploit / PoC",
-        "Identity / Access",
-        "Windows / Microsoft"
+        "Ransomware",
+        "General Security"
       ],
       "curated": true,
       "signal_tier": "critical",
-      "signal_score": 96.93,
-      "priority_score": 89.38
+      "signal_score": 84.19,
+      "priority_score": 85.23
     },
     {
-      "title": "The Zero-Day Exploit Clock: What Is It and Why Is It Still Ticking?",
-      "link": "https://hackernoon.com/the-zero-day-exploit-clock-what-is-it-and-why-is-it-still-ticking?source=rss",
-      "source": "Hacker Noon - cybersecurity",
-      "published": "2026-06-14T16:00:34+00:00",
+      "title": "CISA Flags LiteSpeed cPanel Plugin Flaw Exploited for Root Privilege Escalation",
+      "link": "https://thehackernews.com/2026/06/cisa-flags-litespeed-cpanel-plugin-flaw.html",
+      "source": "The Hacker News",
+      "published": "2026-06-16T05:41:52+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Exploit / PoC"
+        "Exploit / PoC",
+        "General Security"
       ],
       "curated": true,
       "signal_tier": "critical",
-      "signal_score": 85.72,
-      "priority_score": 84.01
+      "signal_score": 82.59,
+      "priority_score": 86.64
     },
     {
-      "title": "SANS Stormcast Monday, June 15th, 2026:  Arch Linux Malicious User Packages; Splunk Vuln and Exploit; Exploiting AI Coding Agents",
-      "link": "https://isc.sans.edu/podcastdetail/9972",
-      "source": "SANS Internet Stormcenter Daily Cyber Security Podcast (Stormcast)",
-      "published": "2026-06-15T02:00:02+00:00",
+      "title": "China espionage dwell 1 year, Microsoft 200 patches, Cisco SD-WAN actively exploited",
+      "link": "https://defend.network/briefings/china-espionage-microsoft-patch-cisco-sdwan-exploit-2026-06-16.html",
+      "source": "defend.network",
+      "published": "2026-06-16T06:30:00+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Malware / Payloads",
-        "Supply Chain / Software",
         "Exploit / PoC",
-        "Linux / Unix",
-        "Community / Briefing"
+        "General Security"
       ],
-      "curated": false,
-      "signal_tier": "critical",
-      "signal_score": 78.9,
-      "priority_score": 77.62
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 73.2,
+      "priority_score": 88.23
     },
     {
-      "title": "Exploit for CVE-2026-42945",
-      "link": "https://vulners.com/githubexploit/A6ABFB6C-1C6C-5010-B6BD-1110C1242606?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "title": "Ransomware Ecosystem Consolidates Around LockBit Alumni, Qilin, Hyflock, and The Gentlemen",
+      "link": "https://cybersecuritynews.com/ransomware-ecosystem-consolidates/",
+      "source": "Cyber Security News",
+      "published": "2026-06-16T06:47:22+00:00",
+      "smart_groups": [
+        "Ransomware",
+        "Data Breaches / Leaks",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 68.44,
+      "priority_score": 88.89
+    },
+    {
+      "title": "Oracle Warns PeopleSoft Customers After Critical Zero-Day Exploited",
+      "link": "https://www.techrepublic.com/article/news-oracle-peoplesoft-zero-day-shinyhunters/",
+      "source": "Security on TechRepublic",
+      "published": "2026-06-15T13:12:42+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 66.98,
+      "priority_score": 84.09
+    },
+    {
+      "title": "Cisco Releases Security Updates for Actively Exploited SD-WAN Manager Flaw",
+      "link": "https://vulners.com/thn/THN:4C575B5BB9BB1889D35E1074597EB347?utm_source=rss&utm_medium=rss&utm_campaign=rss",
       "source": "Vulners.com RSS Feed",
-      "published": "2026-06-14T16:49:12+00:00",
+      "published": "2026-06-16T06:05:00+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 72.93,
-      "priority_score": 75.98
-    },
-    {
-      "title": "CVE-2026-45901 | Linux Kernel up to 6.19.3 netfilter commit_mutex privilege escalation (WID-SEC-2026-1700)",
-      "link": "https://vuldb.com/vuln/366085",
-      "source": "VulDB Updates",
-      "published": "2026-06-15T03:30:50+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Linux / Unix",
-        "Exploit / PoC"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 63.77,
-      "priority_score": 82.85
-    },
-    {
-      "title": "CVE-2026-45880 | Linux Kernel up to 6.6.127/6.12.74/6.18.13/6.19.3 PCI/P2PDMA vm_insert_page privilege escalation (WID-SEC-2026-1700)",
-      "link": "https://vuldb.com/vuln/366130",
-      "source": "VulDB Updates",
-      "published": "2026-06-14T22:26:35+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Linux / Unix",
-        "Exploit / PoC"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 63.77,
-      "priority_score": 81.49
-    },
-    {
-      "title": "Why enterprise security appliances keep breaking the same way",
-      "link": "https://hackernoon.com/why-enterprise-security-appliances-keep-breaking-the-same-way?source=rss",
-      "source": "Hacker Noon - cybersecurity",
-      "published": "2026-06-15T04:45:23+00:00",
-      "smart_groups": [
-        "Ransomware"
-      ],
-      "curated": false,
-      "signal_tier": "watch",
-      "signal_score": 63.72,
-      "priority_score": 72.15
-    },
-    {
-      "title": "Risky Bulletin: Arch Linux supply chain attack hits 1,900 packages",
-      "link": "https://risky.biz/RBNEWS577/",
-      "source": "Risky Business News",
-      "published": "2026-06-15T05:53:18+00:00",
-      "smart_groups": [
-        "Linux / Unix",
-        "Malware / Payloads",
-        "Phishing / Social Engineering",
-        "Community / Briefing"
-      ],
-      "curated": false,
-      "signal_tier": "watch",
-      "signal_score": 49.88,
-      "priority_score": 73.26
-    },
-    {
-      "title": "Exploit for CVE-2026-10795",
-      "link": "https://vulners.com/githubexploit/D84F8A25-5F36-52AC-B454-01D5ECE7059F?utm_source=rss&utm_medium=rss&utm_campaign=rss",
-      "source": "Vulners.com RSS Feed",
-      "published": "2026-06-15T05:06:36+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": false,
-      "signal_tier": "watch",
-      "signal_score": 46.93,
-      "priority_score": 79.06
-    },
-    {
-      "title": "Exploit for CVE-2022-30190",
-      "link": "https://vulners.com/githubexploit/28DF07CC-C023-564E-AD8F-1E0B61DE5982?utm_source=rss&utm_medium=rss&utm_campaign=rss",
-      "source": "Vulners.com RSS Feed",
-      "published": "2026-06-14T21:06:56+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": false,
-      "signal_tier": "watch",
-      "signal_score": 46.93,
-      "priority_score": 76.44
+      "signal_score": 64.86,
+      "priority_score": 77.49
     }
   ]
 }
