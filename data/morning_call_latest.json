@@ -1,170 +1,165 @@
 {
-  "generated_at": "2026-06-16T11:34:01.570469+00:00",
-  "analysis_date": "2026-06-16",
+  "generated_at": "2026-06-17T11:17:55.737418+00:00",
+  "analysis_date": "2026-06-17",
   "provider": "openai",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-06-16T10:19:22.342013+00:00",
+  "source_generated_at": "2026-06-17T06:23:17.597796+00:00",
   "source_days_back": 30,
-  "source_total_items": 31933,
-  "total_items_in_window_all": 2368,
-  "total_items_in_window_curated": 7,
-  "total_items_in_window_selected": 40,
+  "source_total_items": 33906,
+  "total_items_in_window_all": 2052,
+  "total_items_in_window_curated": 3,
+  "total_items_in_window_selected": 58,
   "context_selection_policy": "curated-plus-operational-signal-v1",
-  "morning_call_markdown": "### Executive Summary\n- **Actively exploited zero-days now in CISA KEV:** Cisco Catalyst SD-WAN Manager (vManage) **CVE-2026-20262** and LiteSpeed cPanel plugin **CVE-2026-54420** — treat as **internet-facing compromise risk** until proven otherwise.\n- **Enterprise app exploitation continues post-patch:** Langflow file upload/path traversal being actively attacked months after fix; validate exposure in internal dev/AI environments.\n- **Supply-chain + PRC tradecraft signals:** Ongoing WordPress plugin/CDN supply-chain activity and reporting on **long-dwell PRC-nexus intrusions** (credential theft/auth bypass via backdoored PAM) reinforce need for privileged access monitoring.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Cisco Catalyst SD-WAN Manager (vManage) KEV / zero-day exploitation — CVE-2026-20262**\n- **What happened:** Cisco disclosed and patched **CVE-2026-20262** (arbitrary file write in web UI) with evidence of **active exploitation**; added to **CISA KEV**.\n- **Why it matters operationally:** Management-plane compromise can lead to **network-wide control** and potential **root escalation**; high blast radius in enterprise/branch networks.\n- **Recommended immediate actions for the SOC today:** Confirm any vManage instances (prod/lab/DR) + internet exposure; **expedite patch/mitigation** and start **retro-hunt** for suspicious file writes/config changes and unexpected admin activity.\n\n**2) LiteSpeed cPanel user-end plugin KEV — CVE-2026-54420 (root escalation)**\n- **What happened:** **CVE-2026-54420** in LiteSpeed cPanel user-end plugin is **actively exploited** and listed in **CISA KEV**; escalation to **root** under certain conditions.\n- **Why it matters operationally:** Shared hosting-style stacks (including outsourced/vendor web hosting) are common footholds; root access enables **webshells, credential theft, lateral movement**.\n- **Recommended immediate actions for the SOC today:** Identify any LiteSpeed/cPanel usage (including **third-party hosted marketing sites**) and push urgent patch/mitigation; hunt for **new root-level users, cron/systemd persistence, modified plugin files** on Linux web servers.\n\n**3) Langflow active exploitation (post-patch) — path traversal / file write leading to RCE**\n- **What happened:** Langflow file upload/path traversal flaw is being **actively exploited** despite a fix being available for months.\n- **Why it matters operationally:** AI/dev orchestration tools often run with broad access (tokens, repos, internal APIs); compromise can expose **secrets** and enable **internal pivoting**.\n- **Recommended immediate actions for the SOC today:** Inventory Langflow deployments (dev, PoCs, data science) and enforce patching; monitor for **unexpected file writes in app directories**, abnormal outbound traffic, and suspicious process spawning from Langflow hosts/containers.\n\n**4) WordPress plugin/CDN supply-chain activity (watch → potential web compromise)**\n- **What happened:** Reports of **malicious code injected into legitimate JS** delivered via trusted CDN infrastructure affecting widely used WordPress plugins (notably OptinMonster/related ecosystem per reporting).\n- **Why it matters operationally:** Even if core banking is unaffected, compromised public web properties can be used for **credential phishing**, **watering-hole**, and brand abuse against customers.\n- **Recommended immediate actions for the SOC today:** Validate integrity of WordPress plugin assets on any bank-managed sites; add temporary monitoring for **unexpected script changes**, new admin users, and anomalous outbound calls from web pages (assume details incomplete until vendor confirmations).\n\n---\n\n### Monitoring & detection recommendations\n- **Cisco SD-WAN Manager/vManage:** Monitor appliance/app logs + reverse proxy/WAF for unusual admin sessions and **unexpected file operations** from the web UI; correlate with identity events (**T1078 Valid Accounts**, **T1505.003 Web Shell** if web artifacts appear).\n- **Internet-facing management planes (general hardening hunt):** From firewall/VPN/proxy logs, alert on new inbound exposure, scanning spikes, and auth anomalies to management interfaces (SD-WAN, cPanel, GlobalProtect); focus on **new source geos + repeated failed logins** (**T1110 Brute Force**).\n- **Linux privilege escalation / persistence (LiteSpeed/cPanel and PRC-style PAM backdoors):** EDR + OSQuery/Auditd: watch for changes to `/etc/pam.d/*`, `/lib*/security/*pam*.so`, `/etc/ld.so.preload`, new SUID files, and new system users (**T1543 Create/Modify System Process**, **T1548 Abuse Elevation Control Mechanism**).\n- **Web server compromise indicators:** WAF + web server logs for unusual POSTs to upload endpoints, traversal patterns, and creation of new PHP files in writable dirs; EDR for web worker spawning shells (**T1190 Exploit Public-Facing Application**, **T1059 Command and Scripting Interpreter**).\n- **Langflow hosts/containers:** Cloud/container runtime logs + EDR: alert on Langflow service spawning `bash/sh/python -c`, writing to app/config paths, or unexpected network egress to pastebins/object storage (**T1105 Ingress Tool Transfer**, **T1552 Unsecured Credentials**).\n- **Customer-facing web supply-chain monitoring:** File integrity monitoring (FIM) on WordPress plugin directories and CDN-loaded JS allowlisting; browser-side telemetry (if available) for new third-party script domains (assumption: only if your org has RUM/JS monitoring).\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** Treat **CVE-2026-20262** and **CVE-2026-54420** as “24–48h SLA” items across all environments (prod + DR + labs); ensure exception process requires compensating controls and sign-off.\n- **Exposure management:** Re-validate that management planes (SD-WAN, VPN, admin portals) are not internet-exposed or are locked behind ZTNA/VPN + MFA; document owners and emergency access paths.\n- **Vendor/third-party assurance:** Ask hosting/web vendors to attest patch status for LiteSpeed/cPanel stacks and provide integrity checks for WP plugin/CDN incident; require notification if compromise suspected.\n- **Privileged access monitoring uplift:** Add recurring hunts for PAM/SSH tampering and long-dwell behaviors (backdoored auth modules, stealth credential access); ensure golden-image baselines for Linux auth components.\n- **Ransomware readiness:** Given ecosystem consolidation (LockBit-alumni style regrouping), confirm offline backups, immutable storage, and tested restore paths for critical services; validate IR playbooks for rapid containment of management-plane compromise.",
+  "morning_call_markdown": "### Executive Summary\n- Active exploitation focus: Cisco Catalyst SD-WAN Manager **CVE-2026-20262** (root privesc path) and a new KEV add for **Joomla JCE CVE-2026-48907 (CVSS 10)**—assume opportunistic scanning is ongoing.\n- Ransomware tradecraft shift: **Microsoft Teams TURN relay infrastructure abused for covert C2** (Backdoor.TURN / DragonForce) to blend into trusted SaaS traffic.\n- Multiple “fast-follow” high-risk exposures surfaced: **Fortinet FortiSandbox critical bugs under attack**, plus **SimpleHelp RMM unauth account creation** risk—both high-value for lateral movement into managed estates.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Cisco Catalyst SD-WAN Manager (vManage) zero-day exploited: CVE-2026-20262**\n- What happened: Cisco patched **CVE-2026-20262** affecting Catalyst SD-WAN Manager; reports indicate **in-the-wild exploitation** enabling file create/overwrite leading to **root**.\n- Why it matters operationally: SD-WAN managers are crown-jewel network control planes; compromise enables rapid **network pivoting/traffic manipulation** and broad downstream access.\n- Recommended immediate actions for the SOC today: **Confirm asset inventory + exposure**, prioritize emergency patch/mitigation; **review admin/auth activity and config change logs** on SD-WAN Manager for anomalies since last 7 days.\n\n**2) Microsoft Teams TURN relay used for stealthy C2 (Backdoor.TURN / DragonForce)**\n- What happened: Threat actors used **Microsoft Teams relay/TURN infrastructure** to tunnel C2, hiding malware traffic inside trusted cloud comms paths.\n- Why it matters operationally: Traditional proxy allowlists and “trusted SaaS” assumptions can blind controls; risk of **long-dwell intrusion** before ransomware execution.\n- Recommended immediate actions for the SOC today: **Hunt for unusual Teams-related outbound patterns** (non-user endpoints, servers) and **EDR signs of Go-based RAT execution**; tighten egress policies/conditional access for Teams where feasible (assumption: tenant controls available).\n\n**3) Fortinet FortiSandbox: multiple critical vulnerabilities reportedly actively exploited**\n- What happened: Reporting indicates **three critical FortiSandbox issues** being exploited; one mentioned as **CVE-2026-39813** (details incomplete in this feed—assume remote exploitation attempts).\n- Why it matters operationally: FortiSandbox often sits in security pipelines with privileged connectivity; compromise can become a **security-tool-to-internal pivot** and tamper with detection.\n- Recommended immediate actions for the SOC today: **Identify FortiSandbox instances and verify patch level immediately**; monitor for **new admin accounts, unusual API calls, and outbound connections** from the appliance.\n\n**4) KEV add: Joomla “Widget Factory JCE” CVE-2026-48907 (CVSS 10) active exploitation**\n- What happened: CISA added **CVE-2026-48907** (improper access control) to KEV; described as enabling **PHP code execution** in Joomla JCE.\n- Why it matters operationally: High-likelihood mass exploitation of internet-facing CMS leads to webshells, credential theft, and staging for ransomware.\n- Recommended immediate actions for the SOC today: **Scan for public-facing Joomla/JCE exposure** (including subsidiaries/marketing sites); **review WAF/web logs** for JCE endpoint abuse and block/virtual-patch if patching lags.\n\n**5) SimpleHelp RMM critical flaw: CVE-2026-48558 (unauth “Technician” account creation)**\n- What happened: **CVE-2026-48558** allows unauth attackers to create a new **Technician** and then remote into managed endpoints / run scripts.\n- Why it matters operationally: RMM takeover is a direct path to **fleet-wide remote execution** (high ransomware/financial fraud impact).\n- Recommended immediate actions for the SOC today: **Confirm if SimpleHelp is used anywhere (IT/outsourcers/MSPs)** and isolate management interface if exposed; **alert on new Technician creation + unexpected script runs** across managed endpoints.\n\n---\n\n### Monitoring & detection recommendations\n- **SD-WAN Manager (CVE-2026-20262):** Monitor SD-WAN manager audit/config logs + Linux OS logs for **file writes to system paths, sudo/root escalation attempts** (ATT&CK: T1068, T1078); correlate with unusual admin logins (IdP/VPN if applicable).\n- **Teams relay C2:** From proxy/firewall/DNS logs, baseline and alert on **non-user devices (servers, jump boxes) initiating frequent/long-lived connections related to Teams media/TURN**; pair with EDR detection of unusual child processes spawned by Teams or Go binaries (ATT&CK: T1071.001, T1573).\n- **FortiSandbox exploitation:** Collect appliance logs + perimeter firewall logs for **new/rare inbound management access**, unexpected outbound from FortiSandbox to internet, and configuration export/changes (ATT&CK: T1190, T1562).\n- **Joomla JCE KEV:** WAF/web server logs—hunt for **POST/GET bursts to JCE-related endpoints**, suspicious file uploads, and creation of new PHP files in web roots; EDR on web hosts for webshell behaviors (ATT&CK: T1505.003).\n- **SimpleHelp RMM:** App/server logs—alert on **new “Technician” account creation**, privilege changes, and remote session creation from unusual IPs; EDR for **remote script execution at scale** (ATT&CK: T1133, T1059).\n- **Ransomware affiliate activity (Interlock/Rhysida/Vice Society themes):** EDR for **credential dumping, rapid privilege escalation, mass encryption precursors** (vssadmin/bcdedit, disabling security tools) (ATT&CK: T1003, T1486, T1562.001).\n- **Supply-chain WordPress plugin compromise (ShapedPlugin):** On web estates, monitor plugin update events and file integrity (web root) for **unexpected PHP backdoors**; review admin logins and new WP users.\n\n---\n\n### Medium-term follow-ups\n- **Egress governance for “trusted SaaS”:** Reassess allowlisting for Microsoft 365/Teams—implement **device-based conditional access** and proxy categories that still enable inspection/alerting for abnormal patterns (assumption: tooling supports this).\n- **Internet-facing CMS hygiene:** Ensure a repeatable process to inventory/patch third-party web properties (marketing vendors, acquisitions), and enforce **WAF virtual patching** for KEV-listed CMS flaws.\n- **RMM risk management:** Validate all remote management tools in the environment (including third parties); require **MFA, IP allowlists, and dedicated admin workstations** for RMM operators.\n- **Fortinet appliance assurance:** Add FortiSandbox (and similar security appliances) to “Tier-0-like” monitoring: centralized logging, strict management network isolation, and regular credential rotation.\n- **Arista EOS tunnel decapsulation bug (CVE-2026-7473, no patch planned):** Network engineering to review configs for affected tunnel features; implement **compensating controls** (ACLs, segmentation) since scanners may miss it.\n- **Oracle enterprise app exposure review:** Given multiple new critical Oracle CVEs cited (Siebel/JD Edwards/HR/Payroll etc.), confirm which products exist internally and align patch windows—treat any internet-exposed components as priority in the next change cycle.",
   "highlights": [
     {
-      "title": "LiteSpeed cPanel Plugin 0-Day Vulnerability Actively Exploited in the Wild",
-      "link": "https://cybersecuritynews.com/litespeed-cpanel-plugin-0-day-vulnerability-exploit/",
+      "title": "Hackers Weaponize Microsoft Teams Relay to Hide Ransomware Traffic",
+      "link": "https://cybersecuritynews.com/microsoft-teams-relay-abused/",
       "source": "Cyber Security News",
-      "published": "2026-06-16T06:15:40+00:00",
+      "published": "2026-06-16T13:59:55+00:00",
       "smart_groups": [
-        "Vulnerabilities / CVEs",
+        "Malware / Payloads",
         "Exploit / PoC",
+        "Ransomware",
         "General Security"
       ],
       "curated": true,
       "signal_tier": "critical",
       "signal_score": 100.0,
-      "priority_score": 91.12
+      "priority_score": 87.6
     },
     {
-      "title": "Cisco SD-WAN vManage Vulnerability Exploited in Zero-Day Attacks",
-      "link": "https://cybersecuritynews.com/cisco-sd-wan-vmanage-vulnerability-exploit/",
-      "source": "Cyber Security News",
-      "published": "2026-06-16T05:38:32+00:00",
+      "title": "Infosec News Nuggets — June 16, 2026",
+      "link": "https://aboutdfir.com/infosec-news-nuggets-june-16-2026/",
+      "source": "AboutDFIR – The Definitive Compendium Project",
+      "published": "2026-06-16T11:40:49+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Crypto / Web3",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "critical",
+      "signal_score": 92.97,
+      "priority_score": 74.8
+    },
+    {
+      "title": "No Patch Coming: The Arista EOS Tunnel Bug Your Scanner Will Miss",
+      "link": "https://eclypsium.com/blog/arista-eos-tunnel-decapsulation-no-patch/",
+      "source": "Eclypsium | Supply Chain Security for the Modern Enterprise",
+      "published": "2026-06-16T18:45:27+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC",
-        "General Security"
+        "Vendors / Product Security"
+      ],
+      "curated": false,
+      "signal_tier": "critical",
+      "signal_score": 84.95,
+      "priority_score": 75.98
+    },
+    {
+      "title": "CVE-2026-20262: Cisco SD-WAN Manager Zero-Day Can Lead to Root Privilege Escalation",
+      "link": "https://socprime.com/blog/cve-2026-20262-cisco-sd-wan-manager-zero-day/",
+      "source": "SOC Prime Blog",
+      "published": "2026-06-16T12:12:57+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Vendors / Product Security"
       ],
       "curated": true,
       "signal_tier": "critical",
-      "signal_score": 93.44,
-      "priority_score": 90.89
+      "signal_score": 80.91,
+      "priority_score": 84.64
     },
     {
-      "title": "Exploit for UNIX Symbolic Link Following in Litespeedtech Litespeed_Cpanel_Plugin",
-      "link": "https://vulners.com/githubexploit/B1BB8CF9-0BFD-571E-8152-2D53A8245793?utm_source=rss&utm_medium=rss&utm_campaign=rss",
-      "source": "Vulners.com RSS Feed",
-      "published": "2026-06-16T07:39:09+00:00",
-      "smart_groups": [
-        "Exploit / PoC",
-        "Vulnerabilities / CVEs",
-        "Linux / Unix",
-        "Identity / Access"
-      ],
-      "curated": false,
-      "signal_tier": "critical",
-      "signal_score": 88.86,
-      "priority_score": 78.3
-    },
-    {
-      "title": "Cisco SD-WAN make-me-root bug under attack",
-      "link": "https://www.theregister.com/patches/2026/06/15/cisco-sd-wan-make-me-root-bug-under-attack/5255916",
-      "source": "The Register - Security",
-      "published": "2026-06-15T21:48:25+00:00",
-      "smart_groups": [
-        "Exploit / PoC",
-        "General Security"
-      ],
-      "curated": false,
-      "signal_tier": "critical",
-      "signal_score": 85.23,
-      "priority_score": 66.85
-    },
-    {
-      "title": "Langflow RCE under active attack months after a patch was shipped",
-      "link": "https://www.csoonline.com/article/4185063/langflow-rce-under-active-attack-months-after-a-patch-was-shipped.html",
-      "source": "CSO Online",
-      "published": "2026-06-15T12:48:31+00:00",
+      "title": "Council of Europe hacked",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1u7aujo/council_of_europe_hacked/",
+      "source": "/r/cybersecurity",
+      "published": "2026-06-16T11:28:37+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC",
-        "Threat Actors / APT",
+        "OSINT / Community"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 76.48,
+      "priority_score": 72.19
+    },
+    {
+      "title": "'Lorem Ipsum' Malware Pivots to ClickFix Delivery",
+      "link": "https://www.darkreading.com/cyberattacks-data-breaches/lorem-ipsum-malware-clickfix-delivery",
+      "source": "darkreading",
+      "published": "2026-06-16T15:10:48+00:00",
+      "smart_groups": [
+        "Malware / Payloads",
         "Ransomware",
         "General Security"
       ],
       "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 84.19,
-      "priority_score": 85.23
-    },
-    {
-      "title": "CISA Flags LiteSpeed cPanel Plugin Flaw Exploited for Root Privilege Escalation",
-      "link": "https://thehackernews.com/2026/06/cisa-flags-litespeed-cpanel-plugin-flaw.html",
-      "source": "The Hacker News",
-      "published": "2026-06-16T05:41:52+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 82.59,
-      "priority_score": 86.64
-    },
-    {
-      "title": "China espionage dwell 1 year, Microsoft 200 patches, Cisco SD-WAN actively exploited",
-      "link": "https://defend.network/briefings/china-espionage-microsoft-patch-cisco-sdwan-exploit-2026-06-16.html",
-      "source": "defend.network",
-      "published": "2026-06-16T06:30:00+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "General Security"
-      ],
-      "curated": true,
       "signal_tier": "high",
-      "signal_score": 73.2,
-      "priority_score": 88.23
+      "signal_score": 67.79,
+      "priority_score": 78.92
     },
     {
-      "title": "Ransomware Ecosystem Consolidates Around LockBit Alumni, Qilin, Hyflock, and The Gentlemen",
-      "link": "https://cybersecuritynews.com/ransomware-ecosystem-consolidates/",
-      "source": "Cyber Security News",
-      "published": "2026-06-16T06:47:22+00:00",
-      "smart_groups": [
-        "Ransomware",
-        "Data Breaches / Leaks",
-        "Vulnerabilities / CVEs",
-        "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "high",
-      "signal_score": 68.44,
-      "priority_score": 88.89
-    },
-    {
-      "title": "Oracle Warns PeopleSoft Customers After Critical Zero-Day Exploited",
-      "link": "https://www.techrepublic.com/article/news-oracle-peoplesoft-zero-day-shinyhunters/",
-      "source": "Security on TechRepublic",
-      "published": "2026-06-15T13:12:42+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "high",
-      "signal_score": 66.98,
-      "priority_score": 84.09
-    },
-    {
-      "title": "Cisco Releases Security Updates for Actively Exploited SD-WAN Manager Flaw",
-      "link": "https://vulners.com/thn/THN:4C575B5BB9BB1889D35E1074597EB347?utm_source=rss&utm_medium=rss&utm_campaign=rss",
-      "source": "Vulners.com RSS Feed",
-      "published": "2026-06-16T06:05:00+00:00",
+      "title": "CVE-2026-46859",
+      "link": "https://vuldb.com/cve/CVE-2026-46859",
+      "source": "VulDB CVE",
+      "published": "2026-06-17T04:20:06+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 64.86,
-      "priority_score": 77.49
+      "signal_score": 67.31,
+      "priority_score": 80.34
+    },
+    {
+      "title": "CVE-2026-46925 | Oracle Siebel CRM Cloud Applications up to 26.5 Siebel Cloud Manager Remote Code Execution",
+      "link": "https://vuldb.com/vuln/371825",
+      "source": "VulDB Recent Entries",
+      "published": "2026-06-17T04:57:54+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 63.95,
+      "priority_score": 84.24
+    },
+    {
+      "title": "CVE-2026-46890 | Oracle Siebel Apps up to 26.5 Marketing Remote Code Execution",
+      "link": "https://vuldb.com/vuln/371812",
+      "source": "VulDB Recent Entries",
+      "published": "2026-06-17T04:55:58+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 63.95,
+      "priority_score": 84.23
+    },
+    {
+      "title": "CVE-2026-46889 | Oracle Siebel Apps up to 26.5 Marketing Remote Code Execution",
+      "link": "https://vuldb.com/vuln/371807",
+      "source": "VulDB Recent Entries",
+      "published": "2026-06-17T04:55:24+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 63.95,
+      "priority_score": 84.23
     }
   ]
 }
