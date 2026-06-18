@@ -1,26 +1,45 @@
 {
-  "generated_at": "2026-06-17T11:17:55.737418+00:00",
-  "analysis_date": "2026-06-17",
+  "generated_at": "2026-06-18T10:47:40.365081+00:00",
+  "analysis_date": "2026-06-18",
   "provider": "openai",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-06-17T06:23:17.597796+00:00",
+  "source_generated_at": "2026-06-18T09:24:23.548525+00:00",
   "source_days_back": 30,
-  "source_total_items": 33906,
-  "total_items_in_window_all": 2052,
-  "total_items_in_window_curated": 3,
-  "total_items_in_window_selected": 58,
+  "source_total_items": 36189,
+  "total_items_in_window_all": 2406,
+  "total_items_in_window_curated": 8,
+  "total_items_in_window_selected": 40,
   "context_selection_policy": "curated-plus-operational-signal-v1",
-  "morning_call_markdown": "### Executive Summary\n- Active exploitation focus: Cisco Catalyst SD-WAN Manager **CVE-2026-20262** (root privesc path) and a new KEV add for **Joomla JCE CVE-2026-48907 (CVSS 10)**—assume opportunistic scanning is ongoing.\n- Ransomware tradecraft shift: **Microsoft Teams TURN relay infrastructure abused for covert C2** (Backdoor.TURN / DragonForce) to blend into trusted SaaS traffic.\n- Multiple “fast-follow” high-risk exposures surfaced: **Fortinet FortiSandbox critical bugs under attack**, plus **SimpleHelp RMM unauth account creation** risk—both high-value for lateral movement into managed estates.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Cisco Catalyst SD-WAN Manager (vManage) zero-day exploited: CVE-2026-20262**\n- What happened: Cisco patched **CVE-2026-20262** affecting Catalyst SD-WAN Manager; reports indicate **in-the-wild exploitation** enabling file create/overwrite leading to **root**.\n- Why it matters operationally: SD-WAN managers are crown-jewel network control planes; compromise enables rapid **network pivoting/traffic manipulation** and broad downstream access.\n- Recommended immediate actions for the SOC today: **Confirm asset inventory + exposure**, prioritize emergency patch/mitigation; **review admin/auth activity and config change logs** on SD-WAN Manager for anomalies since last 7 days.\n\n**2) Microsoft Teams TURN relay used for stealthy C2 (Backdoor.TURN / DragonForce)**\n- What happened: Threat actors used **Microsoft Teams relay/TURN infrastructure** to tunnel C2, hiding malware traffic inside trusted cloud comms paths.\n- Why it matters operationally: Traditional proxy allowlists and “trusted SaaS” assumptions can blind controls; risk of **long-dwell intrusion** before ransomware execution.\n- Recommended immediate actions for the SOC today: **Hunt for unusual Teams-related outbound patterns** (non-user endpoints, servers) and **EDR signs of Go-based RAT execution**; tighten egress policies/conditional access for Teams where feasible (assumption: tenant controls available).\n\n**3) Fortinet FortiSandbox: multiple critical vulnerabilities reportedly actively exploited**\n- What happened: Reporting indicates **three critical FortiSandbox issues** being exploited; one mentioned as **CVE-2026-39813** (details incomplete in this feed—assume remote exploitation attempts).\n- Why it matters operationally: FortiSandbox often sits in security pipelines with privileged connectivity; compromise can become a **security-tool-to-internal pivot** and tamper with detection.\n- Recommended immediate actions for the SOC today: **Identify FortiSandbox instances and verify patch level immediately**; monitor for **new admin accounts, unusual API calls, and outbound connections** from the appliance.\n\n**4) KEV add: Joomla “Widget Factory JCE” CVE-2026-48907 (CVSS 10) active exploitation**\n- What happened: CISA added **CVE-2026-48907** (improper access control) to KEV; described as enabling **PHP code execution** in Joomla JCE.\n- Why it matters operationally: High-likelihood mass exploitation of internet-facing CMS leads to webshells, credential theft, and staging for ransomware.\n- Recommended immediate actions for the SOC today: **Scan for public-facing Joomla/JCE exposure** (including subsidiaries/marketing sites); **review WAF/web logs** for JCE endpoint abuse and block/virtual-patch if patching lags.\n\n**5) SimpleHelp RMM critical flaw: CVE-2026-48558 (unauth “Technician” account creation)**\n- What happened: **CVE-2026-48558** allows unauth attackers to create a new **Technician** and then remote into managed endpoints / run scripts.\n- Why it matters operationally: RMM takeover is a direct path to **fleet-wide remote execution** (high ransomware/financial fraud impact).\n- Recommended immediate actions for the SOC today: **Confirm if SimpleHelp is used anywhere (IT/outsourcers/MSPs)** and isolate management interface if exposed; **alert on new Technician creation + unexpected script runs** across managed endpoints.\n\n---\n\n### Monitoring & detection recommendations\n- **SD-WAN Manager (CVE-2026-20262):** Monitor SD-WAN manager audit/config logs + Linux OS logs for **file writes to system paths, sudo/root escalation attempts** (ATT&CK: T1068, T1078); correlate with unusual admin logins (IdP/VPN if applicable).\n- **Teams relay C2:** From proxy/firewall/DNS logs, baseline and alert on **non-user devices (servers, jump boxes) initiating frequent/long-lived connections related to Teams media/TURN**; pair with EDR detection of unusual child processes spawned by Teams or Go binaries (ATT&CK: T1071.001, T1573).\n- **FortiSandbox exploitation:** Collect appliance logs + perimeter firewall logs for **new/rare inbound management access**, unexpected outbound from FortiSandbox to internet, and configuration export/changes (ATT&CK: T1190, T1562).\n- **Joomla JCE KEV:** WAF/web server logs—hunt for **POST/GET bursts to JCE-related endpoints**, suspicious file uploads, and creation of new PHP files in web roots; EDR on web hosts for webshell behaviors (ATT&CK: T1505.003).\n- **SimpleHelp RMM:** App/server logs—alert on **new “Technician” account creation**, privilege changes, and remote session creation from unusual IPs; EDR for **remote script execution at scale** (ATT&CK: T1133, T1059).\n- **Ransomware affiliate activity (Interlock/Rhysida/Vice Society themes):** EDR for **credential dumping, rapid privilege escalation, mass encryption precursors** (vssadmin/bcdedit, disabling security tools) (ATT&CK: T1003, T1486, T1562.001).\n- **Supply-chain WordPress plugin compromise (ShapedPlugin):** On web estates, monitor plugin update events and file integrity (web root) for **unexpected PHP backdoors**; review admin logins and new WP users.\n\n---\n\n### Medium-term follow-ups\n- **Egress governance for “trusted SaaS”:** Reassess allowlisting for Microsoft 365/Teams—implement **device-based conditional access** and proxy categories that still enable inspection/alerting for abnormal patterns (assumption: tooling supports this).\n- **Internet-facing CMS hygiene:** Ensure a repeatable process to inventory/patch third-party web properties (marketing vendors, acquisitions), and enforce **WAF virtual patching** for KEV-listed CMS flaws.\n- **RMM risk management:** Validate all remote management tools in the environment (including third parties); require **MFA, IP allowlists, and dedicated admin workstations** for RMM operators.\n- **Fortinet appliance assurance:** Add FortiSandbox (and similar security appliances) to “Tier-0-like” monitoring: centralized logging, strict management network isolation, and regular credential rotation.\n- **Arista EOS tunnel decapsulation bug (CVE-2026-7473, no patch planned):** Network engineering to review configs for affected tunnel features; implement **compensating controls** (ACLs, segmentation) since scanners may miss it.\n- **Oracle enterprise app exposure review:** Given multiple new critical Oracle CVEs cited (Siebel/JD Edwards/HR/Payroll etc.), confirm which products exist internally and align patch windows—treat any internet-exposed components as priority in the next change cycle.",
+  "morning_call_markdown": "### Executive Summary\n- Multiple **actively exploited / KEV** paths to takeover internet-facing apps: **Oracle PeopleSoft PeopleTools 0‑day (CVE-2026-35273)** and **Joomla JCE (CVE-2026-48907)**; treat as **ransomware initial access risk**.\n- **Microsoft Defender “RoguePlanet” zero-day (CVE-2026-50656)** is public and unpatched (patch pending); expect rapid commoditization for **local privilege escalation** post-compromise.\n- AI/OSS ecosystem risk rising: **LiteLLM unauth RCE chain (CVE-2026-42271 + CVE-2026-48710)** and **npm typosquat (easy-day-js)**; combined with reports of **EDR-killer tooling** and **Teams-relayed C2** in ransomware ops.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Oracle PeopleSoft PeopleTools 0‑day actively exploited (CVE-2026-35273; ransomware-linked)**\n- What happened: CISA added a **PeopleSoft PeopleTools unauth takeover 0‑day** to KEV; exploitation tied to ransomware activity.\n- Why it matters operationally: Any internet-exposed PeopleSoft tier is a **high-probability initial access vector** leading to domain compromise/ransomware.\n- Recommended immediate actions for the SOC today: **Identify/confirm PeopleSoft exposure** (external + internal), prioritize emergency patch/mitigation; **hunt for anomalous web/app admin actions** and new webshell-like artifacts on PeopleSoft servers.\n\n**2) Joomla Content Editor (JCE) max-severity exploit in the wild (CVE-2026-48907; KEV)**\n- What happened: CISA added **Joomla JCE** CVE-2026-48907 (CVSS 10) to KEV; reports indicate **automated exploitation**.\n- Why it matters operationally: Common CMS foothold → rapid **credential theft / webshell / lateral movement**; orgs often have “forgotten” Joomla instances.\n- Recommended immediate actions for the SOC today: **Scan for Joomla/JCE** across DMZ and marketing domains; **block/alert on suspicious POST/extension upload patterns** and validate patching/removal of JCE where not needed.\n\n**3) Microsoft Defender “RoguePlanet” zero-day (CVE-2026-50656) – patch pending**\n- What happened: Microsoft confirmed **Defender local elevation-of-privilege** zero-day; patch is in development (no fix yet).\n- Why it matters operationally: If an attacker gets code execution as a user, this can help them **escalate privileges**, disable defenses, and stage ransomware faster.\n- Recommended immediate actions for the SOC today: **Increase alerting for privilege escalation + tamper attempts** on endpoints; **tighten application control** where feasible (block untrusted binaries/scripts from user-writable paths).\n\n**4) AI/Dev tooling exposure: LiteLLM unauth RCE chain + supply-chain typosquat (easy-day-js)**\n- What happened: **LiteLLM MCP test endpoints command injection (CVE-2026-42271)** can become **unauth RCE** when chained with **Starlette host-header bypass (CVE-2026-48710)**; separate report flags **easy-day-js npm typosquat** impacting AI framework dependencies.\n- Why it matters operationally: Financial orgs increasingly run AI gateways internally; compromise risks **API key/LLM connector credential theft** and pivot into cloud/SaaS.\n- Recommended immediate actions for the SOC today: **Inventory LiteLLM deployments** and upgrade (**LiteLLM 1.83.7 + Starlette 1.0.1**) and **rotate credentials** the gateway accessed (per guidance); **flag new/unknown npm packages** in builds, and quarantine builds pulling `easy-day-js`.\n\n**5) Ransomware tradecraft updates: Teams-relayed C2 + “EDR killer” tooling**\n- What happened: Reporting shows ransomware (e.g., **DragonForce**) using **Microsoft Teams infrastructure as C2 relay** for weeks; separate reporting highlights **Gentlemen/GentleKiller-style EDR disabling** tooling targeting many security products.\n- Why it matters operationally: Network-based C2 detection may miss **legitimate cloud relay traffic**; EDR-killers can reduce visibility right before encryption/exfiltration.\n- Recommended immediate actions for the SOC today: **Baseline Teams traffic** (endpoints/processes initiating) and alert on **Teams used by unusual processes**; prioritize triage of **security service stop/disable events** as potential pre-ransomware signals.\n\n---\n\n### Monitoring & detection recommendations\n- **PeopleSoft / web app exploitation**: WAF/reverse-proxy + app logs for PeopleSoft servers; hunt for **new admin users, unexpected PeopleTools actions, unusual JSP/PS app file writes** (ATT&CK: T1190).\n- **Joomla/JCE exploitation**: Web server logs for Joomla sites; alert on **extension/component upload attempts, unusual POSTs to editor endpoints, spikes in 4xx/5xx** around admin paths (T1190, T1505.003).\n- **Defender RoguePlanet LPE signals**: EDR + Windows Security logs; hunt for **privilege escalation chains** (new local admins, token manipulation, abnormal service creation) (T1068, T1543.003).\n- **EDR tampering / “killer” behavior**: EDR telemetry + Windows event logs for **service stop/disable**, driver install attempts, registry changes to security tooling, and **tamper protection events** (T1562.001).\n- **Teams-relayed C2**: Proxy/DNS + Microsoft 365/Defender for Cloud Apps logs; alert on **Teams network connections initiated by non-Teams binaries**, and unusual outbound volume/session duration from servers that don’t use Teams (T1071.001).\n- **LiteLLM/Starlette exploitation**: API gateway logs + container/K8s audit logs; hunt for **requests to MCP test endpoints**, suspicious Host headers, and **command execution inside pods** (T1190, T1059).\n- **Supply-chain (npm) ingestion**: CI/CD logs + artifact repo + EDR on build agents; alert on **new dependency names similar to popular libs** and unexpected postinstall scripts (T1195.001).\n- **Cloud logging abuse (visibility evasion)**: Cloud control plane logs (AWS CloudTrail / Azure Activity / GCP Audit); watch for **logging configuration changes**, new sinks/exports, or deletion of log resources (T1562.008).\n\n---\n\n### Medium-term follow-ups\n- **Patch/workaround tracking**: Prepare for rapid deployment of the **Defender CVE-2026-50656** patch when released; pre-stage change windows and validation tests.\n- **External attack surface review**: Ensure continuous discovery of **forgotten Joomla/PeopleSoft** and other legacy web apps; enforce ownership and patch SLAs for internet-facing services.\n- **AI gateway hardening**: For LiteLLM/AI proxies, standardize: **disable test/debug endpoints**, restrict admin interfaces, enforce mTLS/IP allowlists, and maintain **credential rotation runbooks**.\n- **Supply-chain governance**: Tighten controls for npm/PyPI/containers (allowlists, lockfiles, SCA gating, signed artifacts) and add an escalation path when typosquats are detected.\n- **Ransomware prep**: Validate alert coverage for **defense evasion + credential access**; run a tabletop focused on **EDR tamper + cloud-relayed C2** scenarios.\n- **Fortinet/FortiBleed context (assumption-based)**: If we operate Fortinet appliances, validate exposure/credential hygiene and monitor vendor advisories; treat any credential leak claims as **rotate + review remote access** triggers.",
   "highlights": [
     {
-      "title": "Hackers Weaponize Microsoft Teams Relay to Hide Ransomware Traffic",
-      "link": "https://cybersecuritynews.com/microsoft-teams-relay-abused/",
-      "source": "Cyber Security News",
-      "published": "2026-06-16T13:59:55+00:00",
+      "title": "LiteLLM CVE-2026-42271: Patch, Rotate, and Harden the RCE",
+      "link": "https://dev.to/aavisangle/litellm-cve-2026-42271-patch-rotate-and-harden-the-rce-4d9l",
+      "source": "DEV Community",
+      "published": "2026-06-18T08:59:00+00:00",
       "smart_groups": [
-        "Malware / Payloads",
+        "Vulnerabilities / CVEs",
+        "Identity / Access",
+        "Cloud / SaaS",
+        "Exploit / PoC",
+        "Linux / Unix",
+        "Supply Chain / Software",
+        "OSINT / Community"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 100.0,
+      "priority_score": 90.59
+    },
+    {
+      "title": "CISA Warns of Oracle PeopleSoft 0-Day Vulnerability Exploited in Ransomware Attacks",
+      "link": "https://cybersecuritynews.com/oracle-peoplesoft-0-day-vulnerability-exploit/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-06-17T11:53:47+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
         "Exploit / PoC",
         "Ransomware",
         "General Security"
@@ -28,138 +47,125 @@
       "curated": true,
       "signal_tier": "critical",
       "signal_score": 100.0,
-      "priority_score": 87.6
+      "priority_score": 83.68
     },
     {
-      "title": "Infosec News Nuggets — June 16, 2026",
-      "link": "https://aboutdfir.com/infosec-news-nuggets-june-16-2026/",
-      "source": "AboutDFIR – The Definitive Compendium Project",
-      "published": "2026-06-16T11:40:49+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Crypto / Web3",
-        "Exploit / PoC"
-      ],
-      "curated": false,
-      "signal_tier": "critical",
-      "signal_score": 92.97,
-      "priority_score": 74.8
-    },
-    {
-      "title": "No Patch Coming: The Arista EOS Tunnel Bug Your Scanner Will Miss",
-      "link": "https://eclypsium.com/blog/arista-eos-tunnel-decapsulation-no-patch/",
-      "source": "Eclypsium | Supply Chain Security for the Modern Enterprise",
-      "published": "2026-06-16T18:45:27+00:00",
+      "title": "Microsoft Confirms RoguePlanet Defender Zero-Day, Says Patch is in Development",
+      "link": "https://vulners.com/thn/THN:6C6F54F5540003560342230BF1B21800?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-06-17T17:36:00+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC",
-        "Vendors / Product Security"
-      ],
-      "curated": false,
-      "signal_tier": "critical",
-      "signal_score": 84.95,
-      "priority_score": 75.98
-    },
-    {
-      "title": "CVE-2026-20262: Cisco SD-WAN Manager Zero-Day Can Lead to Root Privilege Escalation",
-      "link": "https://socprime.com/blog/cve-2026-20262-cisco-sd-wan-manager-zero-day/",
-      "source": "SOC Prime Blog",
-      "published": "2026-06-16T12:12:57+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "Vendors / Product Security"
+        "Malware / Payloads"
       ],
       "curated": true,
       "signal_tier": "critical",
-      "signal_score": 80.91,
-      "priority_score": 84.64
+      "signal_score": 90.82,
+      "priority_score": 84.89
     },
     {
-      "title": "Council of Europe hacked",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1u7aujo/council_of_europe_hacked/",
-      "source": "/r/cybersecurity",
-      "published": "2026-06-16T11:28:37+00:00",
+      "title": "Microsoft Confirms RoguePlanet Defender Zero-Day, Says Patch is in Development",
+      "link": "https://thehackernews.com/2026/06/microsoft-confirms-rogueplanet-defender_02022423645.html",
+      "source": "The Hacker News",
+      "published": "2026-06-17T17:36:28+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "OSINT / Community"
+        "Malware / Payloads",
+        "General Security"
       ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 76.48,
-      "priority_score": 72.19
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 90.57,
+      "priority_score": 83.63
     },
     {
-      "title": "'Lorem Ipsum' Malware Pivots to ClickFix Delivery",
-      "link": "https://www.darkreading.com/cyberattacks-data-breaches/lorem-ipsum-malware-clickfix-delivery",
-      "source": "darkreading",
-      "published": "2026-06-16T15:10:48+00:00",
+      "title": "Microsoft Addresses RoguePlanet Defender Zero-Day Vulnerability (CVE-2026-50656)",
+      "link": "https://www.news4hackers.com/microsoft-addresses-rogueplanet-defender-zero-day-vulnerability-cve-2026-50656/",
+      "source": "News4Hackers",
+      "published": "2026-06-17T15:19:14+00:00",
       "smart_groups": [
-        "Malware / Payloads",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 80.88,
+      "priority_score": 84.53
+    },
+    {
+      "title": "Microsoft Defender zero-day, FortiBleed exposes 73k devices, GitHub worm spreads",
+      "link": "https://defend.network/briefings/microsoft-defender-zero-day-fortinet-credential-leak-gi-2026-06-18.html",
+      "source": "defend.network",
+      "published": "2026-06-18T06:30:00+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Cloud / SaaS",
+        "Exploit / PoC",
+        "Supply Chain / Software",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 77.18,
+      "priority_score": 89.96
+    },
+    {
+      "title": "Healthcare sector faces escalating ransomware, supply chain and APT risks as cyber threats intensify, CYFIRMA warns",
+      "link": "https://industrialcyber.co/ransomware/healthcare-sector-faces-escalating-ransomware-supply-chain-and-apt-risks-as-cyber-threats-intensify-cyfirma-warns/",
+      "source": "Industrial Cyber",
+      "published": "2026-06-18T05:48:12+00:00",
+      "smart_groups": [
+        "Threat Actors / APT",
         "Ransomware",
         "General Security"
       ],
       "curated": true,
       "signal_tier": "high",
-      "signal_score": 67.79,
-      "priority_score": 78.92
+      "signal_score": 70.27,
+      "priority_score": 88.02
     },
     {
-      "title": "CVE-2026-46859",
-      "link": "https://vuldb.com/cve/CVE-2026-46859",
-      "source": "VulDB CVE",
-      "published": "2026-06-17T04:20:06+00:00",
+      "title": "Microsoft Addresses RoguePlanet Zero-Day Vulnerability",
+      "link": "https://www.news4hackers.com/microsoft-addresses-rogueplanet-zero-day-vulnerability/",
+      "source": "News4Hackers",
+      "published": "2026-06-17T11:12:38+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Exploit / PoC"
+        "General Security"
       ],
-      "curated": false,
+      "curated": true,
       "signal_tier": "high",
-      "signal_score": 67.31,
-      "priority_score": 80.34
+      "signal_score": 69.88,
+      "priority_score": 82.8
     },
     {
-      "title": "CVE-2026-46925 | Oracle Siebel CRM Cloud Applications up to 26.5 Siebel Cloud Manager Remote Code Execution",
-      "link": "https://vuldb.com/vuln/371825",
+      "title": "CVE-2026-50194 | SteeltoeOSS Steeltoe.Management.Endpoint up to 4.1.x authentication bypass (GHSA-58f6-6rj2-3v8r)",
+      "link": "https://vuldb.com/vuln/372140",
       "source": "VulDB Recent Entries",
-      "published": "2026-06-17T04:57:54+00:00",
+      "published": "2026-06-18T05:34:36+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 63.95,
-      "priority_score": 84.24
+      "signal_score": 63.85,
+      "priority_score": 83.02
     },
     {
-      "title": "CVE-2026-46890 | Oracle Siebel Apps up to 26.5 Marketing Remote Code Execution",
-      "link": "https://vuldb.com/vuln/371812",
+      "title": "CVE-2026-36418 | jeecgboot JimuReport up to 2.3.4 Aviator executeSelectApi privilege escalation",
+      "link": "https://vuldb.com/vuln/372072",
       "source": "VulDB Recent Entries",
-      "published": "2026-06-17T04:55:58+00:00",
+      "published": "2026-06-17T16:49:46+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 63.95,
-      "priority_score": 84.23
-    },
-    {
-      "title": "CVE-2026-46889 | Oracle Siebel Apps up to 26.5 Marketing Remote Code Execution",
-      "link": "https://vuldb.com/vuln/371807",
-      "source": "VulDB Recent Entries",
-      "published": "2026-06-17T04:55:24+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 63.95,
-      "priority_score": 84.23
+      "signal_score": 63.85,
+      "priority_score": 79.61
     }
   ]
 }
