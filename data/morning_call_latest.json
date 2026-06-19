@@ -1,171 +1,172 @@
 {
-  "generated_at": "2026-06-18T10:47:40.365081+00:00",
-  "analysis_date": "2026-06-18",
+  "generated_at": "2026-06-19T10:57:29.334747+00:00",
+  "analysis_date": "2026-06-19",
   "provider": "openai",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-06-18T09:24:23.548525+00:00",
+  "source_generated_at": "2026-06-19T06:32:32.470068+00:00",
   "source_days_back": 30,
-  "source_total_items": 36189,
-  "total_items_in_window_all": 2406,
-  "total_items_in_window_curated": 8,
+  "source_total_items": 37354,
+  "total_items_in_window_all": 1614,
+  "total_items_in_window_curated": 3,
   "total_items_in_window_selected": 40,
   "context_selection_policy": "curated-plus-operational-signal-v1",
-  "morning_call_markdown": "### Executive Summary\n- Multiple **actively exploited / KEV** paths to takeover internet-facing apps: **Oracle PeopleSoft PeopleTools 0‑day (CVE-2026-35273)** and **Joomla JCE (CVE-2026-48907)**; treat as **ransomware initial access risk**.\n- **Microsoft Defender “RoguePlanet” zero-day (CVE-2026-50656)** is public and unpatched (patch pending); expect rapid commoditization for **local privilege escalation** post-compromise.\n- AI/OSS ecosystem risk rising: **LiteLLM unauth RCE chain (CVE-2026-42271 + CVE-2026-48710)** and **npm typosquat (easy-day-js)**; combined with reports of **EDR-killer tooling** and **Teams-relayed C2** in ransomware ops.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Oracle PeopleSoft PeopleTools 0‑day actively exploited (CVE-2026-35273; ransomware-linked)**\n- What happened: CISA added a **PeopleSoft PeopleTools unauth takeover 0‑day** to KEV; exploitation tied to ransomware activity.\n- Why it matters operationally: Any internet-exposed PeopleSoft tier is a **high-probability initial access vector** leading to domain compromise/ransomware.\n- Recommended immediate actions for the SOC today: **Identify/confirm PeopleSoft exposure** (external + internal), prioritize emergency patch/mitigation; **hunt for anomalous web/app admin actions** and new webshell-like artifacts on PeopleSoft servers.\n\n**2) Joomla Content Editor (JCE) max-severity exploit in the wild (CVE-2026-48907; KEV)**\n- What happened: CISA added **Joomla JCE** CVE-2026-48907 (CVSS 10) to KEV; reports indicate **automated exploitation**.\n- Why it matters operationally: Common CMS foothold → rapid **credential theft / webshell / lateral movement**; orgs often have “forgotten” Joomla instances.\n- Recommended immediate actions for the SOC today: **Scan for Joomla/JCE** across DMZ and marketing domains; **block/alert on suspicious POST/extension upload patterns** and validate patching/removal of JCE where not needed.\n\n**3) Microsoft Defender “RoguePlanet” zero-day (CVE-2026-50656) – patch pending**\n- What happened: Microsoft confirmed **Defender local elevation-of-privilege** zero-day; patch is in development (no fix yet).\n- Why it matters operationally: If an attacker gets code execution as a user, this can help them **escalate privileges**, disable defenses, and stage ransomware faster.\n- Recommended immediate actions for the SOC today: **Increase alerting for privilege escalation + tamper attempts** on endpoints; **tighten application control** where feasible (block untrusted binaries/scripts from user-writable paths).\n\n**4) AI/Dev tooling exposure: LiteLLM unauth RCE chain + supply-chain typosquat (easy-day-js)**\n- What happened: **LiteLLM MCP test endpoints command injection (CVE-2026-42271)** can become **unauth RCE** when chained with **Starlette host-header bypass (CVE-2026-48710)**; separate report flags **easy-day-js npm typosquat** impacting AI framework dependencies.\n- Why it matters operationally: Financial orgs increasingly run AI gateways internally; compromise risks **API key/LLM connector credential theft** and pivot into cloud/SaaS.\n- Recommended immediate actions for the SOC today: **Inventory LiteLLM deployments** and upgrade (**LiteLLM 1.83.7 + Starlette 1.0.1**) and **rotate credentials** the gateway accessed (per guidance); **flag new/unknown npm packages** in builds, and quarantine builds pulling `easy-day-js`.\n\n**5) Ransomware tradecraft updates: Teams-relayed C2 + “EDR killer” tooling**\n- What happened: Reporting shows ransomware (e.g., **DragonForce**) using **Microsoft Teams infrastructure as C2 relay** for weeks; separate reporting highlights **Gentlemen/GentleKiller-style EDR disabling** tooling targeting many security products.\n- Why it matters operationally: Network-based C2 detection may miss **legitimate cloud relay traffic**; EDR-killers can reduce visibility right before encryption/exfiltration.\n- Recommended immediate actions for the SOC today: **Baseline Teams traffic** (endpoints/processes initiating) and alert on **Teams used by unusual processes**; prioritize triage of **security service stop/disable events** as potential pre-ransomware signals.\n\n---\n\n### Monitoring & detection recommendations\n- **PeopleSoft / web app exploitation**: WAF/reverse-proxy + app logs for PeopleSoft servers; hunt for **new admin users, unexpected PeopleTools actions, unusual JSP/PS app file writes** (ATT&CK: T1190).\n- **Joomla/JCE exploitation**: Web server logs for Joomla sites; alert on **extension/component upload attempts, unusual POSTs to editor endpoints, spikes in 4xx/5xx** around admin paths (T1190, T1505.003).\n- **Defender RoguePlanet LPE signals**: EDR + Windows Security logs; hunt for **privilege escalation chains** (new local admins, token manipulation, abnormal service creation) (T1068, T1543.003).\n- **EDR tampering / “killer” behavior**: EDR telemetry + Windows event logs for **service stop/disable**, driver install attempts, registry changes to security tooling, and **tamper protection events** (T1562.001).\n- **Teams-relayed C2**: Proxy/DNS + Microsoft 365/Defender for Cloud Apps logs; alert on **Teams network connections initiated by non-Teams binaries**, and unusual outbound volume/session duration from servers that don’t use Teams (T1071.001).\n- **LiteLLM/Starlette exploitation**: API gateway logs + container/K8s audit logs; hunt for **requests to MCP test endpoints**, suspicious Host headers, and **command execution inside pods** (T1190, T1059).\n- **Supply-chain (npm) ingestion**: CI/CD logs + artifact repo + EDR on build agents; alert on **new dependency names similar to popular libs** and unexpected postinstall scripts (T1195.001).\n- **Cloud logging abuse (visibility evasion)**: Cloud control plane logs (AWS CloudTrail / Azure Activity / GCP Audit); watch for **logging configuration changes**, new sinks/exports, or deletion of log resources (T1562.008).\n\n---\n\n### Medium-term follow-ups\n- **Patch/workaround tracking**: Prepare for rapid deployment of the **Defender CVE-2026-50656** patch when released; pre-stage change windows and validation tests.\n- **External attack surface review**: Ensure continuous discovery of **forgotten Joomla/PeopleSoft** and other legacy web apps; enforce ownership and patch SLAs for internet-facing services.\n- **AI gateway hardening**: For LiteLLM/AI proxies, standardize: **disable test/debug endpoints**, restrict admin interfaces, enforce mTLS/IP allowlists, and maintain **credential rotation runbooks**.\n- **Supply-chain governance**: Tighten controls for npm/PyPI/containers (allowlists, lockfiles, SCA gating, signed artifacts) and add an escalation path when typosquats are detected.\n- **Ransomware prep**: Validate alert coverage for **defense evasion + credential access**; run a tabletop focused on **EDR tamper + cloud-relayed C2** scenarios.\n- **Fortinet/FortiBleed context (assumption-based)**: If we operate Fortinet appliances, validate exposure/credential hygiene and monitor vendor advisories; treat any credential leak claims as **rotate + review remote access** triggers.",
+  "morning_call_markdown": "### Executive Summary\n- Active exploitation confirmed for a **critical Oracle PeopleSoft PeopleTools zero-day (CVE-2026-35273)**; treat any internet-facing PeopleSoft as at-risk until proven otherwise.\n- Multiple **identity/access bypass and unauthenticated RCE paths** surfaced/updated (notably **Splunk KEV auth issue, F5 NGINX RCEs, Webmin auth bypass, SAML/library auth bypass**); prioritize exposure reduction and verification.\n- **Ransomware ecosystem tradecraft update**: DragonForce operators are **hiding C2 inside Microsoft Teams relay infrastructure**; assume “legit SaaS” traffic can be malicious and hunt accordingly.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Oracle PeopleSoft PeopleTools zero-day (CVE-2026-35273) – active exploitation**\n- What happened (1 short line)  \n  - A critical PeopleSoft PeopleTools zero-day was disclosed and is **confirmed actively exploited**.\n- Why it matters operationally (1 short line)  \n  - PeopleSoft often holds **HR/finance/supply-chain data** and is a high-value foothold for fraud and ransomware staging.\n- Recommended immediate actions for the SOC today (1–2 short actions, same bullet)  \n  - **Identify all PeopleSoft/PeopleTools instances + internet exposure**; start **targeted hunt** for new webshells/process spawns from app server accounts and anomalous admin actions.\n\n**2) Splunk Enterprise KEV: missing authentication for critical function (CVE-2026-20253)**\n- What happened (1 short line)  \n  - CISA added a **Splunk Enterprise missing-auth vulnerability** to KEV (active exploitation evidence).\n- Why it matters operationally (1 short line)  \n  - Splunk is frequently **high-privilege and widely reachable internally**, enabling rapid lateral movement and log tampering.\n- Recommended immediate actions for the SOC today (1–2 short actions, same bullet)  \n  - **Confirm versions/exposure of Splunk management interfaces**; **restrict access (allowlists/VPN)** and hunt for unusual REST/API calls and new Splunk apps/users.\n\n**3) Perimeter/device compromise theme: FortiGate “FortiBleed” persistence + leaked Fortinet creds (campaign-level risk)**\n- What happened (1 short line)  \n  - Reporting indicates a campaign compromising FortiGate admin creds at scale, with persistence potentially **below OS**; separate reporting cites **~74k Fortinet device creds leaked**.\n- Why it matters operationally (1 short line)  \n  - Perimeter devices are a direct path to **network-wide visibility, session hijack, and ransomware ingress**, and patching alone may not evict persistence.\n- Recommended immediate actions for the SOC today (1–2 short actions, same bullet)  \n  - **Validate FortiGate admin access paths + rotate creds/tokens**; review configs for **new admins, VPN changes, policy edits**, and consider **device integrity checks / vendor IR guidance** (assumption: Fortinet fleet exists).\n\n**4) Web app / management plane criticals: F5 NGINX unauth RCEs + Webmin auth bypass**\n- What happened (1 short line)  \n  - F5 issued emergency updates for **critical NGINX flaws enabling unauth code execution**; a **Webmin miniserv.pl header auth spoofing** issue also surfaced.\n- Why it matters operationally (1 short line)  \n  - Internet-facing reverse proxies/admin panels are common entry points for **initial access (T1190)** and rapid webshell deployment.\n- Recommended immediate actions for the SOC today (1–2 short actions, same bullet)  \n  - **Inventory and prioritize patching** of NGINX/F5 and Webmin; until patched, **reduce exposure (WAF rules, IP allowlists, disable external admin UIs)** and watch for exploitation attempts in edge logs.\n\n**5) DragonForce ransomware tradecraft: C2 over Microsoft Teams relay infrastructure**\n- What happened (1 short line)  \n  - DragonForce-associated actors used a Go RAT (“Backdoor.Turn”) to **blend C2 into Microsoft Teams relay traffic**.\n- Why it matters operationally (1 short line)  \n  - C2 over trusted SaaS reduces efficacy of simple domain blocking and can mask **data theft + pre-ransomware staging**.\n- Recommended immediate actions for the SOC today (1–2 short actions, same bullet)  \n  - Hunt endpoints for **suspicious Teams child processes / unusual network patterns**; tighten egress monitoring on Teams-related traffic and validate Teams is **not abused for beaconing from servers**.\n\n---\n\n### Monitoring & detection recommendations\n- **PeopleSoft/Oracle app servers**: WAF/web logs + EDR on app hosts for abnormal POSTs to admin endpoints, webshell-like file writes, and unusual Java/Python spawning shells (ATT&CK **T1190**, **T1505.003**).\n- **Splunk**: Splunk internal/audit logs + OS logs on Splunk servers for new users/roles, new apps installed, unusual REST calls to admin endpoints, and outbound connections from Splunk host (ATT&CK **T1078**, **T1562.001**).\n- **FortiGate / perimeter**: Firewall/VPN device logs for new admin logins, config exports, changes to SSL-VPN portals, new local users, and spikes in authentication failures; correlate with geovelocity and atypical source ASNs (ATT&CK **T1078**, **T1562.004**).\n- **F5 NGINX / reverse proxy**: NGINX access/error logs for anomalous module errors, unexpected method/URI combos, and any upstream requests leading to command execution patterns; monitor file integrity on proxy hosts (ATT&CK **T1190**).\n- **Webmin**: Webmin/miniserv logs + EDR for successful logins without prior auth flow, repeated header anomalies, and creation of new users/cron jobs post-login (ATT&CK **T1098**, **T1053.003**).\n- **Microsoft Teams as covert C2**: Proxy/DNS + EDR for Teams processes on non-user servers, Teams spawning PowerShell/cmd, and consistent periodic outbound sessions consistent with beaconing (ATT&CK **T1071.001**, **T1218**).\n- **Supply-chain web injection (Okendo reviews widget)**: Web proxy + browser telemetry/EDR for connections to e-commerce/review-widget scripts followed by payload fetches; monitor for drive-by behaviors and new scheduled tasks after browsing (ATT&CK **T1189**, **T1053**).\n\n---\n\n### Medium-term follow-ups\n- **Patch/mitigation program**: Validate ownership and patch SLAs for **F5 NGINX**, **Webmin**, **Splunk KEV**, and any **FreePBX** exposure (PoC chain to root exists) even if not seen in our environment.\n- **FortiGate hardening**: Implement a standard response playbook for suspected perimeter compromise (config diffing, credential rotation, key/cert review, potential re-image/RMA path depending on vendor guidance).\n- **Identity library risk**: Review SSO/SAML components for exposure to **SAML signature verification bypass (CVE-2026-49454)**; ensure libraries are updated and add regression tests for signature validation.\n- **AI/MCP tooling controls**: If using MCP servers/toolboxes, audit for default binds to **0.0.0.0** and missing auth (e.g., mcp-pinot, mcp-toolbox issues); restrict to localhost/VPN and require authn.\n- **Linux kernel local privesc churn**: Track kernel update cadence for fleets (many local priv-esc CVEs listed); prioritize on **multi-tenant jump hosts, CI runners, and admin workstations**.\n- **Browser patch hygiene**: Confirm rapid update channels for Firefox given critical RCE reporting; verify enterprise policy enforces current versions.",
   "highlights": [
     {
-      "title": "LiteLLM CVE-2026-42271: Patch, Rotate, and Harden the RCE",
-      "link": "https://dev.to/aavisangle/litellm-cve-2026-42271-patch-rotate-and-harden-the-rce-4d9l",
-      "source": "DEV Community",
-      "published": "2026-06-18T08:59:00+00:00",
+      "title": "CVE-2026-35273: Analysis of Oracle PeopleSoft Zero-Day Vulnerability",
+      "link": "https://blog.criminalip.io/2026/06/19/oracle-peoplesoft/",
+      "source": "CIP Blog",
+      "published": "2026-06-19T00:00:40+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Identity / Access",
-        "Cloud / SaaS",
-        "Exploit / PoC",
-        "Linux / Unix",
-        "Supply Chain / Software",
-        "OSINT / Community"
+        "Exploit / PoC"
       ],
       "curated": true,
       "signal_tier": "critical",
       "signal_score": 100.0,
-      "priority_score": 90.59
+      "priority_score": 88.16
     },
     {
-      "title": "CISA Warns of Oracle PeopleSoft 0-Day Vulnerability Exploited in Ransomware Attacks",
-      "link": "https://cybersecuritynews.com/oracle-peoplesoft-0-day-vulnerability-exploit/",
-      "source": "Cyber Security News (FeedBurner)",
-      "published": "2026-06-17T11:53:47+00:00",
+      "title": "InfoSec News Nuggets – 06/18/2026",
+      "link": "https://aboutdfir.com/infosec-news-nuggets-06-18-2026/",
+      "source": "AboutDFIR – The Definitive Compendium Project",
+      "published": "2026-06-18T12:11:51+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "Ransomware",
-        "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 100.0,
-      "priority_score": 83.68
-    },
-    {
-      "title": "Microsoft Confirms RoguePlanet Defender Zero-Day, Says Patch is in Development",
-      "link": "https://vulners.com/thn/THN:6C6F54F5540003560342230BF1B21800?utm_source=rss&utm_medium=rss&utm_campaign=rss",
-      "source": "Vulners.com RSS Feed",
-      "published": "2026-06-17T17:36:00+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
+        "Crypto / Web3",
         "Malware / Payloads"
       ],
-      "curated": true,
+      "curated": false,
       "signal_tier": "critical",
-      "signal_score": 90.82,
-      "priority_score": 84.89
+      "signal_score": 91.02,
+      "priority_score": 75.19
     },
     {
-      "title": "Microsoft Confirms RoguePlanet Defender Zero-Day, Says Patch is in Development",
-      "link": "https://thehackernews.com/2026/06/microsoft-confirms-rogueplanet-defender_02022423645.html",
-      "source": "The Hacker News",
-      "published": "2026-06-17T17:36:28+00:00",
+      "title": "The botnet browser blues.",
+      "link": "https://www.thecyberwire.com/podcasts/daily-podcast/2576/notes",
+      "source": "CyberWire Daily",
+      "published": "2026-06-18T20:30:00+00:00",
       "smart_groups": [
-        "Vulnerabilities / CVEs",
         "Malware / Payloads",
-        "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 90.57,
-      "priority_score": 83.63
-    },
-    {
-      "title": "Microsoft Addresses RoguePlanet Defender Zero-Day Vulnerability (CVE-2026-50656)",
-      "link": "https://www.news4hackers.com/microsoft-addresses-rogueplanet-defender-zero-day-vulnerability-cve-2026-50656/",
-      "source": "News4Hackers",
-      "published": "2026-06-17T15:19:14+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 80.88,
-      "priority_score": 84.53
-    },
-    {
-      "title": "Microsoft Defender zero-day, FortiBleed exposes 73k devices, GitHub worm spreads",
-      "link": "https://defend.network/briefings/microsoft-defender-zero-day-fortinet-credential-leak-gi-2026-06-18.html",
-      "source": "defend.network",
-      "published": "2026-06-18T06:30:00+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Cloud / SaaS",
-        "Exploit / PoC",
-        "Supply Chain / Software",
-        "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "high",
-      "signal_score": 77.18,
-      "priority_score": 89.96
-    },
-    {
-      "title": "Healthcare sector faces escalating ransomware, supply chain and APT risks as cyber threats intensify, CYFIRMA warns",
-      "link": "https://industrialcyber.co/ransomware/healthcare-sector-faces-escalating-ransomware-supply-chain-and-apt-risks-as-cyber-threats-intensify-cyfirma-warns/",
-      "source": "Industrial Cyber",
-      "published": "2026-06-18T05:48:12+00:00",
-      "smart_groups": [
-        "Threat Actors / APT",
         "Ransomware",
-        "General Security"
+        "Vulnerabilities / CVEs",
+        "Data Breaches / Leaks",
+        "Detection Engineering",
+        "Community / Briefing"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 86.21,
+      "priority_score": 86.03
+    },
+    {
+      "title": "SmartApeSG Launches Okendo Reviews Supply Chain Attack",
+      "link": "https://www.zscaler.com/blogs/security-research/smartapesg-launches-okendo-reviews-supply-chain-attack",
+      "source": "Zscaler Research Blogs",
+      "published": "2026-06-18T14:04:56+00:00",
+      "smart_groups": [
+        "Malware / Payloads",
+        "Windows / Microsoft",
+        "Phishing / Social Engineering",
+        "Threat Actors / APT",
+        "Identity / Access",
+        "Supply Chain / Software",
+        "Vulnerabilities / CVEs",
+        "Mobile Security"
       ],
       "curated": true,
       "signal_tier": "high",
-      "signal_score": 70.27,
-      "priority_score": 88.02
+      "signal_score": 70.31,
+      "priority_score": 87.08
     },
     {
-      "title": "Microsoft Addresses RoguePlanet Zero-Day Vulnerability",
-      "link": "https://www.news4hackers.com/microsoft-addresses-rogueplanet-zero-day-vulnerability/",
-      "source": "News4Hackers",
-      "published": "2026-06-17T11:12:38+00:00",
+      "title": "Exploit for SQL Injection in Sangoma Freepbx",
+      "link": "https://vulners.com/githubexploit/D3C0976F-73D0-56D5-A6FE-0D68A14D8753?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-06-18T22:39:35+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "General Security"
+        "Web / API Security",
+        "Exploit / PoC"
       ],
-      "curated": true,
+      "curated": false,
       "signal_tier": "high",
-      "signal_score": 69.88,
-      "priority_score": 82.8
+      "signal_score": 68.81,
+      "priority_score": 76.73
     },
     {
-      "title": "CVE-2026-50194 | SteeltoeOSS Steeltoe.Management.Endpoint up to 4.1.x authentication bypass (GHSA-58f6-6rj2-3v8r)",
+      "title": "CVE-2026-48582 | Microsoft Exchange Online privilege escalation",
+      "link": "https://vuldb.com/vuln/372317",
+      "source": "VulDB Recent Entries",
+      "published": "2026-06-19T06:00:11+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 63.65,
+      "priority_score": 82.93
+    },
+    {
+      "title": "CVE-2026-56020 | Webmin HTTP Server up to 2.640 HTTP Header miniserv.pl authentication spoofing",
+      "link": "https://vuldb.com/vuln/372247",
+      "source": "VulDB Recent Entries",
+      "published": "2026-06-18T17:52:43+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 63.65,
+      "priority_score": 79.68
+    },
+    {
+      "title": "CVE-2026-43365 | Linux Kernel up to 6.19.8 xfs privilege escalation (Nessus ID 313444 / WID-SEC-2026-1454)",
+      "link": "https://vuldb.com/vuln/362275",
+      "source": "VulDB Updates",
+      "published": "2026-06-19T05:27:56+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Linux / Unix",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 63.61,
+      "priority_score": 82.6
+    },
+    {
+      "title": "CVE-2026-50194 | SteeltoeOSS Steeltoe.Management.Endpoint up to 4.1.x authentication bypass (GHSA-58f6-6rj2-3v8r / EUVD-2026-37801)",
       "link": "https://vuldb.com/vuln/372140",
-      "source": "VulDB Recent Entries",
-      "published": "2026-06-18T05:34:36+00:00",
+      "source": "VulDB Updates",
+      "published": "2026-06-19T03:53:32+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 63.85,
-      "priority_score": 83.02
+      "signal_score": 63.61,
+      "priority_score": 82.17
     },
     {
-      "title": "CVE-2026-36418 | jeecgboot JimuReport up to 2.3.4 Aviator executeSelectApi privilege escalation",
-      "link": "https://vuldb.com/vuln/372072",
-      "source": "VulDB Recent Entries",
-      "published": "2026-06-17T16:49:46+00:00",
+      "title": "CVE-2026-43348 | Linux Kernel up to 7.0.1 mshv_vtl privilege escalation (EUVD-2026-28632 / WID-SEC-2026-1454)",
+      "link": "https://vuldb.com/vuln/362142",
+      "source": "VulDB Updates",
+      "published": "2026-06-18T23:03:40+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
+        "Linux / Unix",
         "Exploit / PoC"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 63.85,
-      "priority_score": 79.61
+      "signal_score": 63.61,
+      "priority_score": 80.88
     }
   ]
 }
