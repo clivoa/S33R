@@ -1,175 +1,171 @@
 {
-  "generated_at": "2026-06-20T09:38:09.423305+00:00",
-  "analysis_date": "2026-06-20",
+  "generated_at": "2026-06-21T10:05:41.728808+00:00",
+  "analysis_date": "2026-06-21",
   "provider": "openai",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-06-20T09:08:40.856961+00:00",
+  "source_generated_at": "2026-06-21T06:15:42.061619+00:00",
   "source_days_back": 30,
-  "source_total_items": 38711,
-  "total_items_in_window_all": 1859,
-  "total_items_in_window_curated": 6,
+  "source_total_items": 39253,
+  "total_items_in_window_all": 968,
+  "total_items_in_window_curated": 0,
   "total_items_in_window_selected": 40,
   "context_selection_policy": "curated-plus-operational-signal-v1",
-  "morning_call_markdown": "### Executive Summary\n- **Splunk Enterprise (CVE-2026-20253) is in CISA KEV and actively exploited** — treat any exposed Splunk mgmt plane as “internet-facing critical” and prioritize emergency mitigation/patching today.\n- **Credential-driven edge compromise risk is spiking** (FortiBleed leaked creds + active exploitation; KEV for LiteSpeed cPanel plugin) — validate perimeter exposure, rotate creds, and watch for post-auth VPN/firewall activity.\n- **Ransomware tradecraft escalation** (RaaS “EDR killer” tooling) — shift hunts toward defense evasion + rapid lateral movement patterns, not just payload execution.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Splunk Enterprise unauthenticated RCE / arbitrary file write (CVE-2026-20253) — KEV, exploited**\n- **What happened:** CISA added a critical Splunk Enterprise issue to KEV with confirmed in-the-wild exploitation; attack path may involve a PostgreSQL “sidecar” exposure and file write that can chain to RCE.\n- **Why it matters operationally:** Splunk often has high privileges and broad visibility/credentials; compromise can enable log tampering, credential access, and rapid domain escalation.\n- **Recommended immediate actions for the SOC today:** Identify all Splunk Enterprise instances (incl. dev/DR), verify exposure of Splunk mgmt ports and any PostgreSQL sidecar, apply vendor mitigations/patch ASAP; start targeted IR monitoring on Splunk servers (new services, scheduled tasks, unexpected outbound, config changes).\n\n**2) Fortinet “FortiBleed” credential leak + active exploitation**\n- **What happened:** Credentials for a large population of Fortinet devices were reportedly leaked; CISA warns attackers are actively using the leak to access firewalls/VPN gateways.\n- **Why it matters operationally:** This is “valid account” access at the edge—expect stealthy VPN logins, config changes, and rapid pivoting to internal networks.\n- **Recommended immediate actions for the SOC today:** Force credential rotation for VPN/admin accounts and API tokens on affected devices; hunt for anomalous VPN/admin logins (new geos/ASNs, odd hours), configuration changes, and new admin users; consider temporary tightening (MFA enforcement, restrict management to jump hosts).\n\n**3) AI/ML agent framework servers under active attack (Langflow; similar holes in LangGraph/LangChain)**\n- **What happened:** Reporting indicates thousands of Langflow servers are being attacked; related agent frameworks may share vulnerable patterns enabling shell access and secret theft.\n- **Why it matters operationally:** These services commonly store high-value secrets (LLM API keys, DB creds, SaaS tokens) and are often deployed quickly with weak perimeter controls.\n- **Recommended immediate actions for the SOC today:** Inventory externally reachable AI/agent framework hosts (ports, containers, k8s services), restrict ingress immediately, rotate exposed keys/secrets where these services run; monitor for suspicious process spawns from app services and unexpected outbound to token/credential endpoints.\n\n**4) Ransomware ecosystem: RaaS adds “EDR killer” capability**\n- **What happened:** A major RaaS operation reportedly expanded affiliate tooling to disable common EDR products (targeting many processes/services).\n- **Why it matters operationally:** Early-stage defense evasion may be the first observable signal; if we miss it, dwell time collapses into encryption/exfil quickly.\n- **Recommended immediate actions for the SOC today:** Prioritize alerts for EDR/AV tamper events, service stop/disable attempts, driver installs, and suspicious signed binary abuse; ensure “EDR health” monitoring is wired to SOC paging (agent offline spikes, policy changes).\n\n**5) Web-facing platform risk: LiteSpeed cPanel plugin (CVE-2026-54420) in KEV + FreePBX unauth SQLi→RCE PoC**\n- **What happened:** CISA added a LiteSpeed cPanel plugin flaw to KEV (active exploitation); a separate PoC chain for FreePBX 16 shows unauth SQLi to RCE.\n- **Why it matters operationally:** These are common in hosting/telephony footprints (often in subsidiaries/vendors); compromise can become an initial access vector and staging point for phishing/voice fraud.\n- **Recommended immediate actions for the SOC today:** Confirm we do **not** expose affected stacks (LiteSpeed/cPanel, FreePBX) on any owned internet assets; if present in any environment/vendor, push urgent patch/mitigation and add heightened monitoring for new web shells, new admin users, and unusual outbound from these servers.\n\n---\n\n### Monitoring & detection recommendations\n- **Splunk servers:** Monitor Windows Security / Sysmon or Linux auditd for new child processes spawned by Splunk services, unexpected file writes in Splunk dirs, and new scheduled tasks/cron (ATT&CK **T1059**, **T1105**, **T1569.002**).\n- **Perimeter VPN/firewall:** Review Fortinet auth logs for “first-seen” usernames, logins from new countries/ASNs, failed→successful bursts, and admin UI/API actions (ATT&CK **T1078**, **T1562.001**).\n- **Network egress:** From Splunk/AI framework/telephony hosts, hunt for new outbound to Tor nodes or unusual high-entropy DNS; correlate with long-lived HTTPS sessions (possible backdoor/C2 as seen in Tor-abusing malware themes) (ATT&CK **T1090**, **T1071.001**).\n- **EDR health + tamper:** Alert on endpoint protection service stop/disable, policy changes, kernel driver installs, and sudden simultaneous sensor-offline events across multiple hosts (ATT&CK **T1562.001**, **T1547**).\n- **Cloud/SaaS secrets abuse:** If AI/agent frameworks exist, watch IdP + SaaS logs (Azure AD/Entra, Okta, Salesforce, Git) for token refresh anomalies and new OAuth grants from unusual apps (ATT&CK **T1528**, **T1550**).\n- **Web server telemetry (WAF/NGINX/Apache):** Look for spikes in requests to admin/install endpoints, SQLi patterns, and suspicious POSTs followed by new files in web roots for hosting/FreePBX-like assets (ATT&CK **T1190**).\n- **Email + web proxy:** Track secondary impacts of supply-chain/script injection campaigns (e.g., compromised third-party JS) via unusual browser downloads, new script domains, or endpoint detections tied to web browsing (ATT&CK **T1189**).\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** Add/confirm emergency SLA for KEV items (Splunk CVE-2026-20253; LiteSpeed CVE-2026-54420) with explicit owner and completion timestamps; validate compensating controls when patching is delayed.\n- **Perimeter credential hygiene:** Implement periodic forced rotation + MFA hardening for firewall/VPN admin accounts; reduce standing privileges and restrict management planes to dedicated admin networks.\n- **AI framework hardening:** Formalize controls for AI/agent deployments (no direct internet exposure by default, secret storage in vault, egress allowlists, mandatory logging/EDR in containers/hosts).\n- **Browser vulnerability readiness:** Multiple critical Firefox RCE-class vulns were reported (no exploit noted in context); ensure enterprise browser patch cadence and validate disabling risky features where feasible until patched.\n- **Ransomware resiliency checks:** Validate backups are immutable and tested; run tabletop focusing on “EDR impaired” scenario and rapid containment (isolation, credential reset, GPO lockdown).\n- **Vendor/subsidiary exposure review:** Confirm whether any business units/third parties run FreePBX, cPanel/LiteSpeed, or exposed DevOps/security tooling (e.g., DevGuard) and require attestation/patch evidence.",
+  "morning_call_markdown": "### Executive Summary\n- Multiple **critical Windows Server/Client privilege-escalation and Netlogon RPC RCE CVEs** resurfaced in feeds; assume **rapid weaponization risk** in enterprise environments even if PoC isn’t confirmed here.\n- **Supply-chain activity**: report of **140+ poisoned npm packages** attributed to North Korean actor (Sapphire Sleet/BlueNoroff) — high relevance to dev pipelines and internal tooling.\n- **Ransomware tradecraft update**: “GentleKiller” **EDR-killer/BYOVD-style disablement tooling** highlighted; prioritize detections for security-control tampering.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Windows domain/endpoint risk: Netlogon RPC RCE + multiple critical LPEs (Windows up to Server 2022; Server 2008R2–2019)**\n- **What happened:** Feeds highlight **CVE-2022-38023 (Netlogon RPC RCE)** plus numerous **critical Windows LPEs** (LSA/Kernel/Win32k/CSRSS/GPP/ReFS/etc.).\n- **Why it matters operationally:** RCE/LPE chaining is a common path to **domain takeover** and **ransomware deployment** in financial networks; “no exploit” claims may lag real-world use.\n- **Recommended immediate actions for the SOC today:** Validate patch coverage for listed CVEs on **DCs/servers/jump hosts**; increase alerting for **Netlogon/LSA anomalies + privilege escalation behaviors** on high-value Windows assets.\n\n**2) Ransomware enablement: “GentleKiller” EDR-killer (BYOVD/security tool disablement)**\n- **What happened:** Reporting describes an affiliate-ready **EDR-killer suite** used to disable security tooling ahead of ransomware (“The Gentlemen”).\n- **Why it matters operationally:** Expect **defense evasion** spikes (driver installs, service termination, tamper attempts) shortly before encryption/exfil; SOC may lose visibility if controls are killed.\n- **Recommended immediate actions for the SOC today:** Hunt for **EDR/AV service stop attempts, driver load events, and signed-but-untrusted driver installs**; confirm EDR **tamper protection** is enabled and alerts route out-of-band.\n\n**3) Supply-chain: North Korean (Sapphire Sleet/BlueNoroff) poisoning of 140+ npm packages in AI/dev tooling ecosystem**\n- **What happened:** Community report summarizes a campaign where **>140 npm packages** were compromised/poisoned in an AI tooling dependency chain.\n- **Why it matters operationally:** Direct risk to **CI/CD runners, developer workstations, build artifacts**, and downstream production deployments; finance orgs often have internal Node tooling even if prod isn’t Node.\n- **Recommended immediate actions for the SOC today:** Query EDR/process telemetry for **unexpected `npm install`/`node` executions on non-dev hosts**; coordinate with AppSec/DevOps to **freeze dependency updates** for impacted ecosystems pending review.\n\n**4) Internet-facing web/app risk: Next.js WebSocket upgrade handler SSRF exploit + litellm SSRF**\n- **What happened:** An **exploit/scanner** is advertised for **Next.js SSRF (CVE-2026-44578)**; also a critical **litellm (<=1.82.2) SSRF (CVE-2026-12798)** in MCP OpenAPI spec loading.\n- **Why it matters operationally:** SSRF is frequently leveraged for **cloud metadata access**, internal service pivoting, and credential theft (esp. where IMDS is reachable).\n- **Recommended immediate actions for the SOC today:** Identify externally exposed **Next.js** services and any internal **litellm** deployments; add WAF/reverse-proxy monitoring for **WebSocket upgrade + suspicious internal URL fetch patterns** and prioritize patch/config mitigations.\n\n**5) Oracle enterprise stack exposure: Coherence RCE + Enterprise Manager privilege escalation**\n- **What happened:** Feeds flag **Oracle Coherence core RCE (CVE-2026-35304)** and **Oracle Enterprise Manager Base Platform priv-esc (CVE-2026-46832)**.\n- **Why it matters operationally:** If internet- or broadly internal-exposed, these become **high-impact footholds** into middleware/management planes often used in critical services.\n- **Recommended immediate actions for the SOC today:** Confirm whether **Coherence/OEM** exist in our environment and exposure scope; raise monitoring for **new processes spawned by Java/middleware services** and unusual admin actions in OEM.\n\n---\n\n### Monitoring & detection recommendations\n- **Windows Netlogon/Domain services:** Monitor DC security logs for **Netlogon RPC anomalies**, spikes in authentication failures, unusual machine account activity (ATT&CK: **T1210**, **T1078**); log sources: **DC Security logs, Netlogon logs, SIEM auth analytics**.\n- **Privilege escalation/credential access on Windows:** Hunt for suspicious **LSASS access**, token manipulation, and rapid privilege changes after initial access (ATT&CK: **T1068**, **T1003**); log sources: **EDR, Windows Security (4688/4672), Sysmon**.\n- **EDR/AV tampering & BYOVD patterns:** Alert on **service stop/disable**, registry changes to security tools, and **driver load events** from non-standard paths (ATT&CK: **T1562.001**, **T1112**); log sources: **EDR tamper events, Windows Service Control Manager, Sysmon driver-load**.\n- **SSRF attempts in web tiers (Next.js/litellm):** Look for outbound requests from web/app servers to **link-local/metadata** ranges and internal RFC1918 targets (ATT&CK: **T1190**, **T1552.005**); log sources: **WAF, reverse proxy, VPC/VNet flow logs, egress proxy**.\n- **CI/CD and dev workstation telemetry (npm):** Monitor for **new package installs**, suspicious postinstall scripts, and node processes making external connections (ATT&CK: **T1195.001**, **T1059.007**); log sources: **EDR, CI runner logs, artifact repo logs**.\n- **Oracle middleware/management plane:** Watch for **new webshell-like files**, unexpected **java** child processes, and admin console logins from atypical sources (ATT&CK: **T1190**, **T1505.003**); log sources: **Oracle app logs, web server logs, EDR**.\n- **Linux server priv-esc noise floor:** Given multiple Linux kernel LPE CVEs, monitor for **sudden root shells**, unusual module loads, and privilege transitions on critical Linux hosts (ATT&CK: **T1068**); log sources: **auditd, EDR for Linux, sudo/auth logs**.\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** Cross-check asset inventory for affected **Windows Server versions (2008R2–2022)** and prioritize remediation on **DCs, app servers, VDI/jump hosts**; track exceptions explicitly.\n- **Web hardening for SSRF:** Enforce **egress allow-listing** from app tiers; block access to **cloud metadata endpoints** at network layer where feasible.\n- **Dev supply-chain controls:** Require **lockfiles, package integrity verification, private registries**, and CI policies that fail builds on **new/unreviewed dependencies**.\n- **Ransomware resilience:** Validate **EDR tamper protection**, ensure **out-of-band logging** (syslog/SIEM) and test SOC visibility when endpoint agents are degraded.\n- **Oracle exposure review:** Confirm whether **Oracle Coherence/OEM** are present; if yes, assess **internet exposure**, admin access paths, and implement tighter segmentation.\n- **Disputed N-able Mail Assure auth-bypass claim:** Treat as **watch item** unless vendor confirms; if the service is used, request vendor status and review tenant access/audit logs for anomalies.",
   "highlights": [
     {
-      "title": "CVE-2026-20253: CISA Warns of Actively Exploited Splunk Enterprise RCE",
-      "link": "https://socradar.io/blog/cve-2026-20253-cisa-splunk-enterprise-rce/",
-      "source": "SOCRadar® Cyber Intelligence Inc.",
-      "published": "2026-06-19T15:14:36+00:00",
+      "title": "CVE-2022-38017 | Microsoft Azure StorSimple 8000 Local Privilege Escalation (EUVD-2022-40623)",
+      "link": "https://vuldb.com/vuln/210455",
+      "source": "VulDB Updates",
+      "published": "2026-06-21T04:35:04+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 87.02,
-      "priority_score": 85.27
-    },
-    {
-      "title": "Splunk Enterprise RCE Vulnerability (CVE-2026-20253) Under Active Exploitation",
-      "link": "https://www.news4hackers.com/splunk-enterprise-rce-vulnerability-cve-2026-20253-under-active-exploitation/",
-      "source": "News4Hackers",
-      "published": "2026-06-19T18:04:23+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 86.92,
-      "priority_score": 85.53
-    },
-    {
-      "title": "Exploit for SQL Injection in Sangoma Freepbx",
-      "link": "https://vulners.com/githubexploit/A52A5B67-31DB-5B86-B528-C2F4F2A57FB3?utm_source=rss&utm_medium=rss&utm_campaign=rss",
-      "source": "Vulners.com RSS Feed",
-      "published": "2026-06-19T19:01:41+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Web / API Security",
-        "Exploit / PoC",
-        "Malware / Payloads"
-      ],
-      "curated": false,
-      "signal_tier": "critical",
-      "signal_score": 86.78,
-      "priority_score": 75.11
-    },
-    {
-      "title": "7,000 Langflow servers are under attack. LangGraph and LangChain have the same holes",
-      "link": "https://venturebeat.com/security/7000-langflow-servers-under-attack-langgraph-langchain-same-holes",
-      "source": "Security – VentureBeat",
-      "published": "2026-06-19T21:14:19+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "Web / API Security",
-        "Malware / Payloads",
-        "Data Protection / Privacy",
-        "Detection Engineering",
         "Cloud / SaaS",
-        "Identity / Access",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 63.57,
+      "priority_score": 82.23
+    },
+    {
+      "title": "CVE-2022-38016 | Microsoft Windows up to Server 2022 Local Security Authority privilege escalation (EUVD-2022-40622)",
+      "link": "https://vuldb.com/vuln/210520",
+      "source": "VulDB Updates",
+      "published": "2026-06-21T04:35:03+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Windows / Microsoft"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 63.57,
+      "priority_score": 82.23
+    },
+    {
+      "title": "CVE-2022-37999 | Microsoft Windows up to Server 2022 Group Policy Preference Client privilege escalation (EUVD-2022-40606)",
+      "link": "https://vuldb.com/vuln/210510",
+      "source": "VulDB Updates",
+      "published": "2026-06-21T04:13:06+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Windows / Microsoft"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 63.57,
+      "priority_score": 82.13
+    },
+    {
+      "title": "CVE-2022-37997 | Microsoft Windows up to Server 2022 Graphics privilege escalation (EUVD-2022-40604)",
+      "link": "https://vuldb.com/vuln/210472",
+      "source": "VulDB Updates",
+      "published": "2026-06-20T23:39:33+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
         "Network / OT / ICS",
-        "Threat Actors / APT",
-        "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 86.15,
-      "priority_score": 87.62
-    },
-    {
-      "title": "Unauthenticated RCE in Splunk Enterprise under active attack (CVE-2026-20253)",
-      "link": "https://www.helpnetsecurity.com/2026/06/19/splunk-vulnerability-cve-2026-20253-exploited/",
-      "source": "Help Net Security",
-      "published": "2026-06-19T10:50:33+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 84.89,
-      "priority_score": 83.4
-    },
-    {
-      "title": "CISA Adds Splunk Enterprise RCE (CVE-2026-20253) to KEV - CVSS 9.8. How are your SOCs handling the PostgreSQL sidecar mitigation?",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1ua3npz/cisa_adds_splunk_enterprise_rce_cve202620253_to/",
-      "source": "/r/cybersecurity",
-      "published": "2026-06-19T14:34:28+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "OSINT / Community"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 84.47,
-      "priority_score": 81.72
-    },
-    {
-      "title": "Warning: Actively exploited, critical vulnerability in Splunk Enterprise, can lead to remote code execution Patch Immediately!",
-      "link": "https://ccb.belgium.be/advisories/warning-actively-exploited-critical-vulnerability-splunk-enterprise-can-lead-remote-code",
-      "source": "Cert.be advisories",
-      "published": "2026-06-19T15:33:38+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "Government / CERT"
-      ],
-      "curated": true,
-      "signal_tier": "high",
-      "signal_score": 74.81,
-      "priority_score": 77.69
-    },
-    {
-      "title": "Exploit for CVE-2026-54337",
-      "link": "https://vulners.com/githubexploit/2EE1B1CE-C7E1-5F5D-9FD6-5C929D87F183?utm_source=rss&utm_medium=rss&utm_campaign=rss",
-      "source": "Vulners.com RSS Feed",
-      "published": "2026-06-20T03:49:13+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
+        "Windows / Microsoft"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 64.78,
-      "priority_score": 75.74
+      "signal_score": 63.57,
+      "priority_score": 80.91
     },
     {
-      "title": "Exploit for OS Command Injection in Ray_Project Ray",
-      "link": "https://vulners.com/githubexploit/B7F3888A-67A2-5DAE-904A-1F178F5B69DD?utm_source=rss&utm_medium=rss&utm_campaign=rss",
-      "source": "Vulners.com RSS Feed",
-      "published": "2026-06-19T19:08:58+00:00",
+      "title": "CVE-2022-37995 | Microsoft Windows up to Server 2022 Kernel privilege escalation (EUVD-2022-40602)",
+      "link": "https://vuldb.com/vuln/210517",
+      "source": "VulDB Updates",
+      "published": "2026-06-20T23:39:32+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Exploit / PoC"
+        "Exploit / PoC",
+        "Linux / Unix",
+        "Windows / Microsoft"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 64.78,
-      "priority_score": 75.02
+      "signal_score": 63.57,
+      "priority_score": 80.91
     },
     {
-      "title": "Hackers Abuse Third-Party Okendo Reviews Script to Spread SmartApeSG Malware Campaign",
-      "link": "https://cybersecuritynews.com/hackers-abuse-third-party-okendo-reviews-script/",
-      "source": "Cyber Security News (FeedBurner)",
-      "published": "2026-06-19T12:09:56+00:00",
+      "title": "CVE-2022-37988 | Microsoft Windows up to Server 2022 Kernel privilege escalation (EUVD-2022-40595)",
+      "link": "https://vuldb.com/vuln/210512",
+      "source": "VulDB Updates",
+      "published": "2026-06-20T18:33:31+00:00",
       "smart_groups": [
-        "Threat Actors / APT",
-        "Malware / Payloads",
         "Vulnerabilities / CVEs",
-        "General Security"
+        "Exploit / PoC",
+        "Linux / Unix",
+        "Windows / Microsoft"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 63.92,
-      "priority_score": 68.91
+      "signal_score": 63.57,
+      "priority_score": 79.54
+    },
+    {
+      "title": "CVE-2022-37987 | Microsoft Windows up to Server 2022 Client Server Run-time Subsystem privilege escalation (EUVD-2022-40594)",
+      "link": "https://vuldb.com/vuln/210457",
+      "source": "VulDB Updates",
+      "published": "2026-06-20T18:33:31+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Windows / Microsoft"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 63.57,
+      "priority_score": 79.54
+    },
+    {
+      "title": "CVE-2022-37986 | Microsoft Windows up to Server 2022 Win32k privilege escalation (EUVD-2022-40593)",
+      "link": "https://vuldb.com/vuln/210470",
+      "source": "VulDB Updates",
+      "published": "2026-06-20T18:33:30+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Windows / Microsoft"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 63.57,
+      "priority_score": 79.54
+    },
+    {
+      "title": "CVE-2022-37983 | Microsoft Windows up to Server 2022 DWM Core Library privilege escalation (EUVD-2022-40590)",
+      "link": "https://vuldb.com/vuln/210505",
+      "source": "VulDB Updates",
+      "published": "2026-06-20T17:16:52+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Windows / Microsoft"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 63.57,
+      "priority_score": 79.2
+    },
+    {
+      "title": "CVE-2022-37980 | Microsoft Windows up to Server 2022 DHCP Client privilege escalation (EUVD-2022-40587)",
+      "link": "https://vuldb.com/vuln/210502",
+      "source": "VulDB Updates",
+      "published": "2026-06-20T17:16:51+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Windows / Microsoft"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 63.57,
+      "priority_score": 79.2
     }
   ]
 }
