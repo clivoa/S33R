@@ -1,171 +1,169 @@
 {
-  "generated_at": "2026-06-21T10:05:41.728808+00:00",
-  "analysis_date": "2026-06-21",
+  "generated_at": "2026-06-22T12:25:41.530126+00:00",
+  "analysis_date": "2026-06-22",
   "provider": "openai",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-06-21T06:15:42.061619+00:00",
+  "source_generated_at": "2026-06-22T10:50:47.439105+00:00",
   "source_days_back": 30,
-  "source_total_items": 39253,
-  "total_items_in_window_all": 968,
-  "total_items_in_window_curated": 0,
+  "source_total_items": 39853,
+  "total_items_in_window_all": 1117,
+  "total_items_in_window_curated": 2,
   "total_items_in_window_selected": 40,
   "context_selection_policy": "curated-plus-operational-signal-v1",
-  "morning_call_markdown": "### Executive Summary\n- Multiple **critical Windows Server/Client privilege-escalation and Netlogon RPC RCE CVEs** resurfaced in feeds; assume **rapid weaponization risk** in enterprise environments even if PoC isn’t confirmed here.\n- **Supply-chain activity**: report of **140+ poisoned npm packages** attributed to North Korean actor (Sapphire Sleet/BlueNoroff) — high relevance to dev pipelines and internal tooling.\n- **Ransomware tradecraft update**: “GentleKiller” **EDR-killer/BYOVD-style disablement tooling** highlighted; prioritize detections for security-control tampering.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Windows domain/endpoint risk: Netlogon RPC RCE + multiple critical LPEs (Windows up to Server 2022; Server 2008R2–2019)**\n- **What happened:** Feeds highlight **CVE-2022-38023 (Netlogon RPC RCE)** plus numerous **critical Windows LPEs** (LSA/Kernel/Win32k/CSRSS/GPP/ReFS/etc.).\n- **Why it matters operationally:** RCE/LPE chaining is a common path to **domain takeover** and **ransomware deployment** in financial networks; “no exploit” claims may lag real-world use.\n- **Recommended immediate actions for the SOC today:** Validate patch coverage for listed CVEs on **DCs/servers/jump hosts**; increase alerting for **Netlogon/LSA anomalies + privilege escalation behaviors** on high-value Windows assets.\n\n**2) Ransomware enablement: “GentleKiller” EDR-killer (BYOVD/security tool disablement)**\n- **What happened:** Reporting describes an affiliate-ready **EDR-killer suite** used to disable security tooling ahead of ransomware (“The Gentlemen”).\n- **Why it matters operationally:** Expect **defense evasion** spikes (driver installs, service termination, tamper attempts) shortly before encryption/exfil; SOC may lose visibility if controls are killed.\n- **Recommended immediate actions for the SOC today:** Hunt for **EDR/AV service stop attempts, driver load events, and signed-but-untrusted driver installs**; confirm EDR **tamper protection** is enabled and alerts route out-of-band.\n\n**3) Supply-chain: North Korean (Sapphire Sleet/BlueNoroff) poisoning of 140+ npm packages in AI/dev tooling ecosystem**\n- **What happened:** Community report summarizes a campaign where **>140 npm packages** were compromised/poisoned in an AI tooling dependency chain.\n- **Why it matters operationally:** Direct risk to **CI/CD runners, developer workstations, build artifacts**, and downstream production deployments; finance orgs often have internal Node tooling even if prod isn’t Node.\n- **Recommended immediate actions for the SOC today:** Query EDR/process telemetry for **unexpected `npm install`/`node` executions on non-dev hosts**; coordinate with AppSec/DevOps to **freeze dependency updates** for impacted ecosystems pending review.\n\n**4) Internet-facing web/app risk: Next.js WebSocket upgrade handler SSRF exploit + litellm SSRF**\n- **What happened:** An **exploit/scanner** is advertised for **Next.js SSRF (CVE-2026-44578)**; also a critical **litellm (<=1.82.2) SSRF (CVE-2026-12798)** in MCP OpenAPI spec loading.\n- **Why it matters operationally:** SSRF is frequently leveraged for **cloud metadata access**, internal service pivoting, and credential theft (esp. where IMDS is reachable).\n- **Recommended immediate actions for the SOC today:** Identify externally exposed **Next.js** services and any internal **litellm** deployments; add WAF/reverse-proxy monitoring for **WebSocket upgrade + suspicious internal URL fetch patterns** and prioritize patch/config mitigations.\n\n**5) Oracle enterprise stack exposure: Coherence RCE + Enterprise Manager privilege escalation**\n- **What happened:** Feeds flag **Oracle Coherence core RCE (CVE-2026-35304)** and **Oracle Enterprise Manager Base Platform priv-esc (CVE-2026-46832)**.\n- **Why it matters operationally:** If internet- or broadly internal-exposed, these become **high-impact footholds** into middleware/management planes often used in critical services.\n- **Recommended immediate actions for the SOC today:** Confirm whether **Coherence/OEM** exist in our environment and exposure scope; raise monitoring for **new processes spawned by Java/middleware services** and unusual admin actions in OEM.\n\n---\n\n### Monitoring & detection recommendations\n- **Windows Netlogon/Domain services:** Monitor DC security logs for **Netlogon RPC anomalies**, spikes in authentication failures, unusual machine account activity (ATT&CK: **T1210**, **T1078**); log sources: **DC Security logs, Netlogon logs, SIEM auth analytics**.\n- **Privilege escalation/credential access on Windows:** Hunt for suspicious **LSASS access**, token manipulation, and rapid privilege changes after initial access (ATT&CK: **T1068**, **T1003**); log sources: **EDR, Windows Security (4688/4672), Sysmon**.\n- **EDR/AV tampering & BYOVD patterns:** Alert on **service stop/disable**, registry changes to security tools, and **driver load events** from non-standard paths (ATT&CK: **T1562.001**, **T1112**); log sources: **EDR tamper events, Windows Service Control Manager, Sysmon driver-load**.\n- **SSRF attempts in web tiers (Next.js/litellm):** Look for outbound requests from web/app servers to **link-local/metadata** ranges and internal RFC1918 targets (ATT&CK: **T1190**, **T1552.005**); log sources: **WAF, reverse proxy, VPC/VNet flow logs, egress proxy**.\n- **CI/CD and dev workstation telemetry (npm):** Monitor for **new package installs**, suspicious postinstall scripts, and node processes making external connections (ATT&CK: **T1195.001**, **T1059.007**); log sources: **EDR, CI runner logs, artifact repo logs**.\n- **Oracle middleware/management plane:** Watch for **new webshell-like files**, unexpected **java** child processes, and admin console logins from atypical sources (ATT&CK: **T1190**, **T1505.003**); log sources: **Oracle app logs, web server logs, EDR**.\n- **Linux server priv-esc noise floor:** Given multiple Linux kernel LPE CVEs, monitor for **sudden root shells**, unusual module loads, and privilege transitions on critical Linux hosts (ATT&CK: **T1068**); log sources: **auditd, EDR for Linux, sudo/auth logs**.\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** Cross-check asset inventory for affected **Windows Server versions (2008R2–2022)** and prioritize remediation on **DCs, app servers, VDI/jump hosts**; track exceptions explicitly.\n- **Web hardening for SSRF:** Enforce **egress allow-listing** from app tiers; block access to **cloud metadata endpoints** at network layer where feasible.\n- **Dev supply-chain controls:** Require **lockfiles, package integrity verification, private registries**, and CI policies that fail builds on **new/unreviewed dependencies**.\n- **Ransomware resilience:** Validate **EDR tamper protection**, ensure **out-of-band logging** (syslog/SIEM) and test SOC visibility when endpoint agents are degraded.\n- **Oracle exposure review:** Confirm whether **Oracle Coherence/OEM** are present; if yes, assess **internet exposure**, admin access paths, and implement tighter segmentation.\n- **Disputed N-able Mail Assure auth-bypass claim:** Treat as **watch item** unless vendor confirms; if the service is used, request vendor status and review tenant access/audit logs for anomalies.",
+  "morning_call_markdown": "### Executive Summary\n- **Critical VPN risk:** Active exploitation reported for **PAN-OS GlobalProtect auth bypass (CVE-2026-0257)**—treat any internet-exposed GlobalProtect as high-risk until proven patched/mitigated.\n- **Supply-chain pressure increasing:** Multiple developer ecosystem compromises (Mastra npm poisoning, fake Node.js installer via Google Ads, mass GitHub repo trojaning) raise likelihood of **infostealer / token theft** reaching endpoints and CI/CD.\n- **Exploitation tooling circulating:** Fresh PoCs for **Joomla SP Page Builder unauth RCE (CVE-2026-48908)** and other web app chains increase opportunistic scanning—verify externally exposed CMS/workflow tools.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) PAN-OS GlobalProtect authentication bypass (CVE-2026-0257) – active exploitation**\n- **What happened:** A critical auth bypass affecting PAN-OS GlobalProtect Portal/Gateway has confirmed in-the-wild exploitation and public PoC availability.\n- **Why it matters operationally:** Internet-facing VPN compromise is a common first step to domain takeover/ransomware in financial environments (initial access → credential theft → lateral movement).\n- **Recommended immediate actions for the SOC today:** Confirm patch/mitigation status for all GlobalProtect; hunt for abnormal GlobalProtect auth/session patterns and new admin actions post-VPN access.\n\n**2) Web app/CMS unauth RCE PoCs likely to drive scanning (Joomla SP Page Builder + other public PoCs)**\n- **What happened:** Public PoC released for **CVE-2026-48908 (Joomla SP Page Builder unauth RCE)**; additional PoCs surfaced for widely deployed platforms (e.g., Next.js middleware auth bypass PoC; n8n chain PoC referenced).\n- **Why it matters operationally:** These are “spray-and-pray” friendly—if any internet-exposed instances exist (marketing sites, microsites, dev tools), exploitation can lead to webshells, credential access, or pivoting.\n- **Recommended immediate actions for the SOC today:** Inventory and confirm exposure of Joomla/Next.js/n8n-facing services; increase WAF/IDS sensitivity for suspicious requests to known component paths and block/geo-rate-limit where feasible.\n\n**3) Developer supply-chain & fake tooling delivery (Mastra npm poisoning, fake Node.js installer ads, mass trojan repos)**\n- **What happened:** Reporting indicates **North Korea–linked activity** abusing the **Mastra npm ecosystem** (140+ poisoned packages) and active campaigns pushing a **fake Node.js installer via Google Ads**; separate report of **10k+ GitHub repos** distributing trojan-laced archives.\n- **Why it matters operationally:** High risk of **token/credential theft** (browser creds, cloud keys, CI secrets) and downstream compromise of build pipelines; financial institutions often have developer workstations with privileged access.\n- **Recommended immediate actions for the SOC today:** Alert DevOps to freeze/verify new dependency adds and validate Node.js installer sources; hunt endpoints/CI runners for unusual npm install activity, new persistence, and outbound connections to unknown infrastructure (no specific IOCs provided).\n\n**4) Supply-chain breach ripple: Klue incident impacting multiple organizations**\n- **What happened:** Multiple orgs disclosed downstream impact from a supply-chain attack involving the business analytics platform **Klue**.\n- **Why it matters operationally:** Third-party access paths can enable account takeover, data exposure, or phishing via trusted comms; the exact blast radius is unclear (assumption: may include SSO/API tokens or shared content).\n- **Recommended immediate actions for the SOC today:** Check vendor inventory for Klue usage; review IdP logs for unusual OAuth app consent, token grants, and anomalous logins tied to users who interact with the platform.\n\n---\n\n### Monitoring & detection recommendations\n- **VPN / perimeter (CVE-2026-0257):** PAN-OS / GlobalProtect logs + firewall/WAF → monitor spikes in portal/gateway requests, unusual auth outcomes, new device registrations, and admin config changes (ATT&CK: **T1190**, **T1078**).\n- **Post-VPN internal movement:** EDR + Windows Security logs → hunt for new remote service creation, PsExec/SMB lateral movement, abnormal RDP from VPN pools (ATT&CK: **T1021**, **T1569.002**).\n- **Web exploitation attempts (Joomla/Next.js/n8n themes):** WAF/Reverse proxy access logs → detect high-rate probing, requests to uncommon plugin/middleware routes, suspicious query strings, and upload attempts (ATT&CK: **T1190**).\n- **CI/CD and developer endpoints (npm/GitHub trojans):** EDR + build runner logs + proxy/DNS → look for unusual `npm install`/postinstall scripts, new scheduled tasks/services, and outbound to newly registered/low-reputation domains (ATT&CK: **T1552**, **T1059**).\n- **Credential theft / infostealers (fake Node.js installer):** EDR + browser telemetry (where available) → watch for credential dump indicators, suspicious unsigned installers, and new binaries in user download paths launching network beacons (ATT&CK: **T1204**, **T1555**).\n- **IdP/SaaS exposure (Klue ripple):** IdP audit logs (Okta/Azure AD/etc.) → monitor OAuth consent grants, new app integrations, impossible travel, and token refresh anomalies for affected user groups (ATT&CK: **T1528**, **T1078**).\n- **Linux privilege escalation noise (multiple kernel CVEs listed):** Linux auditd/EDR → prioritize detection of local exploit chains only where you have untrusted code execution risk (jump hosts, CI runners), focusing on new root shells, setuid changes, and container escape precursors (ATT&CK: **T1068**).\n\n---\n\n### Medium-term follow-ups\n- **Patch/mitigation governance:** Ensure GlobalProtect CVE-2026-0257 remediation is tracked to closure with validation (external scan + authenticated config verification).\n- **Internet-exposed app rationalization:** Reconfirm ownership and patch SLAs for externally hosted CMS/workflow tools (Joomla, n8n, Next.js apps); decommission unused instances.\n- **Software supply-chain controls:** Enforce package allowlists, lockfiles, artifact signing/verification, and restrict CI secrets exposure; consider isolating build runners and requiring MFA/token binding for SCM and registries.\n- **User/Dev awareness (targeted):** Quick advisory to developers: avoid sponsored ads for installers, verify official download sources, and report unusual dependency prompts immediately.\n- **Third-party risk review:** If Klue (or similar enablement/analytics tools) is in use, revalidate SSO/OAuth scopes, rotate tokens where feasible, and review shared data classifications.\n- **Baseline hardening:** For high-value admin/dev endpoints, tighten application control (allowlisting), block unsigned installer execution from user-writeable paths, and strengthen egress filtering for low-reputation domains.",
   "highlights": [
     {
-      "title": "CVE-2022-38017 | Microsoft Azure StorSimple 8000 Local Privilege Escalation (EUVD-2022-40623)",
-      "link": "https://vuldb.com/vuln/210455",
-      "source": "VulDB Updates",
-      "published": "2026-06-21T04:35:04+00:00",
+      "title": "CVE-2026-0257: PAN-OS GlobalProtect Authentication Bypass Vulnerability and Externally Exposed VPN Assets",
+      "link": "https://blog.criminalip.io/2026/06/22/cve-2026-0257-pan-os-globalprotect-authentication-bypass-vulnerability-and-externally-exposed-vpn-assets/",
+      "source": "CIP Blog",
+      "published": "2026-06-22T03:31:50+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Cloud / SaaS",
+        "Exploit / PoC"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 100.0,
+      "priority_score": 87.74
+    },
+    {
+      "title": "CVE-2026-56397",
+      "link": "https://vuldb.com/cve/CVE-2026-56397",
+      "source": "VulDB CVE",
+      "published": "2026-06-21T16:12:53+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Supply Chain / Software",
+        "Exploit / PoC",
+        "Web / API Security"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 72.97,
+      "priority_score": 74.39
+    },
+    {
+      "title": "CVE-2026-56395",
+      "link": "https://vuldb.com/cve/CVE-2026-56395",
+      "source": "VulDB CVE",
+      "published": "2026-06-21T16:12:53+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Supply Chain / Software",
+        "Exploit / PoC",
+        "Web / API Security"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 72.97,
+      "priority_score": 74.39
+    },
+    {
+      "title": "Exploit for CVE-2026-48908",
+      "link": "https://vulners.com/githubexploit/A9AC151B-4017-55EC-996C-AB5AF8111575?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-06-22T09:31:27+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Crypto / Web3",
+        "Ransomware",
+        "Web / API Security"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 72.73,
+      "priority_score": 78.05
+    },
+    {
+      "title": "CVE-2026-56395",
+      "link": "https://vulners.com/nvd/NVD:CVE-2026-56395?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-06-21T14:16:26+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Supply Chain / Software",
+        "Exploit / PoC",
+        "Web / API Security"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 72.73,
+      "priority_score": 72.67
+    },
+    {
+      "title": "CVE-2026-56397",
+      "link": "https://vulners.com/nvd/NVD:CVE-2026-56397?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-06-21T14:16:26+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Supply Chain / Software",
+        "Exploit / PoC",
+        "Web / API Security"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 72.73,
+      "priority_score": 72.67
+    },
+    {
+      "title": "Exploit for Out-of-bounds Write in Tenda Ac9_Firmware",
+      "link": "https://vulners.com/githubexploit/D93E90BB-2B9E-5BD6-A00A-62EF1D546898?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-06-21T14:30:54+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
         "Exploit / PoC"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 63.57,
-      "priority_score": 82.23
+      "signal_score": 68.73,
+      "priority_score": 73.22
     },
     {
-      "title": "CVE-2022-38016 | Microsoft Windows up to Server 2022 Local Security Authority privilege escalation (EUVD-2022-40622)",
-      "link": "https://vuldb.com/vuln/210520",
-      "source": "VulDB Updates",
-      "published": "2026-06-21T04:35:03+00:00",
+      "title": "Exploit for Eval Injection in Xwiki",
+      "link": "https://vulners.com/githubexploit/C558BD70-1D0A-5175-B681-DC19927F031B?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-06-21T14:30:41+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "Windows / Microsoft"
+        "Exploit / PoC"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 63.57,
-      "priority_score": 82.23
+      "signal_score": 68.73,
+      "priority_score": 73.17
     },
     {
-      "title": "CVE-2022-37999 | Microsoft Windows up to Server 2022 Group Policy Preference Client privilege escalation (EUVD-2022-40606)",
-      "link": "https://vuldb.com/vuln/210510",
-      "source": "VulDB Updates",
-      "published": "2026-06-21T04:13:06+00:00",
+      "title": "Chinese Cyber Contractors Use Malware, Botnets, and Stolen Data to Enable State Operations",
+      "link": "https://cybersecuritynews.com/chinese-cyber-contractors-use-malware-botnets-and-stolen-data/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-06-22T09:30:03+00:00",
       "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "Windows / Microsoft"
+        "Malware / Payloads",
+        "Threat Actors / APT",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 67.9,
+      "priority_score": 86.78
+    },
+    {
+      "title": "CVE-2025-71348",
+      "link": "https://vuldb.com/cve/CVE-2025-71348",
+      "source": "VulDB CVE",
+      "published": "2026-06-21T13:48:24+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 63.57,
-      "priority_score": 82.13
-    },
-    {
-      "title": "CVE-2022-37997 | Microsoft Windows up to Server 2022 Graphics privilege escalation (EUVD-2022-40604)",
-      "link": "https://vuldb.com/vuln/210472",
-      "source": "VulDB Updates",
-      "published": "2026-06-20T23:39:33+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "Network / OT / ICS",
-        "Windows / Microsoft"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 63.57,
-      "priority_score": 80.91
-    },
-    {
-      "title": "CVE-2022-37995 | Microsoft Windows up to Server 2022 Kernel privilege escalation (EUVD-2022-40602)",
-      "link": "https://vuldb.com/vuln/210517",
-      "source": "VulDB Updates",
-      "published": "2026-06-20T23:39:32+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "Linux / Unix",
-        "Windows / Microsoft"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 63.57,
-      "priority_score": 80.91
-    },
-    {
-      "title": "CVE-2022-37988 | Microsoft Windows up to Server 2022 Kernel privilege escalation (EUVD-2022-40595)",
-      "link": "https://vuldb.com/vuln/210512",
-      "source": "VulDB Updates",
-      "published": "2026-06-20T18:33:31+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "Linux / Unix",
-        "Windows / Microsoft"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 63.57,
-      "priority_score": 79.54
-    },
-    {
-      "title": "CVE-2022-37987 | Microsoft Windows up to Server 2022 Client Server Run-time Subsystem privilege escalation (EUVD-2022-40594)",
-      "link": "https://vuldb.com/vuln/210457",
-      "source": "VulDB Updates",
-      "published": "2026-06-20T18:33:31+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "Windows / Microsoft"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 63.57,
-      "priority_score": 79.54
-    },
-    {
-      "title": "CVE-2022-37986 | Microsoft Windows up to Server 2022 Win32k privilege escalation (EUVD-2022-40593)",
-      "link": "https://vuldb.com/vuln/210470",
-      "source": "VulDB Updates",
-      "published": "2026-06-20T18:33:30+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "Windows / Microsoft"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 63.57,
-      "priority_score": 79.54
-    },
-    {
-      "title": "CVE-2022-37983 | Microsoft Windows up to Server 2022 DWM Core Library privilege escalation (EUVD-2022-40590)",
-      "link": "https://vuldb.com/vuln/210505",
-      "source": "VulDB Updates",
-      "published": "2026-06-20T17:16:52+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "Windows / Microsoft"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 63.57,
-      "priority_score": 79.2
-    },
-    {
-      "title": "CVE-2022-37980 | Microsoft Windows up to Server 2022 DHCP Client privilege escalation (EUVD-2022-40587)",
-      "link": "https://vuldb.com/vuln/210502",
-      "source": "VulDB Updates",
-      "published": "2026-06-20T17:16:51+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "Windows / Microsoft"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 63.57,
-      "priority_score": 79.2
+      "signal_score": 66.97,
+      "priority_score": 73.74
     }
   ]
 }
