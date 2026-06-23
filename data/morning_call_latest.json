@@ -1,169 +1,168 @@
 {
-  "generated_at": "2026-06-22T12:25:41.530126+00:00",
-  "analysis_date": "2026-06-22",
+  "generated_at": "2026-06-23T10:03:00.689690+00:00",
+  "analysis_date": "2026-06-23",
   "provider": "openai",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-06-22T10:50:47.439105+00:00",
+  "source_generated_at": "2026-06-23T09:52:51.096860+00:00",
   "source_days_back": 30,
-  "source_total_items": 39853,
-  "total_items_in_window_all": 1117,
-  "total_items_in_window_curated": 2,
+  "source_total_items": 41652,
+  "total_items_in_window_all": 2070,
+  "total_items_in_window_curated": 1,
   "total_items_in_window_selected": 40,
   "context_selection_policy": "curated-plus-operational-signal-v1",
-  "morning_call_markdown": "### Executive Summary\n- **Critical VPN risk:** Active exploitation reported for **PAN-OS GlobalProtect auth bypass (CVE-2026-0257)**—treat any internet-exposed GlobalProtect as high-risk until proven patched/mitigated.\n- **Supply-chain pressure increasing:** Multiple developer ecosystem compromises (Mastra npm poisoning, fake Node.js installer via Google Ads, mass GitHub repo trojaning) raise likelihood of **infostealer / token theft** reaching endpoints and CI/CD.\n- **Exploitation tooling circulating:** Fresh PoCs for **Joomla SP Page Builder unauth RCE (CVE-2026-48908)** and other web app chains increase opportunistic scanning—verify externally exposed CMS/workflow tools.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) PAN-OS GlobalProtect authentication bypass (CVE-2026-0257) – active exploitation**\n- **What happened:** A critical auth bypass affecting PAN-OS GlobalProtect Portal/Gateway has confirmed in-the-wild exploitation and public PoC availability.\n- **Why it matters operationally:** Internet-facing VPN compromise is a common first step to domain takeover/ransomware in financial environments (initial access → credential theft → lateral movement).\n- **Recommended immediate actions for the SOC today:** Confirm patch/mitigation status for all GlobalProtect; hunt for abnormal GlobalProtect auth/session patterns and new admin actions post-VPN access.\n\n**2) Web app/CMS unauth RCE PoCs likely to drive scanning (Joomla SP Page Builder + other public PoCs)**\n- **What happened:** Public PoC released for **CVE-2026-48908 (Joomla SP Page Builder unauth RCE)**; additional PoCs surfaced for widely deployed platforms (e.g., Next.js middleware auth bypass PoC; n8n chain PoC referenced).\n- **Why it matters operationally:** These are “spray-and-pray” friendly—if any internet-exposed instances exist (marketing sites, microsites, dev tools), exploitation can lead to webshells, credential access, or pivoting.\n- **Recommended immediate actions for the SOC today:** Inventory and confirm exposure of Joomla/Next.js/n8n-facing services; increase WAF/IDS sensitivity for suspicious requests to known component paths and block/geo-rate-limit where feasible.\n\n**3) Developer supply-chain & fake tooling delivery (Mastra npm poisoning, fake Node.js installer ads, mass trojan repos)**\n- **What happened:** Reporting indicates **North Korea–linked activity** abusing the **Mastra npm ecosystem** (140+ poisoned packages) and active campaigns pushing a **fake Node.js installer via Google Ads**; separate report of **10k+ GitHub repos** distributing trojan-laced archives.\n- **Why it matters operationally:** High risk of **token/credential theft** (browser creds, cloud keys, CI secrets) and downstream compromise of build pipelines; financial institutions often have developer workstations with privileged access.\n- **Recommended immediate actions for the SOC today:** Alert DevOps to freeze/verify new dependency adds and validate Node.js installer sources; hunt endpoints/CI runners for unusual npm install activity, new persistence, and outbound connections to unknown infrastructure (no specific IOCs provided).\n\n**4) Supply-chain breach ripple: Klue incident impacting multiple organizations**\n- **What happened:** Multiple orgs disclosed downstream impact from a supply-chain attack involving the business analytics platform **Klue**.\n- **Why it matters operationally:** Third-party access paths can enable account takeover, data exposure, or phishing via trusted comms; the exact blast radius is unclear (assumption: may include SSO/API tokens or shared content).\n- **Recommended immediate actions for the SOC today:** Check vendor inventory for Klue usage; review IdP logs for unusual OAuth app consent, token grants, and anomalous logins tied to users who interact with the platform.\n\n---\n\n### Monitoring & detection recommendations\n- **VPN / perimeter (CVE-2026-0257):** PAN-OS / GlobalProtect logs + firewall/WAF → monitor spikes in portal/gateway requests, unusual auth outcomes, new device registrations, and admin config changes (ATT&CK: **T1190**, **T1078**).\n- **Post-VPN internal movement:** EDR + Windows Security logs → hunt for new remote service creation, PsExec/SMB lateral movement, abnormal RDP from VPN pools (ATT&CK: **T1021**, **T1569.002**).\n- **Web exploitation attempts (Joomla/Next.js/n8n themes):** WAF/Reverse proxy access logs → detect high-rate probing, requests to uncommon plugin/middleware routes, suspicious query strings, and upload attempts (ATT&CK: **T1190**).\n- **CI/CD and developer endpoints (npm/GitHub trojans):** EDR + build runner logs + proxy/DNS → look for unusual `npm install`/postinstall scripts, new scheduled tasks/services, and outbound to newly registered/low-reputation domains (ATT&CK: **T1552**, **T1059**).\n- **Credential theft / infostealers (fake Node.js installer):** EDR + browser telemetry (where available) → watch for credential dump indicators, suspicious unsigned installers, and new binaries in user download paths launching network beacons (ATT&CK: **T1204**, **T1555**).\n- **IdP/SaaS exposure (Klue ripple):** IdP audit logs (Okta/Azure AD/etc.) → monitor OAuth consent grants, new app integrations, impossible travel, and token refresh anomalies for affected user groups (ATT&CK: **T1528**, **T1078**).\n- **Linux privilege escalation noise (multiple kernel CVEs listed):** Linux auditd/EDR → prioritize detection of local exploit chains only where you have untrusted code execution risk (jump hosts, CI runners), focusing on new root shells, setuid changes, and container escape precursors (ATT&CK: **T1068**).\n\n---\n\n### Medium-term follow-ups\n- **Patch/mitigation governance:** Ensure GlobalProtect CVE-2026-0257 remediation is tracked to closure with validation (external scan + authenticated config verification).\n- **Internet-exposed app rationalization:** Reconfirm ownership and patch SLAs for externally hosted CMS/workflow tools (Joomla, n8n, Next.js apps); decommission unused instances.\n- **Software supply-chain controls:** Enforce package allowlists, lockfiles, artifact signing/verification, and restrict CI secrets exposure; consider isolating build runners and requiring MFA/token binding for SCM and registries.\n- **User/Dev awareness (targeted):** Quick advisory to developers: avoid sponsored ads for installers, verify official download sources, and report unusual dependency prompts immediately.\n- **Third-party risk review:** If Klue (or similar enablement/analytics tools) is in use, revalidate SSO/OAuth scopes, rotate tokens where feasible, and review shared data classifications.\n- **Baseline hardening:** For high-value admin/dev endpoints, tighten application control (allowlisting), block unsigned installer execution from user-writeable paths, and strengthen egress filtering for low-reputation domains.",
+  "morning_call_markdown": "### Executive Summary\n- Multiple **supply-chain compromises** (Hola Browser installer, WordPress Pro plugin updates, npm packages, GitHub cloned repos) are driving real-world endpoint/server compromise risk—treat “trusted updates” as untrusted until verified.\n- **Hands-on ransomware tradecraft** is trending (Prinz Eugen): abuse of **RMM tools + PowerShell stagers**; prioritize detection of remote admin tooling misuse and rapid containment playbooks.\n- New/reshared **high-impact CVEs with PoCs** are circulating (Joomla JCE unauth RCE; SharePoint SQLi research; aaPanel incomplete fix) plus identity-ticket weaknesses (ManageEngine SSO) — confirm exposure and accelerate patching where internet-facing.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Supply-chain compromise wave (browser/plugin/dev ecosystem)**\n- What happened: Reports detail supply-chain backdoors/malware in **Hola Browser**, **ShapedPlugin Pro (WordPress) updates**, and **malicious npm/GitHub clone ecosystems** delivering RATs/stealers/miners.\n- Why it matters operationally: This bypasses normal trust controls (signed updates/registries) and can seed **initial access** into corporate endpoints/dev workstations and externally hosted web properties.\n- Recommended immediate actions for the SOC today: **Hunt for recent installs/updates** of Hola/ShapedPlugin Pro and unusual npm-driven executions; **quarantine affected hosts** and trigger software inventory review for those packages.\n\n**2) Prinz Eugen ransomware: RMM + PowerShell stagers (hands-on-keyboard)**\n- What happened: New ransomware operation uses legitimate **RemotePC/RMM tooling** and living-off-the-land execution; reportedly targets include financial orgs.\n- Why it matters operationally: Likely to blend into admin activity; increases risk of **rapid lateral movement and encryption** without obvious malware droppers or ransom notes.\n- Recommended immediate actions for the SOC today: **Review all RMM tool usage** (RemotePC and any sanctioned RMM) for anomalous logins/first-seen agents; **raise alerting thresholds** for PowerShell download/execute patterns from user endpoints/servers.\n\n**3) Web app/server RCE exposure checks (Joomla JCE, aaPanel, legacy Apache, SharePoint research)**\n- What happened: A PoC is circulating for **Joomla JCE unauth RCE (CVE-2025-48907)**; research highlights **aaPanel incomplete fix** leaving large exposure; legacy **Apache 2.4.49 traversal/RCE (CVE-2021-41773) PoC** reappears; SharePoint SQLi exploitation research published (on-prem focus).\n- Why it matters operationally: Internet-facing CMS/panels are common footholds for **webshells, credential theft, and ransomware staging**—especially in DMZs and vendor-managed sites.\n- Recommended immediate actions for the SOC today: **Validate external exposure** (ASM scans/WAF logs) for Joomla/JCE, aaPanel, Apache 2.4.49, on-prem SharePoint; **block/surge monitor** suspicious requests (path traversal, file upload attempts, unusual POSTs) and fast-track patch/mitigation tickets.\n\n**4) Identity/session weaknesses with takeover potential (ManageEngine SSO tickets; app session hijack patterns)**\n- What happened: **ManageEngine** products reported with **predictable SSO ticket generation (CVE-2026-11374)** enabling account takeover; also session-hijack style issues noted in modern app frameworks (e.g., Chainlit session restore weakness).\n- Why it matters operationally: Account takeover can enable **privilege escalation, mailbox access, and persistence** without malware—high impact in financial environments.\n- Recommended immediate actions for the SOC today: **Identify any ManageEngine instances** (ADSelfService Plus/RecoveryManager Plus/M365 Manager Plus/ADAudit Plus) and check patch guidance; **monitor for anomalous SSO patterns** (new sessions without interactive auth, unusual source IPs, impossible travel).\n\n**5) FortiGate/FortiBleed credential-leak campaign (assumption: leaked creds may still be valid)**\n- What happened: Reporting describes a **public leak of FortiGate/SSL VPN credentials** (“FortiBleed” dataset) potentially usable to access real devices.\n- Why it matters operationally: If any edge VPN credentials overlap with our user/password patterns or vendors, this becomes **immediate initial-access risk** against perimeter devices.\n- Recommended immediate actions for the SOC today: **Audit VPN logins** for failed/success bursts, new geos, new devices; **force resets/rotate** VPN/local FortiGate accounts where applicable and ensure MFA enforced.\n\n---\n\n### Monitoring & detection recommendations\n- **RMM abuse / remote tool ingress**: EDR + PAM/admin logs + RMM console logs; alert on first-time RMM agent installs, new remote sessions after-hours, and remote script execution (ATT&CK: T1219, T1078).\n- **PowerShell stagers (ransomware precursor)**: EDR telemetry + Windows PowerShell logs (4104) + Sysmon; hunt `IEX`, `Invoke-WebRequest`, `FromBase64String`, hidden window, and network calls from PowerShell to uncommon hosts (T1059.001, T1105).\n- **Web exploitation attempts (Joomla/aaPanel/Apache/SharePoint)**: WAF/reverse proxy + web server logs; detect traversal strings (`../`, URL-encoded variants), suspicious upload endpoints, atypical POST sizes, and `.php` file writes in web roots (T1190, T1505.003).\n- **Supply-chain endpoint indicators (Hola/plugin/npm)**: EDR process + file creation; hunt for browser/plugin updater processes spawning shells, scheduled tasks, or miners; correlate with software inventory changes in last 7 days (T1543, T1053).\n- **Credential theft / session abuse**: IdP logs (Entra/Okta/etc.), SSO gateways, and app auth logs; alert on new sessions without MFA where MFA expected, unusual token issuance, and rapid privilege changes (T1556, T1098).\n- **FortiGate/SSL VPN anomaly monitoring**: Firewall/VPN logs; watch for password-spray patterns, logins from new countries/ASNs, and admin logins from VPN user pools (T1110, T1078).\n- **Data exfiltration early warnings (extortion trend)**: Proxy/DNS + CASB + endpoint network; spikes to file-sharing, cloud drives, or unusual TLS destinations from servers hosting web apps (T1048, T1567).\n\n---\n\n### Medium-term follow-ups\n- **Supply-chain controls**: Tighten allowlisting for installer/update channels; enforce checksum/signature validation where feasible; review developer workstation policy for npm/package execution and CI/CD secret scanning.\n- **RMM governance**: Inventory all sanctioned/unsanctioned remote admin tools; require MFA, IP allowlists, session recording, and just-in-time access for admins; disable unused agents.\n- **Patch & exposure management**: Add focused checks for **Joomla JCE**, **aaPanel**, **legacy Apache**, and **on-prem SharePoint** to weekly external exposure reviews; ensure owners and SLAs are assigned.\n- **Edge credential hygiene**: Rotate/expire local device accounts and VPN credentials; validate MFA coverage for VPN and privileged access; consider conditional access tightening for admin roles.\n- **Incident playbooks refresh**: Update ransomware rapid response runbooks for “no-ransom-note” scenarios; include steps for RMM containment, PowerShell logging verification, and backup integrity checks.\n- **Third-party/vendor comms**: If any public-facing sites are managed by agencies (WordPress/plugins), require attestation of plugin provenance, last update window review, and immediate compromise assessment.",
   "highlights": [
     {
-      "title": "CVE-2026-0257: PAN-OS GlobalProtect Authentication Bypass Vulnerability and Externally Exposed VPN Assets",
-      "link": "https://blog.criminalip.io/2026/06/22/cve-2026-0257-pan-os-globalprotect-authentication-bypass-vulnerability-and-externally-exposed-vpn-assets/",
-      "source": "CIP Blog",
-      "published": "2026-06-22T03:31:50+00:00",
+      "title": "How Hola Browser was weaponized to spread a Monero miner | Kaspersky official blog",
+      "link": "https://www.kaspersky.com/blog/hola-browser-supply-chain-attack-cryptominer/55999/",
+      "source": "Kaspersky official blog",
+      "published": "2026-06-22T16:41:16+00:00",
       "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
+        "Exploit / PoC",
+        "Windows / Microsoft",
+        "Data Breaches / Leaks"
       ],
       "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 100.0,
-      "priority_score": 87.74
-    },
-    {
-      "title": "CVE-2026-56397",
-      "link": "https://vuldb.com/cve/CVE-2026-56397",
-      "source": "VulDB CVE",
-      "published": "2026-06-21T16:12:53+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Supply Chain / Software",
-        "Exploit / PoC",
-        "Web / API Security"
-      ],
-      "curated": false,
       "signal_tier": "high",
-      "signal_score": 72.97,
-      "priority_score": 74.39
+      "signal_score": 75.41,
+      "priority_score": 76.49
     },
     {
-      "title": "CVE-2026-56395",
-      "link": "https://vuldb.com/cve/CVE-2026-56395",
-      "source": "VulDB CVE",
-      "published": "2026-06-21T16:12:53+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Supply Chain / Software",
-        "Exploit / PoC",
-        "Web / API Security"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 72.97,
-      "priority_score": 74.39
-    },
-    {
-      "title": "Exploit for CVE-2026-48908",
-      "link": "https://vulners.com/githubexploit/A9AC151B-4017-55EC-996C-AB5AF8111575?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "title": "Exploit for Improper Access Control in Widgetfactorylimited Jce",
+      "link": "https://vulners.com/githubexploit/0D7DE32F-DF63-51D0-A699-AAD3D055B58E?utm_source=rss&utm_medium=rss&utm_campaign=rss",
       "source": "Vulners.com RSS Feed",
-      "published": "2026-06-22T09:31:27+00:00",
+      "published": "2026-06-22T18:31:26+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC",
+        "Linux / Unix",
+        "Malware / Payloads"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.72,
+      "priority_score": 74.47
+    },
+    {
+      "title": "CVE-2021-35502 | MISP 2.4.144 Template generic_field.ctp privilege escalation",
+      "link": "https://vuldb.com/vuln/177645",
+      "source": "VulDB Updates",
+      "published": "2026-06-23T03:24:18+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
         "Crypto / Web3",
-        "Ransomware",
-        "Web / API Security"
+        "Exploit / PoC"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 72.73,
-      "priority_score": 78.05
+      "signal_score": 63.52,
+      "priority_score": 80.7
     },
     {
-      "title": "CVE-2026-56395",
-      "link": "https://vulners.com/nvd/NVD:CVE-2026-56395?utm_source=rss&utm_medium=rss&utm_campaign=rss",
-      "source": "Vulners.com RSS Feed",
-      "published": "2026-06-21T14:16:26+00:00",
+      "title": "CVE-2026-45901 | Linux Kernel up to 6.19.3 netfilter commit_mutex privilege escalation (WID-SEC-2026-1700)",
+      "link": "https://vuldb.com/vuln/366085",
+      "source": "VulDB Updates",
+      "published": "2026-06-22T22:57:58+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Supply Chain / Software",
-        "Exploit / PoC",
-        "Web / API Security"
+        "Linux / Unix",
+        "Exploit / PoC"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 72.73,
-      "priority_score": 72.67
+      "signal_score": 63.52,
+      "priority_score": 79.51
     },
     {
-      "title": "CVE-2026-56397",
-      "link": "https://vulners.com/nvd/NVD:CVE-2026-56397?utm_source=rss&utm_medium=rss&utm_campaign=rss",
-      "source": "Vulners.com RSS Feed",
-      "published": "2026-06-21T14:16:26+00:00",
+      "title": "CVE-2026-45880 | Linux Kernel up to 6.6.127/6.12.74/6.18.13/6.19.3 PCI/P2PDMA vm_insert_page privilege escalation (WID-SEC-2026-1700)",
+      "link": "https://vuldb.com/vuln/366130",
+      "source": "VulDB Updates",
+      "published": "2026-06-22T22:21:25+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Supply Chain / Software",
-        "Exploit / PoC",
-        "Web / API Security"
+        "Linux / Unix",
+        "Exploit / PoC"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 72.73,
-      "priority_score": 72.67
+      "signal_score": 63.52,
+      "priority_score": 79.35
     },
     {
-      "title": "Exploit for Out-of-bounds Write in Tenda Ac9_Firmware",
-      "link": "https://vulners.com/githubexploit/D93E90BB-2B9E-5BD6-A00A-62EF1D546898?utm_source=rss&utm_medium=rss&utm_campaign=rss",
-      "source": "Vulners.com RSS Feed",
-      "published": "2026-06-21T14:30:54+00:00",
+      "title": "CVE-2026-30789 | rustdesk-client RustDesk Client up to 1.4.5 src/client.Rs hash_password authentication replay",
+      "link": "https://vuldb.com/vuln/349205",
+      "source": "VulDB Updates",
+      "published": "2026-06-22T14:27:36+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 68.73,
-      "priority_score": 73.22
+      "signal_score": 63.52,
+      "priority_score": 77.23
     },
     {
-      "title": "Exploit for Eval Injection in Xwiki",
-      "link": "https://vulners.com/githubexploit/C558BD70-1D0A-5175-B681-DC19927F031B?utm_source=rss&utm_medium=rss&utm_campaign=rss",
-      "source": "Vulners.com RSS Feed",
-      "published": "2026-06-21T14:30:41+00:00",
+      "title": "CVE-2025-71304 | Linux Kernel up to 6.19.3 smack /smack/doi privilege escalation (Nessus ID 318288 / WID-SEC-2026-1700)",
+      "link": "https://vuldb.com/vuln/366100",
+      "source": "VulDB Updates",
+      "published": "2026-06-22T12:06:33+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Linux / Unix",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 63.52,
+      "priority_score": 76.6
+    },
+    {
+      "title": "CVE-2026-48582 | Microsoft Exchange Online privilege escalation (EUVD-2026-38090 / WID-SEC-2026-2022)",
+      "link": "https://vuldb.com/vuln/372317",
+      "source": "VulDB Updates",
+      "published": "2026-06-22T11:11:30+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 68.73,
-      "priority_score": 73.17
+      "signal_score": 63.52,
+      "priority_score": 76.36
     },
     {
-      "title": "Chinese Cyber Contractors Use Malware, Botnets, and Stolen Data to Enable State Operations",
-      "link": "https://cybersecuritynews.com/chinese-cyber-contractors-use-malware-botnets-and-stolen-data/",
-      "source": "Cyber Security News (FeedBurner)",
-      "published": "2026-06-22T09:30:03+00:00",
+      "title": "CVE-2026-49468 | BerriAI LiteLLM up to 1.83.x authentication spoofing (GHSA-4xpc-pv4p-pm3w)",
+      "link": "https://vuldb.com/vuln/372830",
+      "source": "VulDB Recent Entries",
+      "published": "2026-06-23T05:23:23+00:00",
       "smart_groups": [
-        "Malware / Payloads",
-        "Threat Actors / APT",
-        "General Security"
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
       ],
-      "curated": true,
+      "curated": false,
       "signal_tier": "high",
-      "signal_score": 67.9,
-      "priority_score": 86.78
+      "signal_score": 63.47,
+      "priority_score": 80.99
     },
     {
-      "title": "CVE-2025-71348",
-      "link": "https://vuldb.com/cve/CVE-2025-71348",
+      "title": "CVE-2026-54232",
+      "link": "https://vuldb.com/cve/CVE-2026-54232",
       "source": "VulDB CVE",
-      "published": "2026-06-21T13:48:24+00:00",
+      "published": "2026-06-22T23:30:27+00:00",
       "smart_groups": [
-        "Vulnerabilities / CVEs"
+        "Supply Chain / Software",
+        "Vulnerabilities / CVEs",
+        "Crypto / Web3",
+        "Malware / Payloads",
+        "Web / API Security"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 66.97,
-      "priority_score": 73.74
+      "signal_score": 62.97,
+      "priority_score": 76.81
     }
   ]
 }
