@@ -1,199 +1,182 @@
 {
-  "generated_at": "2026-06-24T09:52:00.427104+00:00",
-  "analysis_date": "2026-06-24",
+  "generated_at": "2026-06-25T09:43:28.335120+00:00",
+  "analysis_date": "2026-06-25",
   "provider": "openai",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-06-24T08:35:38.135743+00:00",
+  "source_generated_at": "2026-06-25T07:54:39.466841+00:00",
   "source_days_back": 30,
-  "source_total_items": 43864,
-  "total_items_in_window_all": 2432,
-  "total_items_in_window_curated": 5,
-  "total_items_in_window_selected": 40,
+  "source_total_items": 46280,
+  "total_items_in_window_all": 2758,
+  "total_items_in_window_curated": 11,
+  "total_items_in_window_selected": 46,
   "context_selection_policy": "curated-plus-operational-signal-v1",
-  "morning_call_markdown": "### Executive Summary\n- Active exploitation reported for **Cisco Unified CM (CVE-2026-20230)** and **Ubiquiti UniFi OS KEV-listed flaws**—validate exposure, patch/mitigate, and hunt for post-exploitation today.\n- Multiple **identity/supply-chain signals**: LastPass confirms **Klue OAuth token theft → Salesforce customer data access**; separate research highlights **session-cookie theft enabling npm package poisoning (Miasma)**.\n- Ransomware initial access evolving: **“Edgecution”** (malicious Microsoft Edge-based delivery) tied to an IAB linked with **Payouts King**—expect social engineering + living-off-the-land tooling.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Cisco Unified CM / Unified CM SME active exploitation (CVE-2026-20230)**\n- What happened: Reports indicate threat actors are **actively exploiting** a Cisco Unified CM flaw after PoC disclosure.\n- Why it matters operationally: UC platforms are often **internet/reachability-adjacent and high-privilege**, enabling rapid foothold → lateral movement (ransomware-ready).\n- Recommended immediate actions for the SOC today: **Identify all Unified CM/SME instances + exposure paths; prioritize patch/mitigations and hunt for anomalous HTTP/admin activity and new processes on UC hosts.**\n\n**2) Ubiquiti UniFi OS vulnerabilities added to CISA KEV (active exploitation)**\n- What happened: CISA added multiple **UniFi OS** issues to **KEV**, noting at least one is exploited in the wild (deadline guidance referenced).\n- Why it matters operationally: UniFi controllers can provide **network visibility/control**, credential access, and pivoting opportunities into enterprise segments.\n- Recommended immediate actions for the SOC today: **Inventory UniFi OS deployments; enforce immediate patch/upgrade and restrict management access (VPN/admin subnet only) while hunting for new admins, config exports, and remote mgmt logins.**\n\n**3) SaaS/OAuth token theft + vendor supply-chain breach (LastPass ↔ Klue)**\n- What happened: LastPass confirmed attackers **stole OAuth tokens via Klue** and accessed **customer data in LastPass’ Salesforce environment** (core vaults reportedly not impacted).\n- Why it matters operationally: This is a playbook for **SaaS token replay** and **CRM/data-exfil** without endpoint malware; financial orgs with heavy SaaS integrations are high-risk.\n- Recommended immediate actions for the SOC today: **Review Salesforce/SSO audit logs for suspicious OAuth app usage, unusual API pulls, and foreign logins; rotate/revoke high-risk OAuth tokens and revalidate third-party connected apps.**\n\n**4) Software supply-chain poisoning via stolen sessions (Miasma npm worm / dev credential market)**\n- What happened: Research describes a campaign where a **stolen session cookie** later enabled **poisoning of packages in npm** (self-propagating worm lineage noted).\n- Why it matters operationally: Threat can land via **CI/CD dependency updates** and propagate internally; finance environments often have automated builds and broad npm usage.\n- Recommended immediate actions for the SOC today: **Freeze/approve dependency updates for critical pipelines; scan repos/build logs for unexpected package/version changes and enforce session hardening (short-lived sessions, device binding where possible).**\n\n**5) Large-scale exploitation of Laravel Livewire RCE (CVE-2025-54068) for credential theft**\n- What happened: Reporting indicates **6,000+ apps compromised** in an ongoing credential theft campaign exploiting a critical Livewire vulnerability (unauth RCE per source).\n- Why it matters operationally: Public-facing apps can be turned into **credential-harvesting and webshell footholds**, then used for internal access and fraud.\n- Recommended immediate actions for the SOC today: **Confirm whether any internet-facing apps use Livewire; prioritize patching/WAF rules and hunt web logs for deserialization/RCE patterns and anomalous outbound from app servers.**\n\n---\n\n### Monitoring & detection recommendations\n- **Cisco Unified CM exploitation hunting:** UC app/web logs + EDR on UC hosts; look for unusual HTTP requests to admin/console endpoints and spawned shells/services (ATT&CK: T1190, T1059).\n- **KEV/edge device compromise checks (UniFi OS):** Firewall/VPN logs + UniFi controller audit logs; alert on new admin creation, config backup/download, and management logins from new geos/IPs (T1098, T1078).\n- **SaaS token replay / OAuth abuse (LastPass/Klue pattern):** IdP (Okta/AAD) + Salesforce connected app logs; detect impossible travel, new OAuth grants, spikes in API exports/report downloads (T1528, T1530).\n- **CI/CD supply-chain tampering (Miasma npm):** CI logs (GitHub/GitLab/Jenkins) + artifact registry logs; monitor unexpected dependency graph changes, new maintainers, unusual publish/install scripts (T1195.002).\n- **Web app exploitation at scale (Livewire + common web RCE PoCs resurfacing):** WAF + reverse proxy logs; watch for deserialization payloads, traversal/RCE probes (e.g., old Apache/Tomcat patterns) and unusual 500/502 bursts (T1190).\n- **Ransomware initial access tradecraft (Edgecution / social engineering):** Email/web proxy + EDR; hunt for Edge/WebView/shortcut-driven execution chains, new scheduled tasks/services, remote tools/tunnels usage (T1204, T1053, T1572).\n- **Credential theft & exfil signals (multiple themes):** DLP/proxy + DNS logs; alert on large outbound to file-sharing, paste, or newly-seen SaaS tenants from app servers and admin workstations (T1041).\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** Ensure rapid remediation SLAs for **KEV-listed** items; verify compensating controls for UC/network management planes (segmentation, admin IP allowlists).\n- **SaaS third-party risk:** Re-audit **connected apps/OAuth tokens** across critical SaaS (Salesforce/M365/ServiceNow); enforce least-privilege scopes and periodic token revocation.\n- **Software supply-chain controls:** Require SBOMs for critical vendors; enable dependency pinning, signed commits/releases, and build provenance (SLSA-style) for internal pipelines.\n- **Web app security backlog:** Validate coverage for frameworks like **Laravel/Livewire**; ensure WAF virtual patching and secure deserialization guidance is in place.\n- **Session/cookie hardening:** Reduce session lifetime, adopt device binding/conditional access for dev/admin portals; monitor for session theft indicators (unusual token use without MFA prompts).\n- **Ransomware readiness:** Re-validate account hygiene on perimeter appliances (stale/local accounts, LDAP misconfigs) and ensure EDR tamper protection + tested restore paths.",
+  "morning_call_markdown": "### Executive Summary\n- Multiple **Cisco perimeter/communications products are under active exploitation** (Catalyst SD‑WAN Manager zero-day + Unified CM SSRF/webshell activity) — prioritize exposure review and emergency patching/mitigations.\n- **Oracle PeopleSoft zero-day used for compromise + extortion** (ShinyHunters/UNC6240 reported) — assume internet-facing ERP apps are being scanned and targeted.\n- **Credential theft + initial access ecosystem remains hot** despite takedowns (StealC/Amadey disrupted; new **Mistic** backdoor and malicious **Edge extension** used in ransomware activity) — tighten identity monitoring and endpoint controls.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Cisco Catalyst SD‑WAN Manager zero-day exploitation (CVE-2026-20245)**\n- **What happened:** Active in-the-wild exploitation of a Cisco Catalyst SD‑WAN Manager privilege escalation zero-day enabling root-level access.\n- **Why it matters operationally:** SD‑WAN management plane compromise = network-wide pivot, device tampering, persistent rogue admin/root creation in a single move.\n- **Recommended immediate actions for the SOC today:** Validate whether we run/peer with affected SD‑WAN; prioritize patch/mitigation and restrict management access (VPN/jump hosts only) + hunt for new local/root accounts and unusual CLI/admin activity.\n\n**2) Cisco Unified CM active exploitation dropping webshells (CVE-2026-20230)**\n- **What happened:** Ongoing exploitation of a Unified Communications Manager SSRF leading to file write/webshell deployment and potential root access.\n- **Why it matters operationally:** Unified CM often sits on sensitive internal networks; webshell footholds commonly lead to credential theft and lateral movement.\n- **Recommended immediate actions for the SOC today:** Confirm patch level and exposure of Unified CM; review web server/app logs for suspicious HTTP requests and new/modified files, and isolate any instance showing webshell indicators.\n\n**3) Oracle PeopleSoft zero-day used for compromise/extortion (CVE-2026-35273)**\n- **What happened:** GTIG/Mandiant reporting active exploitation of a PeopleSoft RCE zero-day tied to ShinyHunters/UNC6240 with extortion outcomes.\n- **Why it matters operationally:** ERP platforms store high-value PII/financial data; attackers may exfiltrate before encryption, driving regulatory and fraud risk.\n- **Recommended immediate actions for the SOC today:** Identify PeopleSoft internet exposure and apply Oracle guidance/patches ASAP; hunt for unusual process spawns from app servers, new web-accessible artifacts, and anomalous outbound connections from ERP subnets.\n\n**4) CISA KEV: Lantronix EDS5000 critical injection (CVE-2025-67038) + broader edge device risk**\n- **What happened:** CISA flags active exploitation of Lantronix EDS5000 critical code injection; patch deadline pressure (mandated for FCEB, relevant for us as urgency signal).\n- **Why it matters operationally:** OT/serial console/remote access appliances are often forgotten but provide high-leverage entry points into segregated networks.\n- **Recommended immediate actions for the SOC today:** Inventory for Lantronix EDS5000 (including subsidiaries/vendors/branch sites); if present, patch immediately or remove from internet/limit to management VLAN and monitor for new admin users/config changes.\n\n**5) Ransomware initial access tradecraft updates (Mistic backdoor + malicious Edge extension “Native Messaging” bridge)**\n- **What happened:** New stealthy backdoor “Mistic” linked to an access broker feeding multiple ransomware families; separate reporting of a malicious Edge extension used to escape browser sandbox and deploy a backdoor.\n- **Why it matters operationally:** Raises probability of “quiet foothold” incidents (persistence first, ransomware later); browser extension abuse bypasses traditional email/web filtering assumptions.\n- **Recommended immediate actions for the SOC today:** Query EDR for suspicious new services/tasks and unusual parent-child chains (browser → script/Python); enforce/verify extension allow-listing and alert on Native Messaging host registrations.\n\n---\n\n### Monitoring & detection recommendations\n- **Cisco SD‑WAN / network management plane:** Monitor SD‑WAN Manager auth/admin logs + TACACS/RADIUS for unusual admin logins, privilege changes, new accounts (ATT&CK **T1098**, **T1078**); correlate with config push events and device reboots.\n- **Unified CM webshell activity:** Review Unified CM HTTP access logs for SSRF-like request patterns and unusual write behaviors; EDR on underlying OS for new executable/web content in web directories (ATT&CK **T1505.003**, **T1105**).\n- **PeopleSoft application servers:** App/web logs (WebLogic/app container as applicable) for anomalous requests and error bursts; EDR for unexpected process execution from app runtime (ATT&CK **T1203**, **T1059**); network logs for new outbound to internet from ERP segments.\n- **Identity/credential theft after StealC/Amadey ecosystem churn:** IdP logs (Azure AD/Okta) for impossible travel, token abuse, consent grants, and anomalous OAuth app activity (ATT&CK **T1528**, **T1550**); prioritize VIP/admin accounts.\n- **On-prem Exchange SSRF/EoP PoC (CVE-2026-45504):** Exchange/IIS logs for suspicious SSRF patterns and file read attempts; Windows Security logs for privilege escalation artifacts and mailbox role changes (ATT&CK **T1068**).\n- **Browser extension + Native Messaging abuse:** Endpoint telemetry for new/modified NativeMessagingHosts registry entries and Edge extension installs outside standard channels; proxy/DNS for odd Telegram or dead-drop style traffic (ATT&CK **T1105**, **T1071**).\n- **General “initial access → ransomware” early warning:** Watch for tool staging (PsExec/WMI/WinRM), mass credential access attempts, and sudden backup/AV tampering (ATT&CK **T1562**, **T1021**); alert on rapid spread from a single workstation.\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** Ensure emergency patch windows cover Cisco SD‑WAN Manager / Unified CM / Oracle PeopleSoft; add explicit “internet-exposed management planes” review in change control.\n- **Edge device inventory validation:** Reconcile CMDB vs. network discovery for “forgotten” appliances (Lantronix/Ubiquiti-class devices); require owners and patch SLAs.\n- **Exchange hardening:** If Exchange on-prem exists, validate June patches applied; limit EWS/remote admin exposure and review least-privileged service account roles.\n- **Extension control policy:** Implement/refresh enterprise browser extension allow-listing and continuous monitoring for Native Messaging usage; document escalation path for high-risk extension findings.\n- **Supply-chain/CI/CD hygiene:** For dev teams, review GitHub/CI secrets handling and permissions (Cordyceps/CI-CD repo hijack theme); confirm SSO, signed commits/artifacts where feasible.\n- **Credential hygiene after “27M creds recovered” reporting:** Assume credential reuse exposure persists; enforce MFA everywhere, rotate high-risk credentials, and run targeted checks against known-compromised-password controls (no direct IOC data provided in the items).",
   "highlights": [
     {
-      "title": "What the Miasma campaign reveals about the new supply chain threat model and the underground market for developer credentials",
-      "link": "https://www.tenable.com/blog/what-the-miasma-campaign-reveals-about-the-new-supply-chain-threat-model-and-the-underground",
-      "source": "Tenable Blog",
-      "published": "2026-06-23T13:00:00+00:00",
+      "title": "Critical Lantronix flaw actively exploited; Cisco SD-WAN zero-day; 27M credentials recovered",
+      "link": "https://defend.network/briefings/lantronix-eds5000-cisco-sd-wan-cordyceps-github-2026-06-25.html",
+      "source": "defend.network",
+      "published": "2026-06-25T06:30:00+00:00",
       "smart_groups": [
-        "Supply Chain / Software",
-        "Malware / Payloads",
-        "Cloud / SaaS",
-        "Identity / Access",
         "Vulnerabilities / CVEs",
-        "Network / OT / ICS",
-        "Threat Actors / APT",
         "Exploit / PoC",
-        "Linux / Unix",
-        "Phishing / Social Engineering",
-        "Detection Engineering",
-        "Crypto / Web3",
-        "Ransomware",
-        "Data Breaches / Leaks"
+        "Malware / Payloads",
+        "General Security"
       ],
       "curated": true,
       "signal_tier": "critical",
       "signal_score": 100.0,
-      "priority_score": 85.02
+      "priority_score": 88.68
     },
     {
-      "title": "Best Data Breach and Data Leak Detection Tools in 2026 | UpGuard",
-      "link": "https://www.upguard.com/blog/best-data-breach-and-data-leak-detection-tools-in-2026",
-      "source": "UpGuard Blog",
-      "published": "2026-06-23T13:43:50+00:00",
-      "smart_groups": [
-        "Data Breaches / Leaks",
-        "Exploit / PoC",
-        "Vendors / Product Security"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 80.92,
-      "priority_score": 87.87
-    },
-    {
-      "title": "Payouts King Ransomware Initial Access Broker Deploys New Edgecution Malware",
-      "link": "https://www.zscaler.com/blogs/security-research/payouts-king-ransomware-initial-access-broker-deploys-new-edgecution",
-      "source": "Zscaler Research Blogs",
-      "published": "2026-06-23T14:57:12+00:00",
-      "smart_groups": [
-        "Ransomware",
-        "Phishing / Social Engineering",
-        "Malware / Payloads",
-        "Windows / Microsoft",
-        "Threat Actors / APT",
-        "Detection Engineering",
-        "Cloud / SaaS",
-        "Crypto / Web3",
-        "Exploit / PoC",
-        "Identity / Access",
-        "Network / OT / ICS"
-      ],
-      "curated": true,
-      "signal_tier": "high",
-      "signal_score": 76.26,
-      "priority_score": 85.65
-    },
-    {
-      "title": "Hole in widely-used FFmpeg codec could crash media servers or enable RCE",
-      "link": "https://www.csoonline.com/article/4188531/hole-in-widely-used-ffmpeg-codec-could-crash-media-servers-or-enable-rce.html",
-      "source": "CSO Online",
-      "published": "2026-06-24T00:23:53+00:00",
+      "title": "Hackers Exploiting Cisco Catalyst SD-WAN Manager 0-Day Flaw to Gain Root-Level Access",
+      "link": "https://cybersecuritynews.com/cisco-catalyst-sd-wan-manager-0-day/",
+      "source": "Cyber Security News",
+      "published": "2026-06-24T17:03:41+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Supply Chain / Software",
-        "Cloud / SaaS",
         "Threat Actors / APT",
         "Exploit / PoC",
-        "Identity / Access",
-        "Linux / Unix",
-        "Malware / Payloads",
-        "Ransomware",
         "General Security"
       ],
       "curated": true,
-      "signal_tier": "high",
-      "signal_score": 75.23,
-      "priority_score": 89.02
+      "signal_tier": "critical",
+      "signal_score": 93.08,
+      "priority_score": 86.45
     },
     {
-      "title": "Exploit for CVE-2026-45156",
-      "link": "https://vulners.com/githubexploit/C0FC9086-8648-5BF4-BFEE-F541B2675907?utm_source=rss&utm_medium=rss&utm_campaign=rss",
-      "source": "Vulners.com RSS Feed",
-      "published": "2026-06-23T19:02:19+00:00",
+      "title": "Oracle PeopleSoft Zero-Day",
+      "link": "https://fortiguard.fortinet.com/threat-signal-report/6468",
+      "source": "FortiGuard Labs | FortiGuard Center - Threat Signal Report",
+      "published": "2026-06-25T03:30:40+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC",
-        "Web / API Security"
+        "Ransomware"
       ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 66.73,
-      "priority_score": 74.85
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 90.92,
+      "priority_score": 88.46
     },
     {
-      "title": "FortiBleed harvests 110M credentials; Cisco SSRF actively exploited; GitHub patches CI/CD attacks",
-      "link": "https://defend.network/briefings/fortibleed-cisco-github-ai-credential-theft-2026-06-24.html",
-      "source": "defend.network",
-      "published": "2026-06-24T06:30:00+00:00",
+      "title": "Cisco Unified CM flaw actively exploited to drop webshells (CVE-2026-20230)",
+      "link": "https://www.helpnetsecurity.com/2026/06/24/cisco-unified-cm-flaw-exploited-to-drop-webshells-cve-2026-20230/",
+      "source": "Help Net Security",
+      "published": "2026-06-24T11:36:30+00:00",
       "smart_groups": [
+        "Vulnerabilities / CVEs",
         "Exploit / PoC",
         "Web / API Security",
         "General Security"
       ],
       "curated": true,
-      "signal_tier": "high",
-      "signal_score": 66.16,
-      "priority_score": 84.3
+      "signal_tier": "critical",
+      "signal_score": 84.91,
+      "priority_score": 83.96
     },
     {
-      "title": "Black Hat Europe 2025 | China's Nexus APT Exploiting Ivanti Endpoint Manager Mobile",
-      "link": "https://www.youtube.com/watch?v=2GzydBBGdbg",
-      "source": "Black Hat",
-      "published": "2026-06-23T14:00:08+00:00",
-      "smart_groups": [
-        "Threat Actors / APT",
-        "Vulnerabilities / CVEs",
-        "Windows / Microsoft",
-        "Identity / Access",
-        "Cloud / SaaS",
-        "Exploit / PoC",
-        "Mobile Security",
-        "Community / Briefing"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 65.19,
-      "priority_score": 75.99
-    },
-    {
-      "title": "Exploit for Path Traversal in Apache Http_Server",
-      "link": "https://vulners.com/githubexploit/EECE9D9F-6DA3-5669-A840-4B74F51D2FBB?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "title": "Exploit for Out-of-bounds Write in Fortinet Fortiproxy",
+      "link": "https://vulners.com/githubexploit/9FE7E8BC-4FDD-5C40-A866-41D14FB4E0CD?utm_source=rss&utm_medium=rss&utm_campaign=rss",
       "source": "Vulners.com RSS Feed",
-      "published": "2026-06-24T01:07:18+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "Web / API Security"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 64.73,
-      "priority_score": 76.0
-    },
-    {
-      "title": "LastPass Customer Data Exposed in Klue Supply Chain Attack",
-      "link": "https://cybersecuritynews.com/lastpass-customer-data-klue/",
-      "source": "Cyber Security News",
-      "published": "2026-06-23T14:15:52+00:00",
-      "smart_groups": [
-        "Identity / Access",
-        "Cloud / SaaS",
-        "Vulnerabilities / CVEs",
-        "General Security"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 64.11,
-      "priority_score": 75.05
-    },
-    {
-      "title": "CVE-2026-56243 | Capgo up to 12.128.1 authentication bypass (GHSA-6g74-8cpq-g2c8)",
-      "link": "https://vuldb.com/vuln/372885",
-      "source": "VulDB Recent Entries",
-      "published": "2026-06-23T13:33:40+00:00",
+      "published": "2026-06-24T14:20:39+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC"
       ],
       "curated": false,
+      "signal_tier": "critical",
+      "signal_score": 84.73,
+      "priority_score": 73.28
+    },
+    {
+      "title": "Attackers exploit Cisco Unified CM flaw weeks after patch release",
+      "link": "https://www.csoonline.com/article/4188867/attackers-exploit-cisco-unified-cm-flaw-weeks-after-patch-release.html",
+      "source": "CSO Online",
+      "published": "2026-06-24T11:32:22+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Threat Actors / APT",
+        "Web / API Security",
+        "General Security"
+      ],
+      "curated": false,
+      "signal_tier": "critical",
+      "signal_score": 83.24,
+      "priority_score": 75.69
+    },
+    {
+      "title": "Cisco Catalyst SD-WAN Manager Privilege Escalation Vulnerability",
+      "link": "https://fortiguard.fortinet.com/threat-signal-report/6456",
+      "source": "FortiGuard Labs | FortiGuard Center - Threat Signal Report",
+      "published": "2026-06-25T03:17:05+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Ransomware"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 82.92,
+      "priority_score": 88.18
+    },
+    {
+      "title": "Authorities Disrupt Password-Stealing Malware StealC Infrastructure in Global Operation",
+      "link": "https://cybersecuritynews.com/stealc-infrastructure-disrupted/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-06-24T16:04:19+00:00",
+      "smart_groups": [
+        "Malware / Payloads",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true,
       "signal_tier": "high",
-      "signal_score": 63.59,
-      "priority_score": 77.7
+      "signal_score": 77.95,
+      "priority_score": 79.56
+    },
+    {
+      "title": "Zero-Day Exploitation of Vulnerability (CVE-2026-20245) in Cisco Catalyst SD-WAN Manager",
+      "link": "https://cloud.google.com/blog/topics/threat-intelligence/zero-day-exploitation-cisco-catalyst-sd-wan-manager/",
+      "source": "Threat Intelligence",
+      "published": "2026-06-24T11:00:00+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Threat Actors / APT",
+        "Detection Engineering",
+        "Crypto / Web3",
+        "Exploit / PoC",
+        "Identity / Access",
+        "Network / OT / ICS",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 74.86,
+      "priority_score": 83.72
+    },
+    {
+      "title": "Be on the lookout for Mistic, a new backdoor used by ransomware broker",
+      "link": "https://www.csoonline.com/article/4189132/be-on-the-lookout-for-mistic-a-new-backdoor-used-by-ransomware-broker.html",
+      "source": "CSO Online",
+      "published": "2026-06-24T22:20:25+00:00",
+      "smart_groups": [
+        "Malware / Payloads",
+        "Windows / Microsoft",
+        "Phishing / Social Engineering",
+        "Threat Actors / APT",
+        "Identity / Access",
+        "Ransomware",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 74.24,
+      "priority_score": 86.31
     }
   ]
 }
