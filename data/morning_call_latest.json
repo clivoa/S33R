@@ -1,144 +1,100 @@
 {
-  "generated_at": "2026-06-26T09:51:45.579946+00:00",
-  "analysis_date": "2026-06-26",
+  "generated_at": "2026-06-27T08:51:05.470728+00:00",
+  "analysis_date": "2026-06-27",
   "provider": "openai",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-06-26T08:07:25.974003+00:00",
+  "source_generated_at": "2026-06-27T08:03:38.041525+00:00",
   "source_days_back": 30,
-  "source_total_items": 48597,
-  "total_items_in_window_all": 2498,
-  "total_items_in_window_curated": 0,
+  "source_total_items": 50302,
+  "total_items_in_window_all": 2220,
+  "total_items_in_window_curated": 1,
   "total_items_in_window_selected": 40,
   "context_selection_policy": "curated-plus-operational-signal-v1",
-  "morning_call_markdown": "### Executive Summary\n- Active exploitation reported for **Cisco Unified CM SSRF (CVE-2026-20230)** being used to **write files and drop webshells**—treat as internet-facing critical.\n- Multiple **identity / access** items with takeover potential: **Keycloak JWT alg-confusion (CVE-2026-11800)** and **ManageEngine + AD360 SSO token predictability (CVE-2026-11374)**—validate exposure in our IAM estate.\n- Growing **initial access + persistence** risk from both **ransomware-access tooling (Mistic backdoor / IAB activity)** and **software supply-chain compromises (npm/AI agent ecosystems)**—increase monitoring for anomalous admin access and dev dependency changes.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Cisco Unified Communications Manager SSRF → file write → webshells (CVE-2026-20230)**\n- What happened: Reports indicate **active exploitation** of Cisco Unified CM WebDialer SSRF to **chain arbitrary file writes and deploy persistent webshells** (often via Tor).\n- Why it matters operationally: If we run **internet-reachable or partner-reachable UCM**, this is a **direct remote foothold** leading to credential theft, call system abuse, and lateral movement into corp networks.\n- Recommended immediate actions for the SOC today: **Confirm exposure + patch/COP ASAP** (release 14 patch; release 15 COP mitigation) and **hunt for suspicious file writes/webshell artifacts** on UCM web components.\n\n**2) IAM takeover paths: Keycloak JWT algorithm confusion (CVE-2026-11800) + ManageEngine/AD360 SSO token issue (CVE-2026-11374)**\n- What happened: **Keycloak** flaw enables bypass of signature verification in a JWT Authorization Grant flow; **ManageEngine integrations with AD360** may allow **predictable SSO tokens** and identity/role exposure.\n- Why it matters operationally: Both map to **authentication bypass / token forgery** enabling **privileged session creation** without typical brute-force signals—high impact for financial services.\n- Recommended immediate actions for the SOC today: **Inventory/confirm any Keycloak + affected ManageEngine deployments** and **enable heightened alerting on abnormal token issuance / new sessions** from unusual clients/IPs.\n\n**3) Ransomware intrusions using “Mistic” stealth backdoor linked to an initial access broker (Woodgnat/KongTuke)**\n- What happened: Symantec-reported **Mistic backdoor** observed since Apr 2026 across multiple sectors; appears designed for **quiet persistence** and may self-destruct.\n- Why it matters operationally: Fits IAB-to-ransomware pipeline—expect **low-noise persistence + credential access** preceding encryption; financial orgs are typical downstream targets even if not explicitly listed.\n- Recommended immediate actions for the SOC today: **Hunt for new/rare persistence mechanisms and suspicious remote admin** (services/tasks/WMI) and **prioritize investigations of “short-lived” tooling** that appears then vanishes.\n\n**4) AI/dev supply-chain: npm ecosystem compromises (Sapphire Sleet @mastra scope + Sonatype “Miasma returns” / Leo Platform)**\n- What happened: Reporting ties a supply-chain attack on **140+ @mastra npm packages** to **Sapphire Sleet (NK)**; Sonatype describes a new wave of **malicious npm packages** after maintainer compromise impacting **Leo Platform/RStreams**.\n- Why it matters operationally: Direct risk to **CI/CD runners, developer workstations, build artifacts**, and potentially production via poisoned dependencies—can bypass perimeter controls.\n- Recommended immediate actions for the SOC today: **Block/monitor installs of impacted package scopes in CI** (where feasible) and **review last-24h dependency changes** in key repos/build pipelines for unexpected package/version drift.\n\n**5) Flowise unauthenticated arbitrary file write → potential RCE (CVE-2025-71338)**\n- What happened: Flowise endpoint allows **path traversal** via `fileName` enabling **arbitrary file write** and potential **RCE** by overwriting runtime files (e.g., `package.json`).\n- Why it matters operationally: Flowise is common in **internal AI workflow tooling**; if exposed (even “internal-only”), it’s a fast route to **server compromise** with data access.\n- Recommended immediate actions for the SOC today: **Identify any Flowise instances and verify exposure** (ingress/WAF/routes) and **monitor for unexpected file modifications/restarts** on Flowise hosts/containers.\n\n---\n\n### Monitoring & detection recommendations\n- **Cisco UCM exploitation hunts**: UCM/web server logs + reverse proxy/WAF + firewall; look for **SSRF patterns** and **subsequent unusual file writes / new web-exposed scripts** (ATT&CK: T1190, T1505.003).\n- **Webshell/persistence signals** (post-CVE-2026-20230 / Flowise): EDR on UCM app servers (where available), Linux auditd, file integrity monitoring; alert on **new files in web roots**, **unexpected child processes from web services** (T1505, T1059).\n- **Keycloak abnormal token issuance**: Keycloak auth/audit logs + IdP logs; hunt **JWT alg changes**, **unexpected grant flows**, **sudden spikes in token issuance** per client/app (T1550.001, T1078).\n- **ManageEngine SSO anomalies**: ManageEngine/AD360 logs + upstream IdP/SSO logs; detect **new sessions for high-value roles** from atypical IPs/ASN, and **token reuse patterns** (T1556, T1078).\n- **IAB/ransomware pre-encryption behaviors (Mistic context)**: EDR + Windows Security logs; hunt for **new services/scheduled tasks**, **WMI persistence**, **credential dumping precursors** (T1543, T1053, T1047, T1003).\n- **Supply-chain in CI/CD**: CI runner logs (GitHub Actions/Azure DevOps/Jenkins), package manager logs (npm/pnpm), repo audit; alert on **new/rare dependencies**, **postinstall scripts**, **build steps invoking curl/wget/powershell** (T1195.002, T1059).\n- **Kernel/driver “EDR kill” behavior** (GameDriverX64.sys CVE-2025-61155 theme): EDR tamper alerts + Windows Event logs; investigate **sudden termination of security processes** and **unexpected signed driver loads** (T1562.001, T1068).\n\n---\n\n### Medium-term follow-ups\n- **Patch/mitigate estate-wide**: Ensure Cisco UCM versions are tracked in CMDB; schedule **release upgrades/COP rollout** and validate compensating controls (WAF rules, ACLs) where patch lag exists.\n- **IAM hardening**: For Keycloak/SSO flows, enforce **strict JWT validation policies**, review allowed algorithms, rotate client secrets where feasible, and ensure **auditing is enabled and forwarded**.\n- **Dev supply-chain guardrails**: Implement/expand **dependency allowlists**, signed provenance (where available), and automated **diff-based alerts** on `package-lock.json/pnpm-lock.yaml` changes in critical repos.\n- **AI tooling exposure review**: Inventory “internal AI” services (Flowise/ToolJet/Triton if present) and confirm **no direct internet exposure**, strong auth, and segmented networks.\n- **Ransomware readiness**: Re-validate **backup immutability + restore tests**, and ensure playbooks cover **stealth backdoor discovery** and “access broker” scenarios (rapid isolation, credential reset sequencing).\n- **Printer/edge device hygiene** (HP printer RCE CVE-2022-24292 update): Confirm firmware management and restrict printer network access; treat as **lateral movement risk** even if not today’s top priority.",
+  "morning_call_markdown": "### Executive Summary\n- **Active exploitation added to CISA KEV:** PTC Windchill/FlexPLM RCE is being used for **web shell deployment**; treat any exposed instance as potentially compromised.\n- **Defender tooling at risk:** A **Splunk Enterprise pre-auth RCE PoC (CVE-2026-20253)** is circulating; compromise of Splunk often becomes a pivot to domain-wide collection and response evasion.\n- **Financially relevant exposure signals:** New issues affecting **Cisco Unified CM (KEV)**, a **WooCommerce payment gateway auth bypass**, and a **reported Oracle PeopleSoft 0-day used in a data theft** increase the need for rapid external exposure checks and credential/session monitoring.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) PTC Windchill / FlexPLM RCE (CVE-2026-12569) – CISA KEV; web shell activity reported**\n- **What happened:** CISA added a critical Windchill RCE to KEV with reports of **in-the-wild exploitation and web shells**.\n- **Why it matters operationally:** Any Internet-facing Windchill can become an **initial access + persistence** foothold, then lateral movement toward finance/AD assets.\n- **Recommended immediate actions for the SOC today:** Identify any Windchill/FlexPLM exposure (CMDB + external scan) and **confirm patch level**; if present, **hunt for web shells/new admin accounts** and isolate hosts pending IR review.\n\n**2) Splunk Enterprise pre-auth RCE (CVE-2026-20253) – public PoC + vendor research**\n- **What happened:** Research and a GitHub PoC highlight **unauthenticated RCE** via a proxied sidecar/recovery endpoint reachable from Splunk Web.\n- **Why it matters operationally:** Splunk is a **high-value control plane**; attacker RCE can enable log tampering, credential theft, and broad environment discovery.\n- **Recommended immediate actions for the SOC today:** Confirm Splunk versions/exposure; **restrict Splunk Web access to admin networks/VPN only** and apply vendor mitigations/patches ASAP; monitor for anomalous Splunk service behavior and new processes.\n\n**3) Cisco Unified Communications Manager (Unified CM) – KEV “actively exploited”**\n- **What happened:** CISA set an urgent patch deadline for an **actively exploited Cisco Unified CM Server flaw** (exact CVE not in provided context).\n- **Why it matters operationally:** Unified CM sits on core network segments; compromise can enable **credential access, call/voice service disruption, and lateral movement**.\n- **Recommended immediate actions for the SOC today:** Validate whether we run affected Cisco Unified CM versions; if yes, **expedite emergency patching** and temporarily **tighten ACLs** (management interfaces/admin portals) to trusted subnets only.\n\n**4) Oracle PeopleSoft “0-day” used in alleged 3.1TB theft (ShinyHunters claim; NAIC confirmed incident)**\n- **What happened:** Reporting claims a breach leveraged a **zero-day in Oracle PeopleSoft** in a high-volume data theft event (details/IOCs not provided).\n- **Why it matters operationally:** Many financial orgs run ERP/HR systems with sensitive PII; even without IOCs, this is a **credible risk signal** for targeted exploitation.\n- **Recommended immediate actions for the SOC today:** Confirm whether PeopleSoft is in our estate and whether it’s Internet-accessible; **increase monitoring on PeopleSoft app/db tiers** for unusual queries/export behavior and privilege changes; prepare to apply Oracle out-of-band guidance if released.\n\n**5) WordPress/WooCommerce payment plugin auth bypass (CVE-2026-56029) – CorvusPay gateway**\n- **What happened:** Critical auth-bypass reported in a WooCommerce payment gateway plugin (up to 2.7.4).\n- **Why it matters operationally:** If any marketing/payment-related WordPress is present, this can lead to **checkout manipulation, skimming staging, or site takeover**.\n- **Recommended immediate actions for the SOC today:** Inventory any WordPress/WooCommerce instances (including “shadow IT”); **disable/upgrade the plugin immediately** where found and review recent admin logins/plugin changes.\n\n---\n\n### Monitoring & detection recommendations\n- **Web shell / post-exploit on enterprise web apps (PTC/PeopleSoft themes):** WAF + web server logs + EDR on app servers; hunt for new/modified `.jsp/.aspx/.php` in web roots, suspicious child processes from web services (ATT&CK **T1505.003**, **T1059**).\n- **Splunk compromise attempts (CVE-2026-20253 theme):** Splunk internal logs (`splunkd`, web access), Linux/Windows EDR for Splunk service accounts spawning shells; alert on new listeners, reverse shells, unusual outbound from Splunk servers (ATT&CK **T1190**, **T1105**).\n- **Cisco Unified CM exploitation / recon:** Network IDS + firewall logs to Unified CM management ports; alert on new source geos, spikes in 4xx/5xx, repeated auth failures, and any new admin sessions.\n- **Ransomware access broker tooling (Mistic RAT / “Woodgnat” theme):** EDR for new persistence (Run keys/services/scheduled tasks) and suspicious remote admin tool patterns; focus on hosts with initial phishing/download activity (ATT&CK **T1053**, **T1547**).\n- **Loader-to-C2 frameworks (SharkLoader → Cobalt Strike theme):** Proxy/DNS logs + EDR; hunt for beacon-like periodic connections, suspicious process injection, and unsigned binaries launching from user profile/temp (ATT&CK **T1055**, **T1071.001**).\n- **Supply-chain compromise in CI/CD (malicious npm + GitHub Actions theme):** GitHub audit logs + CI runner EDR; alert on workflow changes, new secrets access, unexpected package installs during builds, and outbound connections from runners to unknown endpoints (ATT&CK **T1195**, **T1552**).\n- **Linux privilege escalation surfacing (multiple kernel LPE CVEs):** Linux EDR/auditd; watch for local exploit indicators on multi-tenant servers (containers/VM hosts), unusual `setcap`, kernel module activity, or sudden root shells after low-priv sessions (ATT&CK **T1068**).\n\n---\n\n### Medium-term follow-ups\n- **Patch/hardening sprint:** Triage and schedule remediation for the **cluster of Linux kernel LPE CVEs** (macvlan/KVM/fuse/vfio/audit/etc.) on virtualization and container hosts first.\n- **Exposure governance:** Re-validate that **Splunk Web, PTC Windchill, PeopleSoft, and Unified CM admin surfaces** are not Internet-facing; enforce VPN/zero-trust access + MFA for admin paths.\n- **Web app integrity controls:** Expand file integrity monitoring on critical app servers (PTC/ERP/portals) to catch web shell drops and unauthorized code changes.\n- **CI/CD supply-chain controls:** Pin dependencies, enable lockfile enforcement, and require review for GitHub Actions workflow edits; rotate CI secrets if suspicious workflow activity is detected.\n- **Ransomware readiness:** Given access-broker reporting (Mistic RAT) and ongoing ransomware ecosystem activity, validate endpoint tamper protection, immutable backups, and rapid isolation procedures for high-value server tiers.\n- **Third-party plugin risk (payments/WordPress):** Implement continuous discovery for WordPress/plugins and enforce “approved plugin” baselines for any business-owned web properties handling payment flows.",
   "highlights": [
     {
-      "title": "cve-research",
-      "link": "https://vulners.com/githubexploit/CF51C38E-52F7-5CB5-9ACE-2BCD8F86C0BE?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "title": "Exploit for Improper Access Control in Widgetfactorylimited Jce",
+      "link": "https://vulners.com/githubexploit/449EB399-8D3C-5528-B03B-B58DC4645B9D?utm_source=rss&utm_medium=rss&utm_campaign=rss",
       "source": "Vulners.com RSS Feed",
-      "published": "2026-06-25T21:29:42+00:00",
+      "published": "2026-06-27T04:48:09+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC",
-        "Malware / Payloads"
+        "Linux / Unix"
       ],
       "curated": false,
-      "signal_tier": "high",
-      "signal_score": 74.72,
-      "priority_score": 75.07
+      "signal_tier": "critical",
+      "signal_score": 100.0,
+      "priority_score": 77.39
     },
     {
-      "title": "CVE-2026-55413",
-      "link": "https://vuldb.com/cve/CVE-2026-55413",
-      "source": "VulDB CVE",
-      "published": "2026-06-25T16:53:37+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Supply Chain / Software"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 67.05,
-      "priority_score": 75.94
-    },
-    {
-      "title": "Exploit for CVE-2025-61155",
-      "link": "https://vulners.com/githubexploit/8FA4E1EF-9BCF-5027-85E0-2F420F5171B6?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "title": "CISA Adds Exploited PTC Windchill RCE Flaw to KEV as Web Shell Attacks Continue",
+      "link": "https://vulners.com/thn/THN:051D862466EBE7A5DE6BB7DD92EA2EA6?utm_source=rss&utm_medium=rss&utm_campaign=rss",
       "source": "Vulners.com RSS Feed",
-      "published": "2026-06-25T13:01:56+00:00",
+      "published": "2026-06-26T12:31:00+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Detection Engineering",
         "Exploit / PoC",
-        "Linux / Unix",
+        "Identity / Access",
         "Ransomware"
       ],
       "curated": false,
-      "signal_tier": "high",
-      "signal_score": 66.72,
-      "priority_score": 71.72
+      "signal_tier": "critical",
+      "signal_score": 82.68,
+      "priority_score": 73.2
     },
     {
-      "title": "Exploit for CVE-2026-20230",
-      "link": "https://vulners.com/githubexploit/CCA10CC3-6319-542C-ADD9-3605DA4D116A?utm_source=rss&utm_medium=rss&utm_campaign=rss",
-      "source": "Vulners.com RSS Feed",
-      "published": "2026-06-25T09:56:26+00:00",
+      "title": "First-Ever Exploitation of PTC Windchill Vulnerability Discovered in the Wild",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1ug5e24/firstever_exploitation_of_ptc_windchill/",
+      "source": "/r/cybersecurity",
+      "published": "2026-06-26T12:26:02+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC",
-        "Web / API Security"
+        "OSINT / Community"
       ],
       "curated": false,
-      "signal_tier": "high",
-      "signal_score": 64.72,
-      "priority_score": 72.41
+      "signal_tier": "critical",
+      "signal_score": 82.37,
+      "priority_score": 71.6
     },
     {
-      "title": "Major Increase in Ransomware Attacks Targeting Europe, Warns New Report",
-      "link": "https://www.infosecurity-magazine.com/news/increase-ransomware-europe/",
-      "source": "Infosecurity Magazine – News",
-      "published": "2026-06-25T10:45:00+00:00",
+      "title": "CISA Adds Exploited PTC Windchill RCE Flaw to KEV as Web Shell Attacks Continue",
+      "link": "https://thehackernews.com/2026/06/cisa-adds-exploited-ptc-windchill-rce.html",
+      "source": "The Hacker News",
+      "published": "2026-06-26T12:31:56+00:00",
       "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
         "Ransomware",
         "General Security"
       ],
-      "curated": false,
+      "curated": true,
       "signal_tier": "high",
-      "signal_score": 63.77,
-      "priority_score": 67.19
+      "signal_score": 75.48,
+      "priority_score": 81.97
     },
     {
-      "title": "CVE-2026-53215 | Linux Kernel up to 7.0.12 net mvpp2_rx_refill privilege escalation",
-      "link": "https://vuldb.com/vuln/373800",
+      "title": "CVE-2026-56029 | corvuspay CorvusPay WooCommerce Payment Gateway Plugin up to 2.7.4 on WordPress authentication bypass",
+      "link": "https://vuldb.com/vuln/374232",
       "source": "VulDB Recent Entries",
-      "published": "2026-06-25T10:27:09+00:00",
+      "published": "2026-06-26T16:58:57+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Linux / Unix",
         "Exploit / PoC"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 63.72,
-      "priority_score": 77.61
+      "signal_score": 63.69,
+      "priority_score": 79.37
     },
     {
-      "title": "CVE-2026-53232 | Linux Kernel net sfp_bus_del_upstream privilege escalation",
-      "link": "https://vuldb.com/vuln/373762",
-      "source": "VulDB Recent Entries",
-      "published": "2026-06-25T10:22:01+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Linux / Unix",
-        "Exploit / PoC"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 63.72,
-      "priority_score": 77.58
-    },
-    {
-      "title": "CVE-2026-53188 | Linux Kernel up to 6.18.35/7.0.12 RDMA ib_get_ucaps privilege escalation",
-      "link": "https://vuldb.com/vuln/373752",
-      "source": "VulDB Recent Entries",
-      "published": "2026-06-25T10:13:27+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Linux / Unix",
-        "Exploit / PoC"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 63.72,
-      "priority_score": 77.54
-    },
-    {
-      "title": "CVE-2026-46089 | Linux Kernel up to 6.6.139/6.12.85/6.18.26/7.0.3 zram /dev/zram0 submit_bio_wait privilege escalation (EUVD-2026-32472)",
-      "link": "https://vuldb.com/vuln/366290",
+      "title": "CVE-2026-53013 | Linux Kernel up to 6.6.140/6.12.90/6.18.32/7.0.9 macvlan macvlan_get_size bc_cutoff privilege escalation (WID-SEC-2026-2077)",
+      "link": "https://vuldb.com/vuln/373375",
       "source": "VulDB Updates",
-      "published": "2026-06-26T06:36:16+00:00",
+      "published": "2026-06-27T00:55:11+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Linux / Unix",
@@ -146,14 +102,14 @@
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 63.47,
-      "priority_score": 81.75
+      "signal_score": 63.45,
+      "priority_score": 80.18
     },
     {
-      "title": "CVE-2026-45880 | Linux Kernel up to 6.6.127/6.12.74/6.18.13/6.19.3 PCI/P2PDMA vm_insert_page privilege escalation (WID-SEC-2026-1700)",
-      "link": "https://vuldb.com/vuln/366130",
+      "title": "CVE-2026-43483 | Linux Kernel up to 6.19.8 KVM update_cr8_intercept privilege escalation (Nessus ID 314485 / WID-SEC-2026-1531)",
+      "link": "https://vuldb.com/vuln/363532",
       "source": "VulDB Updates",
-      "published": "2026-06-26T05:09:40+00:00",
+      "published": "2026-06-26T21:07:04+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Linux / Unix",
@@ -161,8 +117,53 @@
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 63.47,
-      "priority_score": 81.36
+      "signal_score": 63.45,
+      "priority_score": 79.29
+    },
+    {
+      "title": "CVE-2026-43482 | Linux Kernel up to 6.12.77/6.18.19/6.19.8 sched_ext scx_claim_exit privilege escalation (WID-SEC-2026-1531)",
+      "link": "https://vuldb.com/vuln/363535",
+      "source": "VulDB Updates",
+      "published": "2026-06-26T21:07:04+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Linux / Unix",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 63.45,
+      "priority_score": 79.16
+    },
+    {
+      "title": "CVE-2026-43484 | Linux Kernel up to 6.19.8 mmc __mmc_claim_host privilege escalation (WID-SEC-2026-1531)",
+      "link": "https://vuldb.com/vuln/363542",
+      "source": "VulDB Updates",
+      "published": "2026-06-26T20:10:59+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Linux / Unix",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 63.45,
+      "priority_score": 78.91
+    },
+    {
+      "title": "CVE-2026-52983 | Linux Kernel up to 6.18.32/7.0.9 net airoha_dev_xmit q_tx privilege escalation (WID-SEC-2026-2077)",
+      "link": "https://vuldb.com/vuln/373352",
+      "source": "VulDB Updates",
+      "published": "2026-06-26T18:52:48+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Linux / Unix",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 63.45,
+      "priority_score": 78.56
     }
   ]
 }
