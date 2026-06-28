@@ -1,0 +1,165 @@
+{
+  "generated_at": "2026-06-28T09:32:23.053005+00:00",
+  "analysis_date": "2026-06-28",
+  "provider": "openai",
+  "model": "gpt-5.2",
+  "window_hours": 24,
+  "source_file": "data/news_recent.json",
+  "source_generated_at": "2026-06-28T09:04:49.413341+00:00",
+  "source_days_back": 30,
+  "source_total_items": 50815,
+  "total_items_in_window_all": 1328,
+  "total_items_in_window_curated": 0,
+  "total_items_in_window_selected": 40,
+  "context_selection_policy": "curated-plus-operational-signal-v1",
+  "morning_call_markdown": "### Executive Summary\n- Multiple **public PoCs/exploits** dropped for internet-facing admin/app stacks (notably **cPanel/WHM auth bypass** and **OpenSTAManager RCE paths**) → high risk of rapid opportunistic scanning.\n- Several **critical auth-bypass issues in Traefik** (popular reverse proxy) and **n8n** (automation platform) → prioritize exposure checks and patch/mitigation where these sit on the edge.\n- Ongoing signal on **ransomware access-broker tradecraft** (self-destructing “Mistic” backdoor) + **supply-chain malware** in ecosystems (PyPI) → tighten detections around initial footholds and developer endpoints.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) cPanel/WHM critical authentication bypass (PoC published; CVE-2026-41940)**\n- What happened: A public exploit tool surfaced for a **critical unauthenticated auth bypass** in **cPanel & WHM** (reported CVSS 10).\n- Why it matters operationally: If any exposed management interfaces exist, this is a **direct path to privileged control** and a common ransomware precursor.\n- Recommended immediate actions for the SOC today: **Identify any internet-exposed WHM/cPanel** (ASM/CMDB + external scan) and **block/limit access (VPN/allowlist)**; start **24h heightened monitoring** for WHM/cPanel auth anomalies and new admin actions.\n\n**2) OpenSTAManager authenticated RCE chain(s) + file upload exploit (PoCs published; CVE-2026-38751, CVE-2025-69212)**\n- What happened: Multiple PoCs released for **OpenSTAManager** enabling **RCE via arbitrary file upload** and **OS command injection** via crafted upload filenames.\n- Why it matters operationally: Even “authenticated” bugs are high-risk in finance where **credential reuse/phishing** is common; RCE on business apps often leads to **data theft + ransomware staging**.\n- Recommended immediate actions for the SOC today: **Locate OpenSTAManager instances** (app inventory + web logs) and **restrict/admin-only access** until patched; monitor for **suspicious uploads** (ZIP/.p7m) and **unexpected child processes** spawned by the web service.\n\n**3) Traefik critical authentication bypasses (multiple CVEs; remote)**\n- What happened: Several critical issues reported for **Traefik** up to affected versions (e.g., CVE-2026-53622 / CVE-2026-48020 / CVE-2026-48491) enabling **auth bypass via alternate channel/SNI/wildcard backend edge cases**.\n- Why it matters operationally: Traefik often fronts APIs and internal apps; bypassing it can expose **otherwise-protected endpoints**, enabling account takeover and data access.\n- Recommended immediate actions for the SOC today: **Identify Traefik in edge paths** (K8s ingress, VM, container) and **confirm versions/config exposure**; implement **temporary compensating controls** (WAF rules, IP allowlists for admin routes, mTLS where feasible) until upgraded.\n\n**4) Linux kernel LPE PoC + cluster of new kernel privilege escalation CVEs**\n- What happened: A Linux **local privilege escalation PoC** (“DirtyClone”, CVE-2026-43503) appeared, alongside multiple newly cataloged **kernel privilege escalation** issues (various subsystems).\n- Why it matters operationally: LPE is a common **post-compromise step** after initial access; impacts **Linux servers, containers/hosts**, and could accelerate ransomware operator privilege gain.\n- Recommended immediate actions for the SOC today: Hunt for **local exploit execution indicators** on Linux (compiler use, new SUID, suspicious temp binaries) and **prioritize patching** on internet-adjacent Linux tiers and shared compute nodes.\n\n**5) Supply-chain malware & developer/automation risk (PyPI malicious package + “AI agent repo” abuse pattern)**\n- What happened: Malicious PyPI package reported (**discord-token-generator**) executing an embedded infostealer; separate research shows “clean” repos can trick AI coding agents into executing harmful steps.\n- Why it matters operationally: Developer and automation runners are a high-value pivot into CI/CD secrets, cloud creds, and privileged environments.\n- Recommended immediate actions for the SOC today: **Block/alert on installation/import of the named package** in build telemetry; reinforce monitoring on **dev endpoints/CI runners** for suspicious process trees (package manager → dropped executable → credential access).\n\n---\n\n### Monitoring & detection recommendations\n- **Internet-facing admin apps (cPanel/WHM, OpenSTAManager):** Monitor WAF/web logs + EDR for spikes in requests to admin endpoints, unusual 4xx/5xx patterns, and new sessions from rare geos (T1190).\n- **Web app exploitation → command execution:** EDR on app servers for web service spawning shell/interpreters (`apache/nginx/php-fpm/node/java` → `sh/bash/python/perl/curl/wget`) (T1059).\n- **Upload-to-RCE patterns (OpenSTAManager/Laravel FileManager theme):** Web logs + file integrity monitoring for uploads of archives and “dangerous types” and subsequent execution from upload directories (T1105/T1059).\n- **Traefik edge bypass:** Reverse-proxy access logs for requests hitting protected backends without expected auth headers/paths; flag anomalous SNI / Host header / backend routing mismatches (T1190).\n- **Linux LPE activity:** Linux auditd/EDR for compilation (`gcc/clang/make`), kernel exploit-like syscalls bursts, creation of SUID files, and privilege boundary changes (`sudo`, `setcap`) (T1068).\n- **Supply-chain / Python infostealer:** Endpoint + CI telemetry for `pip install` followed by execution of unexpected binaries from site-packages/temp locations; alert on browser credential access + token stores (T1555).\n- **Ransomware access-broker behaviors (Mistic backdoor signal):** Look for short-lived services/scheduled tasks that delete themselves, rapid log clearing, and tooling staging in temp paths (T1070, T1053).\n\n---\n\n### Medium-term follow-ups\n- **Patch/upgrade program:** Validate patch availability and schedule upgrades for **Traefik**, **cPanel/WHM**, **n8n**, and any affected **Linux kernels**; track exceptions with compensating controls.\n- **Exposure management:** Ensure continuous discovery of **internet-exposed management planes** (WHM/cPanel, automation tools, CI dashboards) and enforce **VPN/allowlist + MFA**.\n- **Web proxy hardening:** Standardize **WAF baseline rules** for upload endpoints, command injection patterns, and unusual archive handling; add dedicated monitoring for admin routes.\n- **Developer supply-chain controls:** Enforce **dependency allowlisting**, lockfiles, and private mirrors; add policy for AI coding agents/automations (no auto-execute “fix” steps on untrusted repos).\n- **Credential & token hygiene:** Rotate secrets on any dev/CI hosts showing risky package activity; review browser credential storage policies and EDR coverage on developer workstations.\n- **IR readiness:** Update playbooks for **proxy/auth-bypass** and **web-app RCE** leading to ransomware; ensure rapid containment steps (isolate host, disable exposed service, revoke tokens) are rehearsed.",
+  "highlights": [
+    {
+      "title": "Exploit for CVE-2026-43503",
+      "link": "https://vulners.com/githubexploit/95D6A730-EFAD-5C8A-A651-39A9ED5B00CB?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-06-28T03:23:00+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Linux / Unix"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.64,
+      "priority_score": 76.61
+    },
+    {
+      "title": "Exploit for Unrestricted Upload of File with Dangerous Type in Devcode Openstamanager",
+      "link": "https://vulners.com/githubexploit/52E3EC4D-B3B2-5A5A-B602-597C9814297E?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-06-27T23:33:43+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Malware / Payloads",
+        "Ransomware"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.64,
+      "priority_score": 75.61
+    },
+    {
+      "title": "Exploit for CVE-2025-56399",
+      "link": "https://vulners.com/githubexploit/1C0E4383-9787-58E2-A56F-70D9888E6255?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-06-28T03:43:50+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Web / API Security"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 64.64,
+      "priority_score": 76.73
+    },
+    {
+      "title": "Exploit for CVE-2026-5366",
+      "link": "https://vulners.com/githubexploit/2188B2BD-305E-5039-8E88-798A5265A54D?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-06-27T13:41:44+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 64.64,
+      "priority_score": 72.76
+    },
+    {
+      "title": "CVE-2026-53095 | Linux Kernel up to 6.18.32/7.0.9 bpf privilege escalation (WID-SEC-2026-2077)",
+      "link": "https://vuldb.com/vuln/373450",
+      "source": "VulDB Updates",
+      "published": "2026-06-28T01:27:50+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Linux / Unix",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 63.43,
+      "priority_score": 79.95
+    },
+    {
+      "title": "CVE-2026-53622 | Traefik up to 3.7.2 SNI authentication bypass (GHSA-9cr8-q42q-g8m7)",
+      "link": "https://vuldb.com/vuln/372962",
+      "source": "VulDB Updates",
+      "published": "2026-06-27T22:23:31+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 63.43,
+      "priority_score": 79.13
+    },
+    {
+      "title": "CVE-2026-48020 | Traefik up to 2.11.47/3.6.18/3.7.2 authentication bypass (GHSA-xf64-8mw2-4gr2)",
+      "link": "https://vuldb.com/vuln/372952",
+      "source": "VulDB Updates",
+      "published": "2026-06-27T22:23:31+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 63.43,
+      "priority_score": 79.13
+    },
+    {
+      "title": "CVE-2026-56029 | corvuspay CorvusPay WooCommerce Payment Gateway Plugin up to 2.7.4 on WordPress authentication bypass (EUVD-2026-39692)",
+      "link": "https://vuldb.com/vuln/374232",
+      "source": "VulDB Updates",
+      "published": "2026-06-27T21:32:38+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 63.43,
+      "priority_score": 79.03
+    },
+    {
+      "title": "CVE-2026-53061 | Linux Kernel up to 7.0.9 Tablepassthrough Mode privilege escalation (WID-SEC-2026-2077)",
+      "link": "https://vuldb.com/vuln/373392",
+      "source": "VulDB Updates",
+      "published": "2026-06-27T18:52:49+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Linux / Unix",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 63.43,
+      "priority_score": 78.18
+    },
+    {
+      "title": "CVE-2026-53053 | Linux Kernel up to 6.12.90/6.18.32/7.0.9 iommu clone_alias privilege escalation (WID-SEC-2026-2077)",
+      "link": "https://vuldb.com/vuln/373390",
+      "source": "VulDB Updates",
+      "published": "2026-06-27T18:52:45+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Linux / Unix",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 63.43,
+      "priority_score": 78.18
+    }
+  ]
+}
