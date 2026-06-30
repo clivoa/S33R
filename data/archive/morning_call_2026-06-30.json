@@ -1,0 +1,162 @@
+{
+  "generated_at": "2026-06-30T10:00:48.003969+00:00",
+  "analysis_date": "2026-06-30",
+  "provider": "openai",
+  "model": "gpt-5.2",
+  "window_hours": 24,
+  "source_file": "data/news_recent.json",
+  "source_generated_at": "2026-06-29T14:16:03.583782+00:00",
+  "source_days_back": 30,
+  "source_total_items": 52013,
+  "total_items_in_window_all": 315,
+  "total_items_in_window_curated": 0,
+  "total_items_in_window_selected": 40,
+  "context_selection_policy": "curated-plus-operational-signal-v1",
+  "morning_call_markdown": "### Executive Summary\n- Active exploitation reported for a **critical Oracle E‑Business Suite (EBS) flaw (CVE-2026-46817)**—highest risk for financial apps and ERP-adjacent environments.\n- New **public PoC exploit for Graylog arbitrary class loading → likely RCE chain** (CVE reference in reports appears inconsistent; treat as exploitable Graylog JVM class-loading issue).\n- Multiple **critical Linux privilege-escalation CVEs** published (mostly local/adjacent, some potentially remote components) — prioritize for exposed/Internet-facing Linux and high-value jump hosts.\n\n### High-priority items (immediate attention)\n**1) Oracle E‑Business Suite (EBS) CVE-2026-46817 – exploitation in the wild**\n- What happened: Reporting indicates **attackers are now exploiting CVE-2026-46817** affecting Oracle EBS (financial application stack).\n- Why it matters operationally: Direct path to **compromise of financial/ERP workflows**, potential data access and ransomware staging from a highly trusted system.\n- Recommended immediate actions for the SOC today: **Identify all EBS assets and confirm patch level**; **enable/raise alerting on abnormal EBS web/app activity** (new endpoints, unusual POST volume, auth anomalies) and be ready to **isolate affected app tiers** if exploitation is suspected.\n\n**2) Graylog arbitrary class loading PoC (possible RCE)**\n- What happened: A **public proof-of-concept exploit** was released demonstrating **arbitrary class loading on Graylog JVM deployments**, reportedly chainable to RCE (CVE naming discrepancy in sources—assume “Graylog class loading vuln with PoC”).\n- Why it matters operationally: Graylog often runs with **broad log/data visibility and credentials in configs**; compromise enables **log tampering, lateral movement, and alert suppression**.\n- Recommended immediate actions for the SOC today: **Inventory Graylog instances (prod/dev) and restrict admin/API exposure** (no direct Internet, tighten ACLs); **hunt for suspicious Graylog plugin/class-loading behavior and new admin users/tokens**.\n\n**3) CISA KEV mention: Cisco Unified Communications Manager (CUCM) added (details incomplete)**\n- What happened: A report states **CISA added a CUCM Server vulnerability to KEV**, implying active exploitation (specific CVE not provided in the item—assumption).\n- Why it matters operationally: CUCM compromise can lead to **credential theft, call-routing abuse, internal pivoting**, and impacts to **incident response communications**.\n- Recommended immediate actions for the SOC today: **Confirm whether we run CUCM and check current advisories/KEV entry for the exact CVE**; **monitor CUCM admin logins/config changes** and consider **restricting management interfaces** to jump hosts/VPN only.\n\n**4) Linux kernel + core Linux utilities priv-esc cluster (CVE-2026-53053/-53057/-53045/-53287 etc.; acl/attr symlink traversal)**\n- What happened: Multiple **critical Linux kernel privilege escalation** issues disclosed, plus **acl/attr local priv-esc via symlink traversal/TOCTOU** (CVE-2026-54369/54370/54371).\n- Why it matters operationally: While many are **local**, they are high-value for attackers post-initial access to **escalate to root** on servers/jump boxes/containers; some kernel items claim remote reach in summaries—treat as **high-risk until validated**.\n- Recommended immediate actions for the SOC today: **Prioritize patching on Internet-adjacent Linux hosts, EDR-less servers, CI/CD runners, and admin jump hosts**; **hunt for post-exploitation signals** (new SUID files, unexpected kernel module activity, abnormal privilege changes).\n\n**5) Ransomware intel: “The Gentlemen” RaaS evolving backdoors**\n- What happened: New reporting describes **The Gentlemen RaaS** using **custom backdoors** and evolving tooling/TTPs.\n- Why it matters operationally: Custom backdoors increase **dwell time and re-entry risk**; ransomware operators commonly target **financial services for extortion** and rapid impact.\n- Recommended immediate actions for the SOC today: **Increase scrutiny on persistence mechanisms** (new services, scheduled tasks, SSH keys, startup items) on high-value segments; **verify backup isolation and EDR coverage** on critical tiers (EBS/db/app, IAM, virtualization).\n\n### Monitoring & detection recommendations\n- **Oracle EBS exploitation watch:** Monitor **WAF/reverse proxy + EBS app logs + database audit logs** for unusual POSTs, new/rare URIs, spikes in 4xx/5xx, and abnormal app user activity (ATT&CK: Exploit Public-Facing Application **T1190**).\n- **Graylog compromise indicators:** Use **EDR on Graylog hosts + Graylog server logs + OS auth logs** to flag new admin accounts/tokens, unexpected plugin/JAR changes, and outbound connections from Graylog to internal assets (ATT&CK: Valid Accounts **T1078**, Command and Scripting Interpreter **T1059**).\n- **CUCM/voice infra monitoring (KEV-driven):** Review **CUCM admin audit logs, AAA/TACACS/RADIUS, firewall logs** for new admin sessions, config exports, and management access from non-jump subnets (ATT&CK: Remote Services **T1021**).\n- **Linux priv-esc post-compromise hunts:** From **EDR + auditd + syslog**, alert on creation of **SUID/SGID binaries**, edits to `/etc/sudoers*`, new root cron entries, and suspicious use of `setcap/getcap`, `getfattr/setfattr`, `setfacl/getfacl`.\n- **Kernel exploit staging signals:** Track **process crashes, kernel oops/panic logs, unusual `dmesg` entries**, and execution from writable paths (`/tmp`, `/dev/shm`) on sensitive Linux servers (ATT&CK: Exploitation for Privilege Escalation **T1068**).\n- **Ransomware early warning:** Watch **EDR + file server logs + AD/IdP** for rapid file renames/encryption patterns, disabled security tools, mass GPO changes, and abnormal privileged group membership changes (ATT&CK: Inhibit System Recovery **T1490**, Data Encrypted for Impact **T1486**).\n- **Developer workstation risk (AI agent prompt injection):** On endpoints, monitor **git client activity + shell execution + credential access** after cloning new repos; flag unusual tool-driven commands from IDE/agent contexts (ATT&CK: User Execution **T1204**, Credential Access **TA0006**).\n\n### Medium-term follow-ups\n- **Patch governance:** Validate exposure and patch cadence for **Oracle EBS**, **Graylog**, and **Cisco CUCM**; ensure vulnerability owners and emergency change windows are pre-approved for KEV-class events.\n- **Linux hardening backlog:** Standardize rapid rollout for **kernel + acl/attr** updates on server fleets; review container host patch SLAs and whether kernels are centrally managed.\n- **Segmentation & access control:** Ensure **Graylog and CUCM management planes** are reachable only via **jump hosts + MFA**, and not from general user subnets.\n- **Ransomware resilience:** Re-test **immutable/offline backups**, restoration RTOs for ERP/EBS dependencies, and validate EDR tamper protection across critical server tiers.\n- **Secure SDLC guidance (AI coding agents):** Update developer policy: treat repo content (incl. READMEs/issues) as untrusted inputs to agents; require least-privilege tokens and isolated dev environments for agent execution.\n- **Detection engineering:** Build/refresh detections for **local priv-esc primitives** (SUID creation, sudoers edits, capability changes) and ensure they’re enabled on **admin jump hosts and CI/CD runners** first.",
+  "highlights": [
+    {
+      "title": "Exploit for Uncontrolled Resource Consumption in Github Cmark-Gfm",
+      "link": "https://vulners.com/githubexploit/7CABEA7D-2DC5-58B7-AF42-1DF51CCE3D29?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-06-29T12:58:57+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.59,
+      "priority_score": 77.49
+    },
+    {
+      "title": "CVE-2026-53053 | Linux Kernel up to 6.12.90/6.18.32/7.0.9 iommu clone_alias privilege escalation (WID-SEC-2026-2077)",
+      "link": "https://vuldb.com/vuln/373390",
+      "source": "VulDB Updates",
+      "published": "2026-06-29T13:38:02+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Linux / Unix",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 63.41,
+      "priority_score": 81.7
+    },
+    {
+      "title": "Mozilla warns of indirect prompt injection risk in AI coding agents",
+      "link": "https://www.helpnetsecurity.com/2026/06/29/mozilla-warns-of-indirect-prompt-injection-risk-in-ai-coding-agents/",
+      "source": "Help Net Security",
+      "published": "2026-06-29T10:48:12+00:00",
+      "smart_groups": [
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": false,
+      "signal_tier": "watch",
+      "signal_score": 63.83,
+      "priority_score": 72.25
+    },
+    {
+      "title": "CISA Warns Attackers Are Targeting Critical Internal Business Platforms",
+      "link": "https://www.cyberdefensemagazine.com/cisa-warns-attackers-are-targeting-critical-internal-business-platforms/",
+      "source": "Cyber Defense Magazine",
+      "published": "2026-06-29T12:00:09+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": false,
+      "signal_tier": "watch",
+      "signal_score": 51.89,
+      "priority_score": 76.51
+    },
+    {
+      "title": "CVE-2026-53287 | Linux Kernel up to 7.0.9 audit __audit_log_capset privilege escalation (WID-SEC-2026-2119)",
+      "link": "https://vuldb.com/vuln/374374",
+      "source": "VulDB Updates",
+      "published": "2026-06-29T14:01:03+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Linux / Unix",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "watch",
+      "signal_score": 45.41,
+      "priority_score": 81.8
+    },
+    {
+      "title": "CVE-2026-53057 | Linux Kernel up to 6.18.32/7.0.9 iommu riscv_iommu_iodir_iotinval privilege escalation (WID-SEC-2026-2077)",
+      "link": "https://vuldb.com/vuln/373391",
+      "source": "VulDB Updates",
+      "published": "2026-06-29T13:38:02+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Linux / Unix",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "watch",
+      "signal_score": 45.41,
+      "priority_score": 81.7
+    },
+    {
+      "title": "CVE-2026-53045 | Linux Kernel up to 7.0.9 memory privilege escalation (WID-SEC-2026-2077)",
+      "link": "https://vuldb.com/vuln/373428",
+      "source": "VulDB Updates",
+      "published": "2026-06-29T13:38:02+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Linux / Unix",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "watch",
+      "signal_score": 45.41,
+      "priority_score": 81.7
+    },
+    {
+      "title": "The Gentlemen are knocking: сustom backdoors and evolving tactics",
+      "link": "https://securelist.com/the-gentlemen-raas/120447/",
+      "source": "Kaspersky Securelist",
+      "published": "2026-06-29T10:00:35+00:00",
+      "smart_groups": [
+        "Ransomware",
+        "Malware / Payloads",
+        "Network / OT / ICS"
+      ],
+      "curated": false,
+      "signal_tier": "watch",
+      "signal_score": 45.35,
+      "priority_score": 73.27
+    },
+    {
+      "title": "CVE-2026-40521",
+      "link": "https://vuldb.com/cve/CVE-2026-40521",
+      "source": "VulDB CVE",
+      "published": "2026-06-29T13:47:22+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": false,
+      "signal_tier": "watch",
+      "signal_score": 42.87,
+      "priority_score": 79.06
+    },
+    {
+      "title": "CVE-2026-54371",
+      "link": "https://vuldb.com/cve/CVE-2026-54371",
+      "source": "VulDB CVE",
+      "published": "2026-06-29T13:47:22+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": false,
+      "signal_tier": "watch",
+      "signal_score": 42.87,
+      "priority_score": 79.01
+    }
+  ]
+}
