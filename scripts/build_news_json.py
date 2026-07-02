@@ -53,6 +53,8 @@ SMART_GROUP_DICT_PATH = Path(
 DAYS_BACK = int(os.environ.get("DAYS_BACK", "30"))
 HIGH_CONFIDENCE_THRESHOLD = float(os.environ.get("SMART_GROUP_HIGH_CONF_THRESHOLD", "0.75"))
 FEED_TIMEOUT_SECONDS = int(os.environ.get("FEED_TIMEOUT_SECONDS", "20"))
+NEWS_RECENT_MAX_BYTES = int(os.environ.get("NEWS_RECENT_MAX_BYTES", "95000000"))
+NEWS_RECENT_MIN_ITEMS = int(os.environ.get("NEWS_RECENT_MIN_ITEMS", "1000"))
 
 
 CATEGORY_SLUGS = {
@@ -1116,6 +1118,152 @@ def compute_curated_status(item: Dict[str, Any], source_quality_score: float, no
     }
 
 
+def dump_news_json(data: Dict[str, Any]) -> str:
+    return json.dumps(data, ensure_ascii=False, separators=(",", ":"))
+
+
+def build_news_output(
+    items: List[Dict[str, Any]],
+    now: datetime,
+    external_rules: Dict[str, Any],
+    source_catalog: Dict[str, Any],
+    feed_attempts: Dict[str, Dict[str, Any]],
+    total_collected_items: int,
+    output_truncated_by_bytes: bool,
+) -> Dict[str, Any]:
+    _, source_quality_report = build_source_quality(items, now)
+
+    total_items = len(items)
+    with_groups = sum(1 for i in items if i.get("smart_groups"))
+    with_high_conf = sum(1 for i in items if i.get("smart_groups_high_confidence"))
+    curated_count = sum(1 for i in items if bool(i.get("curated")))
+    signal_tier_counts: Dict[str, int] = defaultdict(int)
+    for item in items:
+        signal_tier_counts[str(item.get("signal_tier") or "low")] += 1
+
+    classification_stats = {
+        "external_dictionary_path": str(SMART_GROUP_DICT_PATH),
+        "external_dictionary_version": external_rules.get("version"),
+        "high_confidence_threshold": HIGH_CONFIDENCE_THRESHOLD,
+        "items_with_smart_groups": with_groups,
+        "items_with_high_confidence_smart_groups": with_high_conf,
+        "coverage_ratio": round((with_groups / total_items), 4) if total_items else 0.0,
+        "high_confidence_ratio": round((with_high_conf / total_items), 4) if total_items else 0.0,
+    }
+    curation_stats = {
+        "policy": CURATION_POLICY_VERSION,
+        "curated_items": curated_count,
+        "curated_ratio": round((curated_count / total_items), 4) if total_items else 0.0,
+        "min_signal_score": CURATED_MIN_SIGNAL_SCORE,
+        "max_age_hours": CURATED_MAX_AGE_HOURS,
+        "bulk_source_min_signal_score": CURATED_BULK_SOURCE_MIN_SIGNAL_SCORE,
+    }
+    signal_stats = {
+        "model": OPERATIONAL_SIGNAL_VERSION,
+        "high_tiers": sorted(OPERATIONAL_HIGH_TIERS),
+        "tier_counts": dict(sorted(signal_tier_counts.items())),
+        "high_signal_items": sum(signal_tier_counts[tier] for tier in OPERATIONAL_HIGH_TIERS),
+        "high_signal_ratio": round(
+            (sum(signal_tier_counts[tier] for tier in OPERATIONAL_HIGH_TIERS) / total_items),
+            4,
+        ) if total_items else 0.0,
+    }
+    output_limits = {
+        "serialization": "compact",
+        "max_bytes": NEWS_RECENT_MAX_BYTES if NEWS_RECENT_MAX_BYTES > 0 else None,
+        "min_items": NEWS_RECENT_MIN_ITEMS,
+        "total_collected_items": total_collected_items,
+        "items_written": total_items,
+        "items_omitted": max(0, total_collected_items - total_items),
+        "truncated_by_bytes": output_truncated_by_bytes,
+    }
+
+    return {
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "days_back": DAYS_BACK,
+        "total_items": total_items,
+        "total_collected_items": total_collected_items,
+        "output_limits": output_limits,
+        "classification_stats": classification_stats,
+        "curation_stats": curation_stats,
+        "signal_stats": signal_stats,
+        "source_quality_model": {
+            "freshness_weight": 0.32,
+            "useful_volume_weight": 0.24,
+            "dedup_weight": 0.20,
+            "noise_weight": 0.14,
+            "classification_weight": 0.10,
+        },
+        "source_catalog": source_catalog.get("metadata"),
+        "source_quality": source_quality_report,
+        "feed_attempts": list(feed_attempts.values()),
+        "items": items,
+    }
+
+
+def fit_news_output_to_size(
+    items: List[Dict[str, Any]],
+    now: datetime,
+    external_rules: Dict[str, Any],
+    source_catalog: Dict[str, Any],
+    feed_attempts: Dict[str, Dict[str, Any]],
+) -> Tuple[Dict[str, Any], str]:
+    total_collected_items = len(items)
+    selected_items = items
+    payload = build_news_output(
+        selected_items,
+        now,
+        external_rules,
+        source_catalog,
+        feed_attempts,
+        total_collected_items,
+        output_truncated_by_bytes=False,
+    )
+    text = dump_news_json(payload)
+
+    if NEWS_RECENT_MAX_BYTES <= 0:
+        return payload, text
+
+    min_items = min(max(0, NEWS_RECENT_MIN_ITEMS), total_collected_items)
+    truncated = False
+
+    while len(text.encode("utf-8")) > NEWS_RECENT_MAX_BYTES and len(selected_items) > min_items:
+        current_bytes = len(text.encode("utf-8"))
+        ratio = NEWS_RECENT_MAX_BYTES / max(1, current_bytes)
+        target_count = max(min_items, int(len(selected_items) * ratio * 0.97))
+        if target_count >= len(selected_items):
+            target_count = len(selected_items) - 1
+
+        selected_items = selected_items[:target_count]
+        truncated = True
+        payload = build_news_output(
+            selected_items,
+            now,
+            external_rules,
+            source_catalog,
+            feed_attempts,
+            total_collected_items,
+            output_truncated_by_bytes=True,
+        )
+        text = dump_news_json(payload)
+
+    final_bytes = len(text.encode("utf-8"))
+    if final_bytes > NEWS_RECENT_MAX_BYTES:
+        raise SystemExit(
+            f"news_recent.json would be {final_bytes} bytes after keeping "
+            f"{len(selected_items)} items, still above NEWS_RECENT_MAX_BYTES={NEWS_RECENT_MAX_BYTES}"
+        )
+
+    if truncated:
+        print(
+            "[WARN] Trimmed news_recent.json from "
+            f"{total_collected_items} to {len(selected_items)} items to stay under "
+            f"{NEWS_RECENT_MAX_BYTES} bytes"
+        )
+
+    return payload, text
+
+
 # -------------------------------
 # Main
 # -------------------------------
@@ -1341,7 +1489,7 @@ def main() -> None:
 
     items_list = list(items_by_link.values())
 
-    source_quality_map, source_quality_report = build_source_quality(items_list, now)
+    source_quality_map, _ = build_source_quality(items_list, now)
 
     for item in items_list:
         source_name = str(item.get("source") or "Unknown")
@@ -1350,8 +1498,6 @@ def main() -> None:
         item.update(compute_operational_signal(item, source_score, now))
         item.update(compute_curated_status(item, source_score, now))
         item["priority_score"] = compute_priority_score(item, source_score, now)
-
-    _, source_quality_report = build_source_quality(items_list, now)
 
     items_list.sort(
         key=lambda x: (
@@ -1362,64 +1508,20 @@ def main() -> None:
         reverse=True,
     )
 
-    total_items = len(items_list)
-    with_groups = sum(1 for i in items_list if i.get("smart_groups"))
-    with_high_conf = sum(1 for i in items_list if i.get("smart_groups_high_confidence"))
-    curated_count = sum(1 for i in items_list if bool(i.get("curated")))
-    signal_tier_counts: Dict[str, int] = defaultdict(int)
-    for item in items_list:
-        signal_tier_counts[str(item.get("signal_tier") or "low")] += 1
-
-    classification_stats = {
-        "external_dictionary_path": str(SMART_GROUP_DICT_PATH),
-        "external_dictionary_version": external_rules.get("version"),
-        "high_confidence_threshold": HIGH_CONFIDENCE_THRESHOLD,
-        "items_with_smart_groups": with_groups,
-        "items_with_high_confidence_smart_groups": with_high_conf,
-        "coverage_ratio": round((with_groups / total_items), 4) if total_items else 0.0,
-        "high_confidence_ratio": round((with_high_conf / total_items), 4) if total_items else 0.0,
-    }
-    curation_stats = {
-        "policy": CURATION_POLICY_VERSION,
-        "curated_items": curated_count,
-        "curated_ratio": round((curated_count / total_items), 4) if total_items else 0.0,
-        "min_signal_score": CURATED_MIN_SIGNAL_SCORE,
-        "max_age_hours": CURATED_MAX_AGE_HOURS,
-        "bulk_source_min_signal_score": CURATED_BULK_SOURCE_MIN_SIGNAL_SCORE,
-    }
-    signal_stats = {
-        "model": OPERATIONAL_SIGNAL_VERSION,
-        "high_tiers": sorted(OPERATIONAL_HIGH_TIERS),
-        "tier_counts": dict(sorted(signal_tier_counts.items())),
-        "high_signal_items": sum(signal_tier_counts[tier] for tier in OPERATIONAL_HIGH_TIERS),
-        "high_signal_ratio": round(
-            (sum(signal_tier_counts[tier] for tier in OPERATIONAL_HIGH_TIERS) / total_items),
-            4,
-        ) if total_items else 0.0,
-    }
-
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
-    out_data = {
-        "generated_at": datetime.now(timezone.utc).isoformat(),
-        "days_back": DAYS_BACK,
-        "total_items": total_items,
-        "classification_stats": classification_stats,
-        "curation_stats": curation_stats,
-        "signal_stats": signal_stats,
-        "source_quality_model": {
-            "freshness_weight": 0.32,
-            "useful_volume_weight": 0.24,
-            "dedup_weight": 0.20,
-            "noise_weight": 0.14,
-            "classification_weight": 0.10,
-        },
-        "source_catalog": source_catalog.get("metadata"),
-        "source_quality": source_quality_report,
-        "feed_attempts": list(feed_attempts.values()),
-        "items": items_list,
-    }
-    OUTPUT_PATH.write_text(json.dumps(out_data, indent=2), encoding="utf-8")
-    print(f"[INFO] Wrote {total_items} items to {OUTPUT_PATH}")
+    out_data, output_text = fit_news_output_to_size(
+        items_list,
+        now,
+        external_rules,
+        source_catalog,
+        feed_attempts,
+    )
+    output_bytes = len(output_text.encode("utf-8"))
+    OUTPUT_PATH.write_text(output_text, encoding="utf-8")
+    print(f"[INFO] Wrote {out_data['total_items']} items to {OUTPUT_PATH} ({output_bytes} bytes)")
+    omitted = out_data.get("output_limits", {}).get("items_omitted", 0)
+    if omitted:
+        print(f"[INFO] Omitted {omitted} lower-ranked items from news_recent.json output")
 
     total_promo = sum(s["promo_count"] for s in promo_stats.values())
     print(f"[INFO] Total promotional items filtered: {total_promo}")
