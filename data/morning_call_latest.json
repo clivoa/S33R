@@ -1,17 +1,172 @@
 {
-  "generated_at": "2026-07-02T09:32:37.965251+00:00",
-  "analysis_date": "2026-07-02",
+  "generated_at": "2026-07-03T09:35:23.164297+00:00",
+  "analysis_date": "2026-07-03",
   "provider": "openai",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-06-29T14:16:03.583782+00:00",
+  "source_generated_at": "2026-07-03T08:18:47.093010+00:00",
   "source_days_back": 30,
-  "source_total_items": 52013,
-  "total_items_in_window_all": 0,
-  "total_items_in_window_curated": 0,
-  "total_items_in_window_selected": 0,
+  "source_total_items": 52926,
+  "total_items_in_window_all": 1698,
+  "total_items_in_window_curated": 9,
+  "total_items_in_window_selected": 40,
   "context_selection_policy": "curated-plus-operational-signal-v1",
-  "morning_call_markdown": "### Executive Summary\n- No high-signal external security news items were provided in the last 24 hours (briefing context is empty), so there are **no specific new CVEs/campaigns** to pivot on today.\n- Treat today as a **posture + verification day**: validate coverage on top financial-sector attack paths (VPN/edge, email/IdP, EDR gaps, cloud identities).\n- Prioritize **internal telemetry-driven hunting** for common intrusions (credential theft → MFA abuse → remote access → lateral movement → data access/exfil).\n\n### High-priority items (immediate attention)\n**1) Intelligence gap / no external items in feed (assumption: collection or curation issue)**\n- What happened: The last-24h curated news context contains **0 items** (none collected/selected).\n- Why it matters operationally: Lack of external signal can hide **active exploitation** or vendor advisories we’d normally action quickly.\n- Recommended immediate actions for the SOC today: Verify threat-intel/news pipeline health (connectors, filters, rate limits); run a quick “top 10 control-plane hunts” checklist (below) to compensate.\n\n**2) Edge access assurance (VPN/RDP/VDI/remote admin) — proactive validation**\n- What happened: No new edge-device advisories were provided, but edge compromise remains a top initial access vector for financial orgs.\n- Why it matters operationally: Edge access abuse often yields **rapid privilege escalation** and stealthy persistence with minimal endpoint visibility.\n- Recommended immediate actions for the SOC today: Review last 24–72h auth anomalies on VPN/VDI/RD gateways; confirm patch/firmware currency and admin access restrictions (MFA, IP allowlists, no direct admin from internet).\n\n**3) IdP & MFA abuse (phishing-resistant posture check) — proactive validation**\n- What happened: No new phishing/MFA-bypass campaign items were provided; assume baseline threat persists.\n- Why it matters operationally: Credential theft + token theft drives **account takeover**, mailbox rule abuse, and cloud lateral movement.\n- Recommended immediate actions for the SOC today: Hunt for “impossible travel,” atypical MFA prompts/denials, and new device registrations; validate conditional access policies for admin/high-risk groups and ensure alerts route to SOC.\n\n**4) Ransomware readiness drill (operational)**\n- What happened: No new ransomware group/campaign items were provided in the feed.\n- Why it matters operationally: Ransomware dwell time can be short; detection hinges on **early-stage signals** (credential dumping, remote tooling, SMB/WMI, backup tampering).\n- Recommended immediate actions for the SOC today: Run a 30-minute hunt for common precursors (credential dumping, suspicious remote exec, backup service stops); confirm IR hotline/on-call and containment playbooks are current.\n\n### Monitoring & detection recommendations\n- **IdP / SSO logs (Azure AD/Entra, Okta, Ping)**: watch for anomalous sign-ins, new MFA methods/devices, refresh token misuse patterns; map to **T1078 (Valid Accounts)**.\n- **Email security + mailbox audit logs (M365/Gmail)**: detect new inbox rules/forwarding, OAuth app consent spikes, mass search/export; **T1114 (Email Collection)**.\n- **VPN / remote access gateways + firewall**: monitor new geo/ASN patterns, admin portal access, config exports, repeated auth failures then success; **T1190 (Exploit Public-Facing App)** as a standing hypothesis even without new CVEs.\n- **EDR telemetry**: hunt for credential dumping indicators (LSASS access, procdump-like behavior), unsigned LOLBins, remote tooling (PsExec/WMI); **T1003 (OS Credential Dumping), T1021 (Remote Services)**.\n- **Windows event logs (Security, Sysmon if present)**: new local admin additions, scheduled tasks/services creation, RDP enablement, audit policy changes; **T1098 (Account Manipulation), T1053 (Scheduled Task/Job)**.\n- **File/print + SMB logs**: spikes in SMB session creation, lateral file writes to admin shares, unusual access to file servers containing sensitive financial data; **T1021.002 (SMB/Windows Admin Shares)**.\n- **Backup and recovery platform logs**: alerts on backup job deletions, repository access changes, mass failures, or service stops (early ransomware signal).\n\n### Medium-term follow-ups\n- Validate **threat-intel/news collection coverage**: ensure key vendor advisories (Microsoft, Cisco, Palo Alto, Fortinet, Ivanti, Citrix, VMware) and ransomware reporting sources are ingested and not filtered out.\n- Tighten **phishing-resistant MFA** rollout for privileged users (FIDO2/WebAuthn) and reduce reliance on push-based MFA where feasible.\n- Review **edge hardening standards**: admin interfaces off the internet, dedicated management networks, quarterly configuration review, enforced MFA, and monitored break-glass accounts.\n- Confirm **EDR coverage and tamper protection** on high-value server tiers (DCs, jump hosts, VDI brokers, trading/settlement support systems).\n- Run a **ransomware tabletop refresh** focused on containment steps (disable accounts, isolate segments, suspend VPN access, backup integrity verification) and comms pathways.\n\nIf you can share the missing news items or confirm the feed outage, I’ll immediately convert them into a prioritized “patch/mitigation + detections” set for today’s shift.",
-  "highlights": []
+  "morning_call_markdown": "### Executive Summary\n- **Active exploitation:** Microsoft **SharePoint RCE (CVE-2026-45659)** is now in **CISA KEV** and being exploited in the wild—treat any exposed/on-prem SharePoint as a priority target.\n- **Perimeter access monetization:** **FortiBleed** credential theft is being operationalized by **INC and Lynx ransomware** (and possibly chained with a suspected **Nextcloud 0-day**)—assume perimeter creds may already be compromised.\n- **Rapid weaponization trend:** Reports of **Oracle E-Business Suite** attacks via a critical flaw **pre-public exploit**, plus **Citrix Bleed-class/“Bleed 2”** exploitation activity—accelerate patch + post-patch compromise checks.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Microsoft SharePoint Server RCE – CVE-2026-45659 (KEV, active exploitation)**\n- **What happened:** SharePoint RCE (authenticated) **CVE-2026-45659** added to **KEV** with confirmed exploitation.\n- **Why it matters operationally:** SharePoint is commonly internally trusted; RCE enables rapid lateral movement and data staging in enterprise environments.\n- **Recommended immediate actions for the SOC today:** Confirm patch level / exposure of all SharePoint farms; hunt for abnormal process spawn from IIS/SharePoint and suspicious new web shells; escalate any SharePoint alerts as **potential initial access**.\n\n**2) FortiBleed → ransomware (INC / Lynx) + suspected Nextcloud 0-day chaining**\n- **What happened:** Fortinet credential-harvesting activity (“FortiBleed”) linked to **INC and Lynx** ransomware ops; reporting suggests possible chaining with a **Nextcloud zero-day** (unconfirmed specifics).\n- **Why it matters operationally:** Valid perimeter creds + VPN/firewall admin access is a fast track to domain compromise and ransomware; credential theft persists even after patching if creds weren’t rotated.\n- **Recommended immediate actions for the SOC today:** Identify all FortiGate/Forti* exposures and **force credential rotation** (VPN/admin/service accounts) + invalidate sessions; review firewall/VPN auth logs for anomalous logins (new geo, new devices, odd hours) and new admin users/config changes.\n\n**3) Citrix NetScaler “Bleed-class” / Citrix Bleed 2 exploitation and scanning**\n- **What happened:** NetScaler “Bleed-class” exploitation reported within ~24h of disclosure; separate reporting notes ransomware affiliates (e.g., Anubis) abusing **Citrix Bleed 2 (CVE-2025-5777)** for initial access.\n- **Why it matters operationally:** NetScaler compromise can leak session tokens/credentials and bypass MFA patterns; high likelihood of internet-wide scanning and opportunistic takeovers.\n- **Recommended immediate actions for the SOC today:** Verify patch/mitigation status for all NetScaler instances; **invalidate ICA/VPN sessions and rotate exposed credentials** per vendor guidance; monitor for unusual authentication spikes and configuration exports/downloads.\n\n**4) Oracle E-Business Suite critical flaw exploited “pre-PoC”**\n- **What happened:** Reporting indicates attackers reverse-engineered an Oracle patch and exploited Oracle E-Business Suite before public exploit code release.\n- **Why it matters operationally:** ERP compromise is high-impact for finance (payments, PII, privileged workflows); “patch-diff” exploitation means patching alone may be too late without detection.\n- **Recommended immediate actions for the SOC today:** Confirm EBS patch deployment status and external accessibility; hunt for anomalous web/app server behavior (unexpected child processes, new files in web roots, unusual outbound connections) and privilege changes in Oracle/EBS admin logs.\n\n---\n\n### Monitoring & detection recommendations\n- **SharePoint (CVE-2026-45659):** IIS logs + Windows Security + EDR; hunt for `w3wp.exe` spawning shells/powershell/cmd (**T1505.003**, **T1059**) and suspicious POSTs to SharePoint endpoints; alert on new/modified ASPX in web directories.\n- **Perimeter devices (Fortinet/Citrix):** Firewall/VPN auth logs + admin audit logs; detect new admin creation, policy changes, config export/backup, and login anomalies (**T1078**, **T1098**).\n- **Credential/token theft patterns:** IdP logs (Azure AD/Entra/Okta) + VPN logs; watch for impossible travel, new device registrations, refresh token abuse indicators, and sudden MFA fatigue/disable events (**T1550**, **T1528**).\n- **Ransomware post-access tooling:** EDR + Sysmon; look for RMM tool execution (e.g., common remote admin agents), PsExec/SMB remote service creation (**T1021.002**, **T1569.002**), and mass file encryption precursors (shadow copy deletion).\n- **Nextcloud (possible 0-day):** Web server logs + app logs (if deployed); monitor new admin users, abnormal API calls, unexpected file uploads/executions, and outbound traffic from the host (**assumption: exploit details not public**).\n- **Email-borne ransomware lures (Interpol-themed):** Email gateway + endpoint telemetry; flag messages with law-enforcement impersonation themes + attachments/links leading to payload delivery; watch for script execution from user profile/downloads (**T1566.001**, **T1204**).\n- **Supply-chain/PoC trojan risk (fake exploit code / Python deps):** Dev workstation EDR + proxy/DNS; alert on `pip` installing from untrusted sources and unexpected outbound to paste/code hosting during “PoC testing” (**T1195**, **T1059**).\n\n---\n\n### Medium-term follow-ups\n- **Vuln management:** Add **CVE-2026-45659 (SharePoint)**, NetScaler Bleed-class items, and relevant Fortinet advisories to “top patch” list with **post-patch compromise checks** (not just remediation).\n- **Credential hygiene:** Enforce periodic rotation and scoped admin accounts for perimeter devices; require phishing-resistant MFA for admin access where possible.\n- **Segmentation/egress controls:** Tighten egress from SharePoint/EBS/Nextcloud servers; alert on new outbound destinations and block direct internet access where not required.\n- **Incident readiness:** Validate ransomware playbooks for “perimeter credential compromise” scenarios (rapid session invalidation, token revocation, privileged account lockdown).\n- **Awareness:** Targeted comms to IT/admin teams: avoid running “random PoCs” and validate sources; remind staff about law-enforcement impersonation phishing patterns.\n- **Watchlist items:** Track emerging reports on any **confirmed Nextcloud 0-day** details and the “Exploitarium” PoC dump—expect downstream weaponization once technical write-ups spread.",
+  "highlights": [
+    {
+      "title": "Oracle E-Business Suite was under attack via critical flaw before the public exploit code was even released",
+      "link": "https://www.theregister.com/cyber-crime/2026/07/02/oracle-e-business-suite-was-under-attack-via-critical-flaw-before-the-public-exploit-code-was-even-released/5265710",
+      "source": "The Register - Security",
+      "published": "2026-07-02T10:35:16+00:00",
+      "smart_groups": [
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": false,
+      "signal_tier": "critical",
+      "signal_score": 99.27,
+      "priority_score": 68.52
+    },
+    {
+      "title": "US cyber agency warns over forgotten SharePoint flaw",
+      "link": "https://www.computerweekly.com/news/366645307/US-cyber-agency-warns-over-forgotten-SharePoint-flaw",
+      "source": "ComputerWeekly",
+      "published": "2026-07-02T13:17:00+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Ransomware",
+        "Threat Actors / APT",
+        "Exploit / PoC",
+        "Identity / Access",
+        "Web / API Security",
+        "General Security"
+      ],
+      "curated": false,
+      "signal_tier": "critical",
+      "signal_score": 91.08,
+      "priority_score": 75.35
+    },
+    {
+      "title": "FortiBleed campaign traced to INC and Lynx ransomware operations",
+      "link": "https://www.cybersecuritydive.com/news/fortibleed-campaign-traced-to-inc-and-lynx-ransomware-operations/824348/",
+      "source": "Cybersecurity Dive - Latest News",
+      "published": "2026-07-02T15:05:16+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Ransomware",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 87.73,
+      "priority_score": 83.35
+    },
+    {
+      "title": "FortiBleed Credential Theft Connected to INC and Lynx Ransomware",
+      "link": "https://hackread.com/fortibleed-credential-theft-in-lynx-ransomware/",
+      "source": "HackRead",
+      "published": "2026-07-02T16:31:37+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Ransomware",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 87.36,
+      "priority_score": 81.89
+    },
+    {
+      "title": "CC-4806 - Active Exploitation of CVE-2026-45659 in Microsoft SharePoint",
+      "link": "https://digital.nhs.uk/cyber-alerts/2026/cc-4806",
+      "source": "NHS Digital - Cyber Alert Feed",
+      "published": "2026-07-02T12:50:00+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 87.27,
+      "priority_score": 85.68
+    },
+    {
+      "title": "CISA Warns of Actively Exploited Microsoft SharePoint Vulnerability",
+      "link": "https://www.securityweek.com/cisa-warns-of-actively-exploited-microsoft-sharepoint-vulnerability/",
+      "source": "SecurityWeek",
+      "published": "2026-07-02T10:30:42+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Threat Actors / APT",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 82.69,
+      "priority_score": 82.46
+    },
+    {
+      "title": "CISA: Microsoft SharePoint RCE flaw now actively exploited",
+      "link": "https://www.bleepingcomputer.com/news/security/cisa-microsoft-sharepoint-rce-flaw-now-actively-exploited/",
+      "source": "BleepingComputer",
+      "published": "2026-07-02T10:52:43+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 75.56,
+      "priority_score": 81.45
+    },
+    {
+      "title": "CISA: Microsoft SharePoint RCE flaw now actively exploited",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1ulezvz/cisa_microsoft_sharepoint_rce_flaw_now_actively/",
+      "source": "/r/cybersecurity",
+      "published": "2026-07-02T10:58:28+00:00",
+      "smart_groups": [
+        "Exploit / PoC",
+        "Vulnerabilities / CVEs",
+        "OSINT / Community"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 75.37,
+      "priority_score": 75.16
+    },
+    {
+      "title": "FortiBleed Actors Collaborating With Inc, Lynx Ransomware Gangs",
+      "link": "https://www.darkreading.com/threat-intelligence/fortibleed-actors-inc-lynx-ransomware-gangs",
+      "source": "darkreading",
+      "published": "2026-07-02T19:11:33+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Ransomware",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 73.84,
+      "priority_score": 83.93
+    },
+    {
+      "title": "CitrixBleed Vulnerability Exploited by Hackers Within 24 Hours of Public Disclosure",
+      "link": "https://cybersecuritynews.com/citrixbleed-vulnerability-exploited/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-07-02T16:38:52+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 72.82,
+      "priority_score": 74.21
+    }
+  ]
 }
