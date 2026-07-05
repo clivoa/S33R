@@ -1,169 +1,183 @@
 {
-  "generated_at": "2026-07-04T08:51:33.483610+00:00",
-  "analysis_date": "2026-07-04",
+  "generated_at": "2026-07-05T09:23:13.574601+00:00",
+  "analysis_date": "2026-07-05",
   "provider": "openai",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-07-04T07:58:10.629747+00:00",
+  "source_generated_at": "2026-07-05T07:37:03.696863+00:00",
   "source_days_back": 30,
-  "source_total_items": 53308,
-  "total_items_in_window_all": 1924,
-  "total_items_in_window_curated": 2,
+  "source_total_items": 52583,
+  "total_items_in_window_all": 1049,
+  "total_items_in_window_curated": 1,
   "total_items_in_window_selected": 40,
   "context_selection_policy": "curated-plus-operational-signal-v1",
-  "morning_call_markdown": "### Executive Summary\n- Active exploitation activity is being observed against **Ivanti Sentry pre-auth RCE (CVE-2026-10520)** and a **Citrix NetScaler “CitrixBleed-like” issue**—treat any exposed edge devices as high-risk today.\n- Multiple **exploit/PoC releases** landed (Apache Solr RCE framework; ActiveMQ RCE chain/bypass research; Adobe ColdFusion CVE noted as actively exploited), increasing opportunistic scanning pressure on internet-facing apps.\n- Ransomware enablement continues to accelerate: a new **Avalon modular framework** includes ransomware (CrownX) capabilities; reporting also indicates **ransomware group collaboration/consolidation**—expect faster intrusion-to-encryption timelines.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Ivanti Sentry pre-auth RCE (CVE-2026-10520) — exploitation attempts observed**\n- What happened: FortiGuard reports continued **in-the-wild exploitation attempts** following PoC/technical detail release for **unauthenticated RCE** in Ivanti Sentry.\n- Why it matters operationally: Internet-exposed Sentry can be a direct foothold into mobile/MDM-adjacent infrastructure and pivot into core identity/network segments.\n- Recommended immediate actions for the SOC today: **Confirm exposure + patch level** for all Sentry instances; **tighten inbound ACLs/VPN-only admin access** and alert on suspicious requests/process spawns from the Sentry host.\n\n**2) Citrix NetScaler “CitrixBleed-like” flaw — exploit attempts in the wild (CVE not in context)**\n- What happened: Reports indicate a newly patched NetScaler memory-leak style issue is seeing **attempts in the wild** (described as CitrixBleed-like).\n- Why it matters operationally: NetScaler compromise often yields **credential/session material** and rapid lateral movement into VDI/app publishing and SSO-adjacent paths.\n- Recommended immediate actions for the SOC today: **Inventory + patch/mitigate all NetScaler appliances**; **review last 7 days** for anomalous access patterns (new sessions, unusual source geos, spikes in auth failures) and be ready to rotate affected secrets/sessions.\n\n**3) Web app / middleware RCE pressure: Apache Solr exploit framework + ActiveMQ RCE chain/bypass + ColdFusion active exploitation**\n- What happened: Public GitHub tooling/research was released for **Apache Solr RCE via template injection**, **ActiveMQ Classic RCE chain and patch-bypass research**, and NHS flags **active exploitation of Adobe ColdFusion CVE-2026-48282**.\n- Why it matters operationally: These are common enterprise components; PoC availability drives **mass scanning**, initial access, and post-exploitation frameworks leading to ransomware.\n- Recommended immediate actions for the SOC today: **Identify any internet-facing Solr/ActiveMQ/ColdFusion** (including dev/test); **WAF/IPS virtual patch + restrict management endpoints** immediately, and start targeted hunts for webshell/process anomalies on those hosts.\n\n**4) Linux kernel local privesc wave (incl. “Bad Epoll” CVE-2026-46242) + additional kernel privesc CVEs**\n- What happened: A disclosed “Bad Epoll” **local root** issue (CVE-2026-46242) plus multiple other kernel privilege escalations were highlighted/added in feeds (several affecting 6.18/6.19/7.x ranges).\n- Why it matters operationally: Local privesc is a force-multiplier after any foothold (web app, stolen creds, CI runner)—critical for server takeover and ransomware staging.\n- Recommended immediate actions for the SOC today: **Prioritize patching** for internet-facing Linux and Kubernetes nodes first; hunt for **unexpected privilege changes**, new root-owned binaries, and suspicious use of compilers/build tools on servers.\n\n**5) Ransomware tooling evolution: Avalon framework + “teams teaming up” reporting**\n- What happened: Researchers describe **Avalon**, a modular phishing-delivered framework with credential theft, lateral movement, recovery disruption, and ransomware execution; separate reporting notes **ransomware operator collaboration/industrialization**.\n- Why it matters operationally: Expect **more standardized playbooks**, faster hands-on-keyboard activity, and increased likelihood of dual-use tooling (PowerShell + C2 beacons) preceding encryption.\n- Recommended immediate actions for the SOC today: **Increase alert sensitivity** for post-phish behaviors (credential dumping, remote exec, backup tampering); ensure **ransomware containment runbooks** (isolation, privileged account lock, backup protection) are ready for rapid execution.\n\n---\n\n### Monitoring & detection recommendations\n- **Edge appliance exploitation (Ivanti/Citrix):** Monitor VPN/WAF/NetScaler/Sentry logs for spikes in 4xx/5xx, odd URIs, and auth/session anomalies; correlate with EDR on appliance-adjacent jump hosts. (ATT&CK: T1190)\n- **Web RCE attempts (Solr/ActiveMQ/ColdFusion):** From WAF/reverse proxy logs, hunt for template injection patterns, Jolokia/management endpoint access, and unusual POSTs to admin paths; alert on new child processes from web services on app servers. (T1190, T1059)\n- **Post-exploitation framework delivery (SharkLoader/Cobalt Strike mentioned):** EDR hunt for suspicious PowerShell/LOLBin chains, rundll32/regsvr32 misuse, beacon-like network patterns from user workstations. (T1059.001, T1218, T1071)\n- **Phishing-to-malware chains (Avalon / stealer campaigns):** Email security + endpoint telemetry: new inbox rules, abnormal attachment execution, Office spawning scripting engines, and credential prompt artifacts. (T1566, T1114.003)\n- **Linux privilege escalation follow-on:** Linux auditd/EDR: detect sudoers changes, setuid bit flips, new kernel module loads, compilation on servers (gcc/make) outside CI pipelines. (T1068, T1548.003)\n- **Supply-chain/model risk (pickle / AI tooling):** CI/CD logs + EDR on build agents: unexpected `pickle.load` usage in pipelines, new Python dependencies, outbound connections during model/package build steps. (T1195, T1059.006)\n- **Credential/session theft indicators:** IdP/SSO logs: impossible travel, unusual token refreshes, new device registrations, surges in MFA push/denies following edge appliance alerts. (T1550, T1078)\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** Validate patch SLAs for edge devices (Ivanti/Citrix) and common middleware (Solr/ActiveMQ/ColdFusion); ensure compensating controls (WAF/ACL) are standardized when patching lags.\n- **Linux kernel baseline hardening:** Review kernel update cadence for server fleets and container hosts; ensure eBPF/LSM/audit coverage is consistent across critical workloads.\n- **Developer/CI supply-chain controls (Vercel “shadow AI” lesson):** Tighten policies for unvetted AI/dev tools, enforce SaaS allowlists, and expand DLP/secret scanning for browser extensions and developer workstations.\n- **Python/model artifact security:** If the org uses ML pipelines, mandate **picklescan >= 0.0.30** (per CVE-2025-71342 context) and prefer safer serialization formats where feasible; add model provenance checks.\n- **Ransomware readiness:** Re-test restoration (immutable backups), validate EDR isolation at scale, and ensure privileged access workflows (PAM, break-glass) are monitored and rehearsed.\n- **Browser exposure management:** Track MS Edge RCE advisories in patch cycles; validate rapid update enforcement on trader/user endpoints where browser exploitation is a realistic initial vector.",
+  "morning_call_markdown": "### Executive Summary\n- North Korea–linked activity is pushing supply-chain risk again: >100 malicious npm packages observed (plus at least one confirmed backdoored npm package with a reverse shell).\n- Ransomware/extortion pressure is high: “Kairos” data-extortion case study + first reported LLM-agent automated ransomware (“JadePuffer”) reinforces need for fast containment on initial access signals.\n- Multiple high-impact identity/internet-facing issues surfaced (WSO2 auth bypass / role overwrite; public PoCs for some web panels/plugins) — validate exposure and prioritize patch/mitigation.\n\n### High-priority items (immediate attention)\n**1) Malicious npm/supply-chain activity (North Korea-linked + confirmed malicious package)**\n- What happened: Reports of 108 malicious packages across npm ecosystems; one identified npm package (`vps-maintenance`) runs a postinstall reverse shell to **185.112.147.174:7007**.\n- Why it matters operationally: Dev/build pipelines and internal tooling are a direct path to credential theft and code execution; impacts can propagate into production and CI runners.\n- Recommended immediate actions for the SOC today: Hunt for installs of `vps-maintenance` and unusual `npm install`/postinstall execution on build agents; block **185.112.147.174** and alert on outbound connections to TCP/7007 from dev/CI subnets.\n\n**2) Identity stack risk: WSO2 critical auth/role issues (potential internet-facing)**\n- What happened: New reporting on **CVE-2025-13475** (WSO2 Identity Server / API Manager auth bypass) and renewed attention to **CVE-2024-1248** (JIT provisioning role overwrite / privilege escalation).\n- Why it matters operationally: WSO2 often fronts SSO/API access; auth bypass or privilege escalation can lead to rapid tenant compromise, token theft, and downstream lateral movement.\n- Recommended immediate actions for the SOC today: Confirm whether any WSO2 services are internet-facing; increase monitoring for anomalous auth flows/token issuance and admin role changes, and fast-track patch/mitigation validation with the IAM team.\n\n**3) Ransomware + data extortion operational shift (LLM-automated “JadePuffer” + Kairos extortion case)**\n- What happened: First documented ransomware operation reportedly automated end-to-end by an LLM agent (“JadePuffer”); separate case study shows “Kairos” executing data-theft extortion with payment made.\n- Why it matters operationally: Faster, more scalable intrusion chains compress defender time-to-detect; extortion-only actors still require the same containment urgency as ransomware.\n- Recommended immediate actions for the SOC today: Tighten triage SLAs on early intrusion signals (new admin accounts, remote tooling, unusual archive/exfil); verify you can rapidly isolate hosts and revoke sessions/tokens in under 15 minutes.\n\n**4) Public exploit/PoC signal for internet-exposed admin panels/plugins (opportunistic scanning likely)**\n- What happened: PoC/exploit references surfaced for items including **Control Web Panel (CWP) CVE-2026-57517 (SQLi→RCE)** and **Helix3 Joomla plugin CVE-2026-49049 (unauth AJAX handler exposure/scanner)**; other PoC-tagged web app CVEs also circulated.\n- Why it matters operationally: Even if not used in targeted campaigns, these are commonly mass-scanned and can be footholds into DMZ servers that pivot inward.\n- Recommended immediate actions for the SOC today: Identify any exposed CWP/Joomla/related admin portals in attack-surface inventory; add WAF/edge blocks and heightened alerting on suspicious POSTs to admin/AJAX endpoints and unexpected webshell process spawn.\n\n### Monitoring & detection recommendations\n- **Supply-chain / npm execution**: EDR + CI logs + proxy/DNS — alert on `npm install` followed by `postinstall` spawning shells or network tools (ATT&CK T1059); prioritize build agents and developer workstations.\n- **Known malicious npm behavior**: Firewall/proxy — detect/block outbound to **185.112.147.174** and **TCP/7007**; hunt for unusual long-lived TCP sessions from non-server endpoints (ATT&CK T1071).\n- **WSO2 auth anomalies**: IdP/WSO2 audit logs + API gateway logs — watch for unexpected authentication paths (“alternate channel” behaviors assumed), spikes in token issuance, role/claim changes, and first-time admin access (ATT&CK T1078).\n- **Privilege escalation/role overwrite patterns**: IAM audit + directory logs — alert on role changes to privileged groups that originate from federated/JIT provisioning flows (ATT&CK T1098).\n- **Web exploitation / webshell follow-on**: WAF/web server logs + EDR — look for SQLi patterns to `userRes`/AJAX endpoints and subsequent process spawn by web server users (`www-data`, `nginx`, `apache`) (ATT&CK T1190 → T1505.003).\n- **Ransomware/extortion staging**: File/EDR + network — detect mass archive creation (`7z`, `rar`, `zip`) and large outbound uploads to uncommon destinations; correlate with new remote admin tooling (ATT&CK T1560, T1041).\n- **Linux kernel/local privesc chatter (Android/Linux)**: EDR for Linux endpoints — flag unusual BPF/syscall activity and privilege transitions; focus on server fleets running newer kernels if applicable (assumption: limited exposure unless you run affected versions).\n\n### Medium-term follow-ups\n- **DevSecOps controls**: Enforce npm allowlists/lockfiles, SCA gating, and block install scripts where feasible (`--ignore-scripts`) on CI runners; document break-glass exceptions.\n- **IAM hardening**: Review WSO2 JIT provisioning configuration to prevent username collisions/role overwrite; add compensating controls (approval workflows for role elevation, stricter federation mapping).\n- **Attack surface management**: Re-validate external exposure of admin panels (CWP/Joomla/Nagios-like tooling) and move behind VPN/Zero Trust access where possible; ensure WAF coverage.\n- **Ransomware readiness**: Rehearse “extortion-only” playbooks (token revocation, DLP/legal notifications, rapid egress containment) in addition to encryption scenarios.\n- **Legacy/archived component risk**: Inventory any production use of archived `wkhtmltopdf` wrappers and prioritize migration or sandboxing; treat as technical debt with security implications.\n- **Patch backlog hygiene**: Triage the new/high-signal CVEs by *actual presence* in our environment (WSO2 first), then schedule patch windows; avoid chasing low-relevance CMS/SCADA CVEs unless discovered in asset inventory.",
   "highlights": [
     {
-      "title": "The Anatomy of a Shadow AI Supply-Chain Breach: Lessons from the 2026 Vercel Incident",
-      "link": "https://securityaffairs.com/194709/hacking/the-anatomy-of-a-shadow-ai-supply-chain-breach-lessons-from-the-2026-vercel-incident.html",
-      "source": "Security Affairs",
-      "published": "2026-07-03T10:34:14+00:00",
+      "title": "North Korea targets npm, Linux kernel RCE, AI-driven ransomware surge",
+      "link": "https://defend.network/briefings/north-korea-malware-linux-kernel-ransomware-ai-2026-07-05.html",
+      "source": "defend.network",
+      "published": "2026-07-05T06:30:00+00:00",
       "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "Identity / Access",
         "Supply Chain / Software",
+        "Linux / Unix",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "Mobile Security",
         "General Security"
       ],
       "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 83.92,
-      "priority_score": 83.22
+      "signal_tier": "high",
+      "signal_score": 70.14,
+      "priority_score": 89.2
     },
     {
-      "title": "Exploit for CVE-2026-14459",
-      "link": "https://vulners.com/githubexploit/42D2AB27-0085-5020-AA75-F3E233F792A3?utm_source=rss&utm_medium=rss&utm_campaign=rss",
-      "source": "Vulners.com RSS Feed",
-      "published": "2026-07-03T17:30:00+00:00",
+      "title": "CVE-2025-13475 | WSO2 Identity Server/API Manager prior 5.10.0/5.10.0.382 authentication bypass (EUVD-2025-210427)",
+      "link": "https://vuldb.com/vuln/376337",
+      "source": "VulDB Updates",
+      "published": "2026-07-04T17:52:53+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "Threat Actors / APT",
-        "Cloud / SaaS",
-        "Linux / Unix"
+        "Exploit / PoC"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 75.47,
-      "priority_score": 73.29
+      "signal_score": 63.32,
+      "priority_score": 77.72
     },
     {
-      "title": "Ivanti Sentry Pre-Authentication RCE",
-      "link": "https://fortiguard.fortinet.com/threat-signal-report/6472",
-      "source": "FortiGuard Labs | FortiGuard Center - Threat Signal Report",
-      "published": "2026-07-04T00:53:55+00:00",
+      "title": "JadePuffer Ransomware Leverages AI-Powered Automation to Revolutionize Cyberattacks",
+      "link": "https://www.news4hackers.com/jadepuffer-ransomware-leverages-ai-powered-automation-to-revolutionize-cyberattacks/",
+      "source": "News4Hackers",
+      "published": "2026-07-04T15:02:06+00:00",
+      "smart_groups": [
+        "Ransomware",
+        "General Security"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 53.76,
+      "priority_score": 68.41
+    },
+    {
+      "title": "Protocols and Servers 2 TryHackMe Writeup",
+      "link": "https://infosecwriteups.com/protocols-and-servers-2-tryhackme-writeup-42c2d01f5c6c?source=rss----7b722bfd1b8d---4",
+      "source": "InfoSec Write-ups - Medium",
+      "published": "2026-07-05T06:32:09+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
+        "Identity / Access",
+        "Linux / Unix",
+        "Windows / Microsoft",
+        "Ransomware",
+        "Network / OT / ICS",
         "Exploit / PoC",
         "Malware / Payloads",
+        "General Security"
+      ],
+      "curated": false,
+      "signal_tier": "watch",
+      "signal_score": 54.42,
+      "priority_score": 81.59
+    },
+    {
+      "title": "U.S. Government Agency Paid $1M to Data Extortion Group Kairos",
+      "link": "https://securityaffairs.com/194750/security/u-s-government-agency-paid-1m-to-data-extortion-group-kairos.html",
+      "source": "Security Affairs",
+      "published": "2026-07-04T16:53:35+00:00",
+      "smart_groups": [
+        "Threat Actors / APT",
         "Ransomware",
-        "Mobile Security"
-      ],
-      "curated": true,
-      "signal_tier": "high",
-      "signal_score": 68.97,
-      "priority_score": 87.72
-    },
-    {
-      "title": "CVE-2025-71342",
-      "link": "https://vuldb.com/cve/CVE-2025-71342",
-      "source": "VulDB CVE",
-      "published": "2026-07-04T02:56:57+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs"
+        "General Security"
       ],
       "curated": false,
-      "signal_tier": "high",
-      "signal_score": 66.79,
-      "priority_score": 77.17
+      "signal_tier": "watch",
+      "signal_score": 53.91,
+      "priority_score": 70.57
     },
     {
-      "title": "CVE-2025-71342",
-      "link": "https://vulners.com/nvd/NVD:CVE-2025-71342?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "title": "wkhtmltopdf is archived. A straight .NET migration guide (Azure, Windows, and the Linux caveat)",
+      "link": "https://dev.to/florentin_badea/wkhtmltopdf-is-archived-a-straight-net-migration-guide-azure-windows-and-the-linux-caveat-2lc6",
+      "source": "DEV Community",
+      "published": "2026-07-05T06:53:30+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Web / API Security",
+        "Supply Chain / Software",
+        "Cloud / SaaS",
+        "Linux / Unix",
+        "Ransomware",
+        "Windows / Microsoft",
+        "OSINT / Community"
+      ],
+      "curated": false,
+      "signal_tier": "watch",
+      "signal_score": 48.87,
+      "priority_score": 78.47
+    },
+    {
+      "title": "CVE-2024-1248 Role Overwriting via Silent JIT Provisioning in Multiple WSO2 Products Enables Privilege Escalation",
+      "link": "https://vulners.com/cvelist/CVELIST:CVE-2024-1248?utm_source=rss&utm_medium=rss&utm_campaign=rss",
       "source": "Vulners.com RSS Feed",
-      "published": "2026-07-04T02:16:21+00:00",
+      "published": "2026-07-04T20:38:49+00:00",
       "smart_groups": [
+        "Identity / Access",
+        "Vulnerabilities / CVEs",
+        "Crypto / Web3",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "watch",
+      "signal_score": 48.5,
+      "priority_score": 74.05
+    },
+    {
+      "title": "Exploit for CVE-2026-54998",
+      "link": "https://vulners.com/githubexploit/296E4524-1227-5821-A8C1-006798A0526C?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-07-04T22:34:19+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "watch",
+      "signal_score": 46.5,
+      "priority_score": 74.41
+    },
+    {
+      "title": "Rigor in Threat Intel",
+      "link": "https://windowsir.blogspot.com/2026/07/rigor-in-threat-intel.html",
+      "source": "Windows Incident Response",
+      "published": "2026-07-04T13:02:18+00:00",
+      "smart_groups": [
+        "Ransomware",
+        "Threat Actors / APT",
+        "Linux / Unix",
+        "Malware / Payloads",
+        "Vulnerabilities / CVEs",
+        "Windows / Microsoft",
+        "Detection Engineering"
+      ],
+      "curated": false,
+      "signal_tier": "watch",
+      "signal_score": 46.37,
+      "priority_score": 75.97
+    },
+    {
+      "title": "U.S. Government Entity Paid Kairos $1 Million in Data-Theft Extortion Case",
+      "link": "https://vulners.com/thn/THN:DA3100CCC13CEE2E3FE2D12D2CBAF958?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-07-04T12:47:00+00:00",
+      "smart_groups": [
+        "Ransomware",
         "Vulnerabilities / CVEs"
       ],
       "curated": false,
-      "signal_tier": "high",
-      "signal_score": 66.47,
-      "priority_score": 75.37
-    },
-    {
-      "title": "CVE-2026-43060 | Linux Kernel up to 6.19.9 netfilter privilege escalation (Nessus ID 324048 / WID-SEC-2026-1385)",
-      "link": "https://vuldb.com/vuln/361182",
-      "source": "VulDB Updates",
-      "published": "2026-07-03T19:23:13+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Linux / Unix",
-        "Exploit / PoC"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 63.3,
-      "priority_score": 77.93
-    },
-    {
-      "title": "CVE-2026-31662 | Linux Kernel up to 6.19.12 GRP_ACK_MSG tipc_group_proto_rcv privilege escalation (Nessus ID 324048)",
-      "link": "https://vuldb.com/vuln/359467",
-      "source": "VulDB Updates",
-      "published": "2026-07-03T17:58:04+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Linux / Unix",
-        "Exploit / PoC"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 63.3,
-      "priority_score": 77.55
-    },
-    {
-      "title": "CVE-2026-11856 | curl libcurl up to 8.20.0 authentication replay (WID-SEC-2026-2052)",
-      "link": "https://vuldb.com/vuln/376067",
-      "source": "VulDB Updates",
-      "published": "2026-07-03T15:17:35+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 63.3,
-      "priority_score": 76.83
-    },
-    {
-      "title": "CVE-2026-53232 | Linux Kernel net sfp_bus_del_upstream privilege escalation",
-      "link": "https://vuldb.com/vuln/373762",
-      "source": "VulDB Updates",
-      "published": "2026-07-03T12:45:31+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Linux / Unix",
-        "Exploit / PoC"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 63.3,
-      "priority_score": 76.15
-    },
-    {
-      "title": "CVE-2026-53188 | Linux Kernel up to 6.18.35/7.0.12 RDMA ib_get_ucaps privilege escalation (WID-SEC-2026-2077)",
-      "link": "https://vuldb.com/vuln/373752",
-      "source": "VulDB Updates",
-      "published": "2026-07-03T11:20:05+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Linux / Unix",
-        "Exploit / PoC"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 63.3,
-      "priority_score": 75.77
+      "signal_tier": "watch",
+      "signal_score": 45.5,
+      "priority_score": 70.11
     }
   ]
 }
