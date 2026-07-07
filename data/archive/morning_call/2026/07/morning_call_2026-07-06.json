@@ -1,0 +1,169 @@
+{
+  "generated_at": "2026-07-06T11:01:21.729982+00:00",
+  "analysis_date": "2026-07-06",
+  "provider": "openai",
+  "model": "gpt-5.2",
+  "window_hours": 24,
+  "source_file": "data/news_recent.json",
+  "source_generated_at": "2026-07-06T10:32:35.762121+00:00",
+  "source_days_back": 30,
+  "source_total_items": 52119,
+  "total_items_in_window_all": 1452,
+  "total_items_in_window_curated": 1,
+  "total_items_in_window_selected": 40,
+  "context_selection_policy": "curated-plus-operational-signal-v1",
+  "morning_call_markdown": "### Executive Summary\n- Active/exploited critical flaw reported in Oracle ecosystem (CVSS ~9.8) plus fresh public exploits for popular web apps/plugins (WordPress/Joomla/Langflow) → raise internet-edge monitoring and patch/mitigation tempo today.\n- “Agentic/AI-run” ransomware (JadePuffer) and emerging modular ransomware frameworks signal faster end-to-end intrusion chains → prioritize early-stage detection (initial access → credential theft → lateral movement).\n- Supply-chain risk remains elevated (malicious packages across npm/Packagist/Go/Chrome reported) → tighten dependency controls and hunt for unusual developer tooling execution/download behavior.\n\n### High-priority items (immediate attention)\n\n**1) Oracle critical flaw reported as exploited (CVSS 9.8)**\n- What happened: News reports a new Oracle critical vulnerability (9.8) with exploitation activity referenced.\n- Why it matters operationally: Oracle tech is common in financial back-office apps; exploited vulns can become rapid initial access and pivot into core systems.\n- Recommended immediate actions for the SOC today: Validate exposure (internet-facing Oracle services, WAF/LB routes) + verify patch level; stand up heightened alerting for spikes in requests/errors/auth anomalies to Oracle endpoints.\n\n**2) Public exploit code circulating for web platforms/plugins (WordPress/Joomla/Langflow)**\n- What happened: PoCs/exploits posted for multiple pre-auth or low-bar RCE paths (e.g., WP User Manager CVE-2026-9290, Avada Fusion Builder CVE-2026-8713, Joomla iCagenda CVE-2026-48939, Langflow CVE-2026-27966; plus WP auth/role flaws like ASE CVE-2026-12083).\n- Why it matters operationally: These are high-volume internet scanning targets; compromise often leads to webshells, credential theft, and staging for ransomware.\n- Recommended immediate actions for the SOC today: Identify any internet-facing instances in scope (CMDB + external scanning results) and fast-track patch/disable vulnerable plugins/components; increase WAF/IDS sensitivity for path traversal/LFI/file upload patterns and triage any new admin creation/role restoration events on CMS hosts.\n\n**3) Apache Camel vulnerability cluster (priv-esc + info leak)**\n- What happened: Multiple Camel components flagged for privilege escalation (e.g., Camel-JIRA CVE-2026-48206, Camel-MongoDB-GridFS CVE-2026-48204, Camel-Mail CVE-2026-46584, Camel-Elasticsearch-Rest-Client CVE-2026-46453) plus stack-trace info disclosure in Undertow/Netty HTTP handlers (CVE-2026-56139, CVE-2026-49365).\n- Why it matters operationally: Camel is widely embedded in integration/middleware; remote abuse could expose credentials/tokens or enable privilege escalation in integration tiers that bridge to sensitive banking apps.\n- Recommended immediate actions for the SOC today: Inventory Camel usage (artifact scanning/SBOM/repo search) and prioritize patching affected versions; monitor for unusual HTTP 500s with verbose Java stack traces and unexpected outbound connections from integration servers.\n\n**4) Ransomware evolution: “agentic” attacks + emerging modular frameworks**\n- What happened: Reports describe JadePuffer (autonomous agent-run ransomware chain) and “Avalon” modular framework combining credential theft with ransomware deployment; LockBit 5.0 continues leak-site activity.\n- Why it matters operationally: Automation compresses dwell time—SOC may see fewer “hands-on-keyboard” indicators before encryption/exfil; credential theft becomes the main early signal.\n- Recommended immediate actions for the SOC today: Tighten high-severity triage for credential access + remote execution on servers (new service creation, scheduled tasks, LSASS access attempts); ensure ransomware containment playbooks are ready (isolation, privileged account lock, backup validation).\n\n### Monitoring & detection recommendations\n- **Internet-edge exploitation attempts**: WAF/reverse proxy + firewall logs—alert on bursts of 4xx/5xx and traversal/LFI patterns; correlate to new processes on web servers (ATT&CK T1190).\n- **CMS compromise signals (WP/Joomla)**: Web server logs + file integrity monitoring—hunt for new/modified PHP files in uploads/tmp, unexpected admin login sources, plugin/theme file edits (T1505.003 Web Shell).\n- **Langflow / AI tooling RCE risk**: EDR on app servers—watch for python processes spawning shells, outbound connections to unfamiliar hosts, and creation of new services/cron shortly after web requests (T1059, T1105).\n- **Apache Camel middleware abuse**: App logs (Camel/Undertow/Netty) + API gateway logs—flag stack traces returned to clients and anomalous calls to integration routes; monitor secrets access from middleware hosts (T1552).\n- **Credential theft precursor activity**: EDR + Windows security logs—LSASS access anomalies, DPAPI credential reads, browser credential store access; prioritize on jump servers and app servers (T1003, T1555).\n- **Lateral movement to encryption**: Windows event logs (4697 service install, 7045), scheduled tasks, SMB/RPC auth spikes; NetFlow for east-west scanning (T1021, T1046).\n- **Supply-chain/developer endpoint risk**: Proxy/DNS + EDR—new installs from package managers (npm/composer/go) and unusual VSCode/extensions behavior; alert on unsigned binaries/scripts executed from dev workspaces (T1195).\n\n### Medium-term follow-ups\n- **Patch governance**: Create/refresh a “rapid patch” lane for internet-facing CMS/plugins and integration middleware (Camel), with compensating controls (WAF rules, disable features) when patching lags.\n- **Oracle exposure review**: Confirm authoritative vendor advisory mapping for the reported exploited Oracle flaw (assumption: details may be evolving) and update detection content once CVE/product scope is confirmed.\n- **SBOM/dependency controls**: Enforce allowlisting and integrity checks for npm/Packagist/Go dependencies; review Chrome/VSCode extension policies in dev/admin populations.\n- **Ransomware readiness**: Re-validate segmentation around backup инфраструктure, test rapid isolation procedures, and ensure immutable/offline backups are functioning and monitored.\n- **Linux kernel local priv-esc backlog**: Multiple kernel LPE CVEs surfaced (local-network/local access scenarios); schedule patching for server fleets where untrusted code/users exist (CI runners, shared compute).\n- **Browser risk note**: Opera GX “0-click” exfil report is likely end-user focused; confirm whether the browser is allowed in corporate environment and, if present, consider restriction/hardening.",
+  "highlights": [
+    {
+      "title": "AI-Run Ransomware, New Oracle Critical Flaw, NetNut busted",
+      "link": "https://cybersecuritytoday.libsyn.com/ai-run-ransomware-new-oracle-critical-flaw-netnut-busted",
+      "source": "Cybersecurity Today",
+      "published": "2026-07-06T02:00:00+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Cloud / SaaS",
+        "Exploit / PoC",
+        "Malware / Payloads",
+        "Ransomware",
+        "Community / Briefing"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 100.0,
+      "priority_score": 86.73
+    },
+    {
+      "title": "CVE-2026-39831 | x-crypto up to 0.51.x FIDO/U2F Verify authentication spoofing (EUVD-2026-31395 / Nessus ID 316571)",
+      "link": "https://vuldb.com/vuln/365122",
+      "source": "VulDB Updates",
+      "published": "2026-07-05T15:29:29+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 63.33,
+      "priority_score": 76.33
+    },
+    {
+      "title": "CVE-2020-23546 | Irfan Skiljan IrfanView 4.54 XBM File Remote Code Execution",
+      "link": "https://vuldb.com/vuln/185732",
+      "source": "VulDB Updates",
+      "published": "2026-07-05T14:14:08+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 63.33,
+      "priority_score": 76.04
+    },
+    {
+      "title": "CVE-2026-48206 | Apache Camel up to 4.14.8/4.18.2/4.20.x Camel-JIRA privilege escalation",
+      "link": "https://vuldb.com/vuln/376415",
+      "source": "VulDB Recent Entries",
+      "published": "2026-07-05T19:31:46+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 63.18,
+      "priority_score": 76.7
+    },
+    {
+      "title": "Exploit for CVE-2026-9290",
+      "link": "https://vulners.com/githubexploit/2A53B779-7331-5763-8652-F0D828CF73A6?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-07-05T23:17:39+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Malware / Payloads",
+        "Web / API Security"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 60.51,
+      "priority_score": 74.3
+    },
+    {
+      "title": "Researchers Claim First Fully Agentic Ransomware: JadePuffer",
+      "link": "https://www.infosecurity-magazine.com/news/researchers-first-agentic/",
+      "source": "Infosecurity Magazine – News",
+      "published": "2026-07-06T08:30:00+00:00",
+      "smart_groups": [
+        "Ransomware",
+        "General Security"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 53.67,
+      "priority_score": 71.83
+    },
+    {
+      "title": "CVE-2021-35268 | Tuxera ntfs-3g prior 2021.8.22 Inode Loader ntfs_inode_real_open heap-based overflow (EUVD-2021-21911 / Nessus ID 299967)",
+      "link": "https://vuldb.com/vuln/182120",
+      "source": "VulDB Updates",
+      "published": "2026-07-05T12:46:18+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Malware / Payloads"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 53.33,
+      "priority_score": 75.6
+    },
+    {
+      "title": "Opera GX 0-Click Vulnerability Lets Attackers Exfiltrate User Data via Malicious Website",
+      "link": "https://cybersecuritynews.com/opera-gx-0-click-vulnerability/",
+      "source": "Cyber Security News",
+      "published": "2026-07-06T09:26:57+00:00",
+      "smart_groups": [
+        "Exploit / PoC",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": false,
+      "signal_tier": "watch",
+      "signal_score": 51.8,
+      "priority_score": 72.73
+    },
+    {
+      "title": "Exploit for CVE-2026-14628",
+      "link": "https://vulners.com/githubexploit/5B646D39-545B-5C8F-B570-3259ECB4FA41?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-07-05T19:34:02+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "watch",
+      "signal_score": 48.51,
+      "priority_score": 72.87
+    },
+    {
+      "title": "SECURITY AFFAIRS MALWARE NEWSLETTER ROUND 104",
+      "link": "https://securityaffairs.com/194785/uncategorized/security-affairs-malware-newsletter-round-104.html",
+      "source": "Security Affairs",
+      "published": "2026-07-05T17:37:07+00:00",
+      "smart_groups": [
+        "Supply Chain / Software",
+        "Malware / Payloads",
+        "Detection Engineering",
+        "Threat Actors / APT",
+        "General Security"
+      ],
+      "curated": false,
+      "signal_tier": "watch",
+      "signal_score": 47.88,
+      "priority_score": 72.96
+    }
+  ]
+}
