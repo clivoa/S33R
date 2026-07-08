@@ -1,173 +1,164 @@
 {
-  "generated_at": "2026-07-07T10:01:43.651540+00:00",
-  "analysis_date": "2026-07-07",
+  "generated_at": "2026-07-08T08:44:59.830507+00:00",
+  "analysis_date": "2026-07-08",
   "provider": "openai",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-07-07T07:50:35.045632+00:00",
+  "source_generated_at": "2026-07-08T08:40:40.708832+00:00",
   "source_days_back": 30,
-  "source_total_items": 52912,
-  "total_items_in_window_all": 1932,
-  "total_items_in_window_curated": 6,
+  "source_total_items": 52716,
+  "total_items_in_window_all": 2246,
+  "total_items_in_window_curated": 3,
   "total_items_in_window_selected": 40,
   "context_selection_policy": "curated-plus-operational-signal-v1",
-  "morning_call_markdown": "### Executive Summary\n- Active exploitation is now confirmed for multiple perimeter/infra bugs: **Adobe ColdFusion RCE (CVE-2026-48282)**, **Citrix NetScaler memory disclosure (“CitrixBleed”-like)**, and **Microsoft SharePoint RCE (CVE-2026-45659, KEV)**.  \n- **Virtualization and DevOps exposure increased**: public PoC for **Linux KVM guest-to-host escape (CVE-2026-53359)** plus probing of **Gitea auth bypass (CVE-2026-20896)**.  \n- **Supply-chain risk is elevated**: North Korea-linked **PolinRider** compromises open-source repos; **WordPress Uncanny Automator Pro supply-chain backdoor (CVE-2026-12375)** highlights vendor update compromise scenarios.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Internet-facing RCEs under active exploitation (ColdFusion + SharePoint)**\n- **What happened:** ColdFusion **CVE-2026-48282** is exploited in the wild; SharePoint **CVE-2026-45659** added to KEV after active exploitation reports.  \n- **Why it matters operationally:** Both are common footholds for **unauthenticated RCE**, leading to webshells, credential theft, lateral movement, and ransomware staging in enterprise networks.  \n- **Recommended immediate actions for the SOC today:** Confirm patch status and exposure (internet-facing/DMZ) and **escalate any unpatched instances**; start a targeted hunt for **new/modified web-accessible files + suspicious process spawn from web services** on these hosts.\n\n**2) Citrix NetScaler “CitrixBleed-ing again” style issue under attack**\n- **What happened:** A new NetScaler memory disclosure vulnerability is being targeted quickly after PoC release (per reporting).  \n- **Why it matters operationally:** NetScaler sits at the edge; memory disclosure can lead to **session/token theft** and subsequent **valid-session access** that bypasses MFA expectations.  \n- **Recommended immediate actions for the SOC today:** Prioritize verification of **patched/build versions + mitigations** on all NetScaler; hunt for **anomalous authenticated access** (new geo/ASN, impossible travel, abnormal session reuse) tied to VPN/ADC logins.\n\n**3) Virtualization escape risk (Linux KVM CVE-2026-53359 “Januscape”)**\n- **What happened:** Public PoC and community reporting indicate a critical **guest-to-host escape** affecting Intel/AMD KVM hosts.  \n- **Why it matters operationally:** If exploited post-initial foothold, this enables **hypervisor compromise** and broad blast radius across co-located workloads (including security tooling and shared services).  \n- **Recommended immediate actions for the SOC today:** Identify KVM estate and **flag any internet-exposed management planes**; increase alerting on KVM hosts for **unexpected privileged kernel/module activity and unusual QEMU/KVM process behavior**.\n\n**4) Developer/CI supply chain: PolinRider + Gitea auth bypass probed**\n- **What happened:** North Korea-linked **PolinRider** campaign compromised 100+ open-source packages/repos; **Gitea Docker auth bypass (CVE-2026-20896)** reportedly probed soon after disclosure.  \n- **Why it matters operationally:** Financial institutions are high-risk for **build pipeline abuse** (credential theft, token exfil, backdoored artifacts) and rapid downstream deployment.  \n- **Recommended immediate actions for the SOC today:** Review external exposure of **Gitea/SCM and CI** and patch/mitigate; hunt for **new PAT/token creation, unexpected repo actions, and outbound connections from runners/build agents**.\n\n**5) Compromised vendor update channel: WordPress plugin backdoor (CVE-2026-12375)**\n- **What happened:** **Uncanny Automator Pro < 7.3.0.6** distributed with malicious code via compromised update infrastructure, enabling unauth admin session/backdoor behavior.  \n- **Why it matters operationally:** This is a real-world **software supply-chain compromise pattern**; if any marketing/microsite WordPress instances exist, they can become a pivot into internal networks.  \n- **Recommended immediate actions for the SOC today:** Inventory any WordPress usage (including third-party hosted) and **verify plugin versions/disable if present**; monitor for **suspicious admin sessions and outbound beaconing** from web servers.\n\n---\n\n### Monitoring & detection recommendations\n- **Webapp exploitation / webshell follow-on (ColdFusion, SharePoint)**: WAF/web server logs + EDR on app servers; alert on **web process spawning shells** (e.g., java/coldfusion/http worker → cmd/powershell/bash) *(MITRE: T1190, T1505.003, T1059)*.  \n- **Edge session theft patterns (NetScaler)**: NetScaler/VPN logs + IdP logs; hunt for **session reuse**, logins without normal MFA prompts (where observable), **new device fingerprints**, and **impossible travel** *(MITRE: T1550.004, T1078)*.  \n- **Post-exploitation on web tier**: EDR + Windows/Linux security logs; watch for **new local admins, scheduled tasks/cron, new services**, and **credential dumping** on servers that should be “appliance-like” *(MITRE: T1053, T1543, T1003)*.  \n- **KVM host integrity**: Linux auditd/EDR on hypervisors; detect **unexpected kernel messages, module loads, privileged file writes**, and anomalous activity from **qemu-system / libvirtd** *(MITRE: T1068, T1548)*.  \n- **SCM/CI compromise (PolinRider, Gitea)**: Gitea audit logs + CI runner telemetry + secrets manager logs; alert on **new OAuth/PAT tokens**, repo setting changes, new deploy keys, and **unexpected outbound from runners** *(MITRE: T1552, T1649, T1041)*.  \n- **Ransomware staging indicators (JadePuffer/“agentic” + general ransomware reporting)**: EDR + file auditing; watch for **rapid remote exec/lateral movement** bursts (PsExec/WMI/SSH), mass encryption-like file ops, and **discovery commands** *(MITRE: T1021, T1047, T1083, T1486)*.  \n- **Supply-chain from third-party web properties (WordPress backdoor)**: Web server logs + DNS/proxy; detect **new admin logins**, unusual POSTs to admin endpoints, and **new outbound destinations** from web hosts.\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** Ensure emergency change window coverage for **ColdFusion/SharePoint/NetScaler**; document any exceptions with compensating controls (WAF rules, IP allowlisting, virtual patching).  \n- **Asset exposure review:** Revalidate what is truly internet-facing (webapps, ADC/VPN, SCM/CI, hypervisor mgmt); close accidental exposures (temporary test systems, old endpoints like CFIDE/RDS).  \n- **CI/CD hardening:** Enforce **runner egress controls**, short-lived tokens, least-privileged SCM permissions, and mandatory signing/attestation for build artifacts.  \n- **Third-party web risk:** Confirm ownership/visibility for “non-core” WordPress sites (marketing/campaigns); require plugin allowlists and centralized logging to SOC.  \n- **Threat modeling for AI-accelerated ops (agentic ransomware theme):** Treat as faster execution, not “new magic”—tighten time-to-detect for **initial access → privilege escalation → encryption** playbooks and tabletop the escalation path.  \n- **Hypervisor security baseline:** Prioritize KVM host patch cadence and add continuous integrity monitoring for hypervisors supporting critical workloads (especially shared service tiers).",
+  "morning_call_markdown": "### Executive Summary\n- **Active exploitation:** Critical auth bypass in **Gitea official Docker images (CVE-2026-20896)** and **Adobe ColdFusion (CVE-2026-48282)** are being exploited in the wild; treat exposed instances as potentially compromised.\n- **Ransomware trendline:** Reports highlight **identity-first, “EDR-killer” ransomware tradecraft** (Gentlemen/Storm-2697) and **supply-chain credential theft** used to pre-position access (VECT/TeamPCP).\n- **Third-party risk:** **Accenture confirmed a breach** with alleged source code/credential exposure—watch for downstream credential reuse and targeted phishing against financial institutions.\n\n### High-priority items (immediate attention)\n**1) Gitea official Docker auth bypass — actively exploited (CVE-2026-20896)**\n- **What happened:** Attackers are exploiting an auth bypass in **official Gitea Docker images** using a **single HTTP header** (reports + public checker tooling).\n- **Why it matters operationally:** Compromise can expose **private repos, CI/CD secrets, tokens, and source**, enabling rapid lateral movement and supply-chain impact.\n- **Recommended immediate actions for the SOC today:** Identify all Gitea Docker deployments (esp. behind reverse-proxy auth) → **patch/mitigate immediately**; review access logs for suspicious header usage and **rotate repo/CI secrets** if exposure suspected.\n\n**2) Adobe ColdFusion max-severity flaw — KEV / active exploitation (CVE-2026-48282)**\n- **What happened:** **CISA KEV** addition and reporting of **active exploitation** for a ColdFusion path traversal leading to **code execution**.\n- **Why it matters operationally:** ColdFusion is often internet-facing; exploitation is a common **webshell-to-ransomware** entry path in enterprises, including financial services.\n- **Recommended immediate actions for the SOC today:** Find any ColdFusion externally reachable or in DMZ → **emergency patch** / remove exposure; hunt for post-exploitation on those hosts (new web-accessible files, suspicious child processes) and consider **temporary WAF rules** if patch lag exists.\n\n**3) Ransomware operations accelerating (Gentlemen/Storm-2697 + “EDR/AV killers”)**\n- **What happened:** Multiple reports describe ransomware using **legit admin tooling**, attempting **EDR/AV tamper**, and scaling across industries.\n- **Why it matters operationally:** This aligns with real-world intrusions: initial credential access → remote management tools → **defense evasion** → domain-wide encryption; financial orgs are high-value targets.\n- **Recommended immediate actions for the SOC today:** Increase vigilance on **EDR tamper/disable events** and mass remote execution; validate alerts for PsExec/WMI/WinRM bursts and **isolate early** on signs of coordinated lateral movement.\n\n**4) Supply-chain credential theft as pre-positioning (VECT + TeamPCP)**\n- **What happened:** Reporting claims a ransomware affiliate chain using **tampered open-source software** to harvest credentials before monetization.\n- **Why it matters operationally:** Financial institutions with large dev ecosystems risk **developer credential/token theft** leading to privileged access and stealthy persistence.\n- **Recommended immediate actions for the SOC today:** Prioritize detections for **new/unknown developer tooling** making outbound auth requests; verify sensitive CI/CD tokens are scoped/rotated and review recent dependency changes for suspicious package sources (assumption: org uses OSS dependencies widely).\n\n**5) Accenture breach confirmed — potential downstream targeting**\n- **What happened:** Accenture confirmed a breach; threat actor claims **35GB of source code and associated credentials**.\n- **Why it matters operationally:** Likely increase in **vendor-impersonation phishing**, credential stuffing, and targeted intrusion attempts using leaked credentials/knowledge.\n- **Recommended immediate actions for the SOC today:** Watch for **Accenture-themed lures** and abnormal login attempts against SSO/VPN; ensure third-party accounts (if any) are **MFA-enforced** and reviewed for least privilege.\n\n### Monitoring & detection recommendations\n- **Internet-facing app exploitation (ColdFusion/Gitea):** WAF/reverse-proxy + web server logs for unusual auth headers, path traversal patterns, spikes in 4xx/5xx followed by successful 2xx; correlate to new process execution on web servers (ATT&CK **T1190**).\n- **Repo/CI secret abuse:** GitHub/Gitea audit logs + CI runner logs for **new deploy keys/tokens**, unexpected workflow runs, or repo export activity; alert on unusual access from new geos/ASNs (ATT&CK **T1552**, **T1078**).\n- **EDR/AV tampering:** EDR management console + Windows Security logs for service stop/disable, driver load anomalies, and security tool uninstall attempts (ATT&CK **T1562.001**).\n- **Rapid lateral movement patterns:** AD + Windows event logs + EDR for bursts of remote service creation, WMI execution, WinRM sessions, and PsExec-like behavior (ATT&CK **T1021**, **T1047**).\n- **Credential stuffing / ATO pressure:** IdP (Okta/AAD/etc.), VPN, and web auth logs for high-rate failures, password spray indicators, and abnormal device/browser fingerprints (ATT&CK **T1110**).\n- **Supply-chain/dev endpoint anomalies:** Endpoint telemetry on developer fleets for new package manager activity, unsigned binaries in dev tool paths, and outbound connections to unfamiliar artifact registries (ATT&CK **T1195**).\n- **Vendor-impersonation phishing:** Email gateway for “Accenture/consulting engagement” themes, lookalike domains, and QR/HTML attachments; prioritize reported messages from procurement/IT ops users (ATT&CK **T1566**).\n\n### Medium-term follow-ups\n- **Patch governance:** Confirm vulnerability management has **CVE-2026-20896 (Gitea Docker)** and **CVE-2026-48282 (ColdFusion)** in highest SLA tiers; validate asset inventory coverage for dev platforms and legacy app servers.\n- **Secrets hygiene:** Run a focused initiative to **rotate/scoped tokens** (CI/CD, SCM, cloud keys) and enforce short-lived credentials where possible; ensure repo secret scanning is enabled.\n- **Ransomware resilience hardening:** Re-validate backups (immutable/offline), AD tiering, and incident runbooks for **EDR-tamper + lateral movement** scenarios; test isolation procedures.\n- **Third-party access review:** Reassess all **vendor accounts** (including consulting/outsourcers): MFA, conditional access, least privilege, and monitored jump-host usage.\n- **Cloud SSRF/IMDS exposure review (theme from writeup):** Ensure apps with URL fetch features block redirects to metadata endpoints and enforce egress controls; confirm IMDS protections (e.g., v2, hop limits) where applicable.\n- **Container/dev tool advisories intake:** Track additional disclosed items (e.g., KVM escape reporting, Foreman CVEs) and assess relevance to your environment—schedule targeted exposure reviews rather than broad urgent action unless assets are confirmed.",
   "highlights": [
     {
-      "title": "Adobe ColdFusion flaw CVE-2026-48282 now exploited in the wild",
-      "link": "https://securityaffairs.com/194837/hacking/adobe-coldfusion-flaw-cve-2026-48282-now-exploited-in-the-wild.html",
-      "source": "Security Affairs",
-      "published": "2026-07-06T19:53:10+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 86.91,
-      "priority_score": 86.23
-    },
-    {
-      "title": "Adobe ColdFusion RCE, Linux KVM escape, Gitea authentication bypass under active attack",
-      "link": "https://defend.network/briefings/adobe-coldfusion-linux-kvm-gitea-active-exploits-2026-07-07.html",
+      "title": "GitHub, Gitea, Google Dialogflow hit by active exploits; RedWing Android malware-as-service",
+      "link": "https://defend.network/briefings/github-gitea-google-dialogflow-android-redwing-2026-07-08.html",
       "source": "defend.network",
-      "published": "2026-07-07T06:30:00+00:00",
+      "published": "2026-07-08T06:30:00+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
+        "Mobile Security",
         "Exploit / PoC",
-        "Linux / Unix",
+        "Malware / Payloads",
         "General Security"
       ],
       "curated": true,
       "signal_tier": "critical",
-      "signal_score": 85.16,
-      "priority_score": 90.27
+      "signal_score": 97.18,
+      "priority_score": 89.77
     },
     {
-      "title": "Max-Severity Adobe ColdFusion RCE (CVE-2026-48282) Is Now Under Active Attack",
-      "link": "https://dev.to/etairos/max-severity-adobe-coldfusion-rce-cve-2026-48282-is-now-under-active-attack-3b4p",
-      "source": "DEV Community",
-      "published": "2026-07-06T14:05:12+00:00",
+      "title": "Critical Gitea Docker Bug Under Active Exploitation Exposes Repositories and Secrets",
+      "link": "https://securityaffairs.com/194902/hacking/critical-gitea-docker-bug-under-active-exploitation-exposes-repositories-and-secrets.html",
+      "source": "Security Affairs",
+      "published": "2026-07-07T21:16:29+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Detection Engineering",
-        "Cloud / SaaS",
+        "Data Protection / Privacy",
         "Exploit / PoC",
-        "OSINT / Community"
+        "General Security"
       ],
       "curated": true,
       "signal_tier": "critical",
-      "signal_score": 84.87,
-      "priority_score": 84.63
+      "signal_score": 86.97,
+      "priority_score": 86.21
     },
     {
-      "title": "Infosec News Nuggets — July 6, 2026",
-      "link": "https://aboutdfir.com/infosec-news-nuggets-july-6-2026/",
-      "source": "AboutDFIR – The Definitive Compendium Project",
-      "published": "2026-07-06T11:35:09+00:00",
+      "title": "CVE-2011-10043 | Module::Load up to 0.21 Module Loader load privilege escalation (EUVD-2011-5272)",
+      "link": "https://vuldb.com/vuln/376632",
+      "source": "VulDB Updates",
+      "published": "2026-07-07T13:58:27+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Crypto / Web3",
+        "Exploit / PoC",
+        "Malware / Payloads"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 77.37,
+      "priority_score": 76.66
+    },
+    {
+      "title": "VECT and TeamPCP Reverse Ransomware Kill Chain With Supply Chain Credential Theft",
+      "link": "https://cybersecuritynews.com/vect-and-teampcp-reverse-ransomware-kill-chain/",
+      "source": "Cyber Security News",
+      "published": "2026-07-07T16:15:41+00:00",
+      "smart_groups": [
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 70.07,
+      "priority_score": 83.97
+    },
+    {
+      "title": "cve-poc-collection",
+      "link": "https://vulners.com/githubexploit/3C2FF486-CCD1-5866-8E70-DD367B23A723?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-07-07T17:00:17+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 66.58,
+      "priority_score": 73.73
+    },
+    {
+      "title": "CVE-2026-39831 | x-crypto up to 0.51.x FIDO/U2F Verify authentication spoofing (EUVD-2026-31395 / Nessus ID 316571)",
+      "link": "https://vuldb.com/vuln/365122",
+      "source": "VulDB Updates",
+      "published": "2026-07-08T02:15:03+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
         "Exploit / PoC"
       ],
       "curated": false,
-      "signal_tier": "critical",
-      "signal_score": 82.87,
-      "priority_score": 73.9
+      "signal_tier": "high",
+      "signal_score": 63.37,
+      "priority_score": 79.95
     },
     {
-      "title": "⚡ Weekly Recap: Proxy Botnets, Browser Ransomware, AI Agent Tricks, Fake PoC Malware and More",
-      "link": "https://vulners.com/thn/THN:E2E70E897DDD730992E6C1374F10C79D?utm_source=rss&utm_medium=rss&utm_campaign=rss",
-      "source": "Vulners.com RSS Feed",
-      "published": "2026-07-06T13:01:00+00:00",
+      "title": "CVE-2022-44087 | ESPCMS 8.211201 UPFILE_PIC_ZOOM_HIGHT privilege escalation",
+      "link": "https://vuldb.com/vuln/213437",
+      "source": "VulDB Updates",
+      "published": "2026-07-07T18:21:50+00:00",
       "smart_groups": [
-        "Malware / Payloads",
-        "Identity / Access",
-        "Ransomware"
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 77.52,
-      "priority_score": 70.23
+      "signal_score": 63.37,
+      "priority_score": 77.83
     },
     {
-      "title": "⚡ Weekly Recap: Proxy Botnets, Browser Ransomware, AI Agent Tricks, Fake PoC Malware and More",
-      "link": "https://thehackernews.com/2026/07/monday-recap-proxy-botnets-browser.html",
-      "source": "The Hacker News",
-      "published": "2026-07-06T13:01:14+00:00",
+      "title": "CVE-2022-35201 | Tenda AC18 15.03.05.05 privilege escalation",
+      "link": "https://vuldb.com/vuln/206825",
+      "source": "VulDB Updates",
+      "published": "2026-07-07T09:12:37+00:00",
       "smart_groups": [
-        "Malware / Payloads",
-        "Ransomware",
-        "General Security"
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 77.45,
-      "priority_score": 69.87
+      "signal_score": 63.37,
+      "priority_score": 75.38
     },
     {
-      "title": "Critical Adobe ColdFusion Vulnerability Under Active Exploitation",
-      "link": "https://www.news4hackers.com/critical-adobe-coldfusion-vulnerability-under-active-exploitation/",
-      "source": "News4Hackers",
-      "published": "2026-07-06T17:15:33+00:00",
-      "smart_groups": [
-        "Exploit / PoC",
-        "Vulnerabilities / CVEs",
-        "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "high",
-      "signal_score": 75.77,
-      "priority_score": 79.0
-    },
-    {
-      "title": "CitrixBleed-ing Again? NetScaler Vulnerability Under Attack",
-      "link": "https://www.darkreading.com/vulnerabilities-threats/citrixbleed-ing-again-netscaler-vulnerability-under-attack",
-      "source": "darkreading",
-      "published": "2026-07-06T21:17:42+00:00",
-      "smart_groups": [
-        "Exploit / PoC",
-        "Vulnerabilities / CVEs",
-        "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "high",
-      "signal_score": 75.73,
-      "priority_score": 83.45
-    },
-    {
-      "title": "North Korean Hackers Target Open Source Developers in Supply Chain Attacks",
-      "link": "https://www.securityweek.com/north-korean-hackers-target-open-source-developers-in-supply-chain-attacks/",
-      "source": "SecurityWeek",
-      "published": "2026-07-06T13:11:16+00:00",
-      "smart_groups": [
-        "Malware / Payloads",
-        "Vulnerabilities / CVEs",
-        "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "high",
-      "signal_score": 69.66,
-      "priority_score": 80.95
-    },
-    {
-      "title": "Exploit for Unrestricted Upload of File with Dangerous Type in Ollyo Sp_Page_Builder",
-      "link": "https://vulners.com/githubexploit/E2A4520E-343C-5B17-9530-563810F86EA4?utm_source=rss&utm_medium=rss&utm_campaign=rss",
-      "source": "Vulners.com RSS Feed",
-      "published": "2026-07-07T01:31:14+00:00",
+      "title": "CVE-2026-59998 | OpenBSD OpenSSH up to 10.3 privilege escalation",
+      "link": "https://vuldb.com/vuln/376760",
+      "source": "VulDB Recent Entries",
+      "published": "2026-07-08T01:20:22+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "Crypto / Web3",
-        "Ransomware",
-        "Web / API Security"
+        "Exploit / PoC"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 68.52,
-      "priority_score": 75.91
+      "signal_score": 63.31,
+      "priority_score": 79.38
+    },
+    {
+      "title": "CVE-2026-59997 | OpenBSD OpenSSH up to 10.3 Internal-SFTP privilege escalation",
+      "link": "https://vuldb.com/vuln/376757",
+      "source": "VulDB Recent Entries",
+      "published": "2026-07-08T01:18:29+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 63.31,
+      "priority_score": 79.37
     }
   ]
 }
