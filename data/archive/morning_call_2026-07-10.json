@@ -1,0 +1,172 @@
+{
+  "generated_at": "2026-07-10T09:53:52.889890+00:00",
+  "analysis_date": "2026-07-10",
+  "provider": "openai",
+  "model": "gpt-5.2",
+  "window_hours": 24,
+  "source_file": "data/news_recent.json",
+  "source_generated_at": "2026-07-10T07:47:22.859105+00:00",
+  "source_days_back": 30,
+  "source_total_items": 52368,
+  "total_items_in_window_all": 2280,
+  "total_items_in_window_curated": 5,
+  "total_items_in_window_selected": 40,
+  "context_selection_policy": "curated-plus-operational-signal-v1",
+  "morning_call_markdown": "### Executive Summary\n- Active intrusion chain reported from **CitrixBleed 2 (CVE-2025-5777) → privilege escalation → Dragonforce ransomware**; treat any exposed Citrix as high-risk.\n- Microsoft shipped a fix for **Windows Defender / Malware Protection Engine LPE (CVE-2026-50656, “RoguePlanet”)**; PoC existed—prioritize version validation across endpoints.\n- Multiple **software supply-chain** signals: automated **GitHub org API enumeration**, malicious **npm packages** (Injective SDK compromise; fake Paysafe/Skrill/Neteller), plus **WordPress theme/plugin auth bypass/backdoor** CVEs.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) CitrixBleed 2 → Dragonforce ransomware intrusion pattern**\n- **What happened:** Huntress reports repeated intrusions starting with **CitrixBleed 2 (CVE-2025-5777)** exploitation and ending in **Dragonforce ransomware**.\n- **Why it matters operationally:** Citrix edge compromise is a fast path to **credential theft, internal lateral movement, and ransomware impact** in enterprise networks.\n- **Recommended immediate actions for the SOC today:** Confirm patch/mitigation status for all Citrix; hunt for **new/unknown sessions and anomalous auth from Citrix to internal** and escalate any Citrix compromise indicators immediately.\n\n**2) Microsoft Defender “RoguePlanet” LPE patch (CVE-2026-50656)**\n- **What happened:** Microsoft released an update for **Microsoft Malware Protection Engine** fixing **CVE-2026-50656**; PoC was public.\n- **Why it matters operationally:** Local privilege escalation is commonly used **post-phish / post-exploit** to obtain SYSTEM and disable defenses before payload deployment.\n- **Recommended immediate actions for the SOC today:** Verify Defender engine/platform versions fleet-wide and force-update where lagging; hunt for **suspicious privilege escalation + tampering** around Defender/engine update windows.\n\n**3) Destructive malware: GigaWiper backdoor (wiper + fake ransomware + spyware)**\n- **What happened:** Microsoft detailed **GigaWiper**, a modular destructive backdoor that can **wipe disks** and run ransomware-like/spyware functions.\n- **Why it matters operationally:** Wipers drive **irrecoverable outage risk** (esp. for critical services) and can be deployed after initial access similar to ransomware playbooks.\n- **Recommended immediate actions for the SOC today:** Raise monitoring severity for **mass file overwrite/delete, boot/volume tampering, shadow copy deletion attempts**; ensure IR runbooks treat “ransomware” alerts as potential **wiper** until proven otherwise.\n\n**4) Supply-chain / developer ecosystem attacks (GitHub + npm + payment SDK lookalikes)**\n- **What happened:** Reports of **automated GitHub API enumeration** of corporate orgs and multiple **npm supply-chain compromises** (Injective SDK repo compromise; fake Paysafe/Skrill/Neteller packages harvesting API keys/tokens).\n- **Why it matters operationally:** Targets **developer identities, repos, CI/CD secrets, and API tokens**—high impact in financial services (fraud enablement, cloud takeover, data access).\n- **Recommended immediate actions for the SOC today:** Monitor GitHub org for **unusual API token use, repo enumeration patterns, new PATs/OAuth apps, secret access**; coordinate with DevOps to review recent npm pulls/builds for affected ecosystems and rotate exposed secrets if suspected.\n\n**5) Internet-facing web stack risk: WordPress backdoor/theme + OAuth auth bypass plugins**\n- **What happened:** **EscortWP theme** shipped with a vendor-authored backdoor (CVE-2026-12685) and **LoginPress Pro** OAuth callback flaws allow **unauthenticated auth bypass** (multiple CVEs).\n- **Why it matters operationally:** If any business/marketing microsites or third-party vendors run these, attackers can gain **admin access/content destruction** and potentially pivot via reused creds or plugins.\n- **Recommended immediate actions for the SOC today:** Inventory external WordPress exposures (including subsidiaries/vendors) and flag EscortWP/LoginPress Pro usage; monitor for **new WP admin users, unexpected OAuth logins, mass content deletion** and isolate affected hosts.\n\n---\n\n### Monitoring & detection recommendations\n- **Citrix/VPN edge (CitrixBleed 2):** VPN/Citrix ADC logs + firewall/IDS for **new sessions from unusual geos, abnormal auth failures/success bursts, new cookies/tokens reuse** (ATT&CK: T1190).\n- **Post-exploit privilege escalation (RoguePlanet / general):** EDR telemetry for **token manipulation, service creation, scheduled tasks, SYSTEM-level process spikes** after user-level execution (T1068, T1053).\n- **Wiper/ransomware behaviors (GigaWiper/Dragonforce-like):** EDR + Windows Security logs for **mass file operations, vssadmin/wbadmin usage, bcdedit changes, raw disk access attempts** (T1485, T1490).\n- **GitHub org enumeration & token abuse:** GitHub audit logs for **high-rate API calls, org/repo listing, unusual PAT/OAuth app creation, new deploy keys**; alert on **access from new ASNs/locations** (T1213).\n- **CI/CD and secrets exposure:** CI logs (GitHub Actions/Jenkins/Azure DevOps) for **new workflow changes, unexpected outbound network calls, secret read events**; cloud logs for **new keys/tokens minted** (T1552, T1071).\n- **npm/package compromise indicators:** Proxy/DNS logs from build agents/dev workstations for **new npm registry mirrors, sudden downloads of similarly named packages**, and post-install network beacons (T1195.001).\n- **WordPress auth bypass/backdoor:** WAF/web logs for **suspicious login endpoints, OAuth callback anomalies, new admin creation, plugin/theme file edits**; monitor file integrity on webroots (T1190, T1505.003).\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** Add **CVE-2025-5777** (CitrixBleed 2) and **CVE-2026-50656** (Defender engine) to “must-validate” lists; require proof of version compliance (not just “auto-update enabled”).\n- **Developer security controls:** Enforce **least-privilege GitHub tokens**, PAT expiry, and **org-wide audit alerting** for enumeration/permission changes; review external collaborator access quarterly.\n- **Supply-chain hygiene:** For Node/npm, move toward **lockfiles + allowlists**, block install scripts where feasible (note: npm is shifting defaults), and implement package reputation scanning in CI.\n- **Web estate inventory:** Confirm whether any corporate/affiliate WordPress instances use **EscortWP/LoginPress Pro**; require vendors to attest and remediate quickly.\n- **Ransomware/wiper readiness:** Validate offline/immutable backups and recovery time objectives; run a short tabletop for “ransomware alert might be a wiper” decisioning.\n- **Juniper edge resilience (DoS risk):** If Junos MX/SRX with TCP proxy plugin is in scope (CVE-2026-57023), plan maintenance window testing/patching and ensure rate-limiting/HA failover is verified.",
+  "highlights": [
+    {
+      "title": "GitHub API enumeration campaign exposed; GigaWiper Windows backdoor combines disk wipe, spyware",
+      "link": "https://defend.network/briefings/github-api-enumeration-gigawiper-windows-backdoor-npm-s-2026-07-10.html",
+      "source": "defend.network",
+      "published": "2026-07-10T06:30:00+00:00",
+      "smart_groups": [
+        "Supply Chain / Software",
+        "Malware / Payloads",
+        "Ransomware",
+        "Windows / Microsoft",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 100.0,
+      "priority_score": 88.34
+    },
+    {
+      "title": "CitrixBleed 2 (CVE-2025-5777) 7Steps to Dragonforce Ransomware | Huntress",
+      "link": "https://www.huntress.com/blog/citrixbleed-2-dragonforce-ransomware",
+      "source": "Huntress Blog",
+      "published": "2026-07-09T14:00:00+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Ransomware",
+        "Vendors / Product Security"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 70.9,
+      "priority_score": 84.57
+    },
+    {
+      "title": "Turning software supply chain security into a daily habit",
+      "link": "https://www.helpnetsecurity.com/2026/07/10/software-supply-chain-security-video/",
+      "source": "Help Net Security",
+      "published": "2026-07-10T05:30:03+00:00",
+      "smart_groups": [
+        "Supply Chain / Software",
+        "Data Breaches / Leaks",
+        "Phishing / Social Engineering",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 69.88,
+      "priority_score": 87.67
+    },
+    {
+      "title": "Microsoft Reins in RoguePlanet Zero-Day Threat",
+      "link": "https://www.darkreading.com/vulnerabilities-threats/microsoft-rogueplanet-zero-day-threat",
+      "source": "darkreading",
+      "published": "2026-07-09T20:21:19+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Windows / Microsoft",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 69.81,
+      "priority_score": 85.33
+    },
+    {
+      "title": "Microsoft closes book on Nightmare Eclipse's RoguePlanet zero-day",
+      "link": "https://www.theregister.com/security/2026/07/09/microsoft-closes-book-on-nightmare-eclipses-rogueplanet-zero-day/5269280",
+      "source": "The Register - Security",
+      "published": "2026-07-09T13:30:00+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 69.18,
+      "priority_score": 69.23
+    },
+    {
+      "title": "12 Million Impacted by Data Breach at Japanese Telco KDDI",
+      "link": "https://www.securityweek.com/12-million-impacted-by-data-breach-at-japanese-telco-kddi/",
+      "source": "SecurityWeek",
+      "published": "2026-07-09T12:18:46+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Data Breaches / Leaks",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 67.8,
+      "priority_score": 83.12
+    },
+    {
+      "title": "CVE-2026-51597 | Mercury MIPC252W IP camera 1.0.5 Digest Authentication nonce/response authentication replay",
+      "link": "https://vuldb.com/vuln/377240",
+      "source": "VulDB Recent Entries",
+      "published": "2026-07-09T17:41:23+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 63.56,
+      "priority_score": 78.82
+    },
+    {
+      "title": "CVE-2026-14261 | Xerte Online Tools Setup authentication bypass",
+      "link": "https://vuldb.com/vuln/377200",
+      "source": "VulDB Recent Entries",
+      "published": "2026-07-09T13:44:07+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 63.56,
+      "priority_score": 77.76
+    },
+    {
+      "title": "CVE-2023-33781 | D-Link DIR-842V2 1.0.3 File privilege escalation",
+      "link": "https://vuldb.com/vuln/230997",
+      "source": "VulDB Updates",
+      "published": "2026-07-09T16:03:34+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 63.39,
+      "priority_score": 77.54
+    },
+    {
+      "title": "CVE-2023-29818 | Webroot SecureAnywhere Endpoint Protection up to 9.0.33.39 Local Privilege Escalation (EUVD-2023-33356)",
+      "link": "https://vuldb.com/vuln/228900",
+      "source": "VulDB Updates",
+      "published": "2026-07-09T14:53:33+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 63.39,
+      "priority_score": 77.23
+    }
+  ]
+}
