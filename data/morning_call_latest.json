@@ -1,150 +1,83 @@
 {
-  "generated_at": "2026-07-10T09:53:52.889890+00:00",
-  "analysis_date": "2026-07-10",
+  "generated_at": "2026-07-11T08:14:36.258522+00:00",
+  "analysis_date": "2026-07-11",
   "provider": "openai",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-07-10T07:47:22.859105+00:00",
+  "source_generated_at": "2026-07-11T06:23:51.558203+00:00",
   "source_days_back": 30,
-  "source_total_items": 52368,
-  "total_items_in_window_all": 2280,
-  "total_items_in_window_curated": 5,
+  "source_total_items": 52932,
+  "total_items_in_window_all": 2401,
+  "total_items_in_window_curated": 0,
   "total_items_in_window_selected": 40,
   "context_selection_policy": "curated-plus-operational-signal-v1",
-  "morning_call_markdown": "### Executive Summary\n- Active intrusion chain reported from **CitrixBleed 2 (CVE-2025-5777) → privilege escalation → Dragonforce ransomware**; treat any exposed Citrix as high-risk.\n- Microsoft shipped a fix for **Windows Defender / Malware Protection Engine LPE (CVE-2026-50656, “RoguePlanet”)**; PoC existed—prioritize version validation across endpoints.\n- Multiple **software supply-chain** signals: automated **GitHub org API enumeration**, malicious **npm packages** (Injective SDK compromise; fake Paysafe/Skrill/Neteller), plus **WordPress theme/plugin auth bypass/backdoor** CVEs.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) CitrixBleed 2 → Dragonforce ransomware intrusion pattern**\n- **What happened:** Huntress reports repeated intrusions starting with **CitrixBleed 2 (CVE-2025-5777)** exploitation and ending in **Dragonforce ransomware**.\n- **Why it matters operationally:** Citrix edge compromise is a fast path to **credential theft, internal lateral movement, and ransomware impact** in enterprise networks.\n- **Recommended immediate actions for the SOC today:** Confirm patch/mitigation status for all Citrix; hunt for **new/unknown sessions and anomalous auth from Citrix to internal** and escalate any Citrix compromise indicators immediately.\n\n**2) Microsoft Defender “RoguePlanet” LPE patch (CVE-2026-50656)**\n- **What happened:** Microsoft released an update for **Microsoft Malware Protection Engine** fixing **CVE-2026-50656**; PoC was public.\n- **Why it matters operationally:** Local privilege escalation is commonly used **post-phish / post-exploit** to obtain SYSTEM and disable defenses before payload deployment.\n- **Recommended immediate actions for the SOC today:** Verify Defender engine/platform versions fleet-wide and force-update where lagging; hunt for **suspicious privilege escalation + tampering** around Defender/engine update windows.\n\n**3) Destructive malware: GigaWiper backdoor (wiper + fake ransomware + spyware)**\n- **What happened:** Microsoft detailed **GigaWiper**, a modular destructive backdoor that can **wipe disks** and run ransomware-like/spyware functions.\n- **Why it matters operationally:** Wipers drive **irrecoverable outage risk** (esp. for critical services) and can be deployed after initial access similar to ransomware playbooks.\n- **Recommended immediate actions for the SOC today:** Raise monitoring severity for **mass file overwrite/delete, boot/volume tampering, shadow copy deletion attempts**; ensure IR runbooks treat “ransomware” alerts as potential **wiper** until proven otherwise.\n\n**4) Supply-chain / developer ecosystem attacks (GitHub + npm + payment SDK lookalikes)**\n- **What happened:** Reports of **automated GitHub API enumeration** of corporate orgs and multiple **npm supply-chain compromises** (Injective SDK repo compromise; fake Paysafe/Skrill/Neteller packages harvesting API keys/tokens).\n- **Why it matters operationally:** Targets **developer identities, repos, CI/CD secrets, and API tokens**—high impact in financial services (fraud enablement, cloud takeover, data access).\n- **Recommended immediate actions for the SOC today:** Monitor GitHub org for **unusual API token use, repo enumeration patterns, new PATs/OAuth apps, secret access**; coordinate with DevOps to review recent npm pulls/builds for affected ecosystems and rotate exposed secrets if suspected.\n\n**5) Internet-facing web stack risk: WordPress backdoor/theme + OAuth auth bypass plugins**\n- **What happened:** **EscortWP theme** shipped with a vendor-authored backdoor (CVE-2026-12685) and **LoginPress Pro** OAuth callback flaws allow **unauthenticated auth bypass** (multiple CVEs).\n- **Why it matters operationally:** If any business/marketing microsites or third-party vendors run these, attackers can gain **admin access/content destruction** and potentially pivot via reused creds or plugins.\n- **Recommended immediate actions for the SOC today:** Inventory external WordPress exposures (including subsidiaries/vendors) and flag EscortWP/LoginPress Pro usage; monitor for **new WP admin users, unexpected OAuth logins, mass content deletion** and isolate affected hosts.\n\n---\n\n### Monitoring & detection recommendations\n- **Citrix/VPN edge (CitrixBleed 2):** VPN/Citrix ADC logs + firewall/IDS for **new sessions from unusual geos, abnormal auth failures/success bursts, new cookies/tokens reuse** (ATT&CK: T1190).\n- **Post-exploit privilege escalation (RoguePlanet / general):** EDR telemetry for **token manipulation, service creation, scheduled tasks, SYSTEM-level process spikes** after user-level execution (T1068, T1053).\n- **Wiper/ransomware behaviors (GigaWiper/Dragonforce-like):** EDR + Windows Security logs for **mass file operations, vssadmin/wbadmin usage, bcdedit changes, raw disk access attempts** (T1485, T1490).\n- **GitHub org enumeration & token abuse:** GitHub audit logs for **high-rate API calls, org/repo listing, unusual PAT/OAuth app creation, new deploy keys**; alert on **access from new ASNs/locations** (T1213).\n- **CI/CD and secrets exposure:** CI logs (GitHub Actions/Jenkins/Azure DevOps) for **new workflow changes, unexpected outbound network calls, secret read events**; cloud logs for **new keys/tokens minted** (T1552, T1071).\n- **npm/package compromise indicators:** Proxy/DNS logs from build agents/dev workstations for **new npm registry mirrors, sudden downloads of similarly named packages**, and post-install network beacons (T1195.001).\n- **WordPress auth bypass/backdoor:** WAF/web logs for **suspicious login endpoints, OAuth callback anomalies, new admin creation, plugin/theme file edits**; monitor file integrity on webroots (T1190, T1505.003).\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** Add **CVE-2025-5777** (CitrixBleed 2) and **CVE-2026-50656** (Defender engine) to “must-validate” lists; require proof of version compliance (not just “auto-update enabled”).\n- **Developer security controls:** Enforce **least-privilege GitHub tokens**, PAT expiry, and **org-wide audit alerting** for enumeration/permission changes; review external collaborator access quarterly.\n- **Supply-chain hygiene:** For Node/npm, move toward **lockfiles + allowlists**, block install scripts where feasible (note: npm is shifting defaults), and implement package reputation scanning in CI.\n- **Web estate inventory:** Confirm whether any corporate/affiliate WordPress instances use **EscortWP/LoginPress Pro**; require vendors to attest and remediate quickly.\n- **Ransomware/wiper readiness:** Validate offline/immutable backups and recovery time objectives; run a short tabletop for “ransomware alert might be a wiper” decisioning.\n- **Juniper edge resilience (DoS risk):** If Junos MX/SRX with TCP proxy plugin is in scope (CVE-2026-57023), plan maintenance window testing/patching and ensure rate-limiting/HA failover is verified.",
+  "morning_call_markdown": "### Executive Summary\n- Active exploitation reported for **Django GIS SQL injection (CVE-2026-1207)** — confirm exposure of any internet-facing Django/PostGIS services and prioritize patch/mitigation.\n- Microsoft detailed **GigaWiper** (backdoor + ransomware + multi-mode wiper) and a separate **LNK/ZIP click-to-execute chain** — raise vigilance for destructive endpoints and tighten email/EDR controls today.\n- Multiple **identity/auth stack issues** surfaced (Logto SAML/TOTP replay; RabbitMQ OAuth secret disclosure; Grafana OAuth route DoS) — validate if any are in our environment and apply compensating controls.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Django GIS SQL injection — actively exploited (CVE-2026-1207)**\n- What happened: Reports indicate **in-the-wild exploitation** of a Django GIS/PostGIS SQLi vulnerability.\n- Why it matters operationally: Internet-facing web apps/APIs could be **remotely compromised**, leading to DB access, app takeover, and lateral movement.\n- Recommended immediate actions for the SOC today: Identify Django GIS usage + public exposure; fast-track patch/mitigation and **WAF rules**; start targeted hunts for abnormal requests to GIS endpoints.\n\n**2) Destructive malware: GigaWiper + “fake ransomware”/wiper behavior**\n- What happened: Microsoft and multiple outlets described **GigaWiper**, a modular implant enabling backdoor control plus **disk wiping and ransomware-like actions** (destruction-on-demand).\n- Why it matters operationally: Financial ops impact is **availability-critical** (rapid outage/extortion cover); expect fast escalation from foothold to destructive actions.\n- Recommended immediate actions for the SOC today: Increase monitoring for **mass file operations** and suspicious admin tooling; validate backup immutability and EDR tamper protection on critical workstation/server tiers.\n\n**3) Windows initial access via malicious shortcuts (LNK) in ZIP + PowerShell/Node.js chain**\n- What happened: Campaign uses **booking-themed spam** leading to a ZIP containing a **booby-trapped LNK** that launches PowerShell and Node.js to establish a foothold.\n- Why it matters operationally: Single-click execution bypasses user caution and can drop backdoors—high risk for **ransomware staging** from endpoints.\n- Recommended immediate actions for the SOC today: Tighten email attachment controls (ZIP/LNK) and enforce **Mark-of-the-Web** handling; hunt for LNK execution spawning `powershell.exe`/`node.exe` from user download paths.\n\n**4) Identity/auth infrastructure vulnerabilities (Logto, RabbitMQ, Grafana)**\n- What happened: New CVEs include **Logto** (SAML assertion attribute injection/priv-esc, CVE-2026-55789; TOTP replay/bypass, CVE-2026-55370), **RabbitMQ** OAuth client secret disclosure via obsolete endpoint (CVE-2026-57219), and **Grafana** OAuth route memory-exhaustion DoS (CVE-2026-8609).\n- Why it matters operationally: These impact **authentication trust boundaries** (priv-esc/account abuse) and **availability** for monitoring platforms (Grafana DoS).\n- Recommended immediate actions for the SOC today: Confirm whether these components exist (self-hosted auth, RabbitMQ mgmt plugin, Grafana OAuth); if exposed, restrict access (VPN/IP allowlists) and prioritize patches/config changes.\n\n---\n\n### Monitoring & detection recommendations\n- **Web app exploitation (Django/PostGIS)**: WAF + reverse proxy + app logs for spikes in 4xx/5xx, odd query strings, and unusual GIS endpoint access (ATT&CK: Exploit Public-Facing Application **T1190**).\n- **Destructive activity (GigaWiper / wipers)**: EDR telemetry for mass file rename/delete, VSS deletion attempts, raw disk access, and suspicious service/process creation on servers (ATT&CK: Data Destruction **T1485**, Inhibit System Recovery **T1490**).\n- **LNK → PowerShell/Node execution chain**: Windows Security + Sysmon + EDR for `explorer.exe`/`cmd.exe` launching `powershell.exe` and/or `node.exe` from `Downloads`/`Temp`/ZIP extract directories (ATT&CK: User Execution **T1204**, Command and Scripting Interpreter: PowerShell **T1059.001**).\n- **Email ingress for booking-themed lures**: Email gateway + M365 message trace for ZIP attachment campaigns, high click-through, and post-delivery detonation events; correlate with endpoint process start within minutes of download.\n- **OAuth/SSO abuse and auth anomalies** (Logto/RabbitMQ/Grafana themes): IdP/SSO logs for unusual assertion attributes, unexpected role claims, repeated OAuth login hits, and access to management endpoints (ATT&CK: Valid Accounts **T1078**).\n- **RabbitMQ management endpoint exposure**: Firewall/proxy logs for unauthenticated hits to RabbitMQ management API paths; alert on any external source access attempts.\n- **Teams phishing / extension installation (IAB activity)**: M365/Defender for Office + endpoint/browser logs for new extension installs, Edge/Chrome policy violations, and Teams chat links leading to credential prompts (ATT&CK: Phishing **T1566**, Browser Extensions **T1176**).\n\n---\n\n### Medium-term follow-ups\n- **Patch management / exposure review**: Inventory and patch plans for Logto (>=1.41.0), Grafana (address CVE-2026-8609), and RabbitMQ versions/config; document any internet-facing instances and enforce segmentation.\n- **Linux kernel priv-esc CVEs**: Multiple local/network-adjacent kernel privilege escalation items were published; treat as **hardening** for Linux fleets (prioritize internet-facing/bastions and Kubernetes nodes), but not a same-day emergency absent exploitation evidence.\n- **TeamCity stored XSS (CVE-2026-59795)**: If TeamCity is used, prioritize upgrading (risk: CI/CD admin session compromise); restrict agent registration exposure.\n- **Awareness and controls**: Refresh user comms on “booking/invoice” lures and reinforce guidance: don’t open ZIP/LNK; report Teams messages prompting installs or “security updates”.\n- **Wiper/ransomware readiness drill**: Validate restoration time objectives for core banking support apps; ensure runbooks include rapid isolation steps and credential reset triggers for destructive malware cases.\n- **Assumptions to validate**: Items above assume potential presence of Django GIS, Logto, RabbitMQ management plugin, or Grafana OAuth in our estate—confirm via CMDB/service owners today and adjust priorities accordingly.",
   "highlights": [
     {
-      "title": "GitHub API enumeration campaign exposed; GigaWiper Windows backdoor combines disk wipe, spyware",
-      "link": "https://defend.network/briefings/github-api-enumeration-gigawiper-windows-backdoor-npm-s-2026-07-10.html",
-      "source": "defend.network",
-      "published": "2026-07-10T06:30:00+00:00",
+      "title": "Malicious Windows Shortcuts Use PowerShell and Node.js to Enable Remote Code Execution",
+      "link": "https://cybersecuritynews.com/malicious-windows-shortcuts-use-powershell-and-node-js/",
+      "source": "Cyber Security News",
+      "published": "2026-07-10T12:20:22+00:00",
       "smart_groups": [
-        "Supply Chain / Software",
+        "Windows / Microsoft",
+        "Vulnerabilities / CVEs",
         "Malware / Payloads",
         "Ransomware",
-        "Windows / Microsoft",
-        "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 100.0,
-      "priority_score": 88.34
-    },
-    {
-      "title": "CitrixBleed 2 (CVE-2025-5777) 7Steps to Dragonforce Ransomware | Huntress",
-      "link": "https://www.huntress.com/blog/citrixbleed-2-dragonforce-ransomware",
-      "source": "Huntress Blog",
-      "published": "2026-07-09T14:00:00+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "Ransomware",
-        "Vendors / Product Security"
-      ],
-      "curated": true,
-      "signal_tier": "high",
-      "signal_score": 70.9,
-      "priority_score": 84.57
-    },
-    {
-      "title": "Turning software supply chain security into a daily habit",
-      "link": "https://www.helpnetsecurity.com/2026/07/10/software-supply-chain-security-video/",
-      "source": "Help Net Security",
-      "published": "2026-07-10T05:30:03+00:00",
-      "smart_groups": [
-        "Supply Chain / Software",
-        "Data Breaches / Leaks",
-        "Phishing / Social Engineering",
-        "Ransomware",
-        "Vulnerabilities / CVEs",
-        "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "high",
-      "signal_score": 69.88,
-      "priority_score": 87.67
-    },
-    {
-      "title": "Microsoft Reins in RoguePlanet Zero-Day Threat",
-      "link": "https://www.darkreading.com/vulnerabilities-threats/microsoft-rogueplanet-zero-day-threat",
-      "source": "darkreading",
-      "published": "2026-07-09T20:21:19+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "Windows / Microsoft",
-        "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "high",
-      "signal_score": 69.81,
-      "priority_score": 85.33
-    },
-    {
-      "title": "Microsoft closes book on Nightmare Eclipse's RoguePlanet zero-day",
-      "link": "https://www.theregister.com/security/2026/07/09/microsoft-closes-book-on-nightmare-eclipses-rogueplanet-zero-day/5269280",
-      "source": "The Register - Security",
-      "published": "2026-07-09T13:30:00+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
         "General Security"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 69.18,
-      "priority_score": 69.23
+      "signal_score": 64.29,
+      "priority_score": 74.26
     },
     {
-      "title": "12 Million Impacted by Data Breach at Japanese Telco KDDI",
-      "link": "https://www.securityweek.com/12-million-impacted-by-data-breach-at-japanese-telco-kddi/",
-      "source": "SecurityWeek",
-      "published": "2026-07-09T12:18:46+00:00",
+      "title": "Healthcare ransomware attacks remain resilient in H1 2026 as extortion groups broaden attacks across supply chain",
+      "link": "https://industrialcyber.co/ransomware/healthcare-ransomware-attacks-remain-resilient-in-h1-2026-as-extortion-groups-broaden-attacks-across-supply-chain/",
+      "source": "Industrial Cyber",
+      "published": "2026-07-10T16:15:43+00:00",
       "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Data Breaches / Leaks",
-        "Exploit / PoC",
+        "Ransomware",
         "General Security"
       ],
-      "curated": true,
+      "curated": false,
       "signal_tier": "high",
-      "signal_score": 67.8,
-      "priority_score": 83.12
+      "signal_score": 64.02,
+      "priority_score": 70.36
     },
     {
-      "title": "CVE-2026-51597 | Mercury MIPC252W IP camera 1.0.5 Digest Authentication nonce/response authentication replay",
-      "link": "https://vuldb.com/vuln/377240",
+      "title": "CVE-2026-55370 | logto-io Logto up to 1.40.x TOTP Verifier authentication replay",
+      "link": "https://vuldb.com/vuln/377602",
       "source": "VulDB Recent Entries",
-      "published": "2026-07-09T17:41:23+00:00",
+      "published": "2026-07-10T20:21:22+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 63.56,
-      "priority_score": 78.82
+      "signal_score": 63.57,
+      "priority_score": 79.98
     },
     {
-      "title": "CVE-2026-14261 | Xerte Online Tools Setup authentication bypass",
-      "link": "https://vuldb.com/vuln/377200",
+      "title": "CVE-2026-28564 | Apache IoTDB up to 2.0.9 Session Expiration authentication replay",
+      "link": "https://vuldb.com/vuln/377430",
       "source": "VulDB Recent Entries",
-      "published": "2026-07-09T13:44:07+00:00",
+      "published": "2026-07-10T08:14:17+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 63.56,
-      "priority_score": 77.76
+      "signal_score": 63.57,
+      "priority_score": 76.73
     },
     {
-      "title": "CVE-2023-33781 | D-Link DIR-842V2 1.0.3 File privilege escalation",
-      "link": "https://vuldb.com/vuln/230997",
+      "title": "CVE-2026-44454 | Coder up to 2.29.6/2.30.1 privilege escalation (Nessus ID 326279)",
+      "link": "https://vuldb.com/vuln/376682",
       "source": "VulDB Updates",
-      "published": "2026-07-09T16:03:34+00:00",
+      "published": "2026-07-11T04:07:10+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC"
@@ -152,13 +85,13 @@
       "curated": false,
       "signal_tier": "high",
       "signal_score": 63.39,
-      "priority_score": 77.54
+      "priority_score": 81.16
     },
     {
-      "title": "CVE-2023-29818 | Webroot SecureAnywhere Endpoint Protection up to 9.0.33.39 Local Privilege Escalation (EUVD-2023-33356)",
-      "link": "https://vuldb.com/vuln/228900",
+      "title": "CVE-2026-11914 | Drupal Composer Local Privilege Escalation (EUVD-2026-43092)",
+      "link": "https://vuldb.com/vuln/377667",
       "source": "VulDB Updates",
-      "published": "2026-07-09T14:53:33+00:00",
+      "published": "2026-07-11T01:01:17+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC"
@@ -166,7 +99,66 @@
       "curated": false,
       "signal_tier": "high",
       "signal_score": 63.39,
-      "priority_score": 77.23
+      "priority_score": 80.33
+    },
+    {
+      "title": "CVE-2023-33412 | Supermicro X11/M11 prior 3.17.02 Web Interface privilege escalation",
+      "link": "https://vuldb.com/vuln/247187",
+      "source": "VulDB Updates",
+      "published": "2026-07-10T14:30:10+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 63.39,
+      "priority_score": 77.51
+    },
+    {
+      "title": "CVE-2026-43180 | Linux Kernel up to 6.19.5 kaweth_set_rx_mode privilege escalation (Nessus ID 326222)",
+      "link": "https://vuldb.com/vuln/361377",
+      "source": "VulDB Updates",
+      "published": "2026-07-10T12:52:55+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Linux / Unix",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 63.39,
+      "priority_score": 77.08
+    },
+    {
+      "title": "CVE-2026-31670 | Linux Kernel up to 6.19.12 net privilege escalation (EUVD-2026-25563 / Nessus ID 326222)",
+      "link": "https://vuldb.com/vuln/359460",
+      "source": "VulDB Updates",
+      "published": "2026-07-10T11:45:43+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Linux / Unix",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 63.39,
+      "priority_score": 76.78
+    },
+    {
+      "title": "CVE-2025-71304 | Linux Kernel up to 6.19.3 smack /smack/doi privilege escalation (Nessus ID 318288 / WID-SEC-2026-1700)",
+      "link": "https://vuldb.com/vuln/366100",
+      "source": "VulDB Updates",
+      "published": "2026-07-10T10:06:53+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Linux / Unix",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 63.39,
+      "priority_score": 76.34
     }
   ]
 }
