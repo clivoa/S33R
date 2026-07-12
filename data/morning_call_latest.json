@@ -1,164 +1,163 @@
 {
-  "generated_at": "2026-07-11T08:14:36.258522+00:00",
-  "analysis_date": "2026-07-11",
+  "generated_at": "2026-07-12T08:32:22.090612+00:00",
+  "analysis_date": "2026-07-12",
   "provider": "openai",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-07-11T06:23:51.558203+00:00",
+  "source_generated_at": "2026-07-12T06:14:43.819069+00:00",
   "source_days_back": 30,
-  "source_total_items": 52932,
-  "total_items_in_window_all": 2401,
+  "source_total_items": 52443,
+  "total_items_in_window_all": 1413,
   "total_items_in_window_curated": 0,
   "total_items_in_window_selected": 40,
   "context_selection_policy": "curated-plus-operational-signal-v1",
-  "morning_call_markdown": "### Executive Summary\n- Active exploitation reported for **Django GIS SQL injection (CVE-2026-1207)** — confirm exposure of any internet-facing Django/PostGIS services and prioritize patch/mitigation.\n- Microsoft detailed **GigaWiper** (backdoor + ransomware + multi-mode wiper) and a separate **LNK/ZIP click-to-execute chain** — raise vigilance for destructive endpoints and tighten email/EDR controls today.\n- Multiple **identity/auth stack issues** surfaced (Logto SAML/TOTP replay; RabbitMQ OAuth secret disclosure; Grafana OAuth route DoS) — validate if any are in our environment and apply compensating controls.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Django GIS SQL injection — actively exploited (CVE-2026-1207)**\n- What happened: Reports indicate **in-the-wild exploitation** of a Django GIS/PostGIS SQLi vulnerability.\n- Why it matters operationally: Internet-facing web apps/APIs could be **remotely compromised**, leading to DB access, app takeover, and lateral movement.\n- Recommended immediate actions for the SOC today: Identify Django GIS usage + public exposure; fast-track patch/mitigation and **WAF rules**; start targeted hunts for abnormal requests to GIS endpoints.\n\n**2) Destructive malware: GigaWiper + “fake ransomware”/wiper behavior**\n- What happened: Microsoft and multiple outlets described **GigaWiper**, a modular implant enabling backdoor control plus **disk wiping and ransomware-like actions** (destruction-on-demand).\n- Why it matters operationally: Financial ops impact is **availability-critical** (rapid outage/extortion cover); expect fast escalation from foothold to destructive actions.\n- Recommended immediate actions for the SOC today: Increase monitoring for **mass file operations** and suspicious admin tooling; validate backup immutability and EDR tamper protection on critical workstation/server tiers.\n\n**3) Windows initial access via malicious shortcuts (LNK) in ZIP + PowerShell/Node.js chain**\n- What happened: Campaign uses **booking-themed spam** leading to a ZIP containing a **booby-trapped LNK** that launches PowerShell and Node.js to establish a foothold.\n- Why it matters operationally: Single-click execution bypasses user caution and can drop backdoors—high risk for **ransomware staging** from endpoints.\n- Recommended immediate actions for the SOC today: Tighten email attachment controls (ZIP/LNK) and enforce **Mark-of-the-Web** handling; hunt for LNK execution spawning `powershell.exe`/`node.exe` from user download paths.\n\n**4) Identity/auth infrastructure vulnerabilities (Logto, RabbitMQ, Grafana)**\n- What happened: New CVEs include **Logto** (SAML assertion attribute injection/priv-esc, CVE-2026-55789; TOTP replay/bypass, CVE-2026-55370), **RabbitMQ** OAuth client secret disclosure via obsolete endpoint (CVE-2026-57219), and **Grafana** OAuth route memory-exhaustion DoS (CVE-2026-8609).\n- Why it matters operationally: These impact **authentication trust boundaries** (priv-esc/account abuse) and **availability** for monitoring platforms (Grafana DoS).\n- Recommended immediate actions for the SOC today: Confirm whether these components exist (self-hosted auth, RabbitMQ mgmt plugin, Grafana OAuth); if exposed, restrict access (VPN/IP allowlists) and prioritize patches/config changes.\n\n---\n\n### Monitoring & detection recommendations\n- **Web app exploitation (Django/PostGIS)**: WAF + reverse proxy + app logs for spikes in 4xx/5xx, odd query strings, and unusual GIS endpoint access (ATT&CK: Exploit Public-Facing Application **T1190**).\n- **Destructive activity (GigaWiper / wipers)**: EDR telemetry for mass file rename/delete, VSS deletion attempts, raw disk access, and suspicious service/process creation on servers (ATT&CK: Data Destruction **T1485**, Inhibit System Recovery **T1490**).\n- **LNK → PowerShell/Node execution chain**: Windows Security + Sysmon + EDR for `explorer.exe`/`cmd.exe` launching `powershell.exe` and/or `node.exe` from `Downloads`/`Temp`/ZIP extract directories (ATT&CK: User Execution **T1204**, Command and Scripting Interpreter: PowerShell **T1059.001**).\n- **Email ingress for booking-themed lures**: Email gateway + M365 message trace for ZIP attachment campaigns, high click-through, and post-delivery detonation events; correlate with endpoint process start within minutes of download.\n- **OAuth/SSO abuse and auth anomalies** (Logto/RabbitMQ/Grafana themes): IdP/SSO logs for unusual assertion attributes, unexpected role claims, repeated OAuth login hits, and access to management endpoints (ATT&CK: Valid Accounts **T1078**).\n- **RabbitMQ management endpoint exposure**: Firewall/proxy logs for unauthenticated hits to RabbitMQ management API paths; alert on any external source access attempts.\n- **Teams phishing / extension installation (IAB activity)**: M365/Defender for Office + endpoint/browser logs for new extension installs, Edge/Chrome policy violations, and Teams chat links leading to credential prompts (ATT&CK: Phishing **T1566**, Browser Extensions **T1176**).\n\n---\n\n### Medium-term follow-ups\n- **Patch management / exposure review**: Inventory and patch plans for Logto (>=1.41.0), Grafana (address CVE-2026-8609), and RabbitMQ versions/config; document any internet-facing instances and enforce segmentation.\n- **Linux kernel priv-esc CVEs**: Multiple local/network-adjacent kernel privilege escalation items were published; treat as **hardening** for Linux fleets (prioritize internet-facing/bastions and Kubernetes nodes), but not a same-day emergency absent exploitation evidence.\n- **TeamCity stored XSS (CVE-2026-59795)**: If TeamCity is used, prioritize upgrading (risk: CI/CD admin session compromise); restrict agent registration exposure.\n- **Awareness and controls**: Refresh user comms on “booking/invoice” lures and reinforce guidance: don’t open ZIP/LNK; report Teams messages prompting installs or “security updates”.\n- **Wiper/ransomware readiness drill**: Validate restoration time objectives for core banking support apps; ensure runbooks include rapid isolation steps and credential reset triggers for destructive malware cases.\n- **Assumptions to validate**: Items above assume potential presence of Django GIS, Logto, RabbitMQ management plugin, or Grafana OAuth in our estate—confirm via CMDB/service owners today and adjust priorities accordingly.",
+  "morning_call_markdown": "### Executive Summary\n- Active exploitation confirmed for a **critical Joomla Balbooa Forms pre-auth file upload → RCE (CVE-2026-56291, CISA KEV)**; treat any internet-facing Joomla with this extension as high risk.\n- **Supply-chain compromise in npm `jscrambler` 8.14.0** drops a **Rust infostealer at install time** (no import/CLI required); immediate dev/build pipeline hygiene needed.\n- Multiple **new/public PoCs for web-app file upload/path traversal → potential RCE** (notably Moodle CVE-2026-7275; Krayin CVE-2026-38526) increase opportunistic scanning pressure.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Joomla Balbooa Forms pre-auth upload → RCE (CVE-2026-56291, KEV; plus related Joomla extension exploitation activity)**\n- What happened: Public exploit details/PoC are circulating for **CVE-2026-56291** (Balbooa Forms) and CISA KEV notes **active exploitation**; CISA also flagged **iCagenda** as exploited.\n- Why it matters operationally: Internet-facing CMS plugins are frequently used for **initial access → webshell → lateral movement/ransomware** in financial environments (high likelihood, fast time-to-exploit).\n- Recommended immediate actions for the SOC today: **Identify & isolate** any Joomla hosts running Balbooa Forms/iCagenda; **block/monitor** suspicious POSTs to plugin endpoints and alert on new/modified PHP files under web roots.\n\n**2) npm supply-chain: `jscrambler` 8.14.0 malicious preinstall drops Rust infostealer**\n- What happened: `jscrambler` **version 8.14.0** published with a **malicious preinstall hook** that executes during `npm install` and drops/runs an infostealer on Windows/macOS/Linux.\n- Why it matters operationally: Direct impact to **developer endpoints, CI runners, build servers**; risk of **credential/session token theft** and downstream artifact tampering (software supply chain).\n- Recommended immediate actions for the SOC today: **Hunt for installs of `jscrambler@8.14.0`** in repos/lockfiles and on CI; **quarantine/rotate creds** for any affected build agents and review outbound connections from build infrastructure.\n\n**3) Moodle Google Drive repository path traversal/arbitrary write PoC (CVE-2026-7275)**\n- What happened: A PoC and documentation were released for **CVE-2026-7275** enabling **path traversal/arbitrary file write** that can lead to **RCE** on unpatched Moodle.\n- Why it matters operationally: Education platforms are common, but in enterprise they appear in **training portals**; arbitrary write → webshell is a standard exploitation chain with high scanning volume after PoC release.\n- Recommended immediate actions for the SOC today: **Confirm whether any Moodle instances exist (especially internet-facing)** and patch/mitigate; add WAF/IDS monitoring for traversal/write patterns and unexpected file creation in Moodle web directories.\n\n**4) Web-app admin upload RCE PoC (Webkul Krayin 2.2.x, CVE-2026-38526)**\n- What happened: PoC released for **CVE-2026-38526**: RCE via file upload endpoint **`/admin/tinymce/upload`** in Krayin 2.2.x.\n- Why it matters operationally: Even if not widely deployed, attackers will **spray exploit attempts** across exposed web apps; successful compromise yields immediate webshell capability.\n- Recommended immediate actions for the SOC today: **Search external attack surface** for Krayin and that endpoint; alert on requests to `/admin/tinymce/upload` and on any new executable files written near TinyMCE upload paths.\n\n---\n\n### Monitoring & detection recommendations\n- **Web server/WAF logs (T1190 Exploit Public-Facing Application):** alert on spikes in POSTs, unusual user agents, and 4xx/5xx bursts targeting Joomla plugin routes (Balbooa Forms/iCagenda) and known upload endpoints (e.g., `/admin/tinymce/upload`).\n- **File integrity + EDR on web hosts (T1505.003 Web Shell):** watch for new/modified **`.php`, `.phtml`, `.phar`** under web roots, especially shortly after suspicious requests; correlate with parent process (web server) spawning shells.\n- **CI/CD telemetry + EDR on build agents (T1552 Unsecured Credentials / T1059 Command and Scripting):** detect `npm install`/`preinstall` execution chains and unexpected child processes from npm/node; focus on agents that recently pulled `jscrambler@8.14.0`.\n- **Proxy/DNS/NetFlow from dev + CI networks (T1071.001 Web Protocols):** hunt for new outbound destinations from build runners immediately after npm activity; prioritize endpoints that normally have stable egress profiles.\n- **Asset discovery + external scanning results:** validate whether we expose **Joomla/Moodle** externally; if yes, ensure logs are onboarded and WAF rules are active (assumption: asset inventory may lag—verify today).\n- **Endpoint/browser posture checks:** several older Chrome/Edge CVEs are resurfacing in feeds—ensure SOC alerts on **out-of-date browser versions** on privileged/admin workstations (reduce drive-by and sandbox-escape risk even if no active exploit noted here).\n\n---\n\n### Medium-term follow-ups\n- **Patching governance:** enforce rapid patch SLAs for internet-facing CMS/plugins (Joomla extensions, Moodle modules); confirm ownership and patch windows for “non-core” plugins.\n- **Supply-chain controls:** require **package allowlisting**, lockfile pinning, and automated malware scanning (e.g., npm audit + registry reputation checks) for CI; implement “break-glass” process to block specific versions (e.g., `jscrambler@8.14.0`).\n- **Hardening web servers:** restrict web process permissions (no write/exec in web root), disable risky PHP functions where feasible, and separate upload directories from executable paths.\n- **Credential hygiene after build compromise:** formalize playbook to rotate **CI secrets, signing keys, artifact repository tokens** if any malicious dependency installation is confirmed.\n- **Review Linux kernel LPE exposure:** multiple kernel LPE items surfaced; prioritize patching for **multi-tenant Linux hosts** (jump boxes, CI runners, container hosts) where local compromise could become root.\n- **Detection engineering backlog:** add durable rules for **unauthenticated file upload / traversal** patterns and **webshell drop** behaviors across CMS stacks (Joomla/WordPress/Grav/Moodle), rather than one-off signatures per CVE.",
   "highlights": [
     {
-      "title": "Malicious Windows Shortcuts Use PowerShell and Node.js to Enable Remote Code Execution",
-      "link": "https://cybersecuritynews.com/malicious-windows-shortcuts-use-powershell-and-node-js/",
-      "source": "Cyber Security News",
-      "published": "2026-07-10T12:20:22+00:00",
-      "smart_groups": [
-        "Windows / Microsoft",
-        "Vulnerabilities / CVEs",
-        "Malware / Payloads",
-        "Ransomware",
-        "General Security"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 64.29,
-      "priority_score": 74.26
-    },
-    {
-      "title": "Healthcare ransomware attacks remain resilient in H1 2026 as extortion groups broaden attacks across supply chain",
-      "link": "https://industrialcyber.co/ransomware/healthcare-ransomware-attacks-remain-resilient-in-h1-2026-as-extortion-groups-broaden-attacks-across-supply-chain/",
-      "source": "Industrial Cyber",
-      "published": "2026-07-10T16:15:43+00:00",
-      "smart_groups": [
-        "Ransomware",
-        "General Security"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 64.02,
-      "priority_score": 70.36
-    },
-    {
-      "title": "CVE-2026-55370 | logto-io Logto up to 1.40.x TOTP Verifier authentication replay",
-      "link": "https://vuldb.com/vuln/377602",
-      "source": "VulDB Recent Entries",
-      "published": "2026-07-10T20:21:22+00:00",
+      "title": "Exploit for Unrestricted Upload of File with Dangerous Type in Balbooa Forms",
+      "link": "https://vulners.com/githubexploit/F8A753B9-90EC-54D0-AC19-CAD8EE292E6C?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-07-11T10:50:54+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Exploit / PoC"
+        "Crypto / Web3",
+        "Exploit / PoC",
+        "Web / API Security"
+      ],
+      "curated": false,
+      "signal_tier": "critical",
+      "signal_score": 84.58,
+      "priority_score": 72.65
+    },
+    {
+      "title": "Exploit for CVE-2026-7275",
+      "link": "https://vulners.com/githubexploit/78361921-E1FF-5878-ADB0-633C41315170?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-07-11T17:09:17+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Web / API Security"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 63.57,
-      "priority_score": 79.98
+      "signal_score": 66.58,
+      "priority_score": 73.74
     },
     {
-      "title": "CVE-2026-28564 | Apache IoTDB up to 2.0.9 Session Expiration authentication replay",
-      "link": "https://vuldb.com/vuln/377430",
-      "source": "VulDB Recent Entries",
-      "published": "2026-07-10T08:14:17+00:00",
+      "title": "Exploit for CVE-2026-38526",
+      "link": "https://vulners.com/githubexploit/A3E85F2F-EBC3-5F21-A89A-F2503C9A19A4?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-07-11T10:57:04+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 63.57,
-      "priority_score": 76.73
+      "signal_score": 64.58,
+      "priority_score": 72.51
     },
     {
-      "title": "CVE-2026-44454 | Coder up to 2.29.6/2.30.1 privilege escalation (Nessus ID 326279)",
-      "link": "https://vuldb.com/vuln/376682",
+      "title": "Exploit for CVE-2026-38526",
+      "link": "https://vulners.com/githubexploit/013F170E-A7A2-5A14-B62B-14784AC9110C?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-07-11T10:57:04+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 64.58,
+      "priority_score": 72.51
+    },
+    {
+      "title": "CVE-2023-52674 | Linux Kernel up to 5.15.147/6.1.74/6.6.13/6.7.1 scarlett2 clamp privilege escalation (Nessus ID 210815 / WID-SEC-2024-1188)",
+      "link": "https://vuldb.com/vuln/264990",
       "source": "VulDB Updates",
-      "published": "2026-07-11T04:07:10+00:00",
+      "published": "2026-07-11T15:59:42+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Linux / Unix",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 63.4,
+      "priority_score": 77.98
+    },
+    {
+      "title": "CVE-2022-3316 | Google Chrome up to 105.0.5195.125 Safe Browsing Remote Code Execution (EUVD-2022-42706)",
+      "link": "https://vuldb.com/vuln/210095",
+      "source": "VulDB Updates",
+      "published": "2026-07-11T15:44:40+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 63.39,
-      "priority_score": 81.16
+      "signal_score": 63.4,
+      "priority_score": 77.96
+    },
+    {
+      "title": "CVE-2022-3313 | Microsoft Edge Full Screen Remote Code Execution (EUVD-2022-42703)",
+      "link": "https://vuldb.com/vuln/210460",
+      "source": "VulDB Updates",
+      "published": "2026-07-11T14:39:23+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 63.4,
+      "priority_score": 77.66
+    },
+    {
+      "title": "CVE-2022-3313 | Google Chrome up to 105.0.5195.125 Full Screen TBD Remote Code Execution (EUVD-2022-42703)",
+      "link": "https://vuldb.com/vuln/210092",
+      "source": "VulDB Updates",
+      "published": "2026-07-11T14:39:19+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 63.4,
+      "priority_score": 77.66
+    },
+    {
+      "title": "CVE-2022-48852 | Linux Kernel up to 5.15.28/5.16.14 vc4 privilege escalation (ee22082c3e2f/1ed68d776246/e40945ab7c7f / WID-SEC-2024-1625)",
+      "link": "https://vuldb.com/vuln/271640",
+      "source": "VulDB Updates",
+      "published": "2026-07-11T13:13:28+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Linux / Unix",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 63.4,
+      "priority_score": 77.24
     },
     {
       "title": "CVE-2026-11914 | Drupal Composer Local Privilege Escalation (EUVD-2026-43092)",
       "link": "https://vuldb.com/vuln/377667",
       "source": "VulDB Updates",
-      "published": "2026-07-11T01:01:17+00:00",
+      "published": "2026-07-11T13:05:28+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 63.39,
-      "priority_score": 80.33
-    },
-    {
-      "title": "CVE-2023-33412 | Supermicro X11/M11 prior 3.17.02 Web Interface privilege escalation",
-      "link": "https://vuldb.com/vuln/247187",
-      "source": "VulDB Updates",
-      "published": "2026-07-10T14:30:10+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 63.39,
-      "priority_score": 77.51
-    },
-    {
-      "title": "CVE-2026-43180 | Linux Kernel up to 6.19.5 kaweth_set_rx_mode privilege escalation (Nessus ID 326222)",
-      "link": "https://vuldb.com/vuln/361377",
-      "source": "VulDB Updates",
-      "published": "2026-07-10T12:52:55+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Linux / Unix",
-        "Exploit / PoC"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 63.39,
-      "priority_score": 77.08
-    },
-    {
-      "title": "CVE-2026-31670 | Linux Kernel up to 6.19.12 net privilege escalation (EUVD-2026-25563 / Nessus ID 326222)",
-      "link": "https://vuldb.com/vuln/359460",
-      "source": "VulDB Updates",
-      "published": "2026-07-10T11:45:43+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Linux / Unix",
-        "Exploit / PoC"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 63.39,
-      "priority_score": 76.78
-    },
-    {
-      "title": "CVE-2025-71304 | Linux Kernel up to 6.19.3 smack /smack/doi privilege escalation (Nessus ID 318288 / WID-SEC-2026-1700)",
-      "link": "https://vuldb.com/vuln/366100",
-      "source": "VulDB Updates",
-      "published": "2026-07-10T10:06:53+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Linux / Unix",
-        "Exploit / PoC"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 63.39,
-      "priority_score": 76.34
+      "signal_score": 63.4,
+      "priority_score": 77.2
     }
   ]
 }
