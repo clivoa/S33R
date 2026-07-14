@@ -1,163 +1,171 @@
 {
-  "generated_at": "2026-07-13T09:48:27.996282+00:00",
-  "analysis_date": "2026-07-13",
+  "generated_at": "2026-07-14T08:28:45.972973+00:00",
+  "analysis_date": "2026-07-14",
   "provider": "openai",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-07-13T06:30:22.192446+00:00",
+  "source_generated_at": "2026-07-14T06:22:34.058111+00:00",
   "source_days_back": 30,
-  "source_total_items": 51853,
-  "total_items_in_window_all": 1409,
-  "total_items_in_window_curated": 0,
+  "source_total_items": 52502,
+  "total_items_in_window_all": 2427,
+  "total_items_in_window_curated": 5,
   "total_items_in_window_selected": 40,
   "context_selection_policy": "curated-plus-operational-signal-v1",
-  "morning_call_markdown": "### Executive Summary\n- New/recirculating **public PoCs for Apache NiFi and Apache Tomcat RCE paths** increase the odds of opportunistic exploitation against any internet-exposed instances in our environment.\n- Multiple **Linux kernel local privilege escalation (LPE) CVEs** surfaced (tc358743 / Bluetooth / io_uring-related entries); treat as post-compromise escalation risk on Linux fleets.\n- Vendor/community reporting indicates **elevated ransomware + social engineering pressure** (incl. vishing and “shutdown immediately” guidance for ShareFile Storage Zone Controllers) — validate exposure and tighten monitoring.\n\n### High-priority items (immediate attention)\n**1) Public PoC: Apache NiFi RCE (CVE-2023-34468)**\n- What happened: A PoC was posted for NiFi ExecuteSQL/H2 RUNSCRIPT leading to remote command execution under certain misconfigurations.  \n- Why it matters operationally: NiFi is often internally trusted; if exposed or reachable, this is a fast path to foothold and lateral movement (ransomware staging risk).  \n- Recommended immediate actions for the SOC today: Confirm any NiFi inventory/exposure; hunt for unusual NiFi processor edits + outbound reverse-shell-like traffic from NiFi hosts.\n\n**2) Apache Tomcat RCE PoCs trending (CVE-2025-24813 and older CVE-2019-0232)**\n- What happened: PoCs circulated for Tomcat RCE chains (session deserialization via PUT/path traversal) and Windows CGI batch argument injection.  \n- Why it matters operationally: Tomcat is common in financial middleware; exposed/legacy configs get hit quickly by scanners, and compromise often results in webshells and credential theft.  \n- Recommended immediate actions for the SOC today: Identify internet-facing Tomcat and verify PUT/readonly settings + CGI servlet usage; increase alerting for suspicious PUT requests, new JSP/WEB-INF file writes, and atypical child processes from `java`.\n\n**3) ShareFile Storage Zone Controllers: “shut down immediately” advisory (credible external threat; details unclear)**\n- What happened: Reporting indicates customers running **ShareFile Storage Zone Controllers (Windows servers)** were told to shut them down due to a credible external threat (no CVE provided).  \n- Why it matters operationally: Lack of details suggests potential active exploitation or imminent exposure; these systems often store/bridge sensitive files and credentials.  \n- Recommended immediate actions for the SOC today: Validate whether we run on-prem Storage Zone Controllers; if yes, escalate to IR/on-call engineering to isolate, review recent auth/admin changes, and block inbound access until vendor clarity.\n\n**4) Linux kernel LPEs surfaced (CVE-2024-35830, CVE-2026-31771; io_uring entry appears possibly false-positive)**\n- What happened: New reporting on Linux kernel privilege escalation bugs affecting various subsystems (tc358743, Bluetooth `hci_store_wake_reason`), plus an io_uring-related entry flagged as likely false positive.  \n- Why it matters operationally: LPEs are commonly used after initial access (web exploit/credential theft) to obtain root, disable controls, and deploy ransomware.  \n- Recommended immediate actions for the SOC today: Prioritize monitoring for suspicious privilege escalation indicators on Linux (suid changes, kernel module loads, unusual `sudo`/`pkexec` usage); coordinate with patch mgmt for kernel update cadence on exposed/high-value Linux hosts.\n\n### Monitoring & detection recommendations\n- **Web app exploitation / initial access (T1190):** WAF/reverse-proxy + web server logs for Tomcat/NiFi — spike in `PUT`, path traversal patterns, unusual 4xx/5xx bursts, and requests to admin/processor endpoints.\n- **Tomcat post-exploitation (T1505.003, T1059):** EDR on app servers — alert on `java` spawning `cmd.exe`, `powershell.exe`, `bash`, `curl/wget`, or creating `.jsp`/`.war` in web roots.\n- **NiFi misuse (T1562, T1059):** NiFi application logs/audit (where enabled) — new/modified processors (ExecuteSQL/ExecuteScript), parameter context changes, and unexpected controller service updates.\n- **ShareFile SZC risk containment:** Windows Security + Sysmon on suspected servers — watch for new services, scheduled tasks (T1053), LSASS access (T1003), and anomalous inbound connections to management ports.\n- **Linux LPE / privilege escalation (T1068):** Linux auditd/EDR — monitor `setuid` binary changes, unexpected kernel parameter changes, new root cron/systemd units, and abnormal `sudo` patterns.\n- **Credential exfil via AI/automation tooling (CVE-2026-56259 theme):** If any Crawl4AI/LLM tooling exists, monitor container/API gateway logs for requests to `/md`, `/llm`, `/llm/job` with attacker-controlled `base_url` and unusual outbound to unknown LLM endpoints (T1552.007).\n- **Recon via exposed SSO endpoints (Capgo CVEs theme):** API gateway/IdP logs — repeated unauthenticated hits to SSO “check-domain” style endpoints and high-rate domain enumeration behavior (T1590).\n\n### Medium-term follow-ups\n- **Patch/mitigation validation:** Ensure Tomcat hardening baselines (disable/lock down PUT, review `readonly`, restrict manager apps, remove CGI unless required) and confirm NiFi is not internet-exposed.\n- **Asset inventory gap closure:** Reconcile CMDB for NiFi/Tomcat/ShareFile SZC and “shadow IT” instances; add continuous external exposure checks for these services.\n- **Linux kernel update strategy:** Align kernel patch SLAs for internet-adjacent Linux and high-value back-end workloads; explicitly track LPEs as post-compromise risk even when “local network” is required.\n- **Vendor follow-up on ShareFile:** Maintain ticket/bridge with vendor account team for concrete IOCs/affected versions; pre-stage containment steps (isolation playbook, credential rotation plan).\n- **RBAC/SSO hygiene (Capgo/Open WebUI/Aqara OAuth themes):** Review third-party SaaS/OAuth integrations for least privilege, stale admin role removal, and endpoint exposure; treat “info disclosure” CVEs as recon enablers.\n- **Ransomware social engineering readiness:** Refresh vishing/runbook steps with Helpdesk/IT ops (verification callbacks, out-of-band approval) and ensure rapid reporting path into SOC/IR.",
+  "morning_call_markdown": "### Executive Summary\n- CISA flags **active exploitation** of Joomla extension file-upload RCEs (iCagenda/Balbooa Forms) and adds them to **KEV**—internet-facing web stacks should be assumed at risk.\n- **Supply-chain** alert: a **backdoored `jscrambler` npm package** version delivered an infostealer via install hooks—review CI/CD and developer endpoints immediately.\n- Increased focus on **identity/OAuth abuse** (Microsoft reporting ShinyHunters-like OAuth tradecraft) plus multiple new **enterprise CVEs** (SAP, ServiceNow, Apache Camel, Foxit) that could be leveraged for access and execution.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Actively exploited Joomla extension RCEs (KEV): iCagenda + Balbooa Forms**\n- **What happened:** CISA warns and KEV-lists **CVE-2026-48939 (iCagenda)** and **CVE-2026-56291 (Balbooa Forms)** enabling RCE via unrestricted file upload.\n- **Why it matters operationally:** Any exposed Joomla instances can be rapidly webshell’d, then used for credential theft, pivoting, or hosting phishing in our brand.\n- **Recommended immediate actions for the SOC today:** Confirm whether we run Joomla + these extensions (external scan + CMDB); if found, **pull from internet / WAF block upload paths** and fast-track patch/removal; hunt web logs for anomalous uploads/execution under web roots.\n\n**2) Supply-chain compromise: `jscrambler` npm package backdoored with infostealer**\n- **What happened:** A malicious `jscrambler` npm release (reported as **8.14.0**) included a preinstall hook to deploy infostealer malware; downloads already occurred.\n- **Why it matters operationally:** Direct risk to **developer workstations and CI runners** → stolen tokens/credentials (Git, cloud, package registries) → downstream compromise of internal apps.\n- **Recommended immediate actions for the SOC today:** Search build logs/SBOMs/lockfiles for `jscrambler@8.14.0` (and any unapproved versions) and quarantine affected runners; rotate likely-exposed secrets (CI, cloud, Git, npm) and enable stricter egress/proxy logging for build infrastructure.\n\n**3) SaaS/IdP OAuth abuse pattern (ShinyHunters-linked tradecraft)**\n- **What happened:** Microsoft reports activity consistent with ShinyHunters-style operations using **vishing + OAuth consent/token abuse + misconfigured guest access** to access SaaS apps.\n- **Why it matters operationally:** Financial orgs are high-value for **SaaS data theft**; OAuth-granted apps bypass some MFA controls and can persist via refresh tokens (T1528).\n- **Recommended immediate actions for the SOC today:** Review last 7 days of **OAuth app consents** and new enterprise app grants; temporarily tighten policies (admin-consent only / block risky publishers) where feasible; prioritize investigation of helpdesk-driven MFA resets and anomalous guest invitations.\n\n**4) KEV: legacy Cisco IOS HTTP admin CSRF on Cisco 871 ISR (CVE-2008-4128)**\n- **What happened:** CISA adds **CVE-2008-4128** to KEV for Cisco IOS 12.4 on **Cisco 871** routers (HTTP admin interface CSRF issues) with exploitation in the wild.\n- **Why it matters operationally:** Legacy edge devices are often overlooked; compromise can enable traffic manipulation, credential capture, or foothold for lateral movement.\n- **Recommended immediate actions for the SOC today:** Validate we have **zero** exposed Cisco 871/IOS 12.4 HTTP admin interfaces (internet + internal mgmt segments); if present, restrict management to jump hosts/VPN, disable HTTP admin, and schedule emergency remediation.\n\n**5) High-impact enterprise CVEs emerging (patch/mitigate quickly where present)**\n- **What happened:** New high-severity disclosures include **ServiceNow AI Platform RCE (CVE-2026-6875)**, **Apache Camel Camel-JIRA priv-esc (CVE-2026-48206)**, **Foxit PDF RCE (CVE-2026-13128)**, and multiple **SAP** issues (incl. Commerce Cloud sample credentials CVE-2026-44761).\n- **Why it matters operationally:** These map to common attack paths—SaaS/platform compromise, integration middleware abuse, and endpoint initial access via malicious documents.\n- **Recommended immediate actions for the SOC today:** Rapid exposure check: where we run these products, confirm versions/configs and apply vendor mitigations; increase alerting for unusual ServiceNow/Camel service activity and Foxit spawning shells/child processes; for SAP Commerce Cloud, verify no sample OAuth clients/credentials remain.\n\n---\n\n### Monitoring & detection recommendations\n- **Web exploitation/webshells (Joomla KEV)**: WAF + web server logs (POST/PUT to media/components, suspicious file extensions, new PHP under upload dirs); hunt for web processes spawning interpreters (**T1190**, **T1505.003**).\n- **CI/CD & developer supply-chain (`jscrambler`)**: CI runner telemetry + EDR on build agents; alert on package-install scripts launching `curl/wget`, PowerShell, `bash -c`, or writing to temp + persistence locations (**T1059**, **T1105**).\n- **SaaS OAuth abuse (ShinyHunters-like)**: IdP/Azure AD logs (Consent to application, Add service principal, OAuth grant, refresh token usage spikes); correlate with new MFA reset/helpdesk tickets (**T1528**, **T1078**).\n- **Guest access and external collaboration**: M365/Google Workspace audit logs for guest invites, mailbox delegation, rule creation, app password creation; prioritize privileged users and finance teams (**T1098**, **T1114**).\n- **Network edge hygiene (Cisco KEV / IoT legacy exploits resurfacing)**: Firewall/VPN logs for inbound hits to router management ports (80/443/8080) and unexpected config changes; NetFlow for unusual outbound from edge devices (**T1040**, **T1565**).\n- **SAP / enterprise app anomalies**: SAP security/audit logs (failed logons, new OAuth clients, unusual API calls) plus WAF on SAP-facing endpoints; look for new high-priv sessions from atypical geos (**T1078**, **T1550**).\n- **Endpoint doc-based RCE (Foxit/PDF)**: EDR detections for Foxit/reader processes spawning `cmd.exe`, `powershell.exe`, `wscript`, or dropping executables; focus on email-origin files and downloads (**T1204.002**).\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** Add Joomla extension KEVs + Cisco IOS KEV to the vulnerability SLA list; ensure internet-facing CMS inventories are complete (many orgs miss marketing microsites).\n- **Supply-chain controls:** Enforce package allowlists, lockfile integrity checks, and malware scanning in CI; require provenance/signing where available; review NPM org access and 2FA enforcement.\n- **OAuth/consent hardening:** Move to **admin-consent-only**, restrict high-risk permissions, and implement continuous access evaluation; review guest lifecycle/approval workflows.\n- **ServiceNow/SAP validation:** Confirm tenant hardening (IP allowlists, least privilege, audit retention); for SAP Commerce Cloud specifically, ensure sample credentials/config are removed across all environments.\n- **Ransomware readiness (context: sanctions/legal actions)**: Re-validate playbooks for extortion + data theft (notification triggers, evidence preservation, third-party IR engagement) and ensure out-of-band comms are tested.\n- **Detection engineering backlog:** Convert today’s hunts into saved detections (webshell upload heuristics, OAuth-consent anomaly rules, CI runner “install-script outbound” detection) with clear triage steps for L1/L2.",
   "highlights": [
     {
-      "title": "CVE-2024-35830 | Linux Kernel up to 6.8.1 tc358743 privilege escalation (WID-SEC-2024-1188)",
-      "link": "https://vuldb.com/vuln/264955",
-      "source": "VulDB Updates",
-      "published": "2026-07-12T16:25:09+00:00",
+      "title": "CISA warns of actively exploited RCE flaws in Joomla extensions",
+      "link": "https://www.bleepingcomputer.com/news/security/cisa-warns-of-actively-exploited-rce-flaws-in-joomla-extensions/",
+      "source": "BleepingComputer",
+      "published": "2026-07-13T15:20:16+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Linux / Unix",
+        "Cloud / SaaS",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 75.69,
+      "priority_score": 83.79
+    },
+    {
+      "title": "Hackers backdoor Jscrambler npm package with infostealer malware",
+      "link": "https://www.bleepingcomputer.com/news/security/hackers-backdoor-jscrambler-npm-package-with-infostealer-malware/",
+      "source": "BleepingComputer",
+      "published": "2026-07-13T19:44:19+00:00",
+      "smart_groups": [
+        "Malware / Payloads",
+        "Threat Actors / APT",
+        "Supply Chain / Software",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 69.69,
+      "priority_score": 85.25
+    },
+    {
+      "title": "CVE-2026-6875 | ServiceNow prior Brazil EA/Brazil GA AI Platform Remote Code Execution",
+      "link": "https://vuldb.com/vuln/378145",
+      "source": "VulDB Recent Entries",
+      "published": "2026-07-13T18:49:22+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
         "Exploit / PoC"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 63.4,
-      "priority_score": 78.03
+      "signal_score": 63.47,
+      "priority_score": 79.09
     },
     {
-      "title": "Exploit for Code Injection in Apache Nifi",
-      "link": "https://vulners.com/githubexploit/14748680-800D-5A5B-8F0A-8FAAA6421030?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "title": "CVE-2026-48206 | Apache Camel up to 4.14.8/4.18.2/4.20.x Camel-JIRA privilege escalation (WID-SEC-2026-2203)",
+      "link": "https://vuldb.com/vuln/376415",
+      "source": "VulDB Updates",
+      "published": "2026-07-13T16:14:41+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 63.39,
+      "priority_score": 77.99
+    },
+    {
+      "title": "CVE-2026-13128 | Foxit PDF Editor/PDF Reader up to 2026.1.1 PDF file Remote Code Execution (WID-SEC-2026-2241)",
+      "link": "https://vuldb.com/vuln/376790",
+      "source": "VulDB Updates",
+      "published": "2026-07-13T10:34:14+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 63.39,
+      "priority_score": 76.51
+    },
+    {
+      "title": "Exploit for Improper Authentication in Hikvision Ds-2Cd2032-I_Firmware",
+      "link": "https://vulners.com/githubexploit/D2F65666-E792-56C6-ACC6-765C19568BB7?utm_source=rss&utm_medium=rss&utm_campaign=rss",
       "source": "Vulners.com RSS Feed",
-      "published": "2026-07-12T17:21:46+00:00",
+      "published": "2026-07-14T02:08:52+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Crypto / Web3",
         "Exploit / PoC",
-        "Identity / Access"
+        "Network / OT / ICS"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 60.57,
-      "priority_score": 73.67
+      "signal_score": 62.58,
+      "priority_score": 76.59
     },
     {
-      "title": "CVE-2026-55760 | jknack handlebars.java up to 4.5.1 Template Loader compile path traversal",
-      "link": "https://vuldb.com/vuln/376965",
-      "source": "VulDB Updates",
-      "published": "2026-07-13T00:05:01+00:00",
+      "title": "CISA adds iCagenda and Balbooa Forms vulnerabilities to known exploited catalog",
+      "link": "https://www.scworld.com/brief/cisa-adds-icagenda-and-balbooa-forms-vulnerabilities-to-known-exploited-catalog",
+      "source": "SCM feed for Latest",
+      "published": "2026-07-13T14:21:00+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC",
-        "Malware / Payloads"
+        "General Security"
       ],
-      "curated": false,
+      "curated": true,
       "signal_tier": "high",
-      "signal_score": 53.4,
-      "priority_score": 79.6
+      "signal_score": 60.59,
+      "priority_score": 82.99
     },
     {
-      "title": "CVE-2026-61875 - luci-app-upnp Stored XSS via UPnP Port Mapping Description",
-      "link": "https://cvefeed.io/vuln/detail/CVE-2026-61875",
-      "source": "CVEfeed.io - Latest Vulnerabilities",
-      "published": "2026-07-12T12:16:46+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Web / API Security"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 51.65,
-      "priority_score": 77.7
-    },
-    {
-      "title": "CVE-2026-56336 - Capgo - Information Disclosure via Unauthenticated SSO check-domain Endpoint",
-      "link": "https://cvefeed.io/vuln/detail/CVE-2026-56336",
-      "source": "CVEfeed.io - Latest Vulnerabilities",
-      "published": "2026-07-12T12:16:45+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Identity / Access"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 51.65,
-      "priority_score": 77.7
-    },
-    {
-      "title": "mcp-server",
-      "link": "https://vulners.com/githubexploit/530891A2-9B72-53B4-8C8C-C2608435E23C?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "title": "Exploit for CVE-2023-38646",
+      "link": "https://vulners.com/githubexploit/580287DA-3A52-5460-990D-C6364A070306?utm_source=rss&utm_medium=rss&utm_campaign=rss",
       "source": "Vulners.com RSS Feed",
-      "published": "2026-07-12T22:54:35+00:00",
+      "published": "2026-07-14T04:43:35+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Identity / Access",
         "Exploit / PoC"
       ],
       "curated": false,
-      "signal_tier": "watch",
-      "signal_score": 59.57,
-      "priority_score": 74.92
+      "signal_tier": "high",
+      "signal_score": 60.58,
+      "priority_score": 76.8
     },
     {
-      "title": "CVE-2026-56336",
-      "link": "https://vuldb.com/cve/CVE-2026-56336",
-      "source": "VulDB CVE",
-      "published": "2026-07-12T12:54:31+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Identity / Access"
-      ],
-      "curated": false,
-      "signal_tier": "watch",
-      "signal_score": 48.72,
-      "priority_score": 73.22
-    },
-    {
-      "title": "CVE-2026-56336",
-      "link": "https://vulners.com/nvd/NVD:CVE-2026-56336?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "title": "Exploit for OS Command Injection in Gnu Bash",
+      "link": "https://vulners.com/githubexploit/29315751-D5BA-5783-B858-B1200F66225F?utm_source=rss&utm_medium=rss&utm_campaign=rss",
       "source": "Vulners.com RSS Feed",
-      "published": "2026-07-12T12:16:45+00:00",
+      "published": "2026-07-14T03:52:44+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Identity / Access"
-      ],
-      "curated": false,
-      "signal_tier": "watch",
-      "signal_score": 48.57,
-      "priority_score": 72.31
-    },
-    {
-      "title": "CVE-2026-61875 luci-app-upnp Stored XSS via UPnP Port Mapping Description",
-      "link": "https://vulners.com/cvelist/CVELIST:CVE-2026-61875?utm_source=rss&utm_medium=rss&utm_campaign=rss",
-      "source": "Vulners.com RSS Feed",
-      "published": "2026-07-12T12:06:36+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
+        "Crypto / Web3",
+        "Exploit / PoC",
         "Web / API Security"
       ],
       "curated": false,
-      "signal_tier": "watch",
-      "signal_score": 48.57,
-      "priority_score": 72.27
+      "signal_tier": "high",
+      "signal_score": 60.58,
+      "priority_score": 76.57
     },
     {
-      "title": "CVE-2026-56336 Capgo - Information Disclosure via Unauthenticated SSO check-domain Endpoint",
-      "link": "https://vulners.com/cvelist/CVELIST:CVE-2026-56336?utm_source=rss&utm_medium=rss&utm_campaign=rss",
-      "source": "Vulners.com RSS Feed",
-      "published": "2026-07-12T12:06:34+00:00",
+      "title": "U.S. CISA adds a Cisco IOS flaw to its Known Exploited Vulnerabilities catalog",
+      "link": "https://securityaffairs.com/195262/security/u-s-cisa-adds-a-cisco-ios-flaw-to-its-known-exploited-vulnerabilities-catalog.html",
+      "source": "Security Affairs",
+      "published": "2026-07-13T18:05:08+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Identity / Access"
+        "Cloud / SaaS",
+        "Exploit / PoC",
+        "Web / API Security",
+        "Mobile Security",
+        "General Security"
       ],
-      "curated": false,
-      "signal_tier": "watch",
-      "signal_score": 48.57,
-      "priority_score": 72.27
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 58.96,
+      "priority_score": 85.85
     }
   ]
 }
