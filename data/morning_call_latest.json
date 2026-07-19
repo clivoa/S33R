@@ -1,175 +1,178 @@
 {
-  "generated_at": "2026-07-18T08:08:55.960901+00:00",
-  "analysis_date": "2026-07-18",
+  "generated_at": "2026-07-19T08:34:54.121030+00:00",
+  "analysis_date": "2026-07-19",
   "provider": "openai",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-07-18T08:01:42.832351+00:00",
+  "source_generated_at": "2026-07-19T08:30:08.149835+00:00",
   "source_days_back": 30,
-  "source_total_items": 50797,
-  "total_items_in_window_all": 2350,
-  "total_items_in_window_curated": 7,
+  "source_total_items": 50431,
+  "total_items_in_window_all": 1783,
+  "total_items_in_window_curated": 2,
   "total_items_in_window_selected": 40,
   "context_selection_policy": "curated-plus-operational-signal-v1",
-  "morning_call_markdown": "### Executive Summary\n- Actively exploited **unauthenticated RCE in on‑prem Microsoft SharePoint Server (CVE-2026-58644)** is in KEV—treat internet-facing SharePoint as high-risk until patched/mitigated.\n- Multiple **web platform pre-auth RCE paths** have fresh PoCs and active scanning signals: **WordPress core wp2shell (CVE-2026-63030 / CVE-2026-60137)** and **Joomla SP Page Builder (CVE-2026-48908)**.\n- A **Windows local privesc 0-day (“LegacyHive”)** plus **ransomware tradecraft updates (Qilin kernel EDR killer)** increase post-compromise blast radius—tighten endpoint monitoring and privilege-change alerting.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Microsoft SharePoint Server unauth RCE (CVE-2026-58644) — exploited/KEV**\n- **What happened:** Microsoft SharePoint Server critical unauthenticated RCE is reported exploited in the wild and added to **CISA KEV**.\n- **Why it matters operationally:** Direct remote code execution on a common enterprise app = fast initial access → webshells → domain compromise/ransomware in financial environments.\n- **Recommended immediate actions for the SOC today:** Confirm all on‑prem SharePoint versions/patch status; if any are internet-exposed and unpatched, **remove external exposure / enforce WAF virtual patch** and initiate threat hunt on SharePoint web/IIS logs + EDR for webshell behavior.\n\n**2) WordPress core “wp2shell” pre-auth chain (CVE-2026-63030 + CVE-2026-60137) — PoCs available**\n- **What happened:** Public PoCs released for a **WordPress core** REST API batch route confusion → SQLi → potential RCE chain; affected versions called out (6.9.0–6.9.4, 7.0.0–7.0.1; fixed 6.9.5/7.0.2).\n- **Why it matters operationally:** Internet-wide scanning and opportunistic exploitation are likely; even “marketing” WP instances can be leveraged for credential theft, pivoting, and brand abuse.\n- **Recommended immediate actions for the SOC today:** Inventory external WordPress assets (including subsidiaries/third parties) and **patch/force update**; add temporary control to **restrict/monitor `POST /wp-json/batch/v1`** at WAF/reverse proxy and review recent access logs for anomalies.\n\n**3) Joomla SP Page Builder unauth RCE (CVE-2026-48908) — active exploitation attempts**\n- **What happened:** FortiGuard reports continued exploitation attempts against **Joomla SP Page Builder** critical unauthenticated file upload → PHP execution.\n- **Why it matters operationally:** Straightforward web RCE; attackers commonly drop PHP webshells and use them as staging for ransomware and credential access.\n- **Recommended immediate actions for the SOC today:** Identify any Joomla with SP Page Builder; **patch/disable the extension** and hunt for newly written PHP in web roots plus suspicious POSTs to extension endpoints (assume scanning is broad).\n\n**4) Windows “LegacyHive” local privilege escalation 0-day (LegacyHive / MSNightmare)**\n- **What happened:** Reported Windows 0‑day enabling **local privilege escalation** via User Profile Service (ProfSvc), including tampering with admin accounts and admin-level execution.\n- **Why it matters operationally:** Doesn’t grant initial access, but **turns any foothold** (phish, drive-by, webshell to host) into admin, accelerating lateral movement and ransomware.\n- **Recommended immediate actions for the SOC today:** Increase alerting for **new local admins / privilege assignments** and unusual ProfSvc-related activity; prioritize containment playbooks where a single compromised workstation/server could quickly escalate.\n\n**5) Ransomware capability update: Qilin loader + kernel-level “EDR killer”**\n- **What happened:** Reporting describes Qilin using a custom Rust loader and a kernel-level component targeting EDR defenses.\n- **Why it matters operationally:** Higher chance of **sensor blinding** and delayed detection during hands-on-keyboard phases; impacts response confidence and dwell time.\n- **Recommended immediate actions for the SOC today:** Ensure **EDR tamper protection** and kernel driver load alerts are enabled; treat any signs of driver install attempts, service-disable chains, or security-tool termination as high-severity and escalate immediately.\n\n---\n\n### Monitoring & detection recommendations\n- **SharePoint/IIS (CVE-2026-58644):** Monitor IIS logs for anomalous POSTs to SharePoint app paths, sudden spikes in 500s, and new/modified files under `inetpub` / SharePoint directories; EDR for suspicious `w3wp.exe` child processes (T1505.003, T1190).\n- **WordPress wp2shell:** WAF/reverse-proxy + web logs: alert on **`POST /wp-json/batch/v1`** with unusual payload sizes, high frequency, or from new geos; correlate with file writes in `wp-content/` and unexpected PHP execution (T1190, T1505.003).\n- **Joomla SP Page Builder:** Web server logs + FIM: watch for abnormal upload requests and **new `.php` drops** in media/temp/plugin folders; EDR for PHP interpreter spawning shell utilities (T1105, T1059).\n- **Windows LegacyHive (LPE):** Windows Security logs (4720/4728/4732/4738) for account/admin group changes; Sysmon/EDR for registry hive access anomalies and unusual ProfSvc interactions; escalate if paired with credential dumping signals (T1068, T1098).\n- **Kernel/driver abuse (Qilin-style):** Endpoint telemetry for **new driver installations**, service creation, attempts to disable security tools, and signed-but-unusual kernel modules; monitor Event IDs related to driver load where available (T1543.003, T1562.001).\n- **Supply-chain (malicious npm/Vite packages):** CI/CD logs + proxy/DNS: flag new npm dependencies and unexpected outbound to blockchain/Web3 infra during builds; require SBOM/diff review for frontend repos (T1195, T1105).\n- **General web-to-internal pivot:** Network detections for web servers initiating SMB/WinRM/LDAP to internal segments (unexpected east-west from DMZ), indicating post-exploit lateral movement staging (T1021, T1071).\n\n---\n\n### Medium-term follow-ups\n- **KEV-driven patch governance:** Validate timelines/ownership for **SharePoint CVE-2026-58644** and the **other KEV additions mentioned (Fortinet/Oracle/KNX items)**; align with emergency change windows for internet-facing systems.\n- **External attack surface hygiene:** Formalize continuous discovery for **WordPress/Joomla** across business units, vendors, and acquired brands; enforce WAF baselines and authenticated admin paths.\n- **Hardening for post-exploit escalation:** Review local admin sprawl, LAPS usage, and privilege management controls to reduce impact of Windows LPE class bugs like LegacyHive.\n- **EDR resilience testing:** Run purple-team checks for **EDR tamper/driver-load** scenarios; confirm alert routing still works when endpoint agents are degraded.\n- **Dev supply-chain controls:** Enforce npm allowlists, lockfile integrity, and CI egress controls; add automated detection for suspicious install scripts and dependency typosquatting in Vite/Node pipelines.\n- **Tool exposure check:** If using **TheHive** or **SigNoz** externally, verify they are not internet-exposed or are updated/configured to mitigate the reported unauth issues (assumption: some teams may publish these for collaboration/monitoring).",
+  "morning_call_markdown": "### Executive Summary\n- **WordPress “wp2shell” pre-auth RCE chain now has multiple public PoCs and is reportedly being exploited** — treat any internet-facing WP in affected versions as high risk.\n- **CISA KEV update: Fortinet FortiSandbox + Microsoft SharePoint vulnerabilities added as actively exploited** — prioritize exposure validation and patching/mitigations immediately.\n- **Cloud credential risk rising:** NadMesh reportedly harvested **3,811 AWS keys** (via exposed AI services) and Microsoft flagged an **ACR Stealer surge** — increase cloud/key-leak and infostealer monitoring.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) WordPress core “wp2shell” unauthenticated RCE (CVE-2026-63030 + CVE-2026-60137)**\n- **What happened:** Multiple exploit/scan frameworks and PoCs dropped for a WP core bug chain leading to **pre-auth RCE** via `POST /wp-json/batch/v1`.\n- **Why it matters operationally:** Internet-facing WP instances can be mass-scanned and popped quickly; common follow-ons include webshells, credential theft, and ransomware staging.\n- **Recommended immediate actions for the SOC today:** Identify internet-facing WP + versions; block/ratelimit `/wp-json/batch/v1` at WAF/reverse proxy where feasible and **patch to fixed versions** (6.8.6 / 6.9.5 / 7.0.2 per reporting) or isolate until patched.\n\n**2) KEV: Fortinet FortiSandbox + Microsoft SharePoint actively exploited (CISA KEV)**\n- **What happened:** CISA added **FortiSandbox** and **Microsoft SharePoint** flaws to the KEV catalog (active exploitation confirmed).\n- **Why it matters operationally:** These are high-value enterprise targets; successful exploitation often yields initial access, lateral movement, and data theft in financial environments.\n- **Recommended immediate actions for the SOC today:** Confirm whether we run affected FortiSandbox/SharePoint builds and whether they are internet-reachable; emergency patch/mitigate per vendor guidance and add targeted hunting on the exposed systems’ web/service logs.\n\n**3) Cloud credential harvesting: NadMesh stealing AWS keys (exposed AI services)**\n- **What happened:** Reporting claims NadMesh botnet harvested **3,811 AWS keys**, with a theme of **exposed AI services** leading to key exposure.\n- **Why it matters operationally:** Stolen access keys can enable rapid cloud persistence, data access, and cost/fraud abuse; detection often lags if CloudTrail baselines aren’t tuned.\n- **Recommended immediate actions for the SOC today:** Run AWS credential exposure sweep: rotate suspect keys, verify IAM access key last-used, and enforce short-lived creds; hunt CloudTrail for anomalous API usage (new regions, unusual user agents, unusual AssumeRole patterns).\n\n**4) Infostealer activity: Microsoft warning on ACR Stealer surge**\n- **What happened:** Microsoft alerted on increased activity for **ACR Stealer** (credential/session theft).\n- **Why it matters operationally:** Infostealers frequently drive account takeover, VPN reuse, and cookie/token replay against SaaS/financial workflows.\n- **Recommended immediate actions for the SOC today:** Increase monitoring for credential-dump/browser-data access behaviors on endpoints; fast-track IR for any user reporting suspicious MFA prompts/session resets and review IdP risky sign-ins.\n\n**5) 7-Zip critical archive RCE patch released (watch for phishing delivery)**\n- **What happened:** 7-Zip issued patches for a **critical archive-related RCE** (details limited in this feed, assume malicious archive delivery is plausible).\n- **Why it matters operationally:** Archive RCEs are commonly weaponized via email attachments and can be a low-friction initial foothold.\n- **Recommended immediate actions for the SOC today:** Validate 7-Zip versions on user endpoints/jump hosts and prioritize update; tighten email gateway controls for high-risk archive types and monitor execution from Downloads/Temp paths.\n\n---\n\n### Monitoring & detection recommendations\n- **WordPress wp2shell scanning/exploitation:** WAF/reverse-proxy + web server logs for spikes in `POST /wp-json/batch/v1`, high 4xx/5xx rates, and repeated timing-based patterns (MITRE **T1190** Exploit Public-Facing Application).\n- **Post-exploitation on WP hosts:** EDR + file integrity monitoring for new/modified PHP files in web roots, unexpected admin creation, cron changes, and outbound connections from web servers (MITRE **T1505.003** Web Shell, **T1071.001** Web Protocols).\n- **KEV SharePoint/FortiSandbox:** IDS/WAF + appliance/system logs for exploit attempts, unusual process spawns by web services, and suspicious child processes; prioritize any external-to-internal connections to these services (MITRE **T1190**, **T1059** Command and Scripting Interpreter).\n- **AWS key misuse (NadMesh theme):** **CloudTrail**, GuardDuty, and IAM Access Analyzer for new access keys, unusual `AssumeRole`, `CreateUser`, `Attach*Policy`, `PutBucketPolicy`, `GetObject` spikes, and new regions; alert on first-seen principals and impossible travel patterns.\n- **Infostealer-driven account takeover:** IdP (Azure AD/Okta) sign-in logs for atypical user agents, token replay indicators, unfamiliar geo/ASN, and abnormal OAuth consent/app additions (MITRE **T1550** Use Alternate Authentication Material, **T1528** Steal Application Access Token).\n- **Suspicious archive-to-execution chain (7-Zip):** Email gateway + EDR for archive attachments followed by execution of newly dropped binaries/scripts from user-writable directories (MITRE **T1566.001** Phishing, **T1204** User Execution).\n- **Linux kernel priv-esc noise (multiple CVEs posted):** For Linux fleets, EDR/auditd for local exploit precursors: unusual capability changes, kernel module loads, and privilege boundary jumps on shared bastions (MITRE **T1068** Exploitation for Privilege Escalation).\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** Confirm enterprise-wide patch SLAs for **WP core**, **SharePoint**, **Fortinet**, and **7-Zip**; document any exceptions with compensating controls (WAF rules, isolation).\n- **Internet-facing asset review:** Re-validate exposure of CMS/admin panels and batch endpoints; ensure WP REST endpoints are intentionally exposed and protected (WAF, rate limits, bot protections).\n- **Cloud hardening for key theft:** Move workloads toward **short-lived credentials** (STS), enforce key rotation + last-used monitoring, and tighten IAM policies for AI-related services; add detective controls for secrets in code/artifacts.\n- **Infostealer resilience:** Expand conditional access/risk-based policies, enforce phishing-resistant MFA for high-risk roles, and improve rapid session revocation playbooks.\n- **Linux kernel CVE backlog triage:** While exploitability is unclear here (mostly local/network-adjacent per summaries), schedule kernel updates on shared compute/jump hosts and validate segmentation to reduce lateral paths.\n- **Run tabletop for “CMS compromise → ransomware” path:** Ensure playbooks cover rapid webserver isolation, credential reset scope (service accounts/API keys), and cloud pivot containment.",
   "highlights": [
     {
-      "title": "Joomla SP Page Builder RCE",
-      "link": "https://fortiguard.fortinet.com/threat-signal-report/6489",
-      "source": "FortiGuard Labs | FortiGuard Center - Threat Signal Report",
-      "published": "2026-07-17T09:21:09+00:00",
+      "title": "WordPress, 7-Zip RCE exploited; NadMesh steals AWS keys; ACR Stealer surge",
+      "link": "https://defend.network/briefings/wordpress-7zip-nadmesh-acr-stealer-rce-2026-07-19.html",
+      "source": "defend.network",
+      "published": "2026-07-19T06:30:00+00:00",
       "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
         "Malware / Payloads",
-        "Identity / Access",
-        "Ransomware"
+        "Cloud / SaaS",
+        "Exploit / PoC",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "General Security"
       ],
       "curated": true,
       "signal_tier": "critical",
       "signal_score": 100.0,
-      "priority_score": 83.15
+      "priority_score": 88.13
     },
     {
-      "title": "New Windows LegacyHive 0-Day Vulnerability Allows Hackers to Gain Admin Access",
-      "link": "https://cybersecuritynews.com/windows-legacyhive-0-day-vulnerability/",
-      "source": "Cyber Security News (FeedBurner)",
-      "published": "2026-07-17T13:26:21+00:00",
+      "title": "U.S. CISA adds Fortinet FortiSandbox and Microsoft SharePoint flaws to its Known Exploited Vulnerabilities catalog",
+      "link": "https://securityaffairs.com/195569/security/u-s-cisa-adds-fortinet-fortisandbox-and-microsoft-sharepoint-flaws-to-its-known-exploited-vulnerabilities-catalog.html",
+      "source": "Security Affairs",
+      "published": "2026-07-18T11:49:16+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Ransomware",
-        "Windows / Microsoft",
-        "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 88.1,
-      "priority_score": 85.34
-    },
-    {
-      "title": "CVE-2026-58644: Microsoft SharePoint Server Unauthenticated Remote Code Execution Vulnerability Exploited in the Wild",
-      "link": "https://www.rapid7.com/blog/post/etr-cve-2026-58644-microsoft-sharepoint-server-unauthenticated-remote-code-execution-vulnerability-exploited-in-the-wild",
-      "source": "Rapid7 Blog",
-      "published": "2026-07-17T18:18:53+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "Identity / Access",
-        "Malware / Payloads",
-        "Vendors / Product Security"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 87.27,
-      "priority_score": 87.72
-    },
-    {
-      "title": "CISA Warns of Microsoft SharePoint Code Execution Vulnerability Exploited in Attacks",
-      "link": "https://cybersecuritynews.com/microsoft-sharepoint-code-execution-vulnerability-exploited/",
-      "source": "Cyber Security News (FeedBurner)",
-      "published": "2026-07-17T08:47:16+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
+        "Cloud / SaaS",
         "Exploit / PoC",
         "General Security"
-      ],
-      "curated": false,
-      "signal_tier": "critical",
-      "signal_score": 83.1,
-      "priority_score": 74.26
-    },
-    {
-      "title": "In Other News: Iran Tracks US Military Phones, CrashStealer macOS Malware, CVD Blueprint",
-      "link": "https://www.securityweek.com/in-other-news-iran-tracks-us-military-phones-crashstealer-macos-malware-cvd-blueprint/",
-      "source": "SecurityWeek",
-      "published": "2026-07-17T14:27:54+00:00",
-      "smart_groups": [
-        "Malware / Payloads",
-        "Data Breaches / Leaks",
-        "Exploit / PoC",
-        "Ransomware",
-        "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 81.9,
-      "priority_score": 82.45
-    },
-    {
-      "title": "Three Steps to the Terminal: A Siemens ROX II Zero-Day Trilogy",
-      "link": "https://unit42.paloaltonetworks.com/siemens-rox-ii-zero-day-vulnerabilities/",
-      "source": "Unit 42",
-      "published": "2026-07-17T10:00:24+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Vendors / Product Security"
       ],
       "curated": true,
       "signal_tier": "high",
-      "signal_score": 69.79,
-      "priority_score": 82.88
-    },
-    {
-      "title": "wp2shell",
-      "link": "https://vulners.com/githubexploit/B01CB10B-AEB0-5763-B1D9-807C0D261127?utm_source=rss&utm_medium=rss&utm_campaign=rss",
-      "source": "Vulners.com RSS Feed",
-      "published": "2026-07-18T03:56:12+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Web / API Security",
-        "Crypto / Web3",
-        "Exploit / PoC"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 68.61,
-      "priority_score": 76.72
+      "signal_score": 75.98,
+      "priority_score": 82.74
     },
     {
       "title": "Exploit for CVE-2026-63030",
-      "link": "https://vulners.com/githubexploit/0EBE3C5D-5749-5966-ADAA-D184D13F2952?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "link": "https://vulners.com/githubexploit/7CD079AD-E27B-5C54-A696-60635BFDB241?utm_source=rss&utm_medium=rss&utm_campaign=rss",
       "source": "Vulners.com RSS Feed",
-      "published": "2026-07-17T23:10:07+00:00",
+      "published": "2026-07-18T14:06:48+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Web / API Security",
+        "Linux / Unix",
+        "Threat Actors / APT",
+        "Exploit / PoC",
+        "Malware / Payloads"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 75.6,
+      "priority_score": 72.4
+    },
+    {
+      "title": "Exploit for CVE-2026-63030",
+      "link": "https://vulners.com/githubexploit/86EC71B0-3FDB-53E1-A4CA-5A642F759B3F?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-07-18T17:07:39+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC",
+        "Web / API Security"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 73.6,
+      "priority_score": 73.86
+    },
+    {
+      "title": "Exploit for CVE-2026-63030",
+      "link": "https://vulners.com/githubexploit/6F13482A-B157-5DA3-9CC2-4D3684926EC1?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-07-18T20:12:07+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
         "Web / API Security",
+        "Exploit / PoC",
         "Crypto / Web3"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 68.61,
-      "priority_score": 75.53
+      "signal_score": 70.6,
+      "priority_score": 74.56
     },
     {
-      "title": "CVE-2026-16083 | Sipeed PicoClaw up to 0.2.9 LINE Webhook line.go webhook.ParseRequest authentication replay (Issue 3073)",
-      "link": "https://vuldb.com/vuln/379795",
-      "source": "VulDB Recent Entries",
-      "published": "2026-07-17T13:55:26+00:00",
+      "title": "Attackers Can Take Over WordPress Sites Using Newly Released wp2shell Exploits",
+      "link": "https://securityaffairs.com/195597/hacking/attackers-can-take-over-wordpress-sites-using-newly-released-wp2shell-exploits.html",
+      "source": "Security Affairs",
+      "published": "2026-07-19T05:04:03+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Exploit / PoC"
+        "Exploit / PoC",
+        "Cloud / SaaS",
+        "General Security"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 63.53,
-      "priority_score": 77.6
+      "signal_score": 68.98,
+      "priority_score": 78.84
     },
     {
-      "title": "CVE-2026-53013 | Linux Kernel up to 6.6.140/6.12.90/6.18.32/7.0.9 macvlan macvlan_get_size bc_cutoff privilege escalation (WID-SEC-2026-2077)",
-      "link": "https://vuldb.com/vuln/373375",
-      "source": "VulDB Updates",
-      "published": "2026-07-18T03:22:36+00:00",
+      "title": "Exploit for CVE-2026-63030",
+      "link": "https://vulners.com/githubexploit/CDF6EDA8-47D8-5314-B20C-22DEF689703D?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-07-18T16:07:41+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
+        "Web / API Security",
+        "Exploit / PoC",
         "Linux / Unix",
+        "Network / OT / ICS"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.6,
+      "priority_score": 72.94
+    },
+    {
+      "title": "wp2shell-PoC",
+      "link": "https://vulners.com/githubexploit/51C7D9F6-05E2-59F7-A602-3BD17495AF1C?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-07-18T09:30:29+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Web / API Security"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.6,
+      "priority_score": 71.17
+    },
+    {
+      "title": "Exploit for CVE-2026-60137",
+      "link": "https://vulners.com/githubexploit/8B320912-B971-590A-9E72-8DC94D63FD0E?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-07-18T21:11:34+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Web / API Security"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 67.6,
+      "priority_score": 74.99
+    },
+    {
+      "title": "Exploit for CVE-2026-63030",
+      "link": "https://vulners.com/githubexploit/EB524D5C-D08C-51D0-BD31-7D7301919A9E?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-07-18T12:11:11+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Web / API Security",
         "Exploit / PoC"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 63.39,
-      "priority_score": 80.52
+      "signal_score": 67.6,
+      "priority_score": 72.41
     }
   ]
 }
