@@ -1,176 +1,185 @@
 {
-  "generated_at": "2026-07-20T09:35:03.962475+00:00",
-  "analysis_date": "2026-07-20",
+  "generated_at": "2026-07-21T08:45:28.486815+00:00",
+  "analysis_date": "2026-07-21",
   "provider": "openai",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-07-20T06:58:46.197701+00:00",
+  "source_generated_at": "2026-07-21T08:39:47.946712+00:00",
   "source_days_back": 30,
-  "source_total_items": 48203,
-  "total_items_in_window_all": 2428,
-  "total_items_in_window_curated": 4,
+  "source_total_items": 48041,
+  "total_items_in_window_all": 2589,
+  "total_items_in_window_curated": 12,
   "total_items_in_window_selected": 40,
   "context_selection_policy": "curated-plus-operational-signal-v1",
-  "morning_call_markdown": "### Executive Summary\n- Active exploitation is ongoing for **WordPress “WP2Shell” pre-auth RCE** and **SonicWall SMA appliance zero-days** (ransomware-linked activity reported) — prioritize exposure identification + patching/mitigations today.  \n- **NGINX heap overflow RCE** is reported as actively exploited; treat internet-facing NGINX as at-risk until versions are validated and updated.  \n- Multiple **software supply-chain** alerts (malicious **PyPI**, **RubyGems**, and **npm typosquats**) — focus on dev endpoints/CI runners and rapid credential/secrets hygiene if installs are found.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) WordPress “WP2Shell” chain exploited in the wild (CVE-2026-60137, CVE-2026-63030)**\n- What happened: Active exploitation began shortly after disclosure; research describes a REST/SQLi chain leading to unauthenticated RCE.\n- Why it matters operationally: Any internet-facing WordPress instance (including marketing microsites) can become an initial access vector → webshell → lateral movement.\n- Recommended immediate actions for the SOC today: Identify all WordPress 7.x assets + verify patched version; hunt for new admin creation / plugin/theme file writes and suspicious REST requests hitting batch endpoints.\n\n**2) SonicWall SMA 1000 series zero-days exploited pre-disclosure (ransomware-linked)**\n- What happened: SonicWall SMA zero-days were used as zero-days since late June to gain root; activity tracked by Volexity (UTA0533) and linked in reporting to ransomware ops (Inc).\n- Why it matters operationally: VPN/appliance compromise enables credential theft and direct access to internal networks; high probability of follow-on ransomware/extortion playbooks.\n- Recommended immediate actions for the SOC today: Confirm whether SMA 1000 is deployed; if yes, validate firmware/hotfix status, review appliance auth/admin logs for anomalous logins/config changes, and isolate/IR-triage any device showing suspicious behavior.\n\n**3) NGINX heap buffer overflow RCE (CVE-2026-42533) reported under active exploitation**\n- What happened: NGINX RCE was patched (July 15 per reporting) but exploitation is being observed.\n- Why it matters operationally: NGINX is common in DMZ/reverse proxy roles; compromise can expose upstream apps, tokens, headers, and facilitate traffic manipulation.\n- Recommended immediate actions for the SOC today: Inventory internet-facing NGINX and confirm versions/builds; add short-term WAF/IDS focus on abnormal request patterns to NGINX frontends and monitor for spawned shells/child processes from worker/master processes on Linux hosts.\n\n**4) Developer ecosystem supply-chain: malicious PyPI / RubyGems / npm typosquats**\n- What happened: Malicious **PyPI “data-parser-utils”** drops a **Mythic/Poseidon** beacon; **RubyGems “SleeperGem”** campaign; multiple **npm @gocortexio/npmgremlinbox-typosquat-* ** packages flagged as fully compromising hosts.\n- Why it matters operationally: Dev workstations and CI runners often hold high-value secrets (repo tokens, signing keys, cloud creds) → fast path to enterprise compromise.\n- Recommended immediate actions for the SOC today: Query endpoint/EDR + software inventory for these package names and versions; if found, treat systems as compromised—quarantine, start IR, and rotate exposed secrets from a clean machine.\n\n---\n\n### Monitoring & detection recommendations\n- **WordPress web exploitation (T1190 Exploit Public-Facing Application):** WAF/web logs + WordPress access logs for spikes in POSTs to REST endpoints, unusual `wp-json` usage, and follow-on file writes under `wp-content/` (EDR + FIM).  \n- **Webshell / persistence on Linux (T1505.003 Web Shell, T1059.004 Unix Shell):** EDR on web servers for `nginx/apache/php-fpm` spawning `bash/sh/curl/wget/python/perl`, plus new cron/systemd services shortly after web requests.  \n- **SonicWall SMA compromise patterns (T1078 Valid Accounts, T1098 Account Manipulation):** VPN/appliance logs for new admin users, config export events, unexpected firmware changes, repeated auth failures followed by success from new geos/ASNs.  \n- **Ransomware precursor activity (T1562 Impair Defenses, T1486 Data Encrypted for Impact):** Windows EDR for disabling security tools, mass remote exec (PsExec/WMI), abnormal SMB admin share writes, and rapid encryption-like file rename bursts.  \n- **Supply-chain on dev endpoints/CI (T1204 User Execution, T1552 Unsecured Credentials):** EDR + proxy/DNS for package-manager executions (`pip`, `npm`, `gem`) followed by new outbound connections from build agents; audit CI logs for dependency changes in last 72h.  \n- **Credential theft / token misuse (T1550 Use Alternate Auth Material):** IdP/SSO + cloud logs for anomalous token creation, new OAuth app consents, impossible travel, and new API key issuance from dev accounts.  \n- **NGINX exposure monitoring:** Netflow/firewall + WAF for unusual high-error-rate patterns (5xx spikes), odd HTTP methods, and new upstream connections from the proxy host to internal segments not seen historically.\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** Ensure emergency patch SLAs cover *internet-facing CMS/proxies/VPN appliances*; validate WordPress/NGINX/SonicWall patch deployment reporting with asset owners.  \n- **Hardening:** Reduce WordPress attack surface (restrict REST where feasible, disable unused plugins/themes, enforce least privilege for file write permissions, add WAF virtual patches).  \n- **VPN segmentation:** Re-verify that remote-access VPNs land in restricted network zones with MFA enforcement and no direct management-plane reachability.  \n- **DevSecOps controls:** Enforce dependency allowlists, lockfiles, private registries/mirrors, and automated malware scanning for npm/pip/gem; add alerts on new direct-to-internet package downloads from CI.  \n- **Secrets hygiene:** Accelerate move to short-lived credentials for CI and rotate long-lived tokens; ensure secret scanning is enabled on repos and build logs.  \n- **Linux kernel CVE noise (multiple new LPEs listed, no exploit noted):** Track for vendor advisories and prioritize patching on multi-tenant/privileged Linux hosts (CI runners, jump boxes, bastions) rather than broad fleet emergency action today.",
+  "morning_call_markdown": "### Executive Summary\n- Active exploitation confirmed: **ServiceNow pre-auth sandbox-escape RCE (CVE-2026-6875)** and **WordPress “wp2shell” RCE chain (CVE-2026-63030 / CVE-2026-60137)** are being used in the wild; expect scanning and rapid follow-on payloads.\n- Edge/perimeter risk rising: **SonicWall SMA1000 zero-days (CVE-2026-15409/15410)** and **Palo Alto PAN-OS auth bypass used to deploy Qilin ransomware (CVE-2026-0257)** highlight high ransomware-relevant intrusion paths.\n- On-prem Microsoft exposure: reports of **SharePoint Server RCE → web shells + IIS key theft**; treat as potential initial access + persistence vector in hybrid environments.\n\n### High-priority items (immediate attention)\n\n**1) ServiceNow AI Platform pre-auth sandbox-escape RCE (CVE-2026-6875) — exploited**\n- What happened: ServiceNow **CVE-2026-6875** (pre-auth sandbox escape leading to RCE) is **actively exploited**; PoC is public.\n- Why it matters operationally: Direct compromise of a SaaS/workflow platform can enable **credential access, workflow tampering, and downstream lateral movement** into enterprise apps.\n- Recommended immediate actions for the SOC today: **Confirm patch/hotfix status with ServiceNow owners + validate instance versions;** review ServiceNow audit/security logs for **new admin/API tokens, unusual script execution/workflow changes**, and suspicious inbound requests.\n\n**2) Web app mass-exploitation risk: WordPress “wp2shell” RCE chain — exploited**\n- What happened: WordPress Core **CVE-2026-63030 + CVE-2026-60137** unauthenticated RCE chain is widely reported with **in-the-wild exploitation**.\n- Why it matters operationally: Internet-facing WordPress (marketing sites, subsidiaries, vendor microsites) is a common foothold for **web shells, credential theft, and pivoting**.\n- Recommended immediate actions for the SOC today: **Inventory all WordPress exposures (including third-party hosted) and force emergency patching/mitigation;** hunt web logs for **new PHP files, abnormal POSTs to REST endpoints, and outbound connections from web servers**.\n\n**3) Perimeter/VPN appliances: SonicWall SMA1000 zero-days + PAN-OS auth bypass tied to ransomware**\n- What happened: SonicWall SMA1000 **CVE-2026-15409/15410** used as zero-days to deploy custom malware; PAN-OS **CVE-2026-0257** reportedly used for **Qilin ransomware** intrusions.\n- Why it matters operationally: These devices sit at the edge with high privileges; compromise often leads to **rapid domain takeover and ransomware staging**.\n- Recommended immediate actions for the SOC today: **Validate firmware/hotfix levels and management-plane exposure for all SMA/PAN devices;** review VPN/firewall logs for **new admin accounts, config exports, unusual auth patterns, and suspicious post-auth traffic** (then isolate device if indicators of tampering appear).\n\n**4) Microsoft SharePoint Server exploitation (RCE → web shells + IIS key theft)**\n- What happened: Reports indicate active exploitation of SharePoint Server vulnerabilities to gain **RCE**, plant **web shells**, and steal **IIS cryptographic keys**.\n- Why it matters operationally: Key theft can enable **persistent access** (e.g., token/cookie forging depending on configuration) and stealthy re-entry even after cleanup.\n- Recommended immediate actions for the SOC today: **Prioritize on-prem SharePoint exposure review (internet-facing first) + confirm latest security updates;** hunt IIS/SharePoint logs for **new/unknown .aspx/.ashx files, abnormal requests to layouts/, and unexpected changes to machineKey/config**.\n\n### Monitoring & detection recommendations\n- **ServiceNow (CVE-2026-6875 theme):** monitor ServiceNow audit logs + IdP logs for **new OAuth apps/tokens, role escalations, unusual admin logins** (ATT&CK: T1078 Valid Accounts).\n- **WordPress mass exploitation:** from WAF/CDN + web server logs, hunt for **spikes in requests to REST API endpoints, abnormal batch routes, and new file writes under web roots** (ATT&CK: T1505.003 Web Shell).\n- **Edge device compromise (SonicWall/PAN-OS):** review firewall/VPN logs for **new local admins, config changes, unexpected reboots, outbound connections from the appliance to rare IPs** (ATT&CK: T1098 Account Manipulation, T1562 Impair Defenses).\n- **SharePoint/IIS key theft + web shells:** on SharePoint servers collect IIS logs + Windows Security + EDR for **w3wp.exe spawning cmd/powershell**, new scheduled tasks/services, and modifications to web.config/machine keys (ATT&CK: T1059 Command and Scripting Interpreter).\n- **Ransomware staging (Qilin-related behavior):** EDR hunt for **credential dumping tools, remote service creation, PsExec/WMI lateral movement**, and rapid encryption-like file I/O (ATT&CK: T1003 OS Credential Dumping, T1021 Remote Services).\n- **Windows LPE zero-day chatter (LegacyHive):** watch EDR for **unusual privilege escalation sequences** (token manipulation, suspicious DLL loads) on endpoints where attackers already have a foothold; treat as post-compromise accelerator (ATT&CK: T1068 Exploitation for Privilege Escalation).\n- **Archive-based code execution (7-Zip CVE-2026-14266):** email/web proxy + EDR: flag **inbound .xz attachments** and **7z.exe extracting followed by child process execution** (ATT&CK: T1204 User Execution).\n\n### Medium-term follow-ups\n- **Patching governance:** confirm enterprise-wide SLAs for **edge appliances + SharePoint + externally facing CMS**; require asset owners to attest patch status (include subsidiaries/marketing vendors).\n- **ServiceNow hardening:** validate **SSO enforcement, admin role reviews, token lifecycle controls**, and alerting on risky workflow/script changes.\n- **Web exposure reduction:** move WordPress and other CMS behind **WAF, rate limiting, MFA for admin, restricted REST endpoints**; ensure immutable backups for web roots.\n- **Incident readiness:** ensure playbooks cover **edge appliance compromise** (config capture, forensic preservation, credential reset scope, segmentation checks).\n- **Third-party/supply-chain visibility:** re-validate monitoring/contractual notification paths for **hosted platforms and vendors** (assumption: some business units use third-party WordPress/ServiceNow integrations).\n- **Security awareness (targeted):** remind IT/admin teams to treat **archive files (.xz) and “urgent patch” social engineering** as potential initial access vectors; enforce safe handling in sandboxed environments.",
   "highlights": [
     {
-      "title": "NGINX, WordPress, SonicWall RCEs under active exploitation; patched versions released",
-      "link": "https://defend.network/briefings/nginx-wordpress-sonicwall-rce-exploits-2026-07-20.html",
-      "source": "defend.network",
-      "published": "2026-07-20T06:30:00+00:00",
+      "title": "ServiceNow’s sandbox escape RCE hole now exploited in the wild",
+      "link": "https://www.csoonline.com/article/4198993/servicenows-sandbox-escape-rce-hole-now-exploited-in-the-wild.html",
+      "source": "CSO Online",
+      "published": "2026-07-20T20:24:54+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Threat Actors / APT",
+        "Cloud / SaaS",
         "Exploit / PoC",
-        "Malware / Payloads",
+        "Identity / Access",
+        "Network / OT / ICS",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 100.0,
+      "priority_score": 88.01
+    },
+    {
+      "title": "Critical wp2shell RCE Vulnerability – Complete Coverage Including PoC and Active Exploitation Details",
+      "link": "https://cybersecuritynews.com/critical-wp2shell-rce-vulnerability/",
+      "source": "Cyber Security News",
+      "published": "2026-07-20T15:23:10+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Web / API Security",
+        "Cloud / SaaS",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 100.0,
+      "priority_score": 85.94
+    },
+    {
+      "title": "Microsoft SharePoint Vulnerabilities Actively Exploited for RCE, Web Shells, and IIS Key Theft",
+      "link": "https://cybersecuritynews.com/microsoft-sharepoint-vulnerabilities/",
+      "source": "Cyber Security News",
+      "published": "2026-07-20T10:57:37+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Cloud / SaaS",
+        "Exploit / PoC",
         "Ransomware",
         "General Security"
       ],
       "curated": true,
       "signal_tier": "critical",
       "signal_score": 100.0,
-      "priority_score": 90.92
+      "priority_score": 84.16
     },
     {
-      "title": "Wordpress RCE, New Windows 0-day and Coca-Cola's Fairline ransomed",
-      "link": "https://cybersecuritytoday.libsyn.com/wordpress-rce-new-windows-0-day-and-coca-colas-fairline-ransomed",
-      "source": "Cybersecurity Today",
-      "published": "2026-07-20T01:00:00+00:00",
+      "title": "WordPress, SonicWall zero-days in active exploitation; FakeGit malware campaign hits 7,600 GitHub repos",
+      "link": "https://defend.network/briefings/fakegit-wordpress-sonicwall-zero-day-exploits-2026-07-21.html",
+      "source": "defend.network",
+      "published": "2026-07-21T06:30:00+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Ransomware",
-        "Identity / Access",
+        "Malware / Payloads",
         "Exploit / PoC",
-        "Phishing / Social Engineering",
-        "Windows / Microsoft",
-        "Community / Briefing"
+        "General Security"
       ],
       "curated": true,
       "signal_tier": "critical",
-      "signal_score": 100.0,
-      "priority_score": 88.18
+      "signal_score": 95.22,
+      "priority_score": 90.38
     },
     {
-      "title": "Exploit for SQL Injection in Sangoma Freepbx",
-      "link": "https://vulners.com/githubexploit/C5096BEF-00D9-5E49-9834-B2C7D92D9B2F?utm_source=rss&utm_medium=rss&utm_campaign=rss",
-      "source": "Vulners.com RSS Feed",
-      "published": "2026-07-20T06:20:30+00:00",
+      "title": "LegacyHive: Nightmare-Eclipse’s Latest Zero-Day Drop with a Stripped PoC",
+      "link": "https://www.levelblue.com/blogs/spiderlabs-blog/legacyhive-nightmare-eclipses-latest-zero-day-drop-with-a-stripped-poc",
+      "source": "LevelBlue (SpiderLabs Blog)",
+      "published": "2026-07-20T12:35:44+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Web / API Security",
         "Exploit / PoC",
-        "Linux / Unix"
+        "Ransomware",
+        "Windows / Microsoft",
+        "Vendors / Product Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 87.91,
+      "priority_score": 83.98
+    },
+    {
+      "title": "ServiceNow pre-auth RCE exploited in the wild (CVE-2026-6875)",
+      "link": "https://www.helpnetsecurity.com/2026/07/20/servicenow-cve-2026-6875-exploited/",
+      "source": "Help Net Security",
+      "published": "2026-07-20T14:32:31+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 87.3,
+      "priority_score": 86.4
+    },
+    {
+      "title": "⚡ Weekly Recap: WordPress RCE, SonicWall 0-Days, AI Service Attacks, SharePoint 0-Day and More",
+      "link": "https://thehackernews.com/2026/07/weekly-recap-wordpress-rce-sonicwall-0.html",
+      "source": "The Hacker News",
+      "published": "2026-07-20T13:32:26+00:00",
+      "smart_groups": [
+        "Malware / Payloads",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": false,
+      "signal_tier": "critical",
+      "signal_score": 83.56,
+      "priority_score": 66.71
+    },
+    {
+      "title": "wp2shell (CVE-2026-63030, CVE-2026-60137): Frequently asked questions about remote code execution chain in WordPress Core",
+      "link": "https://www.tenable.com/blog/wp2shell-cve-2026-63030-cve-2026-60137-frequently-asked-questions-about-remote-code-execution",
+      "source": "Tenable Blog",
+      "published": "2026-07-20T13:36:32+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Cloud / SaaS",
+        "Exploit / PoC",
+        "Threat Actors / APT",
+        "Web / API Security",
+        "Identity / Access",
+        "Network / OT / ICS",
+        "Ransomware",
+        "Vendors / Product Security"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 76.31,
+      "priority_score": 86.45
+    },
+    {
+      "title": "Exploit for Stack-based Buffer Overflow in Microsoft",
+      "link": "https://vulners.com/githubexploit/11907239-1F92-5FA2-A371-F849B88C5617?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-07-21T02:05:07+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Windows / Microsoft",
+        "Exploit / PoC",
+        "Ransomware"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 64.6,
-      "priority_score": 77.83
+      "signal_score": 72.59,
+      "priority_score": 76.24
     },
     {
-      "title": "CVE-2026-63974 | Linux Kernel up to 6.12.92/6.18.34/7.0.11 hci_sync hci_dev_close_sync privilege escalation",
-      "link": "https://vuldb.com/vuln/380427",
+      "title": "CVE-2026-46715 | pallets-eco Flask-Security-Too up to 5.8.0 OAuth privilege escalation",
+      "link": "https://vuldb.com/vuln/380705",
       "source": "VulDB Recent Entries",
-      "published": "2026-07-19T18:24:47+00:00",
+      "published": "2026-07-20T18:07:40+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Linux / Unix",
+        "Identity / Access",
         "Exploit / PoC"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 63.53,
-      "priority_score": 79.08
-    },
-    {
-      "title": "CVE-2026-63970 | Linux Kernel up to 6.18.34/7.0.11 Vsock virtio_transport_alloc_skb privilege escalation",
-      "link": "https://vuldb.com/vuln/380422",
-      "source": "VulDB Recent Entries",
-      "published": "2026-07-19T18:22:48+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Linux / Unix",
-        "Exploit / PoC"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 63.53,
-      "priority_score": 79.07
-    },
-    {
-      "title": "CVE-2026-64078 | Linux Kernel up to 6.18.33/7.0.10 Netfilter X Tables xt_unregister_table Local Privilege Escalation",
-      "link": "https://vuldb.com/vuln/380257",
-      "source": "VulDB Recent Entries",
-      "published": "2026-07-19T16:57:21+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Linux / Unix",
-        "Exploit / PoC"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 63.53,
-      "priority_score": 78.69
-    },
-    {
-      "title": "CVE-2026-64069 | Linux Kernel up to 6.18.33/7.0.10 Netfs netfs_queue_read privilege escalation",
-      "link": "https://vuldb.com/vuln/380252",
-      "source": "VulDB Recent Entries",
-      "published": "2026-07-19T16:54:51+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Linux / Unix",
-        "Exploit / PoC"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 63.53,
-      "priority_score": 78.68
-    },
-    {
-      "title": "CVE-2026-64060 | Linux Kernel up to 6.18.33/7.0.10 Netfs netfs_write_begin privilege escalation",
-      "link": "https://vuldb.com/vuln/380245",
-      "source": "VulDB Recent Entries",
-      "published": "2026-07-19T16:51:43+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Linux / Unix",
-        "Exploit / PoC"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 63.53,
-      "priority_score": 78.67
-    },
-    {
-      "title": "CVE-2026-64046 | Linux Kernel up to 7.0.10 TLS privilege escalation",
-      "link": "https://vuldb.com/vuln/380235",
-      "source": "VulDB Recent Entries",
-      "published": "2026-07-19T16:46:52+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Linux / Unix",
-        "Exploit / PoC"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 63.53,
-      "priority_score": 78.64
-    },
-    {
-      "title": "CVE-2026-64067 | Linux Kernel up to 7.0.10 Netfs subrequests/flags privilege escalation",
-      "link": "https://vuldb.com/vuln/380207",
-      "source": "VulDB Recent Entries",
-      "published": "2026-07-19T16:32:44+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Linux / Unix",
-        "Exploit / PoC"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 63.53,
-      "priority_score": 78.58
+      "signal_score": 69.57,
+      "priority_score": 78.75
     }
   ]
 }
