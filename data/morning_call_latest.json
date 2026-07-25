@@ -1,135 +1,163 @@
 {
-  "generated_at": "2026-07-24T08:42:33.834857+00:00",
-  "analysis_date": "2026-07-24",
+  "generated_at": "2026-07-25T08:24:40.046044+00:00",
+  "analysis_date": "2026-07-25",
   "provider": "openai",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-07-24T06:37:23.309046+00:00",
+  "source_generated_at": "2026-07-25T02:55:48.294658+00:00",
   "source_days_back": 30,
-  "source_total_items": 49822,
-  "total_items_in_window_all": 2720,
-  "total_items_in_window_curated": 13,
-  "total_items_in_window_selected": 43,
+  "source_total_items": 49505,
+  "total_items_in_window_all": 1775,
+  "total_items_in_window_curated": 5,
+  "total_items_in_window_selected": 40,
   "context_selection_policy": "curated-plus-operational-signal-v1",
-  "morning_call_markdown": "### Executive Summary\n- Active exploitation: **Check Point SmartConsole auth bypass (CVE-2026-16232)** and **Microsoft SharePoint Server RCE chain (incl. CVE-2026-50522)** are in KEV/observed exploitation—treat as **internet-facing takeover risk**.\n- Espionage campaign: **Russia-linked “Laundry Bear”** using **Zimbra zero-day + “half-click” phishing** to steal mail/2FA recovery data—high risk to email and identity controls.\n- Ransomware tradecraft update: **Chaos ransomware** using **msaRAT** to tunnel C2 via **victim Chrome/Edge (DevTools protocol/WebRTC/TURN)**—expect stealthy egress that looks like normal browser traffic.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Check Point SmartConsole / Security Management: auth bypass exploited (CVE-2026-16232)**\n- **What happened:** A critical SmartConsole login auth bypass is being exploited in the wild, enabling unauthenticated admin-level access on vulnerable Check Point management components.\n- **Why it matters operationally:** Management plane compromise can lead to **policy tampering, credential theft, lateral movement**, and broad network exposure (high blast radius in financial environments).\n- **Recommended immediate actions for the SOC today:** Confirm exposure of SmartConsole/management interfaces (esp. internet-reachable) and **fast-track vendor mitigations/patch**; hunt for **new admin sessions/tokens**, unexpected policy installs, and anomalous logins from unusual source IPs.\n\n**2) Microsoft SharePoint Server: critical RCEs with PoC + active exploitation (incl. CVE-2026-50522)**\n- **What happened:** CERT-EU reports PoC and active exploitation in a set of critical SharePoint Server RCE vulnerabilities, with KEV-style signals.\n- **Why it matters operationally:** SharePoint is frequently **domain-adjacent** (service accounts, integrated auth, file/workflow access) and is a common **initial access → ransomware** pathway.\n- **Recommended immediate actions for the SOC today:** Identify all SharePoint servers (prod/dev/DR), validate patch level from July updates, and **isolate/limit inbound access** until patched; review IIS/SharePoint logs for **unusual POSTs, webshell-like file writes, new app pool behavior**.\n\n**3) Zimbra zero-day + “half-click” phishing (Laundry Bear)**\n- **What happened:** Reporting indicates a Russia-backed actor exploited a Zimbra zero-day and used minimal-interaction phishing (open/preview) to exfiltrate mailbox data and 2FA recovery info.\n- **Why it matters operationally:** Direct impact to **email confidentiality**, executive communications, and **identity recovery paths**; also enables downstream BEC, fraud, and persistence.\n- **Recommended immediate actions for the SOC today:** Verify if we run Zimbra or have subsidiaries/vendors that do; tighten email security controls (safe links/preview handling where applicable) and hunt for **mass mailbox access, abnormal SOAP/IMAP/Web access, and unusual OAuth/token events**.\n\n**4) Ransomware tooling: Chaos “msaRAT” covert C2 via Chrome/Edge**\n- **What happened:** Talos/others detail msaRAT using the victim’s browser (Chrome/Edge) via Chrome DevTools Protocol to relay C2 and mask network indicators.\n- **Why it matters operationally:** Egress may resemble normal browser activity, reducing effectiveness of simple C2 domain/IP blocks; suggests **post-compromise stage** aligned with ransomware operators.\n- **Recommended immediate actions for the SOC today:** Hunt endpoints for **unexpected Chrome/Edge instances launched by non-user parent processes** and suspicious DevTools/WebRTC/TURN usage; escalate any findings with concurrent credential access, discovery, or lateral movement signals.\n\n**5) Identity / web-exposed auth bypasses with PoC signals (Logto SSO replay, WordPress SAML SSO bypass, other PoC feeds)**\n- **What happened:** Multiple authentication bypass / replay / missing-auth issues surfaced with PoC references (not all confirmed exploited); likely to be opportunistically scanned.\n- **Why it matters operationally:** Finance orgs often have **edge apps, portals, and SSO components** that can be quickly weaponized for initial access.\n- **Recommended immediate actions for the SOC today:** Inventory externally exposed SSO/WordPress/IdP-adjacent services and **increase WAF/IDS scrutiny** for auth endpoints; prioritize patch/mitigate if these products exist internally (assumption: unknown presence until CMDB verification).\n\n---\n\n### Monitoring & detection recommendations\n- **Check Point management plane:** Monitor Check Point mgmt logs + firewall logs for **new/rare admin logins**, token creation, policy installs, and config export events (ATT&CK: Valid Accounts **T1078**, Modify Cloud/Network Config analogs).\n- **SharePoint/IIS telemetry:** Hunt in IIS logs, Windows Security, and EDR for **suspicious web requests**, new DLL/ASPX drops, new scheduled tasks/services after web traffic spikes (ATT&CK: Exploit Public-Facing App **T1190**, Web Shell **T1505.003**).\n- **Email/IdP anomalous access:** From email gateway + IdP logs, detect **impossible travel, new device sign-ins, mass mailbox access, mailbox rule creation/forwarding** (ATT&CK: Email Collection **T1114**, Exfiltration **T1041**).\n- **Zimbra-specific (if present):** Monitor Zimbra webmail/SOAP/IMAP logs for **unusual user-agent strings, high-volume reads, directory enumeration**, and access to recovery/2FA artifacts (assumption: exact vectors undisclosed).\n- **Browser-as-C2 behavior:** In EDR, alert on **chrome.exe/msedge.exe spawned by services, WMI, scheduled tasks, Office, or unknown binaries**; correlate with network to TURN/WebRTC-heavy sessions (ATT&CK: Proxy **T1090**, Command and Control **TA0011**).\n- **Egress filtering sanity check:** Proxy/DNS logs—flag endpoints with **newly observed destinations** that coincide with browser processes **without user interaction** (no foreground window, off-hours patterns).\n- **Ransomware pre-encryption signals:** Look for **credential dumping attempts, SMB lateral movement bursts, disabling of security tools, shadow copy deletion** in parallel with above initial-access leads (ATT&CK: OS Credential Dumping **T1003**, Inhibit System Recovery **T1490**).\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** Fast-track remediation SLAs for **KEV-listed** SharePoint and Check Point items; verify compensating controls for any systems that cannot be patched immediately (network isolation, admin plane access restrictions).\n- **Email hardening:** Review controls against **preview-triggered content** and strengthen anti-phishing for “half-click” patterns; reinforce DMARC/SPF/DKIM enforcement and user reporting workflows.\n- **Browser telemetry improvements:** Ensure EDR is collecting **process tree + command-line + network attribution** for Chrome/Edge; consider stricter application control for **unauthorized DevTools/remote debugging** usage where feasible.\n- **Third-party/vendor risk:** Query critical vendors/outsourcers (esp. email/portal providers) about **Zimbra exposure** and patch status; require attestation where email is handled externally.\n- **SSO/web app inventory & hygiene:** Validate whether **Logto, WordPress SAML SSO plugins, Langflow OSS, Oracle middleware components** exist in our environment; if present, add to prioritized scanning and patch backlog (assumption: presence unknown).\n- **Ransomware readiness:** Re-validate restore testing, privileged access protections, and segmentation assumptions in light of **increasing ransomware fragmentation and supply-chain targeting** trends.",
+  "morning_call_markdown": "### Executive Summary\n- Multiple **in-the-wild / zero-day-style** threats to enterprise edge and admin tooling: **FastJson (Java/Spring Boot) RCE**, **Zimbra “open/preview” zero-day**, and **Check Point SmartConsole exploited zero-day**.\n- **Pre-auth web app RCE chains with public PoC** (WordPress “wp2shell”, IBM Langflow OSS) raise immediate risk for any exposed instances and are commonly leveraged for ransomware staging.\n- Ongoing shift toward **initial access via infostealer logs + credential replay**; prioritize credential hygiene, IdP monitoring, and rapid containment of suspicious sessions.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Critical FastJson 1.x zero-day RCE (CVE-2026-16723)**\n- What happened: Critical RCE disclosed in **FastJson 1.2.68–1.2.83** under certain **Spring Boot** deployment conditions (reported as zero-day).\n- Why it matters operationally: FastJson is common in Java services; exploitability can lead to **server takeover** and rapid lateral movement in app tiers.\n- Recommended immediate actions for the SOC today: Identify internet-facing Java/Spring Boot services using FastJson 1.x + flag WAF/IDS hits; trigger emergency patch/mitigation process and add temporary WAF rules/blocks if available.\n\n**2) Email platform/admin tooling under active exploitation (Zimbra zero-day + Check Point SmartConsole zero-day)**\n- What happened: **TA488** reportedly exploited a **Zimbra “open/preview”** flaw to steal mail/creds; separate reporting indicates **Check Point SmartConsole** zero-day exploitation enabling security config changes.\n- Why it matters operationally: Zimbra compromise enables **credential theft + mailbox exfil**; SmartConsole exploitation can **weaken perimeter policy** and enable follow-on intrusion without noisy malware.\n- Recommended immediate actions for the SOC today: Hunt for abnormal Zimbra access/exfil patterns and privileged mail actions; review Check Point management/admin logs for unexpected policy edits/new admins and immediately restrict SmartConsole exposure/admin access paths.\n\n**3) Pre-auth RCE with PoC: WordPress “wp2shell” chain + IBM Langflow OSS**\n- What happened: Public exploit references for **WordPress Core pre-auth RCE chain** (CVE-2026-63030 + CVE-2026-60137; route confusion + SQLi → RCE) and **IBM Langflow OSS unauth RCE chain** (CVE-2026-9198 with related bypass/injection CVEs).\n- Why it matters operationally: PoC + pre-auth RCE on common web stacks is a **high-likelihood entry path** (often followed by webshells, credential dumping, ransomware).\n- Recommended immediate actions for the SOC today: Inventory and validate whether any WordPress/Langflow instances are internet-facing; add virtual patching (WAF) and monitor for webshell/process anomalies on hosts serving these apps until patched.\n\n**4) Credential replay / “stealer log” fueled intrusions (plus replay-style auth bypass CVE)**\n- What happened: Reporting highlights **infostealer logs** as a dominant initial-access commodity; separate disclosure includes **auth capture-replay bypass** in wevm mppx (CVE-2026-34209).\n- Why it matters operationally: Financial-sector compromise increasingly starts with **valid sessions** (less phishing, more “already stolen” creds), reducing traditional email-detection value and stressing IdP telemetry.\n- Recommended immediate actions for the SOC today: Enforce/verify MFA and conditional access for privileged roles; monitor for impossible travel/new device sign-ins and immediately revoke tokens/reset creds on suspicious session patterns.\n\n---\n\n### Monitoring & detection recommendations\n- **Java/Spring services (FastJson):** EDR + app server logs (Tomcat/Spring), WAF logs; hunt for suspicious deserialization/RCE behaviors (new child processes from java, unusual outbound) (ATT&CK: T1203, T1059).\n- **Zimbra:** Zimbra audit/access logs + proxy/WAF + DLP/egress; look for spikes in mailbox export, unusual IMAP/HTTP access, admin token creation, and large outbound data shortly after email “preview/open” events (ATT&CK: T1114, T1041).\n- **Check Point SmartConsole:** Check Point management logs + SIEM audit trails; alert on policy/package changes outside change window, new admin accounts, changes to NAT/VPN rules, and log-forwarding tampering (ATT&CK: T1562.001, T1098).\n- **WordPress/Langflow exploitation:** Web server logs (nginx/apache), WAF, EDR on web hosts; detect REST API abuse patterns, SQLi indicators, creation of new PHP files, cron modifications, or reverse shells (ATT&CK: T1505.003, T1190).\n- **Infostealer-log follow-on:** IdP (Okta/Azure AD) sign-in logs, CASB, VPN logs; alert on new device/browser fingerprints, atypical OAuth consent, token refresh bursts, and access to email/cloud storage soon after first login (ATT&CK: T1078, T1550.001).\n- **Linux local privesc PoC signal (kernel LPE references):** EDR for Linux + auditd; watch for compilation on servers, unusual use of `unshare`, `bpf`, `perf`, `mount`, or rapid privilege transitions to root (ATT&CK: T1068).\n- **Phish-to-RAT campaigns (fake payment receipts / fake plugins):** Email gateway + endpoint telemetry; flag oversized attachments, unusual archive formats, and installer/plugin execution from user profile paths (ATT&CK: T1566.001, T1204).\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** Validate exposure and patch plans for: WordPress core versions in scope, Zimbra, Check Point SmartConsole, Redis (CVE-2026-66373; authenticated RESTORE edge case), and Firefox critical RCE CVEs (CVE-2026-15718 / CVE-2026-16350).\n- **WAF/virtual patching playbooks:** Ensure rapid rule deployment procedures for high-volume app CVEs (WordPress, Java libs) and confirm coverage for internet-facing properties.\n- **Credential hygiene uplift:** Expand routine checks for leaked credentials (brand/domain monitoring) and tighten conditional access (device compliance, geo-fencing for admins, token lifetime policies).\n- **Supply-chain/dev risk:** Brief engineering on “slopsquatting” risk (AI-hallucinated packages); require dependency pinning, allowlisting, and artifact signing in CI/CD.\n- **Cloud & Linux baseline:** Review Ubuntu kernel advisories relevant to your cloud footprints (AWS/Azure variants) and ensure kernel/livepatch cadence aligns with critical workloads.\n- **IR readiness:** Pre-stage containment steps for mail server compromise and perimeter management compromise (Zimbra/Check Point): rapid token revocation, rule rollback, admin credential reset, and forensic log preservation.",
   "highlights": [
     {
-      "title": "2026-009: Critical Vulnerabilities in Microsoft SharePoint",
-      "link": "https://cert.europa.eu/publications/security-advisories/2026-009/",
-      "source": "CERT-EU Security Advisories",
-      "published": "2026-07-23T09:13:03+00:00",
+      "title": "Imperva Customers Protected Against CVE-2026-16723: Critical FastJson 1.x Zero-Day RCE",
+      "link": "https://www.imperva.com/blog/imperva-customers-protected-against-cve-2026-16723-critical-fastjson-1-x-zero-day-rce/",
+      "source": "Imperva Blog",
+      "published": "2026-07-24T18:16:29+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC",
-        "Cloud / SaaS",
-        "Government / CERT"
-      ],
-      "curated": false,
-      "signal_tier": "critical",
-      "signal_score": 100.0,
-      "priority_score": 78.67
-    },
-    {
-      "title": "New Check Point Zero-Day Vulnerability Exploited in the Wild",
-      "link": "https://www.securityweek.com/new-check-point-zero-day-vulnerability-exploited-in-the-wild/",
-      "source": "SecurityWeek",
-      "published": "2026-07-23T09:06:04+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 93.17,
-      "priority_score": 85.05
-    },
-    {
-      "title": "CVE-2026-16232: Critical Check Point SmartConsole Authentication Bypass Exploited in the Wild",
-      "link": "https://www.rapid7.com/blog/post/etr-cve-2026-16232-critical-check-point-smartconsole-authentication-bypass-exploited-in-the-wild",
-      "source": "Rapid7 Blog",
-      "published": "2026-07-23T11:57:30+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "Identity / Access",
         "Vendors / Product Security"
       ],
       "curated": true,
       "signal_tier": "critical",
-      "signal_score": 87.3,
-      "priority_score": 86.54
+      "signal_score": 80.41,
+      "priority_score": 84.8
     },
     {
-      "title": "Critical Check Point Zero-Day Vulnerability Actively Exploited",
-      "link": "https://www.news4hackers.com/critical-check-point-zero-day-vulnerability-actively-exploited/",
-      "source": "News4Hackers",
-      "published": "2026-07-23T14:07:41+00:00",
+      "title": "In Other News: Dolphin X AI-Powered Malware, Car Anti-Theft Device Hack, 400 Linux Kernel Flaws",
+      "link": "https://www.securityweek.com/in-other-news-dolphin-x-ai-powered-malware-car-anti-theft-device-hack-400-linux-kernel-flaws/",
+      "source": "SecurityWeek",
+      "published": "2026-07-24T14:20:00+00:00",
       "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 86.32,
-      "priority_score": 86.52
-    },
-    {
-      "title": "Check Point hole grants unauthenticated attackers full SmartConsole admin privileges",
-      "link": "https://www.csoonline.com/article/4200913/check-point-hole-grants-unauthenticated-attackers-full-smartconsole-admin-privileges.html",
-      "source": "CSO Online",
-      "published": "2026-07-23T20:14:58+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
+        "Linux / Unix",
+        "Cloud / SaaS",
         "Malware / Payloads",
-        "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 83.31,
-      "priority_score": 88.56
-    },
-    {
-      "title": "Ransomware in 2026: More groups, more victims, no slowdown",
-      "link": "https://www.helpnetsecurity.com/2026/07/24/ransomware-attack-trends-2026-report/",
-      "source": "Help Net Security",
-      "published": "2026-07-24T04:30:22+00:00",
-      "smart_groups": [
-        "Threat Actors / APT",
-        "Crypto / Web3",
         "Ransomware",
         "Vulnerabilities / CVEs",
         "General Security"
       ],
       "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 78.41,
-      "priority_score": 86.41
+      "signal_tier": "high",
+      "signal_score": 68.09,
+      "priority_score": 84.75
     },
     {
-      "title": "Infosec News Nuggets — July 23, 2026",
-      "link": "https://aboutdfir.com/infosec-news-nuggets-july-23-2026/",
-      "source": "AboutDFIR – The Definitive Compendium Project",
-      "published": "2026-07-23T13:16:01+00:00",
+      "title": "CVE-2026-34209 | wevm mppx up to 0.4.10 authentication replay",
+      "link": "https://vuldb.com/vuln/354397",
+      "source": "VulDB Updates",
+      "published": "2026-07-25T00:06:40+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Crypto / Web3",
-        "Exploit / PoC",
-        "Detection Engineering"
+        "Exploit / PoC"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 77.06,
-      "priority_score": 75.7
+      "signal_score": 63.39,
+      "priority_score": 81.01
     },
     {
-      "title": "New Kimi K3 AI Agent Uncovers 0-Day Exploits in Redis Server",
-      "link": "https://cybersecuritynews.com/redis-server-0-day-exploit/",
+      "title": "CVE-2026-31479 | Linux Kernel up to 6.12.79/6.18.20/6.19.10 drm privilege escalation (Nessus ID 329305 / WID-SEC-2026-1252)",
+      "link": "https://vuldb.com/vuln/358890",
+      "source": "VulDB Updates",
+      "published": "2026-07-24T21:32:28+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Linux / Unix",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 63.39,
+      "priority_score": 80.33
+    },
+    {
+      "title": "CVE-2026-60744 | Oracle Cost Management up to 12.2.15 Internal Operations privilege escalation (EUVD-2026-47078)",
+      "link": "https://vuldb.com/vuln/381742",
+      "source": "VulDB Updates",
+      "published": "2026-07-24T20:42:50+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 63.39,
+      "priority_score": 80.1
+    },
+    {
+      "title": "CVE-2026-15718 | Mozilla Firefox up to 152.0.5 Remote Code Execution (Nessus ID 327187 / WID-SEC-2026-2340)",
+      "link": "https://vuldb.com/vuln/378295",
+      "source": "VulDB Updates",
+      "published": "2026-07-24T09:05:51+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 63.39,
+      "priority_score": 77.04
+    },
+    {
+      "title": "CVE-2026-16350 | Mozilla Firefox up to 115.37/140.12/152 cubeb Remote Code Execution (Nessus ID 329091 / WID-SEC-2026-2458)",
+      "link": "https://vuldb.com/vuln/380850",
+      "source": "VulDB Updates",
+      "published": "2026-07-24T08:51:20+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 63.39,
+      "priority_score": 76.97
+    },
+    {
+      "title": "Exploit for Out-of-bounds Write in Linux Linux_Kernel",
+      "link": "https://vulners.com/githubexploit/CCDEA733-6062-59B7-8900-DB0A735B1D7E?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-07-24T13:01:31+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Linux / Unix",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 62.51,
+      "priority_score": 73.27
+    },
+    {
+      "title": "How Infostealer Logs Became the Fuel Behind Massive Cloud Data Breaches",
+      "link": "https://cybersecuritynews.com/how-infostealer-logs-became-the-fuel/",
       "source": "Cyber Security News (FeedBurner)",
-      "published": "2026-07-23T11:07:50+00:00",
+      "published": "2026-07-24T08:42:38+00:00",
+      "smart_groups": [
+        "Malware / Payloads",
+        "Identity / Access",
+        "Data Breaches / Leaks",
+        "Threat Actors / APT",
+        "Exploit / PoC",
+        "Phishing / Social Engineering",
+        "Ransomware",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 62.14,
+      "priority_score": 84.92
+    },
+    {
+      "title": "Russian Hackers Used a Zimbra Zero-Day to Steal Emails Without Link Clicks",
+      "link": "https://hackread.com/russian-hackers-zimbra-0-day-steal-emails-link-clicks/",
+      "source": "HackRead",
+      "published": "2026-07-24T11:04:51+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC",
@@ -137,39 +165,8 @@
       ],
       "curated": true,
       "signal_tier": "high",
-      "signal_score": 70.16,
-      "priority_score": 83.95
-    },
-    {
-      "title": "CVE-2026-15614 | Logto up to 1.37.1 Single Sign-On single-sign-on.ts authentication replay",
-      "link": "https://vuldb.com/vuln/382752",
-      "source": "VulDB Recent Entries",
-      "published": "2026-07-23T16:32:42+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Identity / Access",
-        "Exploit / PoC"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 69.53,
-      "priority_score": 78.69
-    },
-    {
-      "title": "Exploit for Missing Authentication for Critical Function in Mcpjam Inspector",
-      "link": "https://vulners.com/githubexploit/BB3F0A9F-5105-5AF5-A7BF-4D0BB9DEB6BE?utm_source=rss&utm_medium=rss&utm_campaign=rss",
-      "source": "Vulners.com RSS Feed",
-      "published": "2026-07-23T21:31:22+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "Identity / Access",
-        "Linux / Unix"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 68.52,
-      "priority_score": 75.0
+      "signal_score": 59.62,
+      "priority_score": 82.13
     }
   ]
 }
