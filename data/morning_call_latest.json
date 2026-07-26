@@ -1,59 +1,136 @@
 {
-  "generated_at": "2026-07-25T08:24:40.046044+00:00",
-  "analysis_date": "2026-07-25",
+  "generated_at": "2026-07-26T08:41:11.083561+00:00",
+  "analysis_date": "2026-07-26",
   "provider": "openai",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-07-25T02:55:48.294658+00:00",
+  "source_generated_at": "2026-07-26T07:47:59.796343+00:00",
   "source_days_back": 30,
-  "source_total_items": 49505,
-  "total_items_in_window_all": 1775,
-  "total_items_in_window_curated": 5,
+  "source_total_items": 50614,
+  "total_items_in_window_all": 1650,
+  "total_items_in_window_curated": 3,
   "total_items_in_window_selected": 40,
   "context_selection_policy": "curated-plus-operational-signal-v1",
-  "morning_call_markdown": "### Executive Summary\n- Multiple **in-the-wild / zero-day-style** threats to enterprise edge and admin tooling: **FastJson (Java/Spring Boot) RCE**, **Zimbra “open/preview” zero-day**, and **Check Point SmartConsole exploited zero-day**.\n- **Pre-auth web app RCE chains with public PoC** (WordPress “wp2shell”, IBM Langflow OSS) raise immediate risk for any exposed instances and are commonly leveraged for ransomware staging.\n- Ongoing shift toward **initial access via infostealer logs + credential replay**; prioritize credential hygiene, IdP monitoring, and rapid containment of suspicious sessions.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Critical FastJson 1.x zero-day RCE (CVE-2026-16723)**\n- What happened: Critical RCE disclosed in **FastJson 1.2.68–1.2.83** under certain **Spring Boot** deployment conditions (reported as zero-day).\n- Why it matters operationally: FastJson is common in Java services; exploitability can lead to **server takeover** and rapid lateral movement in app tiers.\n- Recommended immediate actions for the SOC today: Identify internet-facing Java/Spring Boot services using FastJson 1.x + flag WAF/IDS hits; trigger emergency patch/mitigation process and add temporary WAF rules/blocks if available.\n\n**2) Email platform/admin tooling under active exploitation (Zimbra zero-day + Check Point SmartConsole zero-day)**\n- What happened: **TA488** reportedly exploited a **Zimbra “open/preview”** flaw to steal mail/creds; separate reporting indicates **Check Point SmartConsole** zero-day exploitation enabling security config changes.\n- Why it matters operationally: Zimbra compromise enables **credential theft + mailbox exfil**; SmartConsole exploitation can **weaken perimeter policy** and enable follow-on intrusion without noisy malware.\n- Recommended immediate actions for the SOC today: Hunt for abnormal Zimbra access/exfil patterns and privileged mail actions; review Check Point management/admin logs for unexpected policy edits/new admins and immediately restrict SmartConsole exposure/admin access paths.\n\n**3) Pre-auth RCE with PoC: WordPress “wp2shell” chain + IBM Langflow OSS**\n- What happened: Public exploit references for **WordPress Core pre-auth RCE chain** (CVE-2026-63030 + CVE-2026-60137; route confusion + SQLi → RCE) and **IBM Langflow OSS unauth RCE chain** (CVE-2026-9198 with related bypass/injection CVEs).\n- Why it matters operationally: PoC + pre-auth RCE on common web stacks is a **high-likelihood entry path** (often followed by webshells, credential dumping, ransomware).\n- Recommended immediate actions for the SOC today: Inventory and validate whether any WordPress/Langflow instances are internet-facing; add virtual patching (WAF) and monitor for webshell/process anomalies on hosts serving these apps until patched.\n\n**4) Credential replay / “stealer log” fueled intrusions (plus replay-style auth bypass CVE)**\n- What happened: Reporting highlights **infostealer logs** as a dominant initial-access commodity; separate disclosure includes **auth capture-replay bypass** in wevm mppx (CVE-2026-34209).\n- Why it matters operationally: Financial-sector compromise increasingly starts with **valid sessions** (less phishing, more “already stolen” creds), reducing traditional email-detection value and stressing IdP telemetry.\n- Recommended immediate actions for the SOC today: Enforce/verify MFA and conditional access for privileged roles; monitor for impossible travel/new device sign-ins and immediately revoke tokens/reset creds on suspicious session patterns.\n\n---\n\n### Monitoring & detection recommendations\n- **Java/Spring services (FastJson):** EDR + app server logs (Tomcat/Spring), WAF logs; hunt for suspicious deserialization/RCE behaviors (new child processes from java, unusual outbound) (ATT&CK: T1203, T1059).\n- **Zimbra:** Zimbra audit/access logs + proxy/WAF + DLP/egress; look for spikes in mailbox export, unusual IMAP/HTTP access, admin token creation, and large outbound data shortly after email “preview/open” events (ATT&CK: T1114, T1041).\n- **Check Point SmartConsole:** Check Point management logs + SIEM audit trails; alert on policy/package changes outside change window, new admin accounts, changes to NAT/VPN rules, and log-forwarding tampering (ATT&CK: T1562.001, T1098).\n- **WordPress/Langflow exploitation:** Web server logs (nginx/apache), WAF, EDR on web hosts; detect REST API abuse patterns, SQLi indicators, creation of new PHP files, cron modifications, or reverse shells (ATT&CK: T1505.003, T1190).\n- **Infostealer-log follow-on:** IdP (Okta/Azure AD) sign-in logs, CASB, VPN logs; alert on new device/browser fingerprints, atypical OAuth consent, token refresh bursts, and access to email/cloud storage soon after first login (ATT&CK: T1078, T1550.001).\n- **Linux local privesc PoC signal (kernel LPE references):** EDR for Linux + auditd; watch for compilation on servers, unusual use of `unshare`, `bpf`, `perf`, `mount`, or rapid privilege transitions to root (ATT&CK: T1068).\n- **Phish-to-RAT campaigns (fake payment receipts / fake plugins):** Email gateway + endpoint telemetry; flag oversized attachments, unusual archive formats, and installer/plugin execution from user profile paths (ATT&CK: T1566.001, T1204).\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** Validate exposure and patch plans for: WordPress core versions in scope, Zimbra, Check Point SmartConsole, Redis (CVE-2026-66373; authenticated RESTORE edge case), and Firefox critical RCE CVEs (CVE-2026-15718 / CVE-2026-16350).\n- **WAF/virtual patching playbooks:** Ensure rapid rule deployment procedures for high-volume app CVEs (WordPress, Java libs) and confirm coverage for internet-facing properties.\n- **Credential hygiene uplift:** Expand routine checks for leaked credentials (brand/domain monitoring) and tighten conditional access (device compliance, geo-fencing for admins, token lifetime policies).\n- **Supply-chain/dev risk:** Brief engineering on “slopsquatting” risk (AI-hallucinated packages); require dependency pinning, allowlisting, and artifact signing in CI/CD.\n- **Cloud & Linux baseline:** Review Ubuntu kernel advisories relevant to your cloud footprints (AWS/Azure variants) and ensure kernel/livepatch cadence aligns with critical workloads.\n- **IR readiness:** Pre-stage containment steps for mail server compromise and perimeter management compromise (Zimbra/Check Point): rapid token revocation, rule rollback, admin credential reset, and forensic log preservation.",
+  "morning_call_markdown": "### Executive Summary\n- Cl0p affiliates are actively exploiting internet-exposed PTC Windchill/FlexPLM in a data-extortion campaign—treat any exposure as **high-risk today**.\n- Public PoC is now available for a **GitLab self-managed RCE path (authenticated)**; prioritize patch verification and monitor for “commands as git” behavior.\n- Multiple **high-impact RCE/auth-bypass disclosures** (Fastjson 1.x under active attack/no patch; WebLogic SAML auth bypass PoC; several web-app/CMS pre-auth RCE/file-read PoCs) increase opportunistic scanning pressure—tighten internet exposure and detection.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Cl0p affiliates exploiting PTC Windchill/FlexPLM (internet-exposed)**\n- What happened: Reporting indicates Cl0p-linked actors are chaining flaws in PTC Windchill/FlexPLM for pre-auth access leading to compromise and data theft.\n- Why it matters operationally: Direct path to data exfiltration/extortion; opportunistic targeting of exposed enterprise apps can hit third parties/suppliers connected to financial workflows.\n- Recommended immediate actions for the SOC today: Identify any Windchill/FlexPLM exposure (ASM scans, CMDB, firewall NATs) and **block/limit to VPN**; hunt for unusual web requests/auth events and outbound data transfer from those hosts.\n\n**2) GitLab self-managed RCE PoC published (authenticated user → run commands as `git`)**\n- What happened: A working PoC was released for a GitLab flaw patched weeks ago; unpatched instances allow authenticated users who can push to execute commands as `git`.\n- Why it matters operationally: Enables CI/CD and source-code supply-chain compromise, credential access, and lateral movement from developer platforms.\n- Recommended immediate actions for the SOC today: Confirm GitLab patch level (focus on self-managed) and emergency-update if behind; monitor GitLab project activity for suspicious notebook/commit patterns and any spawned processes under the `git` account.\n\n**3) Fastjson 1.x actively exploited (no patch referenced)**\n- What happened: Briefing reports active exploitation of Fastjson 1.x RCE with no vendor patch available (details limited—assume widespread scanning/exploit attempts).\n- Why it matters operationally: Fastjson is common in Java services; exploitation can lead to initial access on internet-facing APIs and internal middleware.\n- Recommended immediate actions for the SOC today: Inventory Java services using Fastjson 1.x (SBOM/appsec inventory, runtime dependency scans) and **add WAF/API gateway mitigations** (block known gadget/deserialization patterns where feasible); increase alerting on anomalous Java process behaviors (new child processes, shell spawns, unexpected outbound).\n\n**4) Oracle WebLogic Server SAML authentication bypass PoC (CVE-2026-60206)**\n- What happened: A PoC is circulating for a critical WebLogic SAML auth bypass enabling remote compromise by forging assertions.\n- Why it matters operationally: WebLogic remains prevalent in legacy enterprise stacks; auth bypass can be a clean prelude to full takeover and data access.\n- Recommended immediate actions for the SOC today: Locate any WebLogic (especially SAML-enabled) and validate patch/mitigation status; monitor for abnormal SAML assertions, unexpected admin/session creation, and new webshell-like artifacts on WebLogic hosts.\n\n**5) Opportunistic web-app/CMS pre-auth bugs with PoCs (Microweber file-read; DataEase RCE chain; Crawl4AI pre-auth RCE; Sulu Admin API auth bypass)**\n- What happened: Multiple PoCs/technical writeups dropped for unauth file read/auth bypass and RCE chains across popular OSS/admin tools.\n- Why it matters operationally: These tools often appear in “shadow IT,” PoC release accelerates mass exploitation, and file-read can leak secrets (.env, DB creds) enabling follow-on compromise.\n- Recommended immediate actions for the SOC today: Run an external exposure sweep for these products and **remove from internet** or restrict to allowlists; hunt for access to sensitive paths (e.g., `.env`, WSDL/admin endpoints) and new admin/API tokens or DB connection attempts.\n\n---\n\n### Monitoring & detection recommendations\n- **PTC Windchill/FlexPLM**: WAF/reverse-proxy + app logs + firewall egress; hunt for unusual WSDL endpoint access, spikes in 4xx/5xx, and large outbound transfers (ATT&CK: Exfiltration T1041).\n- **GitLab RCE behavior**: GitLab audit logs + Linux EDR on GitLab host; alert on `git` user spawning shells/command interpreters and unexpected child processes (ATT&CK: Command and Scripting Interpreter T1059).\n- **Java/Fastjson exploitation**: API gateway/WAF + JVM/app logs + EDR; flag suspicious request bodies to JSON endpoints, sudden error bursts, and post-request process execution or outbound connections from Java services (ATT&CK: Exploit Public-Facing Application T1190).\n- **WebLogic SAML abuse**: IdP/SAML logs + WebLogic access logs; look for atypical assertion issuers/audiences, sudden privilege changes, and new sessions from unusual IP geos (ATT&CK: Valid Accounts T1078).\n- **Web-app PoC fallout (Microweber/DataEase/Sulu/Crawl4AI)**: Web server logs; hunt for path traversal/file reads (`..` patterns) and repeated hits to admin/API endpoints from single sources (ATT&CK: Initial Access T1190).\n- **Linux kernel/network stack exposure (Netfilter RCE items)**: Perimeter IDS/IPS + kernel/host telemetry on exposed Linux appliances; prioritize monitoring of internet-facing Linux gateways for crashes/restarts, kernel oops, and anomalous netfilter activity (assumption: exploitability unclear; treat as “watch” unless vendor confirms).\n- **Ransomware/extortion readiness**: DLP/proxy + DNS + EDR; alert on bulk archiving (`7z`, `rar`) plus immediate outbound uploads to unknown destinations (ATT&CK: Archive Collected Data T1560, Exfiltration T1041).\n\n---\n\n### Medium-term follow-ups\n- **Exposure management**: Add PTC Windchill/FlexPLM, GitLab, WebLogic, DataEase, Sulu, Microweber, Crawl4AI to recurring ASM checks and “must-not-be-internet-exposed” policy exceptions workflow.\n- **Patch governance**: Enforce rapid verification that GitLab and WebLogic patches are applied across all environments (prod/dev/test) and document compensating controls where patching lags.\n- **Java dependency risk**: Accelerate SBOM/runtime dependency visibility for Fastjson 1.x; plan upgrades/migrations and add deserialization hardening guidelines to SDLC.\n- **Web logging baselines**: Ensure consistent retention of WAF/app logs for externally reachable apps (minimum: request URI, user-agent, auth outcome, response size) to support quick triage during PoC-driven scan waves.\n- **Ransomware playbook refresh**: Re-brief Cl0p-style “data theft first” scenarios—ensure rapid containment steps (egress blocks, token resets, forensic capture) are current and rehearsed.\n- **Endpoint/browser patching**: Validate Firefox update compliance given multiple critical RCEs disclosed (no exploit noted, but reduce drive-by risk on analyst/admin workstations).",
   "highlights": [
     {
-      "title": "Imperva Customers Protected Against CVE-2026-16723: Critical FastJson 1.x Zero-Day RCE",
-      "link": "https://www.imperva.com/blog/imperva-customers-protected-against-cve-2026-16723-critical-fastjson-1-x-zero-day-rce/",
-      "source": "Imperva Blog",
-      "published": "2026-07-24T18:16:29+00:00",
+      "title": "Cl0p Affiliates Target Internet-Exposed PTC Windchill and FlexPLM with Unauthenticated RCE",
+      "link": "https://thehackernews.com/2026/07/cl0p-affiliates-target-internet-exposed.html",
+      "source": "The Hacker News",
+      "published": "2026-07-25T10:14:03+00:00",
       "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "Vendors / Product Security"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 80.41,
-      "priority_score": 84.8
-    },
-    {
-      "title": "In Other News: Dolphin X AI-Powered Malware, Car Anti-Theft Device Hack, 400 Linux Kernel Flaws",
-      "link": "https://www.securityweek.com/in-other-news-dolphin-x-ai-powered-malware-car-anti-theft-device-hack-400-linux-kernel-flaws/",
-      "source": "SecurityWeek",
-      "published": "2026-07-24T14:20:00+00:00",
-      "smart_groups": [
-        "Linux / Unix",
+        "Threat Actors / APT",
         "Cloud / SaaS",
-        "Malware / Payloads",
+        "Exploit / PoC",
         "Ransomware",
         "Vulnerabilities / CVEs",
         "General Security"
       ],
       "curated": true,
       "signal_tier": "high",
-      "signal_score": 68.09,
-      "priority_score": 84.75
+      "signal_score": 77.53,
+      "priority_score": 76.82
     },
     {
-      "title": "CVE-2026-34209 | wevm mppx up to 0.4.10 authentication replay",
-      "link": "https://vuldb.com/vuln/354397",
-      "source": "VulDB Updates",
-      "published": "2026-07-25T00:06:40+00:00",
+      "title": "Fastjson RCE under attack, no patch; GitLab exploit public; PTC manufacturing targeted",
+      "link": "https://defend.network/briefings/fastjson-gitlab-rce-malvertising-ptc-exploits-2026-07-26.html",
+      "source": "defend.network",
+      "published": "2026-07-26T06:30:00+00:00",
+      "smart_groups": [
+        "Exploit / PoC",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 76.24,
+      "priority_score": 84.91
+    },
+    {
+      "title": "Exploit for CVE-2026-65694",
+      "link": "https://vulners.com/githubexploit/566642C7-D80C-5E20-9790-03A5CE91EF92?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-07-25T11:33:15+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Web / API Security"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 72.49,
+      "priority_score": 70.28
+    },
+    {
+      "title": "Exploit for CVE-2026-60206",
+      "link": "https://vulners.com/githubexploit/F20C4C47-B9C1-5A9C-9401-63001E2EF695?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-07-25T15:13:41+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Identity / Access",
+        "Exploit / PoC",
+        "Linux / Unix"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.49,
+      "priority_score": 72.96
+    },
+    {
+      "title": "CVE-2026-64414 | Linux Kernel up to 6.12.95/6.18.38/7.1.3/7.2-rc2 Netfilter skb_copy_bits Remote Code Execution",
+      "link": "https://vuldb.com/vuln/383222",
+      "source": "VulDB Recent Entries",
+      "published": "2026-07-25T16:37:40+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Linux / Unix",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 63.49,
+      "priority_score": 78.23
+    },
+    {
+      "title": "CVE-2026-31523 | Linux Kernel up to 6.19.10 nvme-pci privilege escalation (Nessus ID 316948 / WID-SEC-2026-1252)",
+      "link": "https://vuldb.com/vuln/358945",
+      "source": "VulDB Updates",
+      "published": "2026-07-26T06:16:16+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Linux / Unix",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 63.39,
+      "priority_score": 81.37
+    },
+    {
+      "title": "CVE-2026-31519 | Linux Kernel up to 6.19.10 btrfs_orphan_cleanup privilege escalation (Nessus ID 316948 / WID-SEC-2026-1252)",
+      "link": "https://vuldb.com/vuln/358872",
+      "source": "VulDB Updates",
+      "published": "2026-07-26T06:16:14+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Linux / Unix",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 63.39,
+      "priority_score": 81.37
+    },
+    {
+      "title": "CVE-2026-31514 | Linux Kernel up to 6.12.79/6.18.20/6.19.10 vfs_iocb_iter_read privilege escalation (Nessus ID 318589 / WID-SEC-2026-1252)",
+      "link": "https://vuldb.com/vuln/358897",
+      "source": "VulDB Updates",
+      "published": "2026-07-26T04:55:07+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Linux / Unix",
         "Exploit / PoC"
       ],
       "curated": false,
@@ -62,10 +139,10 @@
       "priority_score": 81.01
     },
     {
-      "title": "CVE-2026-31479 | Linux Kernel up to 6.12.79/6.18.20/6.19.10 drm privilege escalation (Nessus ID 329305 / WID-SEC-2026-1252)",
-      "link": "https://vuldb.com/vuln/358890",
+      "title": "CVE-2026-31512 | Linux Kernel up to 6.19.10 l2cap_ecred_data_rcv length privilege escalation (Nessus ID 317729 / WID-SEC-2026-1252)",
+      "link": "https://vuldb.com/vuln/358937",
       "source": "VulDB Updates",
-      "published": "2026-07-24T21:32:28+00:00",
+      "published": "2026-07-26T04:55:06+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Linux / Unix",
@@ -74,13 +151,13 @@
       "curated": false,
       "signal_tier": "high",
       "signal_score": 63.39,
-      "priority_score": 80.33
+      "priority_score": 81.01
     },
     {
-      "title": "CVE-2026-60744 | Oracle Cost Management up to 12.2.15 Internal Operations privilege escalation (EUVD-2026-47078)",
-      "link": "https://vuldb.com/vuln/381742",
+      "title": "CVE-2026-34372 | Sulu up to 2.6.21/3.0.4 Admin API authentication bypass (GHSA-6h7h-m7p5-hjqp)",
+      "link": "https://vuldb.com/vuln/354502",
       "source": "VulDB Updates",
-      "published": "2026-07-24T20:42:50+00:00",
+      "published": "2026-07-25T21:50:55+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC"
@@ -88,85 +165,7 @@
       "curated": false,
       "signal_tier": "high",
       "signal_score": 63.39,
-      "priority_score": 80.1
-    },
-    {
-      "title": "CVE-2026-15718 | Mozilla Firefox up to 152.0.5 Remote Code Execution (Nessus ID 327187 / WID-SEC-2026-2340)",
-      "link": "https://vuldb.com/vuln/378295",
-      "source": "VulDB Updates",
-      "published": "2026-07-24T09:05:51+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 63.39,
-      "priority_score": 77.04
-    },
-    {
-      "title": "CVE-2026-16350 | Mozilla Firefox up to 115.37/140.12/152 cubeb Remote Code Execution (Nessus ID 329091 / WID-SEC-2026-2458)",
-      "link": "https://vuldb.com/vuln/380850",
-      "source": "VulDB Updates",
-      "published": "2026-07-24T08:51:20+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 63.39,
-      "priority_score": 76.97
-    },
-    {
-      "title": "Exploit for Out-of-bounds Write in Linux Linux_Kernel",
-      "link": "https://vulners.com/githubexploit/CCDEA733-6062-59B7-8900-DB0A735B1D7E?utm_source=rss&utm_medium=rss&utm_campaign=rss",
-      "source": "Vulners.com RSS Feed",
-      "published": "2026-07-24T13:01:31+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Linux / Unix",
-        "Exploit / PoC"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 62.51,
-      "priority_score": 73.27
-    },
-    {
-      "title": "How Infostealer Logs Became the Fuel Behind Massive Cloud Data Breaches",
-      "link": "https://cybersecuritynews.com/how-infostealer-logs-became-the-fuel/",
-      "source": "Cyber Security News (FeedBurner)",
-      "published": "2026-07-24T08:42:38+00:00",
-      "smart_groups": [
-        "Malware / Payloads",
-        "Identity / Access",
-        "Data Breaches / Leaks",
-        "Threat Actors / APT",
-        "Exploit / PoC",
-        "Phishing / Social Engineering",
-        "Ransomware",
-        "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "high",
-      "signal_score": 62.14,
-      "priority_score": 84.92
-    },
-    {
-      "title": "Russian Hackers Used a Zimbra Zero-Day to Steal Emails Without Link Clicks",
-      "link": "https://hackread.com/russian-hackers-zimbra-0-day-steal-emails-link-clicks/",
-      "source": "HackRead",
-      "published": "2026-07-24T11:04:51+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "high",
-      "signal_score": 59.62,
-      "priority_score": 82.13
+      "priority_score": 79.12
     }
   ]
 }
