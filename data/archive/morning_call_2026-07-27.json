@@ -1,0 +1,173 @@
+{
+  "generated_at": "2026-07-27T10:10:02.313536+00:00",
+  "analysis_date": "2026-07-27",
+  "provider": "openai",
+  "model": "gpt-5.2",
+  "window_hours": 24,
+  "source_file": "data/news_recent.json",
+  "source_generated_at": "2026-07-27T07:43:58.933705+00:00",
+  "source_days_back": 30,
+  "source_total_items": 48643,
+  "total_items_in_window_all": 1172,
+  "total_items_in_window_curated": 5,
+  "total_items_in_window_selected": 40,
+  "context_selection_policy": "curated-plus-operational-signal-v1",
+  "morning_call_markdown": "### Executive Summary\n- Public RCE exploit activity is trending across common enterprise platforms (GitLab PoC; reports of ServiceNow pre-auth RCE exploitation) — prioritize exposure checks and rapid patch/mitigation validation.\n- Malvertising is evolving to “browser-assemble” Windows payloads (SourTrade-style) — expect higher bypass rates for basic URL/file blocking; lean on EDR behavioral detections.\n- Ransomware continues to couple edge/app exploitation with rapid pivoting (Langflow RCE + exposed Docker socket; Cl0p-style data extortion via manufacturing/3rd-party systems) — revalidate segmentation and egress monitoring.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) GitLab RCE PoC published (likely rapid weaponization)**\n- **What happened:** A GitLab remote code execution exploit PoC is now public.\n- **Why it matters operationally:** GitLab is often internet-accessible; PoC → fast scanning/exploitation and credential/code theft risk.\n- **Recommended immediate actions for the SOC today:** Identify any internet-exposed GitLab (ASM/CMDB + firewall NATs) and confirm version/patch status; increase alerting on GitLab host process spawns + unusual outbound from GitLab servers.\n\n**2) ServiceNow pre-auth RCE reported as exploited (details limited)**\n- **What happened:** Reporting indicates active exploitation of a ServiceNow pre-auth RCE (CVE specifics unclear in provided feed).\n- **Why it matters operationally:** ServiceNow often holds privileged workflows/secrets; compromise can become identity/process abuse and broad downstream access.\n- **Recommended immediate actions for the SOC today:** Confirm your ServiceNow deployment model (SaaS vs on-prem/MID servers) and review vendor advisories/patch notes; hunt for anomalous ServiceNow/MID Server authentications, new integrations, and unexpected outbound connections.\n\n**3) Malvertising “browser-assembled” Windows malware (SourTrade)**\n- **What happened:** Malvertising campaign delivers payload fragments that are assembled in-browser into Windows executables.\n- **Why it matters operationally:** This can evade traditional gateway file inspection and increases risk from ad traffic/drive-by chains, especially on unmanaged browsing endpoints.\n- **Recommended immediate actions for the SOC today:** Prioritize web proxy/DNS monitoring for ad-network redirects and “download-from-browser → new EXE” patterns; validate EDR policy blocks on suspicious child processes spawned by browsers (e.g., cmd/powershell/mshta/rundll32).\n\n**4) Ransomware initial access via Langflow RCE + exposed Docker socket (ENCFORGE/JADEPUFFER)**\n- **What happened:** Ransomware operator reportedly enters via Langflow RCE and pivots using an exposed Docker socket; targets AI model/artifact files.\n- **Why it matters operationally:** Any exposed ML/automation tooling and misconfigured Docker sockets can enable near-instant container/host takeover and encryption/exfil.\n- **Recommended immediate actions for the SOC today:** Search externally and internally for Langflow instances and Docker API exposure (tcp/2375/2376; unix socket mounted into containers); hunt for unusual container creation, mounting of host paths, and sudden bulk reads of model/artifact repositories.\n\n**5) Data-extortion ecosystem continues (Cl0p-style affiliates abusing unauth PTC manufacturing flaws; PEAR breach claim)**\n- **What happened:** Affiliates exploit unauth flaws in manufacturing-related platforms for data theft/extortion; separate large breach claimed by a ransomware group.\n- **Why it matters operationally:** Even if we’re not “manufacturing,” third parties and vendor portals can be the entry/egress path; extortion risk is high for financial data.\n- **Recommended immediate actions for the SOC today:** Reconfirm third-party connectivity paths (SFTP/VPN/API) and enforce least privilege + egress controls; monitor for atypical large outbound transfers from integration servers and vendor-facing DMZ apps.\n\n---\n\n### Monitoring & detection recommendations\n- **GitLab / DevOps servers:** EDR + Linux audit logs for new processes from GitLab services and suspicious shells (MITRE: T1190, T1059); correlate with spikes in inbound requests on GitLab web endpoints (WAF/reverse proxy).\n- **ServiceNow / MID servers:** IdP logs (SSO/OAuth app consent), ServiceNow audit logs, and MID Server EDR for new scheduled jobs, new integrations, or unexpected credential use (MITRE: T1078, T1550).\n- **Malvertising/browser assembly:** Web proxy + DNS logs for high-redirect chains and newly seen domains; EDR telemetry for browser → LOLBin execution (mshta/rundll32/regsvr32/powershell) (MITRE: T1204, T1218).\n- **Docker pivoting:** Container runtime logs (Docker daemon, kube audit if applicable) for `docker run` with privileged flags, host mounts, or unusual image pulls; network logs for access to 2375/2376 (MITRE: T1609, T1610).\n- **Data exfiltration:** DLP/egress proxy + firewall for large uploads to uncommon cloud storage or new ASN destinations; alert on high-volume outbound from CI/CD, file servers, and integration hosts (MITRE: T1041).\n- **Ransomware precursors:** EDR for discovery + credential access burst (net.exe, nltest, adfind equivalents, LSASS access attempts) plus shadow copy deletion attempts (MITRE: T1087, T1003, T1490).\n- **Linux kernel/local priv-esc chatter (many CVEs):** On Linux fleets, watch for abnormal privilege transitions (sudo/su spikes), kernel exploit indicators, and unexpected module loads; prioritize high-value jump hosts.\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** Validate patch SLAs for internet-facing platforms (GitLab, ServiceNow components, ML tooling) and ensure emergency change path is workable for RCE-class issues.\n- **Exposure management:** Expand continuous scanning for “forgotten” dev tools (Git repos, CI runners, Langflow, notebooks) and for Docker API exposure; ensure findings feed directly to SOC triage.\n- **Browser hardening:** Review ad-blocking/secure web gateway controls for corporate browsing; consider restricting executable downloads and tightening “Mark-of-the-Web”/ASR rules where feasible.\n- **Third-party risk:** Reassess vendor connections where a partner compromise could cause data exfiltration; enforce MFA, IP allowlists, and scoped tokens for integrations.\n- **Ransomware readiness:** Re-test restore procedures and validate immutable backups for critical systems; confirm egress filtering and segmentation are aligned to current extortion-first playbooks.\n- **Linux vulnerability hygiene:** The large volume of kernel LPE advisories suggests backlog risk—prioritize kernels on multi-tenant/jump hosts and any system with untrusted local code execution paths.",
+  "highlights": [
+    {
+      "title": "Browser-assembled malware, GitLab RCE exploit public, PTC manufacturing under attack",
+      "link": "https://defend.network/briefings/malvertising-windows-gitlab-rce-ptc-manufacturing-2026-07-27.html",
+      "source": "defend.network",
+      "published": "2026-07-27T06:30:00+00:00",
+      "smart_groups": [
+        "Cloud / SaaS",
+        "Exploit / PoC",
+        "Malware / Payloads",
+        "Vulnerabilities / CVEs",
+        "Windows / Microsoft",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 100.0,
+      "priority_score": 84.82
+    },
+    {
+      "title": "Weekly Cyber Security Newsletter Bulletin – Certighost Exploit, Checkpoint 0-day, HTTP/2 Flaw, Notepad++ Plugin Abuse +20 Stories",
+      "link": "https://cybersecuritynews.com/weekly-cyber-security-newsletter-july/",
+      "source": "Cyber Security News",
+      "published": "2026-07-26T16:40:49+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Cloud / SaaS",
+        "Ransomware",
+        "Network / OT / ICS",
+        "Threat Actors / APT",
+        "Exploit / PoC",
+        "Linux / Unix",
+        "General Security"
+      ],
+      "curated": false,
+      "signal_tier": "critical",
+      "signal_score": 100.0,
+      "priority_score": 75.74
+    },
+    {
+      "title": "July Microsoft Patch Tuesday",
+      "link": "https://vulners.com/avleonov/AVLEONOV:51DD1CF23B15623E035F241930029497?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-07-26T20:00:00+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "critical",
+      "signal_score": 82.46,
+      "priority_score": 74.09
+    },
+    {
+      "title": "ENCFORGE Ransomware Targets AI Models After Langflow RCE Exploit",
+      "link": "https://latesthackingnews.com/2026/07/26/encforge-ransomware-langflow-ai-models/",
+      "source": "Latest Hacking News",
+      "published": "2026-07-26T16:20:05+00:00",
+      "smart_groups": [
+        "Threat Actors / APT",
+        "Exploit / PoC",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 78.41,
+      "priority_score": 82.9
+    },
+    {
+      "title": "ServiceNow Pre-Auth RCE Exploited, Hugging Face Breach Exposed",
+      "link": "https://www.news4hackers.com/servicenow-pre-auth-rce-exploited-hugging-face-breach-exposed/",
+      "source": "News4Hackers",
+      "published": "2026-07-26T10:48:22+00:00",
+      "smart_groups": [
+        "Exploit / PoC",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 76.17,
+      "priority_score": 79.29
+    },
+    {
+      "title": "Exploit for Path Traversal in Mate-Desktop Atril",
+      "link": "https://vulners.com/githubexploit/0B9ACC9D-5DCB-5F9B-AE7A-4A7859E790A3?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-07-27T06:45:13+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.46,
+      "priority_score": 76.81
+    },
+    {
+      "title": "Exploit for CVE-2026-66012",
+      "link": "https://vulners.com/githubexploit/966D5755-38DD-590D-A412-4BFEABA9FEE1?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-07-26T10:45:03+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 66.46,
+      "priority_score": 71.66
+    },
+    {
+      "title": "NCC Group: Ransomware groups expand operations as software supply chain attacks accelerate",
+      "link": "https://industrialcyber.co/ransomware/ncc-group-ransomware-groups-expand-operations-as-software-supply-chain-attacks-accelerate/",
+      "source": "Industrial Cyber",
+      "published": "2026-07-27T06:56:07+00:00",
+      "smart_groups": [
+        "Supply Chain / Software",
+        "Ransomware",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 64.18,
+      "priority_score": 86.52
+    },
+    {
+      "title": "CVE-2026-41608 | Apache Thrift up to 0.23.x zlib Decompression privilege escalation",
+      "link": "https://vuldb.com/vuln/383330",
+      "source": "VulDB Recent Entries",
+      "published": "2026-07-26T16:21:37+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 63.41,
+      "priority_score": 77.76
+    },
+    {
+      "title": "CVE-2026-60178 | Oracle MySQL Cluster/MySQL Server Server Clone Plugin privilege escalation (Nessus ID 330039)",
+      "link": "https://vuldb.com/vuln/381272",
+      "source": "VulDB Updates",
+      "published": "2026-07-27T05:58:00+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 63.39,
+      "priority_score": 81.28
+    }
+  ]
+}
