@@ -1,172 +1,173 @@
 {
-  "generated_at": "2026-07-29T09:09:17.710471+00:00",
-  "analysis_date": "2026-07-29",
+  "generated_at": "2026-07-30T08:49:01.534531+00:00",
+  "analysis_date": "2026-07-30",
   "provider": "openai",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-07-29T07:54:19.264536+00:00",
+  "source_generated_at": "2026-07-30T06:40:26.296894+00:00",
   "source_days_back": 30,
-  "source_total_items": 48092,
-  "total_items_in_window_all": 2398,
-  "total_items_in_window_curated": 12,
+  "source_total_items": 49538,
+  "total_items_in_window_all": 3076,
+  "total_items_in_window_curated": 9,
   "total_items_in_window_selected": 40,
   "context_selection_policy": "curated-plus-operational-signal-v1",
-  "morning_call_markdown": "### Executive Summary\n- Multiple **internet-facing pre-auth RCE / auth-bypass** issues are in play (PTC Windchill/FlexPLM actively exploited by Cl0p; FastJson 1.x RCE 0-day; vBulletin pre-auth RCE with public exploit).\n- **Endpoint privilege escalation** risk is elevated (new Linux kernel LPE report; Windows LPE exploit code for a recently fixed WalletService issue) — assume attackers will chain these post-compromise.\n- **Social engineering + remote assistance abuse** continues (fake IT calls via Microsoft Teams/Quick Assist delivering a new Go-based backdoor linked to ransomware tradecraft).\n\n### High-priority items (immediate attention)\n\n**1) PTC Windchill & FlexPLM pre-auth RCE (actively exploited / ransomware)**\n- What happened: FortiGuard reports **active exploitation** of a **critical unauthenticated RCE** in PTC Windchill PDMlink / FlexPLM by **Cl0p affiliates**.\n- Why it matters operationally: Any internet-exposed PLM instance can become a **rapid foothold for web shells, IP theft, and ransomware staging**.\n- Recommended immediate actions for the SOC today: **Identify any PTC PLM exposure** (ASM/CMDB + external scan) and **prioritize emergency patch/mitigation**; hunt for **new/unknown web shells and unusual outbound data transfers** from PLM servers.\n\n**2) FastJson 1.x RCE zero-day (CVE-2026-16723)**\n- What happened: Multiple sources report **in-the-wild exploitation** of a **FastJson RCE 0-day** affecting **1.2.68–1.2.83**, with **no patch for 1.x** noted.\n- Why it matters operationally: FastJson is common in **Java services**; exploitation enables **server-side code execution** and may bypass normal auth flows if JSON is attacker-controlled.\n- Recommended immediate actions for the SOC today: **Inventory apps bundling FastJson 1.x** (SBOM/dependency scans, container images, JAR hunting) and **add WAF/API gateway filtering for untrusted JSON endpoints**; escalate to AppSec to implement **workarounds/upgrade path**.\n\n**3) Edge/management plane takeover paths (auth bypass + command injection)**\n- What happened: Rapid7 published deep-dive on **Check Point SmartConsole auth bypass (CVE-2026-16232)**; The Register highlights **actively exploited unauth command injection** impacting **VeloCloud-managed edge** devices with a CISA clock.\n- Why it matters operationally: These are **high-leverage control planes** (firewall/management, SD-WAN edge) — compromise can enable **network-wide pivoting and policy tampering**.\n- Recommended immediate actions for the SOC today: **Confirm versions and patch status** for Check Point management and any VeloCloud/edge estate; monitor for **new admin sessions/tokens and config changes** outside change windows.\n\n**4) vBulletin pre-auth RCE with public exploit (CVE-2026-61511)**\n- What happened: Public PoC is available and vendors/media report a **critical pre-auth RCE** in vBulletin via template rendering.\n- Why it matters operationally: Internet-facing community/support forums (including vendor-hosted) are **frequently scanned** and can become an **initial access point** into internal networks.\n- Recommended immediate actions for the SOC today: **Locate any vBulletin instances** (owned or business-unit hosted) and **patch immediately**; add detection for **unexpected PHP process spawning, new template edits, and webshell-like file writes**.\n\n**5) Ransomware intrusion pattern: Teams “helpdesk” calls + Quick Assist → Go backdoor**\n- What happened: Reports describe **fake IT calls on Microsoft Teams** leading users to allow **Quick Assist**, followed by installation of a **GoGRPC backdoor** in suspected ransomware operations.\n- Why it matters operationally: This bypasses perimeter controls and lands directly on endpoints with **user-approved remote control** (high success rate in finance).\n- Recommended immediate actions for the SOC today: **Tighten/monitor Quick Assist usage** (allow-list, conditional access, or disable where possible) and hunt for **remote assistance launches + new persistence** shortly after Teams calls.\n\n### Monitoring & detection recommendations\n- **Internet-facing exploitation (PTC/vBulletin/FastJson):** WAF/reverse-proxy + web server logs for **spikes in 4xx/5xx, odd POSTs to JSON endpoints, template/admin paths**, and **new files in web roots** (ATT&CK: T1190).\n- **Web shell & post-exploitation on servers:** EDR on affected app servers for **cmd.exe/powershell/bash spawned by web processes** (w3wp/nginx/apache/java), and **suspicious child processes** (ATT&CK: T1505, T1059).\n- **Check Point management auth bypass indicators:** Check Point management logs for **unusual token creation/login events**, **new admin/API sessions**, and **policy installs** outside change windows (ATT&CK: T1078).\n- **SD-WAN/edge device compromise:** Firewall/edge telemetry for **new inbound management access**, **unexpected outbound connections** from edge devices, and **config export/download events** (ATT&CK: T1210).\n- **Teams/Quick Assist social engineering chain:** M365 audit + endpoint telemetry for **Quick Assist (or remote help tooling) execution**, followed by **new scheduled tasks/services/Run keys** within 0–60 minutes (ATT&CK: T1566, T1219, T1547).\n- **Linux/Windows privilege escalation chaining:** EDR for **sudden SYSTEM/root context transitions**, **credential dumping precursors**, and **untrusted driver/service installs** after initial access (ATT&CK: T1068, T1003).\n- **Data theft ahead of ransomware:** Proxy/DNS + DLP where available for **large outbound transfers**, **new cloud storage usage**, and **rare external destinations** from server subnets (ATT&CK: T1041, T1567).\n\n### Medium-term follow-ups\n- **FastJson risk reduction plan:** Push engineering to **remove/upgrade FastJson 1.x** where feasible; if stuck, implement **strict JSON schema validation** and **gateway-based request normalization** (assumption: exploit requires attacker-controlled JSON input).\n- **Patch governance for “control plane” systems:** Re-validate patch SLAs for **firewall management, SD-WAN, and other network controllers**; ensure **break-glass change process** is usable 24/7.\n- **Remote assistance policy:** Decide institutional stance on **Quick Assist/other RMM tools** (disable by default, allow-list per role, MFA re-prompt, monitored sessions).\n- **Web app inventory hygiene:** Confirm ownership and patch cadence for **“orphan” internet web apps** (forums, microsites, legacy portals) that often evade standard vulnerability management.\n- **WordPress plugin supply-chain/backdoor awareness:** If any corporate WordPress exists, review installed plugins for **the backdoored video embedder (CVE-2026-18072)** and enforce **plugin allow-list + integrity monitoring**.\n- **Ransomware readiness drill:** Re-check **restore tests, immutable backups, and egress controls** for critical server segments given continued ransomware targeting of edge/exposed services.",
+  "morning_call_markdown": "### Executive Summary\n- Active exploitation confirmed for **Cisco Secure Firewall Management Center (FMC) CVE-2026-20316** (static credentials) — treat any internet-exposed FMC as **potentially compromised** until patched and validated.\n- **Email infrastructure remains a top entry point**: Exchange/OWA zero-day campaigns reported (CVE-2026-42897), plus a **public PoC** for an exploited **Check Point SmartConsole auth bypass (CVE-2026-16232)**.\n- **Software supply-chain risk is elevated** (malicious npm packages; pip path traversal CVE-2026-13346; DPRK-linked OSS targeting) — prioritize detections around developer/build systems and outbound secrets exfil.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Cisco Secure Firewall Management Center (FMC) zero-day exploitation — CVE-2026-20316**\n- What happened: CISA added **CVE-2026-20316** to KEV; Cisco confirms **active zero-day exploitation** leveraging **static credentials** in FMC web interface.\n- Why it matters operationally: FMC is a high-value control-plane asset; compromise can enable **network policy tampering, device management abuse, and broad visibility loss**.\n- Recommended immediate actions for the SOC today: **Identify all FMC instances + exposure**, apply Cisco hotfix/patch ASAP; **review FMC admin logins/config change history** and isolate/IR any FMC with suspicious access.\n\n**2) Check Point Security Management / MDS SmartConsole auth bypass — CVE-2026-16232 (PoC + in-the-wild exploitation)**\n- What happened: A **public PoC** was released for **CVE-2026-16232** (auth bypass) affecting Check Point management servers; exploitation reported in the wild.\n- Why it matters operationally: Security management plane compromise can lead to **policy push, lateral movement into protected networks**, and stealthy persistence.\n- Recommended immediate actions for the SOC today: **Confirm patch level** on Security Management Server/MDS; **hunt for anomalous SmartConsole/API access** (unexpected source IPs, odd hours, new admin objects) and restrict management access paths.\n\n**3) Exchange / Outlook Web Access (OWA) zero-day campaigns — CVE-2026-42897 (XSS → mailbox compromise/persistence)**\n- What happened: Reporting links multiple actors (incl. Russia-nexus reporting and TA488 mention) to **OWA exploitation** using **CVE-2026-42897** to run script on message open and enable long-term mailbox access/backdoor behavior.\n- Why it matters operationally: For financial services, mailbox compromise is a direct path to **fraud, payment diversion, internal recon, and credential theft**; webmail exposure amplifies risk.\n- Recommended immediate actions for the SOC today: **Verify emergency patch applied** across Exchange/OWA; **enable heightened monitoring on OWA and mailbox rule changes** and fast-track IR for any account with suspicious rules/tokens.\n\n**4) Developer/build supply-chain threats (npm malware + pip path traversal + DPRK OSS targeting)**\n- What happened: Malicious packages reported in **AsyncAPI npm** and **Joyfill npm beta builds**; **pip CVE-2026-13346** allows path traversal when installing from **malicious package indexes**; AWS reports **DPRK-linked OSS supply-chain operations**.\n- Why it matters operationally: Compromise of CI/CD and developer endpoints enables **credential theft (GitHub/npm/cloud/AI keys)** and insertion of backdoors into internal apps.\n- Recommended immediate actions for the SOC today: **Block/alert on package installs from non-approved registries/indexes**, review recent dependency changes in CI; **hunt for abnormal outbound from build agents** (token exfil patterns) and rotate exposed developer tokens if suspected.\n\n---\n\n### Monitoring & detection recommendations\n- **Cisco FMC / Check Point management-plane**: monitor firewall/management logs for **new admin accounts, policy pushes, config exports**, and **web UI logins from unusual IPs** (ATT&CK: Valid Accounts **T1078**, Modify Cloud/Network Config analogous behavior).\n- **Perimeter web exploitation**: watch WAF/reverse proxy for spikes in requests to **FMC/Check Point management endpoints** and anomalous auth flows (ATT&CK: Exploit Public-Facing Application **T1190**).\n- **Exchange/OWA**: correlate **IIS logs + Exchange admin audit + mailbox audit** for unusual OWA sessions, suspicious user agents, and **mailbox rule/forwarding/inbox rule creation** (ATT&CK: Email Collection **T1114**, Account Manipulation **T1098**).\n- **Identity provider (IdP) / SSO**: alert on **new OAuth app consents, refresh token anomalies, impossible travel**, and **MFA reset events** tied to mail-enabled users (ATT&CK: OAuth/Token abuse fits Credential Access).\n- **EDR on admin/workstations**: hunt for execution spawned from browsers/webmail contexts (e.g., scripting engines, unusual child processes) following OWA use (ATT&CK: Command and Scripting Interpreter **T1059**).\n- **CI/CD + developer endpoints**: monitor for **new npm/pip installs during builds**, unusual access to **~/.npmrc, pip.conf, .pypirc**, and outbound connections to code repos/package registries from non-build hours (ATT&CK: Exfiltration Over Web Service **T1567**).\n- **Secrets & credential access**: alert on access to common token stores (Git credential helpers, cloud CLI config dirs) and bulk reads of env vars on build agents (ATT&CK: Unsecured Credentials **T1552**).\n\n---\n\n### Medium-term follow-ups\n- **Patch governance**: ensure KEV-driven SLA coverage for **CVE-2026-20316 (Cisco FMC)** and **CVE-2026-16232 (Check Point)** with validation checks (version + functional verification + exposure review).\n- **Exchange hardening**: reduce OWA exposure where possible (VPN/conditional access), enforce **modern auth + MFA**, and tighten mailbox auditing retention for IR readiness.\n- **Supply-chain controls**: enforce **allow-listed registries**, dependency pinning, SBOM usage, and CI policy to block installs from **untrusted package indexes** (pip CVE-2026-13346 risk scenario).\n- **Developer credential hygiene**: accelerate rollout of **short-lived tokens**, secret scanning, and automated token rotation for GitHub/npm/cloud credentials.\n- **Coverage review for “management plane” assets**: confirm centralized logging and EDR coverage for firewall managers, security management servers, and jump hosts; ensure admin actions are fully auditable.\n- **Triage watch items (as capacity allows)**: Coverity Connect auth bypass **CVE-2026-8338** and other newly published CVEs—validate whether any internal instances exist before prioritizing.",
   "highlights": [
     {
-      "title": "PTC Windchill & FlexPLM RCE",
-      "link": "https://fortiguard.fortinet.com/threat-signal-report/6491",
-      "source": "FortiGuard Labs | FortiGuard Center - Threat Signal Report",
-      "published": "2026-07-28T23:57:05+00:00",
+      "title": "Cisco FMC Zero-Day Actively Exploited, Static Credentials Could Expose Sensitive Data",
+      "link": "https://thehackernews.com/2026/07/cisco-fmc-zero-day-actively-exploited.html",
+      "source": "The Hacker News",
+      "published": "2026-07-30T05:08:39+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Ransomware",
-        "Detection Engineering",
+        "Data Protection / Privacy",
         "Exploit / PoC",
-        "Identity / Access",
-        "Phishing / Social Engineering"
+        "General Security"
       ],
       "curated": true,
       "signal_tier": "critical",
       "signal_score": 100.0,
-      "priority_score": 87.06
+      "priority_score": 87.67
     },
     {
-      "title": "Hackers Exploiting FastJson RCE 0-Day in the Wild to Attack US-based Organizations",
-      "link": "https://cybersecuritynews.com/hackers-exploiting-fastjson-rce-0-day/",
-      "source": "Cyber Security News",
-      "published": "2026-07-28T13:10:52+00:00",
+      "title": "Public PoC Released for Exploited Check Point SmartConsole Authentication Bypass",
+      "link": "https://thehackernews.com/2026/07/rapid7-releases-poc-for-exploited-check.html",
+      "source": "The Hacker News",
+      "published": "2026-07-29T08:58:27+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC",
         "General Security"
       ],
       "curated": true,
-      "signal_tier": "high",
-      "signal_score": 77.36,
-      "priority_score": 86.57
+      "signal_tier": "critical",
+      "signal_score": 100.0,
+      "priority_score": 82.05
     },
     {
-      "title": "AI-Assisted Research Uncovers Linux Kernel Zero-Day Enabling Root Privilege Escalation",
-      "link": "https://cybersecuritynews.com/ai-assisted-linux-kernel-zero-day/",
-      "source": "Cyber Security News",
-      "published": "2026-07-28T10:41:14+00:00",
+      "title": "Exploit for Deserialization of Untrusted Data in Microsoft",
+      "link": "https://vulners.com/githubexploit/8AD3FCD2-60B1-5994-BB74-7EF998BFC6EF?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-07-29T12:41:41+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Linux / Unix",
-        "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "high",
-      "signal_score": 77.36,
-      "priority_score": 86.15
-    },
-    {
-      "title": "Infosec News Nuggets — July 28, 2026",
-      "link": "https://aboutdfir.com/infosec-news-nuggets-july-28-2026/",
-      "source": "AboutDFIR – The Definitive Compendium Project",
-      "published": "2026-07-28T10:51:08+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Crypto / Web3",
-        "Exploit / PoC",
-        "Detection Engineering"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 77.08,
-      "priority_score": 74.8
-    },
-    {
-      "title": "FastJson RCE Zero-Day Actively Targets Organizations",
-      "link": "https://www.esecurityplanet.com/threats/fastjson-rce-zero-day-actively-targets-organizations/",
-      "source": "eSecurityPlanet",
-      "published": "2026-07-28T20:39:54+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Threat Actors / APT",
         "Exploit / PoC"
       ],
-      "curated": true,
-      "signal_tier": "high",
-      "signal_score": 76.9,
-      "priority_score": 86.46
+      "curated": false,
+      "signal_tier": "critical",
+      "signal_score": 100.0,
+      "priority_score": 72.3
     },
     {
-      "title": "Arista patches actively exploited VeloCloud bug as CISA puts admins on the clock",
-      "link": "https://www.theregister.com/security/2026/07/28/arista-patches-actively-exploited-velocloud-bug-as-cisa-puts-admins-on-the-clock/5279414",
-      "source": "The Register - Security",
-      "published": "2026-07-28T09:15:00+00:00",
+      "title": "Cisco Firewall Management Center 0-Day Actively Exploited to Access Sensitive Data",
+      "link": "https://cybersecuritynews.com/cisco-firewall-management-center-0-day/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-07-30T05:17:58+00:00",
       "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Data Protection / Privacy",
         "Exploit / PoC",
         "General Security"
       ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 75.95,
-      "priority_score": 67.73
-    },
-    {
-      "title": "Industrial Controllers Are Under Attack",
-      "link": "https://www.youtube.com/shorts/8tElQtXhgUI",
-      "source": "Security Weekly",
-      "published": "2026-07-28T22:00:07+00:00",
-      "smart_groups": [
-        "Network / OT / ICS",
-        "Community / Briefing"
-      ],
       "curated": true,
-      "signal_tier": "high",
-      "signal_score": 72.19,
-      "priority_score": 88.26
+      "signal_tier": "critical",
+      "signal_score": 93.05,
+      "priority_score": 89.87
     },
     {
-      "title": "Public Exploit Lands for vBulletin’s Pre-Auth RCE, CVE-2026-61511",
-      "link": "https://latesthackingnews.com/2026/07/28/vbulletin-rce-vulnerability-cve-2026-61511/",
-      "source": "Latest Hacking News",
-      "published": "2026-07-28T12:18:07+00:00",
+      "title": "Cisco warns of FMC static credential flaw exploited in zero-day attacks",
+      "link": "https://www.bleepingcomputer.com/news/security/cisco-warns-of-fmc-static-credential-flaw-exploited-in-zero-day-attacks/",
+      "source": "BleepingComputer",
+      "published": "2026-07-29T21:35:40+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC",
         "General Security"
       ],
       "curated": true,
-      "signal_tier": "high",
-      "signal_score": 71.02,
-      "priority_score": 84.61
+      "signal_tier": "critical",
+      "signal_score": 92.87,
+      "priority_score": 86.88
     },
     {
-      "title": "CVE-2022-41109 | Microsoft Windows up to Server 2022 Datacenter Azure Edition Win32k privilege escalation (EUVD-2022-44352)",
-      "link": "https://vuldb.com/vuln/213155",
-      "source": "VulDB Updates",
-      "published": "2026-07-29T03:48:53+00:00",
+      "title": "TA488 May Have Exploited Outlook Web Access 0-Day Flaw Before Microsoft’s Emergency Patch",
+      "link": "https://cybersecuritynews.com/ta488-exploited-outlook-web-access-0-day-flaw/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-07-30T05:49:26+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Cloud / SaaS",
+        "Web / API Security",
         "Exploit / PoC",
-        "Windows / Microsoft"
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 91.05,
+      "priority_score": 88.3
+    },
+    {
+      "title": "Only 1% of AI-discovered vulnerabilities have actually been exploited in the wild - a rate that matches standard, human-found bugs.",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1v9t706/only_1_of_aidiscovered_vulnerabilities_have/",
+      "source": "/r/cybersecurity",
+      "published": "2026-07-29T11:15:47+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Data Breaches / Leaks",
+        "Exploit / PoC",
+        "Malware / Payloads",
+        "Ransomware",
+        "OSINT / Community"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 80.12,
+      "priority_score": 84.72
+    },
+    {
+      "title": "Russian hackers exploit Exchange OWA zero-day for long-term mailbox access",
+      "link": "https://www.bleepingcomputer.com/news/security/russian-hackers-exploit-exchange-owa-zero-day-for-long-term-mailbox-access/",
+      "source": "BleepingComputer",
+      "published": "2026-07-29T23:44:07+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Malware / Payloads",
+        "Threat Actors / APT",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 73.87,
+      "priority_score": 86.83
+    },
+    {
+      "title": "Exploit for CVE-2026-52832",
+      "link": "https://vulners.com/githubexploit/89C08CAD-426E-5542-99AB-8261C6D350E9?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-07-29T10:23:41+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 63.37,
-      "priority_score": 80.57
+      "signal_score": 67.47,
+      "priority_score": 71.25
     },
     {
-      "title": "CVE-2022-41092 | Microsoft Windows up to Server 2022 Datacenter Azure Edition Win32k privilege escalation (EUVD-2022-44335)",
-      "link": "https://vuldb.com/vuln/213172",
-      "source": "VulDB Updates",
-      "published": "2026-07-28T20:03:33+00:00",
+      "title": "Exploit for CVE-2026-57811",
+      "link": "https://vulners.com/githubexploit/E6F6BE2D-6EE0-5E30-9D22-6E972E128122?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-07-29T12:51:00+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Cloud / SaaS",
-        "Exploit / PoC",
-        "Windows / Microsoft"
+        "Exploit / PoC"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 63.37,
-      "priority_score": 78.49
+      "signal_score": 64.47,
+      "priority_score": 72.56
     }
   ]
 }
