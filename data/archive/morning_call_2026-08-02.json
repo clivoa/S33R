@@ -1,0 +1,173 @@
+{
+  "generated_at": "2026-08-02T08:38:50.823576+00:00",
+  "analysis_date": "2026-08-02",
+  "provider": "openai",
+  "model": "gpt-5.2",
+  "window_hours": 24,
+  "source_file": "data/news_recent.json",
+  "source_generated_at": "2026-08-02T06:44:05.419094+00:00",
+  "source_days_back": 30,
+  "source_total_items": 50454,
+  "total_items_in_window_all": 1675,
+  "total_items_in_window_curated": 3,
+  "total_items_in_window_selected": 40,
+  "context_selection_policy": "curated-plus-operational-signal-v1",
+  "morning_call_markdown": "### Executive Summary\n- **Critical Adobe Campaign Classic RCE patched (CVSS 10.0, CVE-2026-48449):** treat as internet-edge/marketing-platform emergency patch + rapid compromise checks.  \n- **Supply-chain/ad ecosystem compromise:** Adform ad-serving script hijack used for crypto wallet redirection/malware-like delivery behavior; monitor web traffic anomalies and third-party script integrity.  \n- **Auth/token theft and identity-bypass themes:** hotel Wi‑Fi token theft targeting Microsoft 365 sessions + new SSO/WordPress auth issues; prioritize conditional access/session token telemetry and exposed web apps.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Adobe Campaign Classic critical RCE (CVE-2026-48449, CVSS 10.0)**\n- **What happened:** Adobe patched a max-severity RCE in Campaign Classic enabling remote code execution without user interaction.  \n- **Why it matters operationally:** Commonly deployed in enterprise marketing stacks; if exposed/bridged to core networks it’s a fast path to initial access and lateral movement (ransomware risk).  \n- **Recommended immediate actions for the SOC today:** Confirm patch status + external exposure; hunt on Campaign hosts for new processes/webshell indicators and suspicious admin/API activity.\n\n**2) Adform supply-chain compromise (ad-serving script hijack / crypto redirection)**\n- **What happened:** Adform’s trusted ad-serving infrastructure was reportedly hijacked to redirect users to crypto-stealing activity (supply-chain style abuse).  \n- **Why it matters operationally:** Third-party scripts can impact employee browsing endpoints and customer-facing web properties; can trigger credential theft, token theft, and follow-on malware.  \n- **Recommended immediate actions for the SOC today:** Review web proxy/DNS logs for spikes in redirects from ad/marketing tags; validate integrity/allowlisting controls for third-party scripts on corporate sites/apps.\n\n**3) Microsoft 365 token theft via captive portal “hotel Wi‑Fi” campaign (Storm-2945 / Midnight Blizzard subcluster)**\n- **What happened:** Microsoft reported a campaign where attackers hijack captive portals to deliver malware and steal Microsoft 365 tokens from travelers.  \n- **Why it matters operationally:** Token theft can bypass MFA and enable rapid mailbox/SharePoint access, internal phishing, and financial fraud workflows (high relevance to banking).  \n- **Recommended immediate actions for the SOC today:** Monitor Entra ID sign-ins for token replay/atypical session behavior and impossible travel; tighten CA policies for high-risk sign-ins and validate device compliance enforcement.\n\n**4) Exploit/PoC activity: Gitea/Forgejo authenticated RCE (CVE-2025-68937)**\n- **What happened:** Public PoC released for template processing symlink traversal leading to RCE as the git service user; any authenticated user can trigger.  \n- **Why it matters operationally:** Internal dev platforms are frequent staging points for credential harvesting and CI/CD compromise; “low-priv user → RCE” is attractive for insider threat and post-phish persistence.  \n- **Recommended immediate actions for the SOC today:** Identify any Gitea/Forgejo instances and patch/mitigate; hunt for unusual repo/template generation events and new outbound connections from git service accounts.\n\n**5) Cluster of unauthenticated WordPress plugin vulns (OAuth token disclosure / auth bypass / RCE scanners)**\n- **What happened:** Multiple WP plugin CVEs surfaced including OAuth token disclosure (CVE-2026-15236), auth bypass (CVE-2026-8457), unauth priv escalation (CVE-2026-16256), and RCE/scanning tooling for popular components (e.g., Joomla Helix3 CVE-2026-49049; “wp2shell” PoC referenced).  \n- **Why it matters operationally:** Any internet-facing marketing microsites can be a foothold into corporate SSO, brand abuse, or web-to-internal pivoting; token disclosure is especially dangerous if tied to shared Google/M365 accounts.  \n- **Recommended immediate actions for the SOC today:** Inventory internet-facing WP/Joomla and prioritize patching/temporary disablement of affected plugins; add WAF rules/virtual patching for suspicious REST/AJAX routes and file upload patterns.\n\n---\n\n### Monitoring & detection recommendations\n- **Adobe Campaign Classic servers:** EDR + web server logs for new child processes from web/app services, suspicious file writes in web roots, and unexpected outbound traffic (ATT&CK: T1190, T1505).  \n- **Ad/supply-chain web activity:** Secure web gateway/proxy + DNS logs for abnormal redirect chains and new domains immediately following ad/marketing tag loads; correlate to endpoint browser process spawns (T1189).  \n- **M365 token theft / session abuse:** Entra ID sign-in logs, Conditional Access, and Unified Audit Log for atypical token-based auth, new OAuth app consents, abnormal mailbox rules, and mass download from SharePoint/OneDrive (T1528, T1098).  \n- **Dev platform compromise (Gitea/Forgejo):** Application audit logs + Linux auth logs for repo/template generation anomalies, new SSH keys, and unexpected git service user shells; network logs for new egress from dev subnets (T1059, T1078).  \n- **Internet-facing CMS exploitation:** WAF + web server logs for bursts of POSTs to `/wp-json/`, admin-ajax endpoints, plugin upload routes, and Joomla extension endpoints; alert on high-rate scanning patterns.  \n- **Linux privilege escalation noise (kernel CVEs listed):** On server fleets, watch EDR for local exploit behaviors (abnormal kernel syscalls, sudden root escalation, suspicious `perf` usage) and tie to initial access events—treat as “post-compromise accelerators,” not primary entry.  \n- **Ransomware early indicators (generic):** Endpoint telemetry for mass file renames/extensions, vssadmin/bcdedit usage, and service stop attempts; prioritize servers adjacent to marketing/CMS and dev tooling (T1486, T1490).\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** Add Adobe Campaign Classic and any Chrome updates (CVE-2026-17661 listed) to expedited patch rings; verify compensating controls for systems that can’t patch quickly.  \n- **Third-party script controls:** Implement/validate Subresource Integrity (SRI) where feasible, tighten CSP, and establish monitoring for changes to embedded marketing/ad scripts (supply-chain resilience).  \n- **Identity hardening:** Review CA policies for high-risk travel scenarios (guest Wi‑Fi, unmanaged devices), session lifetime/token protection, and OAuth app governance; run a retro-hunt for suspicious token activity since early May 2026 (per campaign timing).  \n- **Web estate inventory & ownership:** Ensure every external WP/Joomla instance has an owner, patch SLA, and WAF coverage; remove/retire unused plugins and enforce least-priv admin access.  \n- **Dev platform risk reduction:** Segment Gitea/Forgejo and CI/CD from user networks, restrict who can create templates/repos, and ensure service accounts have minimal permissions and monitored egress.  \n- **Ransomware readiness check:** Validate immutable/offline backups, restoration drills for web and marketing platforms, and confirm EDR anti-tamper coverage on internet-facing hosts.",
+  "highlights": [
+    {
+      "title": "Adobe Campaign CVSS 10.0 exploit, Coldcard $70M theft, Adform supply-chain attack",
+      "link": "https://defend.network/briefings/adobe-campaign-coldcard-adform-crypto-attacks-2026-08-02.html",
+      "source": "defend.network",
+      "published": "2026-08-02T06:30:00+00:00",
+      "smart_groups": [
+        "Crypto / Web3",
+        "Exploit / PoC",
+        "Supply Chain / Software",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 74.26,
+      "priority_score": 85.29
+    },
+    {
+      "title": "Exploit for CVE-2025-68937",
+      "link": "https://vulners.com/githubexploit/C6FB54E1-7814-566E-BB01-D870F5800C80?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-08-02T03:14:20+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Web / API Security",
+        "Linux / Unix"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 70.41,
+      "priority_score": 76.07
+    },
+    {
+      "title": "CVE-2025-38550 | Linux Kernel up to 6.1.146/6.6.99/6.12.39/6.15.7 ipv6 mld_del_delrec privilege escalation (EUVD-2025-25098 / Nessus ID 264793)",
+      "link": "https://vuldb.com/vuln/320377",
+      "source": "VulDB Updates",
+      "published": "2026-08-01T21:54:03+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Linux / Unix",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 63.35,
+      "priority_score": 79.2
+    },
+    {
+      "title": "CVE-2025-38547 | Linux Kernel up to 6.12.39/6.15.7 axp20x_adc privilege escalation (EUVD-2025-25101 / Nessus ID 276629)",
+      "link": "https://vuldb.com/vuln/320375",
+      "source": "VulDB Updates",
+      "published": "2026-08-01T21:54:03+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Linux / Unix",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 63.35,
+      "priority_score": 79.2
+    },
+    {
+      "title": "CVE-2025-38512 | Linux Kernel up to 6.1.145/6.6.98/6.12.38/6.15.6 mac80211_hwsim privilege escalation (EUVD-2025-25086 / Nessus ID 264665)",
+      "link": "https://vuldb.com/vuln/320372",
+      "source": "VulDB Updates",
+      "published": "2026-08-01T18:03:00+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Linux / Unix",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 63.35,
+      "priority_score": 78.17
+    },
+    {
+      "title": "CVE-2025-38499 | Linux Kernel up to 6.1.146/6.6.99/6.12.39/6.15.2 clone_private_mnt privilege escalation (Nessus ID 259927 / WID-SEC-2025-1757)",
+      "link": "https://vuldb.com/vuln/319435",
+      "source": "VulDB Updates",
+      "published": "2026-08-01T18:03:00+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Linux / Unix",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 63.35,
+      "priority_score": 78.17
+    },
+    {
+      "title": "CVE-2022-41209 | SAP Customer Data Cloud 7.4 on Android inadequate encryption (EUVD-2022-44450)",
+      "link": "https://vuldb.com/vuln/210627",
+      "source": "VulDB Updates",
+      "published": "2026-08-01T13:03:53+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Mobile Security"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 61.35,
+      "priority_score": 76.36
+    },
+    {
+      "title": "Boolean-Based Blind SQL Injection to Remote Code Execution",
+      "link": "https://dev.to/xnu11/boolean-based-blind-sql-injection-to-remote-code-execution-g29",
+      "source": "DEV Community",
+      "published": "2026-08-01T13:33:09+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Web / API Security",
+        "Exploit / PoC",
+        "Identity / Access",
+        "Windows / Microsoft",
+        "OSINT / Community"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 60.14,
+      "priority_score": 85.94
+    },
+    {
+      "title": "Adobe fixed a maximum-severity vulnerability flaw in Campaign Classic",
+      "link": "https://securityaffairs.com/196429/security/adobe-fixed-a-maximum-severity-vulnerability-flaw-in-campaign-classic.html",
+      "source": "Security Affairs",
+      "published": "2026-08-01T12:31:34+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 57.1,
+      "priority_score": 74.94
+    },
+    {
+      "title": "Hackers Turned a Trusted Advertising Platform Into a Crypto-Stealer Delivery Network",
+      "link": "https://cybersecuritynews.com/adform-advertising-platform-compromised/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-08-01T12:13:57+00:00",
+      "smart_groups": [
+        "Malware / Payloads",
+        "Crypto / Web3",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 56.03,
+      "priority_score": 82.82
+    }
+  ]
+}
