@@ -1,0 +1,166 @@
+{
+  "generated_at": "2026-08-03T10:06:38.254026+00:00",
+  "analysis_date": "2026-08-03",
+  "provider": "openai",
+  "model": "gpt-5.2",
+  "window_hours": 24,
+  "source_file": "data/news_recent.json",
+  "source_generated_at": "2026-08-03T08:40:27.804038+00:00",
+  "source_days_back": 30,
+  "source_total_items": 50164,
+  "total_items_in_window_all": 1711,
+  "total_items_in_window_curated": 0,
+  "total_items_in_window_selected": 40,
+  "context_selection_policy": "curated-plus-operational-signal-v1",
+  "morning_call_markdown": "### Executive Summary\n- Multiple **pre-auth / unauth** compromise paths surfaced with PoC or strong exploitation risk: **N-able N-central “god-mode” takeover**, **TeamCity on‑prem unauth RCE**, and **Gitea/CodeIgniter pre-auth RCE PoCs** (CI/CD + admin tools = high blast radius).\n- **macOS infostealer campaign (MacSync)** abusing **fake Claude install guides + “paste this in Terminal”** social engineering—relevant for exec/dev endpoints and BYOD.\n- New auth/credential-abuse weaknesses highlighted (e.g., **PaperCut brute-force + user enumeration**)—treat as a **credential-stuffing readiness** prompt.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) N-able N-central critical takeover (incl. incomplete patch / account takeover)**\n- What happened: Critical N-central issues reported enabling **unauth “god-mode” admin access**; separate CVE notes **incomplete patch leading to auth bypass/account takeover** (CVE-2026-18577).\n- Why it matters operationally: RMM console compromise is a **fleet-wide control-plane breach** (rapid lateral movement, script execution, ransomware staging).\n- Recommended immediate actions for the SOC today: **Identify any N-central exposure** (cloud/on‑prem, internet-facing), **confirm patched version beyond 2026.3.1 + vendor mitigations**, and **alert on new/changed admin users, API tokens, or unexpected automation jobs** in N-central audit logs.\n\n**2) JetBrains TeamCity On-Prem critical unauth RCE (CVE-2026-63077)**\n- What happened: Public analysis of a **critical unauth server compromise** path in TeamCity on‑prem (insecure deserialization via agent polling protocol).\n- Why it matters operationally: CI/CD compromise enables **code theft, pipeline tampering, signing key access**, and direct pivot into prod (financial-sector supply-chain risk).\n- Recommended immediate actions for the SOC today: **Inventory TeamCity instances**, **verify patch level/mitigation** and restrict management interfaces; **hunt for new service accounts, new build agents, unexpected plugin installs, and outbound connections from TeamCity hosts**.\n\n**3) Pre-auth RCE PoCs in common dev/web stacks (Gitea + CodeIgniter)**\n- What happened: PoCs published for **Gitea pre-auth RCE (CVE-2026-60004)** and **CodeIgniter 4 file upload RCE (CVE-2026-63223; fixed in 4.7.4)**.\n- Why it matters operationally: These platforms often sit in **dev networks with secrets**; PoC availability increases opportunistic scanning and “smash-and-grab” compromise.\n- Recommended immediate actions for the SOC today: **Scan externally reachable surfaces** for Gitea/CodeIgniter apps; **block/monitor suspicious upload endpoints and abnormal POST patterns**, and **prioritize patching/isolating internet-facing instances**.\n\n**4) macOS “paste into Terminal” infostealer (MacSync) via fake Claude guidance**\n- What happened: Campaign uses **paid search + fake Claude installation guide** to trick users into **running a Terminal command** that installs MacSync stealer.\n- Why it matters operationally: Likely leads to **credential/session theft** (browser creds, wallet data); high risk for **exec/dev Mac endpoints** with privileged SaaS access.\n- Recommended immediate actions for the SOC today: **Notify IT/SOC floor** to treat “Claude install” searches as suspicious; **hunt for unusual shell execution chains** (Terminal → curl/bash, osascript, launch agents) on macOS EDR and **force re-auth + token revocation** for affected users.\n\n---\n\n### Monitoring & detection recommendations\n- **RMM/remote admin abuse (N-central)**: Monitor **N-central audit logs + IdP logs** for new admin creation, role changes, token creation, mass device tasking (MITRE: **T1098 Account Manipulation**, **T1059 Command and Scripting Interpreter**).\n- **CI/CD compromise signals (TeamCity/Gitea)**: From **CI server logs + EDR on CI hosts**, alert on new agents, plugin installs, build config changes, credential store access; watch **egress** to unusual destinations (MITRE: **T1195 Supply Chain Compromise**, **T1552 Unsecured Credentials**).\n- **External scanning/attempted exploitation**: On **WAF/reverse proxy/firewall**, look for spikes in requests to **/login, /api, /upload, git hook endpoints, TeamCity agent polling paths**; correlate with 4xx/5xx bursts and new source ASNs (MITRE: **T1595 Active Scanning**).\n- **macOS stealer execution patterns**: In **macOS EDR + MDM logs**, hunt for Terminal spawning **curl/wget/python/bash**, creation of **LaunchAgents/LaunchDaemons**, or new persistence items (MITRE: **T1059**, **T1543.001**, **T1547**).\n- **Credential stuffing readiness (PaperCut + general)**: In **IdP/VPN/app auth logs**, alert on high-rate failures, distributed login attempts, and timing/user-enum patterns; ensure lockout/MFA challenges are triggering (MITRE: **T1110 Brute Force**).\n- **Oracle WebCenter Portal criticals (CVE-2026-60561/60563/60566)**: If present, monitor **web/app logs** for unusual Runtime Tools access, new privileged sessions, and unexpected process spawns on the app server (MITRE: **T1068 Privilege Escalation**, **T1190 Exploit Public-Facing App**).\n- **Linux local privesc noise (kernel/PackageKit)**: On **Linux EDR/auditd**, alert on PackageKit D-Bus transactions, unexpected package installs, and privilege escalations from low-priv users (MITRE: **T1068**).\n\n---\n\n### Medium-term follow-ups\n- **Patch governance**: Validate patch SLAs for **RMM/CI/CD/admin tooling**; require **out-of-band validation** for “incomplete patch” scenarios (e.g., N-central through 2026.3.1 impacted).\n- **Exposure reduction**: Ensure **CI/CD, RMM, and admin consoles** are not internet-facing; enforce **VPN + MFA + allowlisting** and tighten reverse-proxy rules.\n- **macOS hardening**: Enforce **restricted Terminal/scripting** where feasible, stronger **PPPC/MDM controls**, and user prompts for new persistence items; update phishing training to include **“paste this command”** scams.\n- **Credential protections**: Review **rate-limiting/lockout** and **MFA enforcement** for apps with known brute-force weaknesses (PaperCut theme); confirm SOC playbooks for credential-stuffing spikes.\n- **AppSec backlog**: Triage and patch internet-facing **Gitea/CodeIgniter/WordPress plugins**; add these to continuous external attack surface monitoring with ownership mapping.\n- **Detection engineering**: Create/refresh detections for **CI pipeline tampering** (build config changes + secret access + unusual egress) and **RMM mass-action anomalies** (burst tasking across endpoints).",
+  "highlights": [
+    {
+      "title": "Weekly Cyber Security Newsletter– Claude Hacked 3 Companies, Cisco 0-Day, Word Copilot and VMware Flaw +20 Stories",
+      "link": "https://cybersecuritynews.com/cyber-security-newsletter-august/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-08-02T12:45:45+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Cloud / SaaS",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": false,
+      "signal_tier": "critical",
+      "signal_score": 100.0,
+      "priority_score": 74.76
+    },
+    {
+      "title": "CVE-2026-60561 | Oracle WebCenter Portal 12.2.1.4.0/14.1.2.0.0 Runtime Tools privilege escalation",
+      "link": "https://vuldb.com/vuln/381557",
+      "source": "VulDB Updates",
+      "published": "2026-08-03T04:39:38+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 63.35,
+      "priority_score": 80.46
+    },
+    {
+      "title": "CVE-2024-56531 | Linux Kernel up to 6.12.1 ALSA snd_card_free_when_closed privilege escalation (Nessus ID 214781 / WID-SEC-2024-3762)",
+      "link": "https://vuldb.com/vuln/289462",
+      "source": "VulDB Updates",
+      "published": "2026-08-02T20:05:23+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Linux / Unix",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 63.35,
+      "priority_score": 78.16
+    },
+    {
+      "title": "CVE-2026-11856 | curl libcurl up to 8.20.0 authentication replay (Nessus ID 331599 / WID-SEC-2026-2052)",
+      "link": "https://vuldb.com/vuln/376067",
+      "source": "VulDB Updates",
+      "published": "2026-08-02T19:54:42+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 63.35,
+      "priority_score": 78.12
+    },
+    {
+      "title": "Exploit for CVE-2026-63223",
+      "link": "https://vulners.com/githubexploit/66E445FC-C735-56C1-ACA3-6B5C18DF764C?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-08-03T03:37:35+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 62.4,
+      "priority_score": 75.61
+    },
+    {
+      "title": "Exploit for Missing Authentication for Critical Function in Coreweave Marimo",
+      "link": "https://vulners.com/githubexploit/FCE4386F-0EEF-54FF-9056-202822791688?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-08-02T17:34:07+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Linux / Unix",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 62.4,
+      "priority_score": 72.89
+    },
+    {
+      "title": "Critical N-Able N-Central Vulnerability Allows Hackers to Gain god-mode Access to the RMM Console",
+      "link": "https://cybersecuritynews.com/n-able-n-central-vulnerability/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-08-03T06:26:29+00:00",
+      "smart_groups": [
+        "Exploit / PoC",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": false,
+      "signal_tier": "watch",
+      "signal_score": 76.06,
+      "priority_score": 73.73
+    },
+    {
+      "title": "Clevatess",
+      "link": "https://en.wikipedia.org/w/index.php?title=Clevatess&diff=1367416575&oldid=1366743010",
+      "source": "Wikipedia - Recent changes [en]",
+      "published": "2026-08-03T00:04:06+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": false,
+      "signal_tier": "watch",
+      "signal_score": 52.2,
+      "priority_score": 72.76
+    },
+    {
+      "title": "Exploit for CVE-2025-48932",
+      "link": "https://vulners.com/githubexploit/A6CF65DF-A489-568C-AB1F-5752A75A10E5?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-08-02T17:32:41+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Web / API Security",
+        "Identity / Access",
+        "Data Breaches / Leaks",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "watch",
+      "signal_score": 49.0,
+      "priority_score": 71.19
+    },
+    {
+      "title": "Exploit for CVE-2026-60004",
+      "link": "https://vulners.com/githubexploit/96B20AF9-E93D-59FB-AB40-48817E5D4C64?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-08-03T07:48:39+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Crypto / Web3",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "watch",
+      "signal_score": 48.4,
+      "priority_score": 76.73
+    }
+  ]
+}
