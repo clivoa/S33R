@@ -1,170 +1,174 @@
 {
-  "generated_at": "2026-08-04T08:55:15.511343+00:00",
-  "analysis_date": "2026-08-04",
+  "generated_at": "2026-08-05T08:53:07.596544+00:00",
+  "analysis_date": "2026-08-05",
   "provider": "openai",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-08-04T08:50:26.082344+00:00",
+  "source_generated_at": "2026-08-05T07:52:47.101611+00:00",
   "source_days_back": 30,
-  "source_total_items": 50767,
-  "total_items_in_window_all": 2369,
-  "total_items_in_window_curated": 7,
-  "total_items_in_window_selected": 46,
+  "source_total_items": 51683,
+  "total_items_in_window_all": 2679,
+  "total_items_in_window_curated": 10,
+  "total_items_in_window_selected": 43,
   "context_selection_policy": "curated-plus-operational-signal-v1",
-  "morning_call_markdown": "### Executive Summary\n- Active exploitation: **N-able N-central auth bypass (CVE-2026-18577) is in KEV** and being used for admin takeover—treat any exposed N-central as potentially compromised.\n- Ransomware operations: **INC ransomware is actively exploiting SonicWall SMA 1000** flaws; prioritize VPN edge exposure review and post-exploitation hunting.\n- New/weaponizing risk: **Public PoCs dropped for Redis UAF RCE (CVE-2026-23479), .NET RCE (CVE-2026-56158), and Rails Active Storage RCE (CVE-2026-66066)**—expect scanning and opportunistic exploitation.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) N-able N-central auth bypass under active exploitation (CVE-2026-18577; KEV)**\n- What happened: Multiple advisories report **in-the-wild exploitation** enabling **unauthenticated admin access/account takeover** of N-central.\n- Why it matters operationally: N-central is a **high-leverage RMM**; compromise enables rapid lateral movement, script execution, and fleet-wide impact (ransomware-ready).\n- Recommended immediate actions for the SOC today: **Confirm patch level + exposure** (internet-facing / VPN-accessible); **hunt for new admin users/tokens, suspicious script/jobs, and agent push events** since last known-good snapshot.\n\n**2) Edge device / management plane takeover: SonicWall SMA 1000 exploitation linked to ransomware**\n- What happened: Reporting indicates **INC ransomware** is a dominant actor exploiting **SonicWall SMA 1000 vulnerabilities** for initial access.\n- Why it matters operationally: VPN compromise gives **credential capture + session hijack + direct internal access**; high likelihood of ransomware staging and data theft.\n- Recommended immediate actions for the SOC today: **Review SMA 1000 exposure and patch/mitigation status**; **hunt for anomalous VPN logins, new sessions from unusual geos/ASNs, and post-VPN internal discovery** in the hours following successful logins.\n\n**3) Check Point Security Management auth bypass → command execution (CVE-2026-18574)**\n- What happened: A critical issue reported allowing **unauthenticated access to management services** leading to **arbitrary command execution** on Check Point management servers.\n- Why it matters operationally: Compromise of firewall management is a **catastrophic control-plane event** (policy tampering, log suppression, credential theft, network-wide pivot).\n- Recommended immediate actions for the SOC today: **Identify any reachable management interfaces** (including partner/admin networks); **prioritize emergency patch/compensating controls** (restrict mgmt ports, enforce jump-host, MFA) and **review recent admin actions/policy pushes**.\n\n**4) PoC-driven app/server RCE wave: Redis / .NET / Rails Active Storage**\n- What happened: **Public exploits/PoCs** surfaced for **Redis UAF RCE (CVE-2026-23479)**, **.NET deserialization RCE (CVE-2026-56158)**, and **Rails Active Storage RCE (CVE-2026-66066)**.\n- Why it matters operationally: PoC availability typically triggers **internet-wide scanning** and fast opportunistic compromise of exposed services and web apps.\n- Recommended immediate actions for the SOC today: **Validate external exposure** (Redis should not be internet-facing; review WAF paths for Rails file upload endpoints); **monitor for exploit-like request patterns and resulting child processes** on app hosts (web worker spawning shells, unusual DLL loads, redis-server crashes/restarts).\n\n**5) In-the-wild command injection against VeloCloud Orchestrator (CVE-2026-16812)**\n- What happened: Reports indicate **active exploitation** of a critical **VeloCloud Orchestrator command injection** in on-prem deployments.\n- Why it matters operationally: SD-WAN orchestrator compromise enables **network traffic manipulation and widespread site impact**, especially dangerous in distributed branch environments.\n- Recommended immediate actions for the SOC today: **Confirm whether any VCO is deployed on-prem** and reachable; **review web/app logs for suspicious admin/API calls** and abnormal process execution on the orchestrator host.\n\n---\n\n### Monitoring & detection recommendations\n- **RMM/N-central (T1078 Valid Accounts, T1059 Command/Scripting):** Monitor N-central audit logs for **new admin creation, token/session issuance, mass task/job creation, agent redeployments**; correlate with EDR for **remote execution bursts** across endpoints.\n- **VPN/SMA 1000 (T1133 External Remote Services):** Watch VPN logs for **first-time users/devices, impossible travel, atypical source countries/ASNs, high session counts**, and **logins followed by SMB/RDP/WinRM spikes** internally.\n- **Firewall management plane (Check Point):** Alert on **new admin logins, policy/package publishes, changes to logging destinations**, and any **process spawning from management daemons** on the management server (EDR/syslog).\n- **Web app exploitation (Rails Active Storage / SSRF patterns):** Use WAF/reverse-proxy logs to hunt for **suspicious upload flows, unexpected MIME types, path traversal-like accesses, and internal URL fetch attempts** (SSRF indicators).\n- **Redis exploitation (T1190 Exploit Public-Facing Application):** Network telemetry for **direct Redis connections from untrusted networks**, unusual command sequences, and host telemetry for **redis-server crashes/restarts** plus unexpected child processes.\n- **.NET deserialization RCE:** EDR detection for **new or unsigned .NET assemblies**, abnormal **w3wp/dotnet spawning cmd/powershell**, and application logs showing deserialization exceptions preceding execution.\n- **Supply-chain (npm/PyPI) risks (T1195 Supply Chain Compromise):** In CI/CD logs, flag **new dependencies, postinstall scripts, package name lookalikes**, and unexpected outbound connections during builds.\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** Move any **internet-facing management/VPN/RMM** into a **48–72h emergency patch SLA** (KEV-driven), not monthly cadence; ensure rollback plans are tested.\n- **Access hardening:** Enforce **MFA + conditional access** for VPN/RMM/admin portals; restrict management interfaces to **jump hosts + allowlists**; validate break-glass accounts are monitored.\n- **Rails/Redis exposure review:** Inventory where **Active Storage + libvips** is used and where **Redis is reachable**; implement segmentation and auth/TLS where applicable.\n- **Adobe Campaign Classic exposure check:** If ACC exists in marketing stacks, prioritize vendor patching and validate it is **not directly internet reachable**; add WAF rules for ACC admin/app endpoints (details may be incomplete in reporting).\n- **AI/MCP server controls (AWS Amazon MQ MCP Server CVE-2026-18655):** If used internally, update to fixed version and add guardrails for **prompt-injection-driven secret access** (limit broker creds scope; rotate tokens).\n- **Threat intel/IR readiness:** Given ransomware activity (INC; recent bank ransomware reporting), confirm **backup immutability, restore drills, and egress monitoring** for large data staging/exfil.",
+  "morning_call_markdown": "### Executive Summary\n- **Actively exploited auth bypass in N-able N-central (CVE-2026-18577)** is now in KEV; high risk for MSP/RMM-style lateral movement into managed endpoints.\n- **SonicWall SMA 1000 zero-day exploitation continues** with **INC ransomware** reported as a dominant operator; expect edge-device compromise → credential access → encryption/extortion pressure.\n- **Supply-chain risk spike (npm)**: large-scale compromise waves (ChainDrop / Shai-Hulud variants) impacting widely used packages; treat CI/CD and developer endpoints as potential initial access paths.\n\n### High-priority items (immediate attention)\n**1) N-able N-central auth bypass (CVE-2026-18577) – exploited / KEV**\n- **What happened:** Active in-the-wild exploitation of an unauthenticated authentication bypass in N-central; emergency hotfix released; prior fix was incomplete.\n- **Why it matters operationally:** RMM tooling is a force-multiplier—if N-central is compromised, attackers can push payloads/scripts to many endpoints quickly (high blast radius in financial environments).\n- **Recommended immediate actions for the SOC today:** Identify any N-central instances and **confirm hotfix applied**; hunt for **new/unknown admin accounts, API tokens, or unexpected remote actions/jobs** originating from N-central.\n\n**2) SonicWall SMA 1000 zero-days leveraged by INC ransomware (edge compromise → extortion)**\n- **What happened:** Reporting indicates INC ransomware is aggressively chaining recently disclosed SonicWall SMA 1000 flaws and escalating victim pressure via calls/emails post-compromise.\n- **Why it matters operationally:** VPN/SMA appliances sit on the perimeter; compromise can enable credential theft, session hijack, internal discovery, and rapid ransomware staging.\n- **Recommended immediate actions for the SOC today:** Validate SMA 1000 **patch/mitigation status and exposure**; prioritize triage of **any anomalous SMA auth patterns, new admin changes, or outbound connections from SMA** and fast-track IR if found.\n\n**3) Apache Tomcat encryption vulnerability (CVE-2026-34486) – actively exploited / KEV**\n- **What happened:** CISA added a Tomcat encryption-related flaw to KEV and states it’s actively exploited; remediation deadline imminent (per reporting).\n- **Why it matters operationally:** Internet-facing Tomcat is common in internal apps/portals; exploitation can enable data access/tampering and serve as a beachhead into app tiers.\n- **Recommended immediate actions for the SOC today:** Inventory **internet-facing and DMZ Tomcat** and apply vendor mitigations/patches; monitor **Tomcat access logs for unusual endpoints/parameters and new webshell-like file writes** on app servers.\n\n**4) Large-scale npm supply-chain compromises (ChainDrop / Shai-Hulud waves, incl. high-download packages)**\n- **What happened:** Multiple reports of self-propagating malware compromising hundreds to 1,300+ npm packages (some with extremely high weekly downloads) via maintainer/GitHub account compromise.\n- **Why it matters operationally:** Risk concentrates in **developer workstations, CI runners, build pipelines**, and any production apps that auto-update dependencies; potential credential theft and token exfiltration.\n- **Recommended immediate actions for the SOC today:** Alert DevOps to **freeze/lock dependency updates** and review recent npm install activity; hunt on dev/CI endpoints for **suspicious child processes spawned by node/npm install scripts** and unexpected outbound to retrieve second-stage payloads.\n\n**5) Flowise OAuth2 endpoint issues (multiple CVEs; unauth refresh/token theft + SSRF)**\n- **What happened:** Multiple Flowise CVEs published describing **unauthenticated OAuth2 refresh endpoints** that can return access tokens and enable SSRF/secret exfiltration (versions prior to 3.1.3).\n- **Why it matters operationally:** If Flowise is used to integrate SaaS (email, ticketing, storage), compromise can yield **OAuth tokens** leading to downstream service access and data exposure.\n- **Recommended immediate actions for the SOC today:** Confirm whether Flowise exists in estate (prod/dev) and **upgrade to fixed versions**; monitor for **unauthenticated calls to oauth2-credential refresh endpoints** and unusual outbound requests from Flowise hosts.\n\n### Monitoring & detection recommendations\n- **RMM/N-central (T1078 Valid Accounts, T1219 Remote Services):** Monitor N-central audit/admin logs + EDR on managed endpoints for **new admin creation, token generation, mass job execution**, and **script/payload pushes** outside change windows.\n- **SonicWall SMA (T1190 Exploit Public-Facing Application):** Collect SMA syslogs/auth logs + firewall telemetry for **spikes in failed logins, unusual geos, new admin config changes**, and **post-auth sessions followed by internal scanning**.\n- **Ransomware staging behaviors (T1486 Data Encrypted for Impact):** EDR hunt for **vssadmin/wbadmin/bcdedit** usage, rapid file renames/encryption bursts, and **lateral admin tool use** (PsExec/WMI/WinRM) after edge events.\n- **Tomcat exploitation/webshell patterns (T1505.003 Server Software Component):** Web/app logs for **suspicious POSTs to uncommon paths**, repeated 4xx/5xx probing, and host telemetry for **new .jsp/.war drops** or unexpected writes under web roots.\n- **npm supply-chain execution on install (T1059.007 JavaScript):** On dev endpoints/CI runners, alert on **npm/node spawning shell/powershell/curl/wget**, new persistence, or access to credential stores immediately after dependency installs.\n- **OAuth token abuse / SaaS pivot (T1528 Steal Application Access Token):** IdP/SaaS logs (M365/Google/Slack/GitHub) for **new OAuth app grants, token refresh anomalies, impossible travel**, and **API-heavy activity** from new user agents.\n- **Device code / AiTM phishing trend (per Stormcast mention):** Email security + IdP logs for **device code authentication events**, unexpected MFA method changes, and sign-ins preceded by suspicious inbox rules/forwarding.\n\n### Medium-term follow-ups\n- **Patch governance:** Add **CVE-2026-18577 (N-central)** and **CVE-2026-34486 (Tomcat)** to top patch SLAs; validate coverage via vuln scans and config management (not just “reported patched”).\n- **Edge appliance hardening:** Review exposure and management-plane access for **SMA/VPN and OOB interfaces**; restrict admin access by IP/VPN, enforce MFA, and enable immutable logging.\n- **Supply-chain controls:** Enforce **package lockfiles, private registries, signature/attestation checks (where available), and CI egress controls**; require maintainer verification for dependency updates.\n- **Secrets hygiene:** Rotate **CI/CD tokens, npm/GitHub credentials, and service principals** if recent dependency installs occurred during the compromise windows (assumption: auto-update pipelines exist).\n- **Flowise/LLM tooling review:** Inventory internal “AI workflow” tools and integrations; require **auth on admin/API endpoints**, network segmentation, and outbound allow-listing to reduce SSRF/token theft impact.\n- **Ransomware readiness:** Revalidate **offline/immutable backups**, restoration RTOs for critical banking apps, and ensure playbooks include **extortion pressure channels** (calls/emails) coordination with Legal/Comms.",
   "highlights": [
     {
-      "title": "Zero-Day Remediation Meets Operational Resiliency",
-      "link": "https://blog.qualys.com/product-tech/2026/08/03/zero-day-remediation-operational-resiliency-trurisk-eliminate",
-      "source": "Qualys Security Blog",
-      "published": "2026-08-03T16:00:49+00:00",
+      "title": "CVE-2026-18577: N-able N-central Authentication Bypass Exploited in the Wild",
+      "link": "https://www.rapid7.com/blog/post/etr-cve-2026-18577-n-able-n-central-authentication-bypass-exploited-in-the-wild",
+      "source": "Rapid7 Blog",
+      "published": "2026-08-04T11:11:54+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
+        "Cloud / SaaS",
         "Exploit / PoC",
+        "Windows / Microsoft",
         "Vendors / Product Security"
       ],
       "curated": true,
       "signal_tier": "critical",
-      "signal_score": 85.24,
-      "priority_score": 81.04
+      "signal_score": 89.32,
+      "priority_score": 85.91
     },
     {
-      "title": "CC-4823 - Active Exploitation of Critical N-central Authentication Bypass Vulnerability",
-      "link": "https://digital.nhs.uk/cyber-alerts/2026/cc-4823",
-      "source": "NHS Digital - Cyber Alert Feed",
-      "published": "2026-08-03T11:17:00+00:00",
+      "title": "CVE-2026-18577: N-able N-central Authentication Bypass Exploited in the Wild",
+      "link": "https://vulners.com/rapid7blog/RAPID7BLOG:37526707495E2ED635E8E814E426C3D6?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-08-04T11:11:54+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "Government / CERT"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 85.03,
-      "priority_score": 84.22
-    },
-    {
-      "title": "Zero-Day Remediation Meets Operational Resiliency",
-      "link": "https://blog.qualys.com/category/product-tech",
-      "source": "Product and Tech – Qualys Security Blog",
-      "published": "2026-08-03T16:00:49+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "Vendors / Product Security"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 84.1,
-      "priority_score": 75.34
-    },
-    {
-      "title": "CVE-2026-18574",
-      "link": "https://vuldb.com/cve/CVE-2026-18574",
-      "source": "VulDB CVE",
-      "published": "2026-08-03T12:47:17+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
+        "Cloud / SaaS",
         "Exploit / PoC"
       ],
-      "curated": false,
-      "signal_tier": "critical",
-      "signal_score": 82.76,
-      "priority_score": 73.27
-    },
-    {
-      "title": "N-able N-central Vulnerability Under Active Exploitation",
-      "link": "https://www.esecurityplanet.com/threats/n-able-n-central-vulnerability-under-active-exploitation/",
-      "source": "eSecurityPlanet",
-      "published": "2026-08-03T17:03:20+00:00",
-      "smart_groups": [
-        "Threat Actors / APT",
-        "Exploit / PoC",
-        "Vulnerabilities / CVEs"
-      ],
       "curated": true,
-      "signal_tier": "high",
-      "signal_score": 76.18,
-      "priority_score": 81.64
+      "signal_tier": "critical",
+      "signal_score": 88.4,
+      "priority_score": 81.26
     },
     {
-      "title": "INC Ransomware Emerges as Dominant Actor Exploiting SonicWall SMA 1000 Flaws",
-      "link": "https://thehackernews.com/2026/08/inc-ransomware-emerges-as-dominant.html",
-      "source": "The Hacker News",
-      "published": "2026-08-03T16:15:13+00:00",
+      "title": "INC Ransomware is Calling Victims – Pressure Tactics Post SonicWall Zero-Day Exploit",
+      "link": "https://securityaffairs.com/196607/malware/inc-ransomware-is-calling-victims-pressure-tactics-post-sonicwall-zero-day-exploit.html",
+      "source": "Security Affairs",
+      "published": "2026-08-04T13:46:54+00:00",
       "smart_groups": [
-        "Data Breaches / Leaks",
+        "Vulnerabilities / CVEs",
         "Threat Actors / APT",
         "Cloud / SaaS",
         "Exploit / PoC",
+        "Network / OT / ICS",
         "Ransomware",
         "Mobile Security",
         "General Security"
       ],
       "curated": true,
-      "signal_tier": "high",
-      "signal_score": 75.56,
-      "priority_score": 78.29
+      "signal_tier": "critical",
+      "signal_score": 88.12,
+      "priority_score": 85.11
     },
     {
-      "title": "Exploit for CVE-2026-56158",
-      "link": "https://vulners.com/githubexploit/C70098EC-8455-5303-80B5-BD82E10260AE?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "title": "CVE-2026-18577: N-able N-central Authentication Bypass Lets Attackers Reach Managed Endpoints",
+      "link": "https://socprime.com/blog/cve-2026-18577-analysis/",
+      "source": "SOC Prime Blog",
+      "published": "2026-08-04T13:00:01+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Vendors / Product Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 85.13,
+      "priority_score": 85.04
+    },
+    {
+      "title": "U.S. CISA adds a N-able N-central flaw to its Known Exploited Vulnerabilities catalog",
+      "link": "https://securityaffairs.com/196585/security/u-s-cisa-adds-a-n-able-n-central-flaw-to-its-known-exploited-vulnerabilities-catalog.html",
+      "source": "Security Affairs",
+      "published": "2026-08-04T11:02:44+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 85.12,
+      "priority_score": 84.86
+    },
+    {
+      "title": "Exploit for Interpretation Conflict in Wordpress",
+      "link": "https://vulners.com/githubexploit/EAD3091E-D6DE-595F-BECF-235A06F58FB5?utm_source=rss&utm_medium=rss&utm_campaign=rss",
       "source": "Vulners.com RSS Feed",
-      "published": "2026-08-03T19:24:59+00:00",
+      "published": "2026-08-04T13:35:24+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Identity / Access"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 76.4,
+      "priority_score": 70.34
+    },
+    {
+      "title": "Prolific ransomware group behind SonicWall zero-day attacks",
+      "link": "https://cyberscoop.com/inc-ransomware-sonicwall-zero-day-attacks/",
+      "source": "CyberScoop",
+      "published": "2026-08-04T15:20:06+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Ransomware",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 74.4,
+      "priority_score": 86.9
+    },
+    {
+      "title": "Exploit for CVE-2025-64513",
+      "link": "https://sploitus.com/exploit?id=CCE27BEF-74DE-5AC7-8FA0-F4D0E1A5839B&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-08-05T02:57:51+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 64.4,
-      "priority_score": 73.4
+      "signal_score": 70.2,
+      "priority_score": 72.95
     },
     {
-      "title": "CVE-2026-62995 | authlib joserfc up to 1.7.1 authentication replay (Nessus ID 331668)",
-      "link": "https://vuldb.com/vuln/384240",
-      "source": "VulDB Updates",
-      "published": "2026-08-03T18:55:17+00:00",
+      "title": "The Frontier AI Vulnerability Burst: Industrializing Autonomous Zero-Day Discovery in Open-Source Software",
+      "link": "https://unit42.paloaltonetworks.com/frontier-ai-vulnerability-burst/",
+      "source": "Unit 42",
+      "published": "2026-08-04T13:00:11+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Supply Chain / Software",
+        "Vendors / Product Security"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 70.0,
+      "priority_score": 84.91
+    },
+    {
+      "title": "Exploit for CVE-2026-59243",
+      "link": "https://sploitus.com/exploit?id=E61E543A-1E02-5D08-914B-0266B1C07B78&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-08-04T20:17:55+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 63.36,
-      "priority_score": 77.88
-    },
-    {
-      "title": "Exploit for Use After Free in Redis",
-      "link": "https://vulners.com/githubexploit/1DB0D250-EDB8-5F73-8BEE-FBC8561EC0C1?utm_source=rss&utm_medium=rss&utm_campaign=rss",
-      "source": "Vulners.com RSS Feed",
-      "published": "2026-08-04T04:39:48+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "Ransomware"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 62.4,
-      "priority_score": 75.87
-    },
-    {
-      "title": "Exploit for Link Following in Microsoft",
-      "link": "https://vulners.com/githubexploit/B4F7388D-B821-56A6-86B7-73DDDF9CFD9C?utm_source=rss&utm_medium=rss&utm_campaign=rss",
-      "source": "Vulners.com RSS Feed",
-      "published": "2026-08-03T11:53:44+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "Linux / Unix",
-        "Windows / Microsoft"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 62.4,
-      "priority_score": 71.35
+      "signal_score": 68.2,
+      "priority_score": 71.16
     }
   ]
 }
