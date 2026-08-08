@@ -1,0 +1,183 @@
+{
+  "generated_at": "2026-08-07T07:42:08.153109+00:00",
+  "analysis_date": "2026-08-07",
+  "provider": "openai",
+  "model": "gpt-5.2",
+  "window_hours": 24,
+  "source_file": "data/news_recent.json",
+  "source_generated_at": "2026-08-07T07:24:54.529024+00:00",
+  "source_days_back": 30,
+  "source_total_items": 52738,
+  "total_items_in_window_all": 2428,
+  "total_items_in_window_curated": 7,
+  "total_items_in_window_selected": 40,
+  "context_selection_policy": "curated-plus-operational-signal-v1",
+  "morning_call_markdown": "### Executive Summary\n- **Actively exploited CI/CD RCE:** JetBrains **TeamCity On-Prem CVE-2026-63077** is in **CISA KEV** with exploitation reported—treat exposed servers as **at-risk for rapid compromise**.\n- **Public PoCs for high-impact infra/identity bugs:** **Cisco IMC CVE-2026-20200 (root RCE)** and **miniOrange SAML SSO CVE-2026-15013 (auth bypass)** now have PoC—expect scanning and opportunistic intrusions.\n- **Email/collab + supply-chain risk rising:** **SOGo ICS invite XSS → RCE** exploited in the wild; plus **malicious/backdoored WordPress plugins** and **AI coding agent supply-chain/RCE patterns** warrant tighter controls on build and web ecosystems.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) JetBrains TeamCity On-Prem: unauth deserialization RCE (CVE-2026-63077) – actively exploited / KEV**\n- **What happened:** Reports indicate **active exploitation** of **unauthenticated RCE** in TeamCity agent polling.\n- **Why it matters operationally:** CI/CD compromise is a fast path to **credential theft, code tampering, build pipeline poisoning**, and lateral movement into prod.\n- **Recommended immediate actions for the SOC today:** **Identify all TeamCity instances and internet exposure; prioritize patch/mitigation today** and **hunt for new admin/users, suspicious build config changes, and unexpected child processes on TeamCity hosts**.\n\n**2) cPanel & WHM 11.x: “root SQL execution toolkit” exploit published (CVE-2026-58048)**\n- **What happened:** A **weaponized toolkit/PoC** was released for **cPanel/WHM** enabling RCE/persistence on unpatched targets.\n- **Why it matters operationally:** Any exposed/admin hosting control plane can be leveraged for **webshells, credential harvesting, data access**, and downstream compromise of hosted apps.\n- **Recommended immediate actions for the SOC today:** **Confirm whether we run cPanel/WHM anywhere (incl. subsidiaries/vendors); block/monitor management exposure** and **alert on unusual DB/UDF activity, new cron jobs, or unexpected outbound connections from cPanel hosts**.\n\n**3) Cisco Integrated Management Controller (IMC): critical root command execution with public PoC (CVE-2026-20200)**\n- **What happened:** Cisco disclosed and fixed a bug allowing **root commands via IMC web interface**; **public PoC** is available.\n- **Why it matters operationally:** IMC is often **overlooked “out-of-band” management**; compromise can yield persistent hardware-level footholds and pivoting into restricted networks.\n- **Recommended immediate actions for the SOC today:** **Inventory Cisco IMC endpoints and verify segmentation (no direct internet)**; **patch/upgrade urgently and monitor for web access anomalies to IMC interfaces**.\n\n**4) Identity & email/collaboration exploitation paths: miniOrange SAML SSO auth bypass + SOGo ICS XSS→RCE (active)**\n- **What happened:** **miniOrange SAML SSO <= 5.4.3** has an **unauthenticated auth bypass PoC (CVE-2026-15013)**; **SOGo v5.12.7** has **ICS invite XSS leading to RCE**, with **in-the-wild exploitation** reported.\n- **Why it matters operationally:** These enable **account takeover (SSO bypass)** or **RCE via calendar invite**—high impact in financial environments where email/SSO are primary trust anchors.\n- **Recommended immediate actions for the SOC today:** **Confirm presence of affected miniOrange/SOGo; patch/mitigate or restrict access immediately** and **increase monitoring on IdP/SAML assertions anomalies + suspicious calendar invite activity and post-exploitation behaviors on mail servers**.\n\n**5) Supply-chain and “malicious plugin” risk: backdoored WordPress plugins (CVE-2026-14812, CVE-2026-11976)**\n- **What happened:** Reporting flags **malicious/backdoored WordPress plugins** creating hidden admin accounts and enabling broader control.\n- **Why it matters operationally:** Public web properties (marketing, customer portals) are common entry points for **credential theft, webshells, and brand abuse**—often connected to enterprise SSO or analytics.\n- **Recommended immediate actions for the SOC today:** **Scan WordPress fleets for affected plugins and unknown admin users**; **review webserver logs for new admin creation events and unusual POSTs to admin endpoints**.\n\n---\n\n### Monitoring & detection recommendations\n- **TeamCity exploitation/post-compromise:** EDR + Windows/Linux process telemetry on TeamCity hosts for **unexpected child processes (cmd/powershell/bash), service creation, scheduled tasks** (ATT&CK **T1059**, **T1543**, **T1053**).\n- **CI/CD integrity monitoring:** TeamCity audit logs + SCM logs for **new/modified build steps, injected scripts, new tokens/credentials, changes to artifact repositories** (ATT&CK **T1565.001**).\n- **SAML/SSO bypass indicators (miniOrange):** IdP and app auth logs for **impossible travel, sudden role escalation, unusual SAMLResponse signature/algorithm patterns**; correlate with WAF/app logs (ATT&CK **T1078**).\n- **Mail/collab server exploitation (SOGo ICS):** Email gateway + server logs for **ICS attachments/invitations with SVG/odd MIME**, and EDR on mail servers for **browser/rendering processes spawning shells** (ATT&CK **T1204**, **T1059**).\n- **Cisco IMC probing:** Firewall/WAF/NDR for **new inbound scans to IMC ports/interfaces**, repeated auth failures, or unusual HTTP methods/URIs against management subnets (ATT&CK **T1595**).\n- **Web backdoors/hidden admin creation (WordPress):** Web/app logs for **/wp-admin** admin creation, plugin installation changes, and unusual requests to plugin PHP files; monitor DB changes if available (ATT&CK **T1505.003**).\n- **Outbound C2 after foothold:** Proxy/DNS logs for **newly observed domains from server subnets**, especially CI/CD, mail, and web tiers; alert on beacon-like periodicity (ATT&CK **T1071.001**).\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** Align vuln SLAs to “exploit-available/KEV” triggers—**TeamCity, Cisco IMC, SOGo, miniOrange** should map to **emergency change windows**.\n- **Reduce management plane exposure:** Enforce **no-internet policy** for out-of-band controllers (IMC/iDRAC/iLO), require **VPN + MFA + allowlists**, and add continuous external attack surface checks.\n- **CI/CD hardening:** Rotate CI secrets, enforce **least-privileged build agents**, isolate runners, and implement artifact signing/verification to reduce blast radius from TeamCity-class bugs.\n- **Web ecosystem controls:** Centralize WordPress/plugin management, restrict plugin install rights, and implement routine **admin-account reconciliation** and file integrity monitoring.\n- **AI coding agent risk (if used internally):** Validate whether any teams use Anthropic/Google/OpenAI coding agents; require **sandboxing, scoped tokens, repo allowlists, and secret scanning** to mitigate supply-chain/RCE patterns (assumption: usage may exist in dev teams).\n- **Ransomware targeting trend:** Reinforce monitoring for **manager/executive account compromise** (phishing-resistant MFA, conditional access, mailbox rule creation alerts) given continued targeting of higher-privilege business users.",
+  "highlights": [
+    {
+      "title": "Exploit for CVE-2026-58048",
+      "link": "https://vulners.com/githubexploit/95634F7D-9277-5576-BD0E-79D878E8920F?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-08-06T09:33:49+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 100.0,
+      "priority_score": 80.34
+    },
+    {
+      "title": "VU#487613: Alinto SOGo v5.12.7 vulnerable to cross-site scripting via malformed ICS calendar invitations",
+      "link": "https://kb.cert.org/vuls/id/487613",
+      "source": "CERT Recently Published Vulnerability Notes",
+      "published": "2026-08-06T18:36:37+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Web / API Security",
+        "Exploit / PoC",
+        "Network / OT / ICS",
+        "Phishing / Social Engineering",
+        "Government / CERT"
+      ],
+      "curated": false,
+      "signal_tier": "critical",
+      "signal_score": 89.11,
+      "priority_score": 77.11
+    },
+    {
+      "title": "TeamCity CVE-2026-63077: Unauthenticated Deserialization RCE in Agent Polling Actively Exploited",
+      "link": "https://dev.to/anoymask/teamcity-cve-2026-63077-unauthenticated-deserialization-rce-in-agent-polling-actively-exploited-2712",
+      "source": "DEV Community",
+      "published": "2026-08-07T02:56:41+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Threat Actors / APT",
+        "Detection Engineering",
+        "Cloud / SaaS",
+        "Exploit / PoC",
+        "Identity / Access",
+        "Malware / Payloads",
+        "Ransomware",
+        "Supply Chain / Software",
+        "Windows / Microsoft",
+        "OSINT / Community"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 87.24,
+      "priority_score": 89.75
+    },
+    {
+      "title": "InfoSec News Nuggets – 08/06/2026",
+      "link": "https://aboutdfir.com/infosec-news-nuggets-08-06-2026/",
+      "source": "AboutDFIR – The Definitive Compendium Project",
+      "published": "2026-08-06T12:59:52+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Crypto / Web3",
+        "Exploit / PoC",
+        "Detection Engineering"
+      ],
+      "curated": false,
+      "signal_tier": "critical",
+      "signal_score": 83.06,
+      "priority_score": 75.32
+    },
+    {
+      "title": "CVE-2026-15013 – miniOrange SAML SSO <= 5.4.3 Unauthenticated Authentication Bypass (PoC)",
+      "link": "https://seclists.org/fulldisclosure/2026/Aug/33",
+      "source": "Full Disclosure",
+      "published": "2026-08-06T19:36:09+00:00",
+      "smart_groups": [
+        "Identity / Access",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "OSINT / Community"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 72.08,
+      "priority_score": 92.21
+    },
+    {
+      "title": "Critical Cisco IMC bug gives attackers root, PoC is out (CVE-2026-20200)",
+      "link": "https://www.helpnetsecurity.com/2026/08/06/cisco-imc-cve-2026-20200-public-poc-exploit/",
+      "source": "Help Net Security",
+      "published": "2026-08-06T10:38:43+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Cloud / SaaS",
+        "Mobile Security",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 71.32,
+      "priority_score": 85.37
+    },
+    {
+      "title": "TeamPCP Linked To Redis Attacks Dating Back To 2020 And Later Supply Chain Campaign",
+      "link": "https://vulners.com/thn/THN:A5356DC7BC75590B2B3A93BFAB732909?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-08-07T06:50:00+00:00",
+      "smart_groups": [
+        "Malware / Payloads",
+        "Supply Chain / Software",
+        "Threat Actors / APT",
+        "Data Protection / Privacy",
+        "Cloud / SaaS",
+        "Crypto / Web3",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 69.37,
+      "priority_score": 74.36
+    },
+    {
+      "title": "Exploit for CVE-2026-70553",
+      "link": "https://sploitus.com/exploit?id=2FCD7081-4746-5C48-84DA-7F1228A2481C&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-08-06T14:10:05+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.76,
+      "priority_score": 72.41
+    },
+    {
+      "title": "Exploit for CVE-2026-0163",
+      "link": "https://sploitus.com/exploit?id=A3D67C65-FBDD-59BC-95FC-7F81946C42A1&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-08-06T11:40:01+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.76,
+      "priority_score": 71.74
+    },
+    {
+      "title": "Exploit for CVE-2026-69098",
+      "link": "https://sploitus.com/exploit?id=C724A8F6-03D9-59D1-9E5F-9CFBB245DB14&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-08-06T10:49:41+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.76,
+      "priority_score": 71.51
+    }
+  ]
+}
