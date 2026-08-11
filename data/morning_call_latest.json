@@ -1,168 +1,186 @@
 {
-  "generated_at": "2026-08-10T08:04:33.128377+00:00",
-  "analysis_date": "2026-08-10",
+  "generated_at": "2026-08-11T07:37:48.129996+00:00",
+  "analysis_date": "2026-08-11",
   "provider": "openai",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-08-10T07:54:40.691115+00:00",
+  "source_generated_at": "2026-08-11T07:22:22.691007+00:00",
   "source_days_back": 30,
-  "source_total_items": 49799,
-  "total_items_in_window_all": 2030,
-  "total_items_in_window_curated": 4,
-  "total_items_in_window_selected": 40,
+  "source_total_items": 51531,
+  "total_items_in_window_all": 4247,
+  "total_items_in_window_curated": 10,
+  "total_items_in_window_selected": 70,
   "context_selection_policy": "curated-plus-operational-signal-v1",
-  "morning_call_markdown": "### Executive Summary\n- Multiple **actively exploited zero-days / KEV items** hitting common enterprise tooling (Metabase, Progress LoadMaster, UniFi OS, N-able N-central) → **internet-exposed attack surface review + rapid patch/mitigation** is priority today.\n- **Prompt-injection style data exfil risk** reported for Atlassian Rovo (Jira/Confluence context) → monitor for **unusual bulk access/export** and tighten AI/plugin governance.\n- Several **fresh public PoCs for critical web app components** (Magento extension, WordPress chain/tooling, misc CVEs) → increase **WAF/edge telemetry hunts** for scanning and webshell/file-drop behavior.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Metabase critical zero-day (GHSA-vwf4-m7j8-wcjf, CVSS 10) exploited for unauthenticated admin takeover**\n- What happened: Metabase confirmed a **zero-day** being **exploited in the wild** to gain **full admin access** without authentication.\n- Why it matters operationally: Metabase commonly has DB creds and reporting data; compromise enables **data theft + lateral movement** from an analytics foothold.\n- Recommended immediate actions for the SOC today: **Find all Metabase instances** (on-prem/cloud), **restrict to VPN/internal** immediately if internet-exposed; start **IR triage** on any instance with recent new admin users/sessions or config changes.\n\n**2) Network appliance / edge exploitation: Progress LoadMaster (CVE-2026-8037 KEV) + Ubiquiti UniFi OS (CVE-2026-34910/-34909 KEV, Mirai-derived botnet)**\n- What happened: LoadMaster **command injection** added to **CISA KEV** with high exploit volume; UniFi OS Server flaws enable **unauth RCE + file read** and are reportedly used by a **Mirai-derived implant**.\n- Why it matters operationally: Internet-facing edge devices are **rapidly mass-scanned**; compromise can lead to **traffic interception, persistence, and botnet enrollment** affecting availability and downstream access.\n- Recommended immediate actions for the SOC today: **Identify exposures** (LoadMaster/UniFi mgmt interfaces) and **patch/mitigate per vendor guidance**; hunt for **new processes/binaries, cron/jobs, unusual outbound** from these appliances and isolate if suspected.\n\n**3) N-able N-central auth bypass (CVE-2026-18577) actively exploited**\n- What happened: An **authentication bypass** in N-central (RMM platform) is confirmed **actively exploited**.\n- Why it matters operationally: RMM compromise is a high-confidence path to **enterprise-wide remote execution** and ransomware-style operations across managed endpoints.\n- Recommended immediate actions for the SOC today: **Confirm N-central presence and version**, apply vendor mitigations/patch ASAP; review **new users/API tokens, unexpected agent tasks, mass script pushes** in the last 7 days and escalate anomalies to L3/IR.\n\n**4) Atlassian Rovo prompt-injection leading to Jira/Confluence data exfil (reported active abuse)**\n- What happened: Report indicates Rovo can be manipulated via **prompt injection** to **exfiltrate Jira/Confluence data**.\n- Why it matters operationally: This bypasses traditional “exploit” patterns—risk is **data exposure via AI workflow** and **abuse of legitimate access paths** (harder to detect).\n- Recommended immediate actions for the SOC today: Validate whether **Rovo is enabled** and which projects/spaces it can access; monitor for **unusual bulk reads/exports** and consider temporarily **reducing Rovo scope** (least privilege) pending vendor guidance.\n\n**5) Public PoCs for high-impact web stack components (Magento/M2 extension, WordPress chain tooling, other critical PoCs)**\n- What happened: Multiple PoCs/tools surfaced, including **Magento 2 extension unauth file upload (CVE-2026-53787)** and **WordPress XSS-to-RCE chain tooling (CVE-2026-64638)**; other high-CVSS PoCs also published (context incomplete for some).\n- Why it matters operationally: Public PoCs drive **spray-and-pray exploitation** against any exposed web properties, often leading to **webshells, credential theft, and pivoting**.\n- Recommended immediate actions for the SOC today: Ask web/platform teams to **confirm no internet-exposed admin panels** and review **WAF blocks**; SOC to hunt for **unexpected file writes under web roots/media dirs** and suspicious POST patterns to plugin endpoints.\n\n---\n\n### Monitoring & detection recommendations\n- **Metabase**: EDR + web access logs (reverse proxy) → hunt for **new admin creation, unusual login sources, config/DB connection changes**; map to *T1078 Valid Accounts* (post-takeover) and *T1565 Data Manipulation* (settings).\n- **LoadMaster / UniFi OS appliances**: Firewall/NetFlow + appliance logs (if available) → detect **spikes in inbound requests to mgmt ports**, **new outbound connections**, and **DNS anomalies** from appliances; map to *T1190 Exploit Public-Facing Application*.\n- **N-able N-central**: N-central audit logs + EDR on managed endpoints → alert on **mass job/task execution**, **new remote scripts**, **unexpected agent upgrades**, and **concurrent admin sessions**; map to *T1105 Ingress Tool Transfer* / *T1021 Remote Services*.\n- **Atlassian Jira/Confluence + Rovo**: Atlassian audit logs → watch for **bulk page/project reads**, **unusual search/export activity**, **new integrations/apps**, and access from **non-corporate IP ranges**; map to *T1213 Data from Information Repositories*.\n- **Web exploitation (Magento/WordPress)**: WAF + web server logs → look for **multipart/form-data uploads**, **writes to /media, /wp-content/uploads**, requests to **uncommon PHP files**, and subsequent **outbound connections from web servers** (*T1505.003 Web Shell*).\n- **Botnet-style post-compromise (Mirai-like)**: NDR/IDS + DNS logs → detect **high-rate scanning from internal IPs**, egress to **many random IPs/ports**, and **suspicious UDP floods** (availability risk).\n- **General “PoC dropped” surge**: Edge telemetry (CDN/WAF) → tune for **burst scanning signatures** (high 404/401 ratios, rapid path enumeration) and prioritize blocks/ratelimits on affected URIs.\n\n---\n\n### Medium-term follow-ups\n- **Asset & exposure hygiene**: Refresh inventory for **BI tools (Metabase), RMM, edge load balancers, UniFi controllers**, and ensure mgmt planes are **not internet-reachable** (enforce via network policy).\n- **RMM governance**: Tighten N-central controls—**MFA everywhere, admin role review, IP allowlisting, break-glass accounts**, and alerting on **script/task creation**.\n- **AI/plugin risk management**: Establish policy for **Atlassian Rovo and similar assistants** (data scope, approved connectors, logging requirements, red-team prompt-injection testing assumptions).\n- **Web stack hardening**: Validate WAF coverage, **file integrity monitoring** for web roots, and “no direct upload execution” controls (e.g., disallow PHP execution in upload dirs).\n- **Patch backlog triage**: Track and validate remediation for items with **active exploitation/KEV** first; for other PoC-only CVEs in the list, confirm relevance before emergency change windows (assumption: some PoC items lack verified in-the-wild exploitation in provided context).",
+  "morning_call_markdown": "### Executive Summary\n- **Active exploitation:** CISA KEV flags **Progress LoadMaster/ADC command injection (CVE-2026-8037)** targeting exposed devices—treat as internet-edge incident risk.\n- **Ransomware initial access via RMM tooling:** Microsoft reports **Storm-1175 (China-linked)** exploiting **N-able N-central auth bypass (CVE-2026-18577)** and deploying **StormEncryptor** ransomware.\n- **Metabase zero-day in the wild:** **Unauthenticated SQLi → admin access** exploited; confirmed real-world data access at a third party—assume scanning continues.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Progress LoadMaster/ADC command injection (CVE-2026-8037) — KEV, exploited**\n- **What happened:** CISA added **CVE-2026-8037** (Progress LoadMaster/Progress ADC) command injection to **KEV** after observed attacks on exposed devices.\n- **Why it matters operationally:** Internet-facing load balancers/ADCs are common financial-sector edge tech; unauth RCE enables rapid pivoting, credential theft, and web traffic manipulation.\n- **Recommended immediate actions for the SOC today:** **Find & validate all exposed LoadMaster/ADC assets + versions;** prioritize emergency patch/mitigation and **review edge/WAF/VPN logs for unusual requests** to LoadMaster management/API endpoints.\n\n**2) N-able N-central exploitation → StormEncryptor ransomware (CVE-2026-18577)**\n- **What happened:** Microsoft/partners report **Storm-1175** likely exploited **N-central auth bypass (CVE-2026-18577)**; new **StormEncryptor** ransomware observed (shift from Medusa affiliate activity).\n- **Why it matters operationally:** RMM compromise is a high-speed enterprise takeover path (mass command execution, agent deployment, lateral movement) with disproportionate blast radius in regulated environments.\n- **Recommended immediate actions for the SOC today:** **Inventory N-central exposure (internet reachable/admin portals) and patch/mitigate immediately;** hunt for **new/abnormal N-central admin accounts, policy changes, scripted “push” actions, and remote execution spikes**.\n\n**3) Metabase SQLi zero-day exploited (unauth → admin)**\n- **What happened:** Metabase disclosed/patched a **critical zero-day SQL injection** exploited in the wild enabling **unauthenticated admin access**; at least one organization reported customer data access.\n- **Why it matters operationally:** Metabase is often deployed quickly with weak perimeter controls; compromise can expose data sources/credentials and provide an internal foothold.\n- **Recommended immediate actions for the SOC today:** **Locate all Metabase instances (including “shadow IT” in cloud) and patch immediately;** review **web access logs for suspicious hits to Metabase auth/reset/password-related APIs** and investigate any new admin sessions/users.\n\n**4) Public PoC uptick for common enterprise components (Next.js Server Actions / WordPress auth path)**\n- **What happened:** Public PoCs circulated for **Next.js Server Actions RCE (CVE-2025-55182)** and a **WordPress pre-auth XSS→RCE chain (CVE-2026-64638)**.\n- **Why it matters operationally:** Even if not confirmed exploited in this feed, PoCs accelerate mass scanning; financial orgs often have marketing/app stacks and third-party sites that can be leveraged for brand abuse or footholds.\n- **Recommended immediate actions for the SOC today:** **Identify externally reachable Next.js/WordPress properties and confirm patched versions;** monitor for **webshell-like behavior and anomalous process execution on web servers** (e.g., unexpected child processes from web workers).\n\n---\n\n### Monitoring & detection recommendations\n- **Internet edge exploitation (LoadMaster/ADC):** Firewall/WAF + appliance logs for **spikes in 4xx/5xx, unusual URL paths, or repeated requests to management interfaces**; align to **T1190 (Exploit Public-Facing Application)**.\n- **RMM abuse (N-central):** N-central audit logs + AD/Entra ID logs + EDR for **new admin creation, credential changes, bulk task execution, remote scripting**; map to **T1569.002 (Service Execution)** / **T1105 (Ingress Tool Transfer)**.\n- **Ransomware early warning (StormEncryptor/DeadLock themes):** EDR for **shadow copy deletion, backup stop commands, rapid file rename/encryption patterns, mass process kills**; map to **T1486 (Data Encrypted for Impact)**, **T1490 (Inhibit System Recovery)**.\n- **Metabase compromise:** Web server/reverse proxy logs + Metabase application logs for **unexpected admin session creation, password reset endpoint abuse, DB connection reconfiguration**; map to **T1078 (Valid Accounts)** (post-compromise).\n- **Web app PoC-driven scanning (Next.js/WordPress):** CDN/WAF logs for **high-rate probing from single ASNs, unusual POST bodies, repeated hits to login/reset endpoints**; consider temporary **rate-limits/geo controls** where appropriate.\n- **Supply-chain dependency risk (GitHub detection expansion):** CI/CD logs + repository audit for **new dependencies, typosquatted packages, sudden lockfile changes**; map to **T1195 (Supply Chain Compromise)**.\n- **Email-to-exploit hygiene (manager targeting trend):** Email gateway + endpoint for **credential phishing → immediate token use (impossible travel, new device sign-ins)**; map to **T1566 (Phishing)** + **T1528 (Steal Application Access Token)** (where applicable).\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** Ensure **KEV-driven SLA** explicitly prioritizes internet-edge appliances (LoadMaster/ADC) and RMM tooling (N-central) with documented emergency change paths.\n- **Metabase hardening:** Enforce **SSO/MFA where possible, network segmentation, deny public access by default**, and rotate any DB credentials stored/used by Metabase (assume potential exposure if compromised).\n- **RMM blast-radius reduction:** Implement **least privilege for RMM admins, conditional access, IP allowlisting, and separate admin workstations**; regularly review agent deployment policies.\n- **Ransomware readiness:** Validate **immutable/offline backups**, restoration runbooks, and “gold image” recovery for critical payment/clearing workflows; rehearse rapid isolation procedures.\n- **Software supply chain:** Expand internal detection for **malicious dependency introduction** (Dependabot/registry scanning is improving externally, but enforce internal review + signed builds where feasible).\n- **ClamAV PoC DoS (Cisco advisory):** If ClamAV is in mail/web scanning pipeline, schedule update/mitigation to reduce **service disruption risk** (availability impact more than breach, based on current reporting).",
   "highlights": [
     {
-      "title": "Atlassian Rovo, Metabase, LoadMaster zero-days & active exploitation",
-      "link": "https://defend.network/briefings/atlassian-rovo-metabase-loadmaster-zero-day-2026-08-10.html",
-      "source": "defend.network",
-      "published": "2026-08-10T06:30:00+00:00",
+      "title": "CISA Warns of Progress LoadMaster Command Injection Vulnerability Exploited in Attacks",
+      "link": "https://cybersecuritynews.com/progress-loadmaster-command-injection-vulnerability-exploited/",
+      "source": "Cyber Security News",
+      "published": "2026-08-10T15:12:07+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC",
         "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 100.0,
-      "priority_score": 90.47
-    },
-    {
-      "title": "Metabase 0-Day Vulnerability Exploited in the Wild to Gain Admin Access",
-      "link": "https://cybersecuritynews.com/metabase-0-day-vulnerability/",
-      "source": "Cyber Security News (FeedBurner)",
-      "published": "2026-08-09T16:35:29+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 100.0,
-      "priority_score": 86.14
-    },
-    {
-      "title": "Exploit for Improper Input Validation in Ui Unifi_Os_Server",
-      "link": "https://vulners.com/githubexploit/1EBBB112-7C6A-5E16-BE71-47B9A5007AA4?utm_source=rss&utm_medium=rss&utm_campaign=rss",
-      "source": "Vulners.com RSS Feed",
-      "published": "2026-08-09T16:58:00+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Identity / Access",
-        "Exploit / PoC",
-        "Malware / Payloads"
       ],
       "curated": false,
       "signal_tier": "critical",
-      "signal_score": 100.0,
-      "priority_score": 72.36
+      "signal_score": 83.33,
+      "priority_score": 77.08
     },
     {
-      "title": "N-able N-central Authentication Bypass: CVE-2026-18577 Analysis",
-      "link": "https://blog.criminalip.io/2026/08/10/n-able-n-central-authentication-bypass-cve-2026-18577-analysis/",
-      "source": "CIP Blog",
-      "published": "2026-08-10T00:00:26+00:00",
+      "title": "China-linked hackers turning popular cybersecurity tool into ransomware launchpad, Microsoft warns",
+      "link": "https://therecord.media/china-hackers-ransomware-microsoft",
+      "source": "The Record – Cybercrime",
+      "published": "2026-08-10T13:15:00+00:00",
       "smart_groups": [
+        "Threat Actors / APT",
+        "Exploit / PoC",
+        "Ransomware",
         "Vulnerabilities / CVEs",
-        "Exploit / PoC"
+        "Data Breaches / Leaks"
       ],
       "curated": true,
       "signal_tier": "critical",
-      "signal_score": 86.73,
-      "priority_score": 86.34
+      "signal_score": 78.21,
+      "priority_score": 81.15
     },
     {
-      "title": "Nightmare-Windows-0-day-exp exploit",
-      "link": "https://sploitus.com/exploit?id=5A6BC976-34CA-53A6-BD75-9163EA777CC0&utm_source=rss&utm_medium=rss",
-      "source": "Sploitus – Exploits",
-      "published": "2026-08-09T11:52:24+00:00",
+      "title": "Critical Metabase Zero-Day Exploited",
+      "link": "https://socradar.io/blog/critical-metabase-zero-day/",
+      "source": "SOCRadar® Cyber Intelligence Inc.",
+      "published": "2026-08-10T13:25:39+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Web / API Security",
+        "Exploit / PoC"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 76.23,
+      "priority_score": 85.68
+    },
+    {
+      "title": "Exploit for CVE-2025-7771",
+      "link": "https://vulners.com/githubexploit/6D5BC7E6-C0A6-54A0-8116-47799C31DFA2?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-08-10T23:15:36+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC",
+        "Linux / Unix",
+        "Web / API Security",
         "Windows / Microsoft"
       ],
-      "curated": true,
+      "curated": false,
       "signal_tier": "high",
-      "signal_score": 77.21,
-      "priority_score": 73.93
+      "signal_score": 70.44,
+      "priority_score": 74.88
     },
     {
-      "title": "Weekly Cyber Security Newsletter — OWASP Top 10 for LLM, Cisco IOS XE Flaw, and 1-Click Cursor RCE +20 Stories",
-      "link": "https://cybersecuritynews.com/weekly-cyber-security-newsletter-aug/",
-      "source": "Cyber Security News (FeedBurner)",
-      "published": "2026-08-09T17:21:41+00:00",
+      "title": "Metabase Patches Vulnerability Exploited as Zero-Day",
+      "link": "https://www.securityweek.com/metabase-patches-vulnerability-exploited-as-zero-day/",
+      "source": "SecurityWeek",
+      "published": "2026-08-10T11:03:55+00:00",
       "smart_groups": [
-        "Linux / Unix",
-        "Exploit / PoC",
         "Vulnerabilities / CVEs",
-        "Mobile Security",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 70.04,
+      "priority_score": 84.1
+    },
+    {
+      "title": "Metabase SQL injection vulnerability exploited in zero-day attacks",
+      "link": "https://www.scworld.com/brief/metabase-sql-injection-vulnerability-exploited-in-zero-day-attacks",
+      "source": "SCM feed for Latest",
+      "published": "2026-08-10T14:21:00+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Web / API Security",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 69.91,
+      "priority_score": 84.36
+    },
+    {
+      "title": "⚡ Weekly Recap: AI Goes Rogue, Metabase 0-Day, MCP Supply-Chain Attacks, and Router Backdoors",
+      "link": "https://thehackernews.com/2026/08/weekly-recap-ai-goes-rogue-metabase-0.html",
+      "source": "The Hacker News",
+      "published": "2026-08-10T15:00:29+00:00",
+      "smart_groups": [
+        "Exploit / PoC",
+        "Malware / Payloads",
+        "Supply Chain / Software",
         "General Security"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 76.09,
-      "priority_score": 74.23
+      "signal_score": 69.52,
+      "priority_score": 67.27
     },
     {
-      "title": "langflow-exploit",
-      "link": "https://vulners.com/githubexploit/96FB054B-D5D3-50DD-8F94-788DFA1EB4D2?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "title": "Exploit for Missing Authentication for Critical Function in Mcpjam Inspector",
+      "link": "https://vulners.com/githubexploit/08BE5839-6AAC-504B-8255-ECBEFFBD42A3?utm_source=rss&utm_medium=rss&utm_campaign=rss",
       "source": "Vulners.com RSS Feed",
-      "published": "2026-08-09T21:39:50+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 70.4,
-      "priority_score": 74.26
-    },
-    {
-      "title": "Nightmare-Windows-0-day-exp",
-      "link": "https://vulners.com/githubexploit/5A6BC976-34CA-53A6-BD75-9163EA777CC0?utm_source=rss&utm_medium=rss&utm_campaign=rss",
-      "source": "Vulners.com RSS Feed",
-      "published": "2026-08-09T11:52:24+00:00",
+      "published": "2026-08-10T09:07:16+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC",
         "Cloud / SaaS",
-        "Windows / Microsoft"
+        "Linux / Unix"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 69.4,
-      "priority_score": 71.7
+      "signal_score": 68.44,
+      "priority_score": 71.05
     },
     {
-      "title": "Exploit for CVE-2026-69084",
-      "link": "https://sploitus.com/exploit?id=EFAE4382-8B52-52E8-B2F7-900D05C3A218&utm_source=rss&utm_medium=rss",
-      "source": "Sploitus – Exploits",
-      "published": "2026-08-09T20:02:45+00:00",
+      "title": "Metabase zero-day exploited to access Framework customer data",
+      "link": "https://www.helpnetsecurity.com/2026/08/10/metabase-zero-day-framework-tally-kilo-code/",
+      "source": "Help Net Security",
+      "published": "2026-08-10T13:42:28+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Exploit / PoC"
+        "Data Breaches / Leaks",
+        "Exploit / PoC",
+        "General Security"
       ],
-      "curated": false,
+      "curated": true,
       "signal_tier": "high",
-      "signal_score": 69.21,
-      "priority_score": 66.12
+      "signal_score": 68.2,
+      "priority_score": 85.63
     },
     {
-      "title": "Exploit for CVE-2026-64564",
-      "link": "https://sploitus.com/exploit?id=A5C07986-0218-5022-AFE3-17A4E57CABCB&utm_source=rss&utm_medium=rss",
-      "source": "Sploitus – Exploits",
-      "published": "2026-08-10T05:16:43+00:00",
+      "title": "Ransomware Now Shows Up in Nearly Half of All Breaches: A Survival Playbook for Lean Security Teams",
+      "link": "https://cyble.com/blog/ransomware-incident-response-plan/",
+      "source": "Cyble",
+      "published": "2026-08-10T12:44:47+00:00",
       "smart_groups": [
+        "Ransomware",
         "Vulnerabilities / CVEs",
-        "Exploit / PoC"
+        "Data Breaches / Leaks",
+        "Threat Actors / APT",
+        "Detection Engineering",
+        "Crypto / Web3",
+        "Exploit / PoC",
+        "Identity / Access",
+        "Linux / Unix",
+        "Network / OT / ICS",
+        "Supply Chain / Software",
+        "Windows / Microsoft",
+        "Vendors / Product Security"
       ],
-      "curated": false,
+      "curated": true,
       "signal_tier": "high",
-      "signal_score": 67.21,
-      "priority_score": 68.59
+      "signal_score": 68.11,
+      "priority_score": 85.53
     }
   ]
 }
