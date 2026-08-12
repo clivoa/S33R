@@ -1,186 +1,189 @@
 {
-  "generated_at": "2026-08-11T07:37:48.129996+00:00",
-  "analysis_date": "2026-08-11",
+  "generated_at": "2026-08-12T07:53:35.834273+00:00",
+  "analysis_date": "2026-08-12",
   "provider": "openai",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-08-11T07:22:22.691007+00:00",
+  "source_generated_at": "2026-08-12T06:23:41.546093+00:00",
   "source_days_back": 30,
-  "source_total_items": 51531,
-  "total_items_in_window_all": 4247,
+  "source_total_items": 54728,
+  "total_items_in_window_all": 4774,
   "total_items_in_window_curated": 10,
-  "total_items_in_window_selected": 70,
+  "total_items_in_window_selected": 56,
   "context_selection_policy": "curated-plus-operational-signal-v1",
-  "morning_call_markdown": "### Executive Summary\n- **Active exploitation:** CISA KEV flags **Progress LoadMaster/ADC command injection (CVE-2026-8037)** targeting exposed devices—treat as internet-edge incident risk.\n- **Ransomware initial access via RMM tooling:** Microsoft reports **Storm-1175 (China-linked)** exploiting **N-able N-central auth bypass (CVE-2026-18577)** and deploying **StormEncryptor** ransomware.\n- **Metabase zero-day in the wild:** **Unauthenticated SQLi → admin access** exploited; confirmed real-world data access at a third party—assume scanning continues.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Progress LoadMaster/ADC command injection (CVE-2026-8037) — KEV, exploited**\n- **What happened:** CISA added **CVE-2026-8037** (Progress LoadMaster/Progress ADC) command injection to **KEV** after observed attacks on exposed devices.\n- **Why it matters operationally:** Internet-facing load balancers/ADCs are common financial-sector edge tech; unauth RCE enables rapid pivoting, credential theft, and web traffic manipulation.\n- **Recommended immediate actions for the SOC today:** **Find & validate all exposed LoadMaster/ADC assets + versions;** prioritize emergency patch/mitigation and **review edge/WAF/VPN logs for unusual requests** to LoadMaster management/API endpoints.\n\n**2) N-able N-central exploitation → StormEncryptor ransomware (CVE-2026-18577)**\n- **What happened:** Microsoft/partners report **Storm-1175** likely exploited **N-central auth bypass (CVE-2026-18577)**; new **StormEncryptor** ransomware observed (shift from Medusa affiliate activity).\n- **Why it matters operationally:** RMM compromise is a high-speed enterprise takeover path (mass command execution, agent deployment, lateral movement) with disproportionate blast radius in regulated environments.\n- **Recommended immediate actions for the SOC today:** **Inventory N-central exposure (internet reachable/admin portals) and patch/mitigate immediately;** hunt for **new/abnormal N-central admin accounts, policy changes, scripted “push” actions, and remote execution spikes**.\n\n**3) Metabase SQLi zero-day exploited (unauth → admin)**\n- **What happened:** Metabase disclosed/patched a **critical zero-day SQL injection** exploited in the wild enabling **unauthenticated admin access**; at least one organization reported customer data access.\n- **Why it matters operationally:** Metabase is often deployed quickly with weak perimeter controls; compromise can expose data sources/credentials and provide an internal foothold.\n- **Recommended immediate actions for the SOC today:** **Locate all Metabase instances (including “shadow IT” in cloud) and patch immediately;** review **web access logs for suspicious hits to Metabase auth/reset/password-related APIs** and investigate any new admin sessions/users.\n\n**4) Public PoC uptick for common enterprise components (Next.js Server Actions / WordPress auth path)**\n- **What happened:** Public PoCs circulated for **Next.js Server Actions RCE (CVE-2025-55182)** and a **WordPress pre-auth XSS→RCE chain (CVE-2026-64638)**.\n- **Why it matters operationally:** Even if not confirmed exploited in this feed, PoCs accelerate mass scanning; financial orgs often have marketing/app stacks and third-party sites that can be leveraged for brand abuse or footholds.\n- **Recommended immediate actions for the SOC today:** **Identify externally reachable Next.js/WordPress properties and confirm patched versions;** monitor for **webshell-like behavior and anomalous process execution on web servers** (e.g., unexpected child processes from web workers).\n\n---\n\n### Monitoring & detection recommendations\n- **Internet edge exploitation (LoadMaster/ADC):** Firewall/WAF + appliance logs for **spikes in 4xx/5xx, unusual URL paths, or repeated requests to management interfaces**; align to **T1190 (Exploit Public-Facing Application)**.\n- **RMM abuse (N-central):** N-central audit logs + AD/Entra ID logs + EDR for **new admin creation, credential changes, bulk task execution, remote scripting**; map to **T1569.002 (Service Execution)** / **T1105 (Ingress Tool Transfer)**.\n- **Ransomware early warning (StormEncryptor/DeadLock themes):** EDR for **shadow copy deletion, backup stop commands, rapid file rename/encryption patterns, mass process kills**; map to **T1486 (Data Encrypted for Impact)**, **T1490 (Inhibit System Recovery)**.\n- **Metabase compromise:** Web server/reverse proxy logs + Metabase application logs for **unexpected admin session creation, password reset endpoint abuse, DB connection reconfiguration**; map to **T1078 (Valid Accounts)** (post-compromise).\n- **Web app PoC-driven scanning (Next.js/WordPress):** CDN/WAF logs for **high-rate probing from single ASNs, unusual POST bodies, repeated hits to login/reset endpoints**; consider temporary **rate-limits/geo controls** where appropriate.\n- **Supply-chain dependency risk (GitHub detection expansion):** CI/CD logs + repository audit for **new dependencies, typosquatted packages, sudden lockfile changes**; map to **T1195 (Supply Chain Compromise)**.\n- **Email-to-exploit hygiene (manager targeting trend):** Email gateway + endpoint for **credential phishing → immediate token use (impossible travel, new device sign-ins)**; map to **T1566 (Phishing)** + **T1528 (Steal Application Access Token)** (where applicable).\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** Ensure **KEV-driven SLA** explicitly prioritizes internet-edge appliances (LoadMaster/ADC) and RMM tooling (N-central) with documented emergency change paths.\n- **Metabase hardening:** Enforce **SSO/MFA where possible, network segmentation, deny public access by default**, and rotate any DB credentials stored/used by Metabase (assume potential exposure if compromised).\n- **RMM blast-radius reduction:** Implement **least privilege for RMM admins, conditional access, IP allowlisting, and separate admin workstations**; regularly review agent deployment policies.\n- **Ransomware readiness:** Validate **immutable/offline backups**, restoration runbooks, and “gold image” recovery for critical payment/clearing workflows; rehearse rapid isolation procedures.\n- **Software supply chain:** Expand internal detection for **malicious dependency introduction** (Dependabot/registry scanning is improving externally, but enforce internal review + signed builds where feasible).\n- **ClamAV PoC DoS (Cisco advisory):** If ClamAV is in mail/web scanning pipeline, schedule update/mitigation to reduce **service disruption risk** (availability impact more than breach, based on current reporting).",
+  "morning_call_markdown": "### Executive Summary\n- Ransomware operators are actively exploiting **Microsoft SharePoint Server** and **SonicWall SMA1000** flaws (both on CISA KEV); treat any exposed instances as likely initial-access paths.\n- Microsoft August Patch Tuesday includes an **actively exploited Windows kernel EoP (AFD.sys / CVE-2026-68820)** linked to Lazarus activity; prioritize endpoint patching and post-exploitation hunting.\n- Multiple additional high-impact enterprise issues surfaced: **Metabase critical SQLi**, **Cisco ASA/FTD exploited DoS**, and notable **supply-chain risk (LiteLLM)**—validate exposure and tighten monitoring today.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Internet-facing SharePoint Server exploitation → ransomware**\n- What happened (1 short line)  \n  CISA confirms a **SharePoint RCE chain** is now being used in **ransomware attacks** (incl. CVE-2026-63520; related auth bypass CVE-2026-55040 analysis/PoC published).\n- Why it matters operationally (1 short line)  \n  SharePoint is commonly internet-reachable and high-trust; exploitation can rapidly lead to **webshells, domain lateral movement, and encryption**.\n- Recommended immediate actions for the SOC today (1–2 short actions, same bullet)  \n  **Confirm patch level/exposure** for all SharePoint (esp. internet-facing) and **hunt last 30 days** for abnormal SharePoint/IIS child processes and new web-accessible files.\n\n**2) SonicWall SMA1000 VPN vulns exploited for ransomware (KEV)**\n- What happened (1 short line)  \n  CISA added **CVE-2026-15409 / CVE-2026-15410** (SMA1000) to KEV and reports **ransomware deployment via exploitation**.\n- Why it matters operationally (1 short line)  \n  VPN appliance compromise enables **credential theft + direct internal access**; common precursor to ransomware in financial environments.\n- Recommended immediate actions for the SOC today (1–2 short actions, same bullet)  \n  **Inventory SMA1000 exposure + patch/mitigate immediately**, and **review VPN auth logs** for suspicious admin activity, new accounts, and atypical geo/time access.\n\n**3) Microsoft zero-day under active exploit: Windows AFD.sys EoP (CVE-2026-68820)**\n- What happened (1 short line)  \n  Microsoft patched **CVE-2026-68820** (AFD.sys / WinSock driver) and reporting indicates **active exploitation** with Lazarus-linked malware/rootkit deployment.\n- Why it matters operationally (1 short line)  \n  EoP is typically chained after initial access; it accelerates **SYSTEM-level persistence, credential dumping, and EDR evasion**.\n- Recommended immediate actions for the SOC today (1–2 short actions, same bullet)  \n  **Prioritize patching for high-risk workstation/server tiers**, and **hunt** for unusual privilege escalation patterns (new services/drivers, LSASS access attempts, unexpected kernel driver loads).\n\n**4) Perimeter disruption & credential exposure: Cisco ASA/FTD exploited DoS + Metabase critical SQLi**\n- What happened (1 short line)  \n  Cisco patched **CVE-2026-20349** (ASA/FTD) being exploited for **remote device crash/DoS**; Metabase disclosed **critical SQLi (CVE-2026-72898)** with potential credential/token exposure.\n- Why it matters operationally (1 short line)  \n  DoS against edge firewalls/VPN can degrade availability; Metabase compromise can leak **API keys, DB creds, cloud tokens**—high impact for data/ops.\n- Recommended immediate actions for the SOC today (1–2 short actions, same bullet)  \n  **Patch/mitigate ASA/FTD and watch for crash/reload events**, and for Metabase **assume secrets exposure if vulnerable**: rotate tokens/DB creds and review access logs for suspicious queries/admin actions.\n\n---\n\n### Monitoring & detection recommendations\n- **SharePoint/IIS post-exploitation:** EDR + Windows Security logs + IIS logs; alert on `w3wp.exe` spawning `cmd.exe/powershell.exe/rundll32.exe` and unusual file writes under web roots (MITRE: T1505.003, T1059).\n- **VPN appliance compromise signals (SMA1000/ASA/FTD):** VPN/auth logs + firewall syslog; hunt for new admin users, config changes, unexpected reboots/crashes, and bursts of failed logins (T1190, T1110).\n- **Kernel EoP follow-on behavior (CVE-2026-68820):** EDR telemetry for privilege jumps to SYSTEM, suspicious driver/service creation, and LSASS targeting; validate with Sysmon (if present) for Service Install events (T1068, T1543, T1003).\n- **Metabase exploitation/credential harvesting:** Metabase application logs + reverse proxy/WAF + DB audit logs; look for anomalous requests to API endpoints, unexpected admin actions, and unusual DB queries from Metabase service accounts (T1190, T1552).\n- **Credential phishing via captive portals (CaptiveCrunch / M365):** IdP/M365 sign-in logs; detect “impossible travel,” new device sign-ins, suspicious OAuth consent/app registrations, and spikes in password resets (T1566, T1078, T1528).\n- **Supply-chain / CI/CD exposure (LiteLLM):** CI/CD audit logs (GitHub/GitLab/Jenkins) + artifact registry; look for unexpected package versions, new maintainers/tokens used, and unusual build runners/egress (T1195, T1552.007).\n- **Ransomware/extortion prep:** Netflow + DLP + proxy; monitor large outbound transfers and use of atypical exfil channels (including torrents noted in extortion-only activity) (T1041, T1567).\n\n---\n\n### Medium-term follow-ups\n- **Patch management:** Execute a risk-based sprint for Microsoft August updates (398 CVEs); prioritize internet-facing services, endpoint EoP, and any server roles tied to identity/auth.\n- **SharePoint hardening:** Validate external exposure, enforce least privilege for SharePoint service accounts, review upload/attachment controls, and ensure robust backup/restore testing for SharePoint farms.\n- **Edge resilience:** For ASA/FTD DoS, confirm HA failover works, review rate-limiting/DoS protections, and update runbooks for rapid edge device recovery.\n- **Secret hygiene:** After Metabase/LiteLLM-related checks, expand to a broader **credential/token rotation plan** (DB creds, API keys, cloud access tokens) tied to evidence of exposure.\n- **User travel/remote access policy:** Given captive-portal credential theft theme, reinforce conditional access (phishing-resistant MFA/passkeys where possible), and add guidance for traveling staff on captive portals.\n- **Supply-chain governance:** Tighten controls on third-party packages in build pipelines (pinning, provenance/SBOM where available, restricted publish permissions, monitoring for short-lived malicious releases).",
   "highlights": [
     {
-      "title": "CISA Warns of Progress LoadMaster Command Injection Vulnerability Exploited in Attacks",
-      "link": "https://cybersecuritynews.com/progress-loadmaster-command-injection-vulnerability-exploited/",
+      "title": "CISA: Microsoft SharePoint flaw now exploited in ransomware attacks",
+      "link": "https://www.bleepingcomputer.com/news/security/cisa-microsoft-sharepoint-flaw-now-exploited-in-ransomware-attacks/",
+      "source": "BleepingComputer",
+      "published": "2026-08-11T12:12:16+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Ransomware",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 100.0,
+      "priority_score": 83.32
+    },
+    {
+      "title": "CISA Warns of SonicWall SMA1000 Vulnerabilities Exploited in Attacks to Deploy Ransomware",
+      "link": "https://cybersecuritynews.com/sonicwall-sma1000-vulnerabilities-exploited/",
       "source": "Cyber Security News",
-      "published": "2026-08-10T15:12:07+00:00",
+      "published": "2026-08-11T08:35:34+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "General Security"
-      ],
-      "curated": false,
-      "signal_tier": "critical",
-      "signal_score": 83.33,
-      "priority_score": 77.08
-    },
-    {
-      "title": "China-linked hackers turning popular cybersecurity tool into ransomware launchpad, Microsoft warns",
-      "link": "https://therecord.media/china-hackers-ransomware-microsoft",
-      "source": "The Record – Cybercrime",
-      "published": "2026-08-10T13:15:00+00:00",
-      "smart_groups": [
-        "Threat Actors / APT",
         "Exploit / PoC",
         "Ransomware",
-        "Vulnerabilities / CVEs",
-        "Data Breaches / Leaks"
+        "General Security"
       ],
       "curated": true,
       "signal_tier": "critical",
-      "signal_score": 78.21,
-      "priority_score": 81.15
+      "signal_score": 89.59,
+      "priority_score": 86.41
     },
     {
-      "title": "Critical Metabase Zero-Day Exploited",
-      "link": "https://socradar.io/blog/critical-metabase-zero-day/",
-      "source": "SOCRadar® Cyber Intelligence Inc.",
-      "published": "2026-08-10T13:25:39+00:00",
+      "title": "Infosec News Nuggets — August 11, 2026",
+      "link": "https://aboutdfir.com/infosec-news-nuggets-august-11-2026/",
+      "source": "AboutDFIR – The Definitive Compendium Project",
+      "published": "2026-08-11T10:29:41+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Web / API Security",
-        "Exploit / PoC"
-      ],
-      "curated": true,
-      "signal_tier": "high",
-      "signal_score": 76.23,
-      "priority_score": 85.68
-    },
-    {
-      "title": "Exploit for CVE-2025-7771",
-      "link": "https://vulners.com/githubexploit/6D5BC7E6-C0A6-54A0-8116-47799C31DFA2?utm_source=rss&utm_medium=rss&utm_campaign=rss",
-      "source": "Vulners.com RSS Feed",
-      "published": "2026-08-10T23:15:36+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "Linux / Unix",
-        "Web / API Security",
-        "Windows / Microsoft"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 70.44,
-      "priority_score": 74.88
-    },
-    {
-      "title": "Metabase Patches Vulnerability Exploited as Zero-Day",
-      "link": "https://www.securityweek.com/metabase-patches-vulnerability-exploited-as-zero-day/",
-      "source": "SecurityWeek",
-      "published": "2026-08-10T11:03:55+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "high",
-      "signal_score": 70.04,
-      "priority_score": 84.1
-    },
-    {
-      "title": "Metabase SQL injection vulnerability exploited in zero-day attacks",
-      "link": "https://www.scworld.com/brief/metabase-sql-injection-vulnerability-exploited-in-zero-day-attacks",
-      "source": "SCM feed for Latest",
-      "published": "2026-08-10T14:21:00+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Web / API Security",
-        "Exploit / PoC",
-        "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "high",
-      "signal_score": 69.91,
-      "priority_score": 84.36
-    },
-    {
-      "title": "⚡ Weekly Recap: AI Goes Rogue, Metabase 0-Day, MCP Supply-Chain Attacks, and Router Backdoors",
-      "link": "https://thehackernews.com/2026/08/weekly-recap-ai-goes-rogue-metabase-0.html",
-      "source": "The Hacker News",
-      "published": "2026-08-10T15:00:29+00:00",
-      "smart_groups": [
-        "Exploit / PoC",
-        "Malware / Payloads",
-        "Supply Chain / Software",
-        "General Security"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 69.52,
-      "priority_score": 67.27
-    },
-    {
-      "title": "Exploit for Missing Authentication for Critical Function in Mcpjam Inspector",
-      "link": "https://vulners.com/githubexploit/08BE5839-6AAC-504B-8255-ECBEFFBD42A3?utm_source=rss&utm_medium=rss&utm_campaign=rss",
-      "source": "Vulners.com RSS Feed",
-      "published": "2026-08-10T09:07:16+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "Cloud / SaaS",
-        "Linux / Unix"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 68.44,
-      "priority_score": 71.05
-    },
-    {
-      "title": "Metabase zero-day exploited to access Framework customer data",
-      "link": "https://www.helpnetsecurity.com/2026/08/10/metabase-zero-day-framework-tally-kilo-code/",
-      "source": "Help Net Security",
-      "published": "2026-08-10T13:42:28+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Data Breaches / Leaks",
-        "Exploit / PoC",
-        "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "high",
-      "signal_score": 68.2,
-      "priority_score": 85.63
-    },
-    {
-      "title": "Ransomware Now Shows Up in Nearly Half of All Breaches: A Survival Playbook for Lean Security Teams",
-      "link": "https://cyble.com/blog/ransomware-incident-response-plan/",
-      "source": "Cyble",
-      "published": "2026-08-10T12:44:47+00:00",
-      "smart_groups": [
-        "Ransomware",
-        "Vulnerabilities / CVEs",
-        "Data Breaches / Leaks",
-        "Threat Actors / APT",
-        "Detection Engineering",
         "Crypto / Web3",
         "Exploit / PoC",
+        "Detection Engineering"
+      ],
+      "curated": false,
+      "signal_tier": "critical",
+      "signal_score": 83.12,
+      "priority_score": 74.62
+    },
+    {
+      "title": "CVE-2026-63520: Microsoft SharePoint Remote Code Execution (FIXED)",
+      "link": "https://www.rapid7.com/blog/post/etr-cve-2026-63520-microsoft-sharepoint-remote-code-execution-fixed",
+      "source": "Rapid7 Blog",
+      "published": "2026-08-11T13:00:00+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Ransomware",
+        "Windows / Microsoft",
+        "Vendors / Product Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 81.16,
+      "priority_score": 86.17
+    },
+    {
+      "title": "Rapid7 Analysis: Microsoft SharePoint JWT Token Authentication Bypass (CVE-2026-55040)",
+      "link": "https://www.rapid7.com/blog/post/ra-microsoft-sharepoint-jwt-token-authentication-bypass-cve-2026-55040",
+      "source": "Rapid7 Blog",
+      "published": "2026-08-11T13:00:00+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
         "Identity / Access",
-        "Linux / Unix",
+        "Cloud / SaaS",
+        "Exploit / PoC",
+        "Crypto / Web3",
         "Network / OT / ICS",
-        "Supply Chain / Software",
+        "Web / API Security",
         "Windows / Microsoft",
         "Vendors / Product Security"
       ],
       "curated": true,
       "signal_tier": "high",
-      "signal_score": 68.11,
-      "priority_score": 85.53
+      "signal_score": 77.16,
+      "priority_score": 86.06
+    },
+    {
+      "title": "Microsoft's August 2026 Patch Tuesday Addresses 398 CVEs (CVE-2026-68820)",
+      "link": "https://www.tenable.com/blog/microsofts-august-2026-patch-tuesday-addresses-398-cves-cve-2026-68820",
+      "source": "Tenable Blog",
+      "published": "2026-08-11T18:04:04+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Windows / Microsoft",
+        "Cloud / SaaS",
+        "Crypto / Web3",
+        "Exploit / PoC",
+        "Identity / Access",
+        "Linux / Unix",
+        "Network / OT / ICS",
+        "Mobile Security",
+        "Vendors / Product Security"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 69.18,
+      "priority_score": 77.65
+    },
+    {
+      "title": "Exploit for CVE-2026-62737",
+      "link": "https://sploitus.com/exploit?id=CCD7B5DE-FC43-5639-B6C1-4EC9753D91BE&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-08-11T18:47:22+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 69.17,
+      "priority_score": 65.99
+    },
+    {
+      "title": "Ransomware gangs don’t need control system access to disrupt industrial production",
+      "link": "https://www.helpnetsecurity.com/2026/08/11/industrial-ransomware-attacks-q2-2026/",
+      "source": "Help Net Security",
+      "published": "2026-08-11T09:32:04+00:00",
+      "smart_groups": [
+        "Network / OT / ICS",
+        "Data Breaches / Leaks",
+        "Ransomware",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 68.27,
+      "priority_score": 84.12
+    },
+    {
+      "title": "Exploit for Insertion of Sensitive Information into Log File in Hitachi Configuration_Manager",
+      "link": "https://sploitus.com/exploit?id=A8D910FE-2EC7-5AF1-971D-8E2AFF7C739D&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-08-11T19:55:00+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 67.17,
+      "priority_score": 66.29
+    },
+    {
+      "title": "Lazarus Hackers Actively Exploiting Windows AFD.sys Zero-Day to Deploy FudModule Rootkit",
+      "link": "https://cybersecuritynews.com/windows-afd-sys-zero-day-exploited/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-08-12T03:23:37+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Linux / Unix",
+        "Malware / Payloads",
+        "Threat Actors / APT",
+        "Windows / Microsoft",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 67.07,
+      "priority_score": 89.51
     }
   ]
 }
