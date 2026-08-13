@@ -1,189 +1,175 @@
 {
-  "generated_at": "2026-08-12T07:53:35.834273+00:00",
-  "analysis_date": "2026-08-12",
+  "generated_at": "2026-08-13T07:52:57.203349+00:00",
+  "analysis_date": "2026-08-13",
   "provider": "openai",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-08-12T06:23:41.546093+00:00",
+  "source_generated_at": "2026-08-13T06:28:01.890072+00:00",
   "source_days_back": 30,
-  "source_total_items": 54728,
-  "total_items_in_window_all": 4774,
-  "total_items_in_window_curated": 10,
-  "total_items_in_window_selected": 56,
+  "source_total_items": 54982,
+  "total_items_in_window_all": 3160,
+  "total_items_in_window_curated": 16,
+  "total_items_in_window_selected": 50,
   "context_selection_policy": "curated-plus-operational-signal-v1",
-  "morning_call_markdown": "### Executive Summary\n- Ransomware operators are actively exploiting **Microsoft SharePoint Server** and **SonicWall SMA1000** flaws (both on CISA KEV); treat any exposed instances as likely initial-access paths.\n- Microsoft August Patch Tuesday includes an **actively exploited Windows kernel EoP (AFD.sys / CVE-2026-68820)** linked to Lazarus activity; prioritize endpoint patching and post-exploitation hunting.\n- Multiple additional high-impact enterprise issues surfaced: **Metabase critical SQLi**, **Cisco ASA/FTD exploited DoS**, and notable **supply-chain risk (LiteLLM)**—validate exposure and tighten monitoring today.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Internet-facing SharePoint Server exploitation → ransomware**\n- What happened (1 short line)  \n  CISA confirms a **SharePoint RCE chain** is now being used in **ransomware attacks** (incl. CVE-2026-63520; related auth bypass CVE-2026-55040 analysis/PoC published).\n- Why it matters operationally (1 short line)  \n  SharePoint is commonly internet-reachable and high-trust; exploitation can rapidly lead to **webshells, domain lateral movement, and encryption**.\n- Recommended immediate actions for the SOC today (1–2 short actions, same bullet)  \n  **Confirm patch level/exposure** for all SharePoint (esp. internet-facing) and **hunt last 30 days** for abnormal SharePoint/IIS child processes and new web-accessible files.\n\n**2) SonicWall SMA1000 VPN vulns exploited for ransomware (KEV)**\n- What happened (1 short line)  \n  CISA added **CVE-2026-15409 / CVE-2026-15410** (SMA1000) to KEV and reports **ransomware deployment via exploitation**.\n- Why it matters operationally (1 short line)  \n  VPN appliance compromise enables **credential theft + direct internal access**; common precursor to ransomware in financial environments.\n- Recommended immediate actions for the SOC today (1–2 short actions, same bullet)  \n  **Inventory SMA1000 exposure + patch/mitigate immediately**, and **review VPN auth logs** for suspicious admin activity, new accounts, and atypical geo/time access.\n\n**3) Microsoft zero-day under active exploit: Windows AFD.sys EoP (CVE-2026-68820)**\n- What happened (1 short line)  \n  Microsoft patched **CVE-2026-68820** (AFD.sys / WinSock driver) and reporting indicates **active exploitation** with Lazarus-linked malware/rootkit deployment.\n- Why it matters operationally (1 short line)  \n  EoP is typically chained after initial access; it accelerates **SYSTEM-level persistence, credential dumping, and EDR evasion**.\n- Recommended immediate actions for the SOC today (1–2 short actions, same bullet)  \n  **Prioritize patching for high-risk workstation/server tiers**, and **hunt** for unusual privilege escalation patterns (new services/drivers, LSASS access attempts, unexpected kernel driver loads).\n\n**4) Perimeter disruption & credential exposure: Cisco ASA/FTD exploited DoS + Metabase critical SQLi**\n- What happened (1 short line)  \n  Cisco patched **CVE-2026-20349** (ASA/FTD) being exploited for **remote device crash/DoS**; Metabase disclosed **critical SQLi (CVE-2026-72898)** with potential credential/token exposure.\n- Why it matters operationally (1 short line)  \n  DoS against edge firewalls/VPN can degrade availability; Metabase compromise can leak **API keys, DB creds, cloud tokens**—high impact for data/ops.\n- Recommended immediate actions for the SOC today (1–2 short actions, same bullet)  \n  **Patch/mitigate ASA/FTD and watch for crash/reload events**, and for Metabase **assume secrets exposure if vulnerable**: rotate tokens/DB creds and review access logs for suspicious queries/admin actions.\n\n---\n\n### Monitoring & detection recommendations\n- **SharePoint/IIS post-exploitation:** EDR + Windows Security logs + IIS logs; alert on `w3wp.exe` spawning `cmd.exe/powershell.exe/rundll32.exe` and unusual file writes under web roots (MITRE: T1505.003, T1059).\n- **VPN appliance compromise signals (SMA1000/ASA/FTD):** VPN/auth logs + firewall syslog; hunt for new admin users, config changes, unexpected reboots/crashes, and bursts of failed logins (T1190, T1110).\n- **Kernel EoP follow-on behavior (CVE-2026-68820):** EDR telemetry for privilege jumps to SYSTEM, suspicious driver/service creation, and LSASS targeting; validate with Sysmon (if present) for Service Install events (T1068, T1543, T1003).\n- **Metabase exploitation/credential harvesting:** Metabase application logs + reverse proxy/WAF + DB audit logs; look for anomalous requests to API endpoints, unexpected admin actions, and unusual DB queries from Metabase service accounts (T1190, T1552).\n- **Credential phishing via captive portals (CaptiveCrunch / M365):** IdP/M365 sign-in logs; detect “impossible travel,” new device sign-ins, suspicious OAuth consent/app registrations, and spikes in password resets (T1566, T1078, T1528).\n- **Supply-chain / CI/CD exposure (LiteLLM):** CI/CD audit logs (GitHub/GitLab/Jenkins) + artifact registry; look for unexpected package versions, new maintainers/tokens used, and unusual build runners/egress (T1195, T1552.007).\n- **Ransomware/extortion prep:** Netflow + DLP + proxy; monitor large outbound transfers and use of atypical exfil channels (including torrents noted in extortion-only activity) (T1041, T1567).\n\n---\n\n### Medium-term follow-ups\n- **Patch management:** Execute a risk-based sprint for Microsoft August updates (398 CVEs); prioritize internet-facing services, endpoint EoP, and any server roles tied to identity/auth.\n- **SharePoint hardening:** Validate external exposure, enforce least privilege for SharePoint service accounts, review upload/attachment controls, and ensure robust backup/restore testing for SharePoint farms.\n- **Edge resilience:** For ASA/FTD DoS, confirm HA failover works, review rate-limiting/DoS protections, and update runbooks for rapid edge device recovery.\n- **Secret hygiene:** After Metabase/LiteLLM-related checks, expand to a broader **credential/token rotation plan** (DB creds, API keys, cloud access tokens) tied to evidence of exposure.\n- **User travel/remote access policy:** Given captive-portal credential theft theme, reinforce conditional access (phishing-resistant MFA/passkeys where possible), and add guidance for traveling staff on captive portals.\n- **Supply-chain governance:** Tighten controls on third-party packages in build pipelines (pinning, provenance/SBOM where available, restricted publish permissions, monitoring for short-lived malicious releases).",
+  "morning_call_markdown": "### Executive Summary\n- Active exploitation confirmed for **Windows AFD.sys LPE zero-day (CVE-2026-68820)** and a **Cisco ASA/FTD SSL VPN zero-day DoS (CVE-2026-20349)** — prioritize patching and exploitation hunting.\n- **SharePoint auth/JWT bypass (CVE-2026-55040)** is being exploited quickly after PoC release — treat all internet-facing SharePoint as high risk.\n- Multiple **“exploit-ready” PoCs + supply-chain exposure (LiteLLM/Trivy)** increase likelihood of opportunistic compromise and credential theft in enterprise environments.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Microsoft Windows AFD.sys actively exploited zero-day (CVE-2026-68820) + Lazarus-linked campaigns**\n- What happened: Microsoft patched an **in-the-wild exploited** Windows AFD.sys use-after-free LPE; reporting ties exploitation to **Lazarus/Operation Dream Job** activity.\n- Why it matters operationally: Converts initial access (phish/web foothold) into **SYSTEM** quickly; high value for ransomware and targeted intrusion in financial environments.\n- Recommended immediate actions for the SOC today: **Accelerate patch deployment** to endpoints/servers; **hunt for post-exploitation chains** (new local admin/SYSTEM processes spawned from user apps) and escalate any signs of credential dumping or rapid privilege changes.\n\n**2) Cisco Secure Firewall ASA/FTD SSL VPN zero-day exploited (CVE-2026-20349)**\n- What happened: Cisco disclosed **active exploitation** of an unauthenticated flaw in Remote Access **SSL VPN** causing firewall reload/DoS.\n- Why it matters operationally: Direct availability impact on remote access and edge security controls; can be used as cover for follow-on intrusion attempts during outages.\n- Recommended immediate actions for the SOC today: **Identify exposed ASA/FTD with SSL VPN enabled** and prioritize mitigation/patch; **monitor for reload events/crash loops** and spike in failed VPN handshakes/connection resets from external sources.\n\n**3) SharePoint JWT/authentication bypass (CVE-2026-55040) exploited shortly after PoC**\n- What happened: A previously patched SharePoint JWT token authentication bypass has moved to **real-world exploitation** after PoC release.\n- Why it matters operationally: Internet-facing SharePoint is a frequent initial-access vector; bypass can enable **unauthorized access/exfil** and staging for ransomware.\n- Recommended immediate actions for the SOC today: **Confirm July SharePoint patches are applied everywhere** (incl. DR and “forgotten” farms); **review SharePoint/IIS logs for anomalous token/auth patterns** and unexpected access to sensitive site collections.\n\n**4) Microsoft Defender “ShieldBreak” patch-bypass PoC (reported 0-day)**\n- What happened: Public PoC claims a **bypass** of a prior Defender fix (references CVE-2026-50656/RoguePlanet) enabling SYSTEM-level execution.\n- Why it matters operationally: Even if reliability varies, public PoC increases copycat attempts; bypasses of endpoint protections can reduce SOC visibility.\n- Recommended immediate actions for the SOC today: **Validate Defender platform/engine/signature versions** on critical fleets; **alert on Defender tampering indicators** (service stops, exclusion additions, disabled real-time protection) and treat as high-severity.\n\n**5) LiteLLM supply-chain incident (via Trivy compromise) distributing infostealers**\n- What happened: Reporting indicates **LiteLLM** was abused through a **Trivy-related supply chain compromise** to distribute information-stealing malware to users.\n- Why it matters operationally: High risk of **developer workstation and CI/CD credential theft** (cloud keys, tokens, passwords) leading to lateral movement and SaaS compromise.\n- Recommended immediate actions for the SOC today: **Query EDR/asset inventory for LiteLLM and Trivy usage** in endpoints/CI runners; **rotate potentially exposed secrets** (CI tokens, cloud/API keys) where usage is confirmed or uncertain.\n\n---\n\n### Monitoring & detection recommendations\n- **Windows LPE / Lazarus-style intrusion chains:** EDR + Windows Security logs (4688 process creation, token elevation) for unusual parent/child chains to SYSTEM (e.g., Office/browser/PDF tool → suspicious loader → SYSTEM service) — *MITRE: T1059, T1068, T1543*.\n- **Credential theft after privilege gain:** EDR + LSASS access events and memory-dump tooling patterns; alert on abnormal handle access to LSASS and new credential material access — *MITRE: T1003*.\n- **Cisco ASA/FTD SSL VPN DoS attempts:** Firewall/VPN telemetry for bursts of SSL VPN connections, handshake anomalies, reload events, and watchdog/crash logs; correlate to external source concentration (same ASN/IP ranges).\n- **SharePoint exploitation visibility:** IIS/SharePoint ULS logs for abnormal authentication outcomes, unusual JWT/token-related errors, and unexpected access to admin endpoints; look for new web shells or suspicious .aspx writes — *MITRE: T1505.003*.\n- **Defender tampering / bypass attempts:** Microsoft Defender for Endpoint alerts + Windows Event Logs for policy changes, exclusion additions, and service disablement; hunt for “security product stopped” events — *MITRE: T1562.001*.\n- **Supply-chain / infostealer outcomes:** Proxy/DNS + EDR for new outbound from developer tools/CI runners to uncommon domains, plus credential store access; prioritize devices running build agents — *MITRE: T1555, T1071*.\n- **SaaS data enumeration/exfil (Salesforce/ServiceNow ‘City-Forum’ theme):** CASB/SaaS audit logs for abnormal guest/unauthenticated enumeration patterns, large-volume exports, and atypical API client usage — *MITRE: T1213, T1020*.\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** Treat this as an “emergency patch window” for **CVE-2026-68820** (Windows) and **SharePoint July patch validation**; report coverage gaps to IT risk daily until closed.\n- **Edge resilience:** Review ASA/FTD SSL VPN exposure; consider **rate limiting / segmentation / alternate remote access** to reduce single-point DoS impact (assumption: SSL VPN is business-critical).\n- **Exploit-PoC backlog triage:** Several high-CVSS PoCs surfaced (multiple CVE listings in feeds) — prioritize based on **your actual asset inventory** (internet-facing first, then internal critical apps).\n- **Supply-chain controls:** Reassess dependency provenance (Trivy/LiteLLM and CI pipelines), enforce signed artifacts where possible, and add **SBOM + registry allowlisting** for build environments.\n- **Ransomware readiness:** New RaaS marketing (Eclipse) + reports of EDR bypass in Safe Mode suggest reinforcing **immutable backups, safe-mode protections, and privileged access monitoring**.\n- **SaaS posture:** Validate **guest access and public endpoints** configurations for Salesforce/ServiceNow; ensure least-privilege and monitoring for bulk data operations are enforced.",
   "highlights": [
     {
-      "title": "CISA: Microsoft SharePoint flaw now exploited in ransomware attacks",
-      "link": "https://www.bleepingcomputer.com/news/security/cisa-microsoft-sharepoint-flaw-now-exploited-in-ransomware-attacks/",
-      "source": "BleepingComputer",
-      "published": "2026-08-11T12:12:16+00:00",
+      "title": "CVE-2026-68820: Actively Exploited Windows AFD.sys Zero-Day Enables SYSTEM Privilege Escalation",
+      "link": "https://socprime.com/blog/cve-2026-68820-actively-exploited-windows/",
+      "source": "SOC Prime Blog",
+      "published": "2026-08-12T12:50:03+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC",
-        "Ransomware",
-        "General Security"
+        "Windows / Microsoft",
+        "Vendors / Product Security"
       ],
       "curated": true,
       "signal_tier": "critical",
       "signal_score": 100.0,
-      "priority_score": 83.32
+      "priority_score": 86.56
     },
     {
-      "title": "CISA Warns of SonicWall SMA1000 Vulnerabilities Exploited in Attacks to Deploy Ransomware",
-      "link": "https://cybersecuritynews.com/sonicwall-sma1000-vulnerabilities-exploited/",
-      "source": "Cyber Security News",
-      "published": "2026-08-11T08:35:34+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "Ransomware",
-        "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 89.59,
-      "priority_score": 86.41
-    },
-    {
-      "title": "Infosec News Nuggets — August 11, 2026",
-      "link": "https://aboutdfir.com/infosec-news-nuggets-august-11-2026/",
-      "source": "AboutDFIR – The Definitive Compendium Project",
-      "published": "2026-08-11T10:29:41+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Crypto / Web3",
-        "Exploit / PoC",
-        "Detection Engineering"
-      ],
-      "curated": false,
-      "signal_tier": "critical",
-      "signal_score": 83.12,
-      "priority_score": 74.62
-    },
-    {
-      "title": "CVE-2026-63520: Microsoft SharePoint Remote Code Execution (FIXED)",
-      "link": "https://www.rapid7.com/blog/post/etr-cve-2026-63520-microsoft-sharepoint-remote-code-execution-fixed",
-      "source": "Rapid7 Blog",
-      "published": "2026-08-11T13:00:00+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "Ransomware",
-        "Windows / Microsoft",
-        "Vendors / Product Security"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 81.16,
-      "priority_score": 86.17
-    },
-    {
-      "title": "Rapid7 Analysis: Microsoft SharePoint JWT Token Authentication Bypass (CVE-2026-55040)",
-      "link": "https://www.rapid7.com/blog/post/ra-microsoft-sharepoint-jwt-token-authentication-bypass-cve-2026-55040",
-      "source": "Rapid7 Blog",
-      "published": "2026-08-11T13:00:00+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Identity / Access",
-        "Cloud / SaaS",
-        "Exploit / PoC",
-        "Crypto / Web3",
-        "Network / OT / ICS",
-        "Web / API Security",
-        "Windows / Microsoft",
-        "Vendors / Product Security"
-      ],
-      "curated": true,
-      "signal_tier": "high",
-      "signal_score": 77.16,
-      "priority_score": 86.06
-    },
-    {
-      "title": "Microsoft's August 2026 Patch Tuesday Addresses 398 CVEs (CVE-2026-68820)",
-      "link": "https://www.tenable.com/blog/microsofts-august-2026-patch-tuesday-addresses-398-cves-cve-2026-68820",
-      "source": "Tenable Blog",
-      "published": "2026-08-11T18:04:04+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Windows / Microsoft",
-        "Cloud / SaaS",
-        "Crypto / Web3",
-        "Exploit / PoC",
-        "Identity / Access",
-        "Linux / Unix",
-        "Network / OT / ICS",
-        "Mobile Security",
-        "Vendors / Product Security"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 69.18,
-      "priority_score": 77.65
-    },
-    {
-      "title": "Exploit for CVE-2026-62737",
-      "link": "https://sploitus.com/exploit?id=CCD7B5DE-FC43-5639-B6C1-4EC9753D91BE&utm_source=rss&utm_medium=rss",
-      "source": "Sploitus – Exploits",
-      "published": "2026-08-11T18:47:22+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 69.17,
-      "priority_score": 65.99
-    },
-    {
-      "title": "Ransomware gangs don’t need control system access to disrupt industrial production",
-      "link": "https://www.helpnetsecurity.com/2026/08/11/industrial-ransomware-attacks-q2-2026/",
+      "title": "Microsoft patches 400+ vulnerabilities, one zero-day under attack (CVE-2026-68820)",
+      "link": "https://www.helpnetsecurity.com/2026/08/12/august-2026-patch-tuesday-cve-2026-68820/",
       "source": "Help Net Security",
-      "published": "2026-08-11T09:32:04+00:00",
-      "smart_groups": [
-        "Network / OT / ICS",
-        "Data Breaches / Leaks",
-        "Ransomware",
-        "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "high",
-      "signal_score": 68.27,
-      "priority_score": 84.12
-    },
-    {
-      "title": "Exploit for Insertion of Sensitive Information into Log File in Hitachi Configuration_Manager",
-      "link": "https://sploitus.com/exploit?id=A8D910FE-2EC7-5AF1-971D-8E2AFF7C739D&utm_source=rss&utm_medium=rss",
-      "source": "Sploitus – Exploits",
-      "published": "2026-08-11T19:55:00+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 67.17,
-      "priority_score": 66.29
-    },
-    {
-      "title": "Lazarus Hackers Actively Exploiting Windows AFD.sys Zero-Day to Deploy FudModule Rootkit",
-      "link": "https://cybersecuritynews.com/windows-afd-sys-zero-day-exploited/",
-      "source": "Cyber Security News (FeedBurner)",
-      "published": "2026-08-12T03:23:37+00:00",
+      "published": "2026-08-12T09:34:16+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC",
+        "Windows / Microsoft",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 97.28,
+      "priority_score": 85.78
+    },
+    {
+      "title": "SANS Stormcast Thursday, August 13th, 2026: Process Accounting; ShieldBreak; SharePoint JWT Vuln PoC; AI regulation",
+      "link": "https://isc.sans.edu/podcastdetail/10050",
+      "source": "SANS Internet Stormcenter Daily Cyber Security Podcast (Stormcast)",
+      "published": "2026-08-13T02:00:02+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
         "Linux / Unix",
-        "Malware / Payloads",
+        "Windows / Microsoft",
+        "Community / Briefing"
+      ],
+      "curated": false,
+      "signal_tier": "critical",
+      "signal_score": 97.12,
+      "priority_score": 79.43
+    },
+    {
+      "title": "Cisco Firewall 0-Day Vulnerability Exploited in the Wild to Trigger DoS Condition",
+      "link": "https://cybersecuritynews.com/cisco-firewall-0-day-vulnerability/",
+      "source": "Cyber Security News",
+      "published": "2026-08-13T04:36:14+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 93.34,
+      "priority_score": 91.15
+    },
+    {
+      "title": "CVE-2026-20349: Actively Exploited Cisco ASA and FTD Flaw Enables Remote DoS",
+      "link": "https://socprime.com/blog/cve-2026-20349-actively-exploited-cisco-asa-and-ftd-flaw-enables-remote-dos/",
+      "source": "SOC Prime Blog",
+      "published": "2026-08-12T12:55:30+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Vendors / Product Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 87.25,
+      "priority_score": 86.31
+    },
+    {
+      "title": "Lazarus Exploits Windows Zero-Day to Gain SYSTEM Access and Deploy Backdoor",
+      "link": "https://thehackernews.com/2026/08/lazarus-exploits-windows-zero-day-to.html",
+      "source": "The Hacker News",
+      "published": "2026-08-12T17:39:27+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
         "Threat Actors / APT",
+        "Exploit / PoC",
+        "Malware / Payloads",
+        "Windows / Microsoft",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 79.63,
+      "priority_score": 82.95
+    },
+    {
+      "title": "ShieldBreak: New Windows Zero-Day Bypasses Microsoft’s RoguePlanet Patch",
+      "link": "https://securityaffairs.com/197063/hacking/shieldbreak-new-windows-zero-day-bypasses-microsofts-rogueplanet-patch.html",
+      "source": "Security Affairs",
+      "published": "2026-08-12T08:07:15+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
         "Windows / Microsoft",
         "General Security"
       ],
       "curated": true,
       "signal_tier": "high",
-      "signal_score": 67.07,
-      "priority_score": 89.51
+      "signal_score": 73.09,
+      "priority_score": 84.31
+    },
+    {
+      "title": "Exploit for CVE-2024-52806",
+      "link": "https://vulners.com/githubexploit/16BEF64E-3CD4-5957-8FE7-21125AA498E3?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-08-12T10:39:38+00:00",
+      "smart_groups": [
+        "Identity / Access",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 70.46,
+      "priority_score": 70.35
+    },
+    {
+      "title": "SharePoint Vulnerability Exploited Shortly After PoC Release",
+      "link": "https://www.securityweek.com/sharepoint-vulnerability-exploited-shortly-after-poc-release/",
+      "source": "SecurityWeek",
+      "published": "2026-08-12T14:47:01+00:00",
+      "smart_groups": [
+        "Exploit / PoC",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 70.17,
+      "priority_score": 80.68
+    },
+    {
+      "title": "Microsoft fixes 398 vulnerabilities in August Patch Tuesday — and a Windows zero-day requires immediate attention",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1vmja0r/microsoft_fixes_398_vulnerabilities_in_august/",
+      "source": "/r/cybersecurity",
+      "published": "2026-08-12T16:38:08+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Linux / Unix",
+        "Windows / Microsoft",
+        "OSINT / Community"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 70.06,
+      "priority_score": 86.35
     }
   ]
 }
