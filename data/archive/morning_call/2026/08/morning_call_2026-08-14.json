@@ -1,0 +1,175 @@
+{
+  "generated_at": "2026-08-14T07:53:15.597424+00:00",
+  "analysis_date": "2026-08-14",
+  "provider": "openai",
+  "model": "gpt-5.2",
+  "window_hours": 24,
+  "source_file": "data/news_recent.json",
+  "source_generated_at": "2026-08-14T06:23:06.442291+00:00",
+  "source_days_back": 30,
+  "source_total_items": 54375,
+  "total_items_in_window_all": 3739,
+  "total_items_in_window_curated": 14,
+  "total_items_in_window_selected": 49,
+  "context_selection_policy": "curated-plus-operational-signal-v1",
+  "morning_call_markdown": "### Executive Summary\n- Multiple **actively exploited enterprise CVEs** to prioritize today: **Windows AFD.sys zero-day (CVE-2026-68820)**, **SharePoint auth bypass (CVE-2026-55040)**, and **VMware vCenter Syslog Server RCE (CVE-2026-59310)**.\n- **Unpatched GeoServer zero-day** (SQLi → potential RCE) is seeing active exploitation attempts; treat any exposed GeoServer as internet-critical until mitigated/isolated.\n- **E-commerce/app platforms under rapid weaponization**: **Adobe Commerce (CVE-2026-71362)** and **Metabase SQLi (CVE-2026-72898)** reported as actively exploited; prioritize any internet-facing instances.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Microsoft Windows AFD.sys (Ancillary Function Driver) zero-day – KEV / exploited (CVE-2026-68820)**\n- What happened: CISA added **CVE-2026-68820** to KEV; reports indicate **in-the-wild exploitation** (use-after-free in AFD.sys).\n- Why it matters operationally: Likely **post-compromise privilege escalation to SYSTEM** on Windows endpoints/servers—high value in ransomware and APT chains in financial environments.\n- Recommended immediate actions for the SOC today: **Confirm patch/mitigation status** via vuln mgmt + prioritize critical tiers; **hunt for exploit-to-elevation chains** (new admin tokens/services/drivers) on recently alerted hosts.\n\n**2) Microsoft SharePoint auth bypass – active exploitation after public PoC (CVE-2026-55040)**\n- What happened: Attackers are exploiting **CVE-2026-55040** (patched July) shortly after a **public PoC**; enables **unauth admin impersonation** on exposed SharePoint.\n- Why it matters operationally: Internet-facing SharePoint is a frequent **initial access** vector leading to webshells, lateral movement, and data theft.\n- Recommended immediate actions for the SOC today: **Identify all SharePoint endpoints** (especially internet-facing) and verify patch level; **increase monitoring on SharePoint/IIS logs** for suspicious auth patterns and admin-context actions.\n\n**3) VMware vCenter Syslog Server RCE – active exploitation (CVE-2026-59310)**\n- What happened: A patched **critical vCenter Syslog Server RCE** is being exploited to deploy **reverse SSH** for persistence/remote access.\n- Why it matters operationally: vCenter compromise is a **blast-radius amplifier** (VM control, credential access, rapid ransomware propagation).\n- Recommended immediate actions for the SOC today: **Validate patching and exposure** of vCenter Syslog Server; **hunt for outbound “reverse SSH” behavior** from vCenter networks and new persistence artifacts on vCenter appliances.\n\n**4) Unpatched GeoServer zero-day – active exploitation attempts (SQLi → potential RCE; no CVE yet)**\n- What happened: Researchers report **active exploitation attempts** against an **unpatched GeoServer SQL injection** that can lead to **RCE**.\n- Why it matters operationally: If GeoServer exists in the environment (often “forgotten” apps), it’s a high-risk **internet-facing web app** compromise path.\n- Recommended immediate actions for the SOC today: **Inventory for GeoServer** (CMDB + web scans + app owner outreach) and **isolate/WAF-restrict** any exposed instances; **monitor for anomalous requests** indicative of SQLi probing and follow-on command execution.\n\n**5) Rapid weaponization of internet-facing app platforms – Adobe Commerce + Metabase (both reported exploited)**\n- What happened: **Adobe Commerce (CVE-2026-71362)** account/session hijack and **Metabase SQLi (CVE-2026-72898)** are reported as **actively exploited**; CERT guidance also flags Metabase.\n- Why it matters operationally: These are common externally reachable platforms; exploitation can yield **customer data access**, credential theft, and footholds for further intrusion.\n- Recommended immediate actions for the SOC today: **Confirm whether we run Adobe Commerce/Metabase** (including subsidiaries/marketing sites) and patch/disable exposure; **tighten monitoring** for unusual admin/customer session changes and suspicious query/error patterns in app logs.\n\n---\n\n### Monitoring & detection recommendations\n- **Windows privilege escalation / kernel exploit follow-on (CVE-2026-68820)**: EDR telemetry + Windows Security logs (4688/4697/7045/4672); hunt for **new service installs, driver loads, token privilege changes** (MITRE: **T1068**, **T1543**).\n- **SharePoint exploitation (CVE-2026-55040)**: IIS/SharePoint ULS logs + WAF; alert on **unexpected admin-context actions**, anomalous auth flows, and **sudden config changes** (MITRE: **T1190**).\n- **vCenter reverse SSH persistence**: vCenter appliance logs + network telemetry (NetFlow/Proxy/DNS); detect **unusual outbound SSH** from management VLANs and long-lived sessions (MITRE: **T1021.004**, **T1071.001**).\n- **GeoServer zero-day (SQLi → RCE)**: WAF + web server logs; hunt for **SQLi patterns** (error-based/time-based anomalies) and unusual endpoints/parameters; correlate with **new processes spawned by web service** where observable (MITRE: **T1190**, **T1059**).\n- **Metabase exploitation**: Metabase application logs + reverse proxy/WAF; watch for **unexpected database query activity**, abnormal error spikes, and **new admin creation / settings changes** (MITRE: **T1190**, **T1505**).\n- **Adobe Commerce account/session hijack**: App logs + IdP where applicable; monitor for **session switching anomalies**, sudden account takeovers, and admin panel access from new geos/ASNs (MITRE: **T1556**, **T1078**).\n- **Firewall disruption (Cisco Secure Firewall/ASA/FTD DoS in KEV)**: Firewall event logs + availability monitoring; alert on **unexpected reloads/restarts**, crash signatures, and management-plane spikes (MITRE: **T1499**).\n\n---\n\n### Medium-term follow-ups\n- **Patch governance**: Microsoft August Patch Tuesday is large-scale; ensure **risk-based rollup** (internet-facing, Tier-0, EDR coverage gaps) and validate remediation for **KEV-listed** items first.\n- **Exposure management**: Reconcile CMDB vs reality for “edge” and “forgotten” apps (SharePoint web farms, GeoServer instances, Metabase in analytics teams); close gaps with **external attack surface scans**.\n- **Segmentation & egress controls**: Tighten outbound access from **management networks** (vCenter, backup, monitoring) to reduce reverse-SSH and C2 channels.\n- **Ransomware readiness**: Recent reporting highlights edge-device and rapid exploitation realities; validate **immutable backups**, restore tests, and **privileged access hardening** for admin tooling.\n- **Supply-chain/appsec watch** (context items mention credential exposure/supply-chain themes): reinforce **token hygiene** (rotate secrets, restrict CI/CD scopes) and ensure SOC has playbooks for **third-party credential leak response**.\n- **Threat intel alignment**: Track Storm-1175’s ransomware evolution (StormEncryptor) as a potential **financially motivated** crossover; map detections to ransomware precursor behaviors (credential access, lateral movement, backup disruption).",
+  "highlights": [
+    {
+      "title": "Microsoft’s August Patch Tuesday: 400+ Bugs Fixed, One Zero-Day Already Under Attack",
+      "link": "https://www.techrepublic.com/article/news-microsoft-august-2026-patch-tuesday/",
+      "source": "Security on TechRepublic",
+      "published": "2026-08-13T12:51:06+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Cloud / SaaS",
+        "Exploit / PoC",
+        "Windows / Microsoft",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 100.0,
+      "priority_score": 85.35
+    },
+    {
+      "title": "SharePoint CVE-2026-55040 Comes Under Attack Following Public Exploit",
+      "link": "https://securityaffairs.com/197137/hacking/sharepoint-cve-2026-55040-comes-under-attack-following-public-exploit.html",
+      "source": "Security Affairs",
+      "published": "2026-08-13T08:36:30+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 100.0,
+      "priority_score": 84.65
+    },
+    {
+      "title": "Unpatched GeoServer Zero-Day Targeted in Active Exploitation Attempts, Can Lead to RCE",
+      "link": "https://vulners.com/thn/THN:D3E45D634B84E74F060F9B1E79CF0239?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-08-13T18:45:00+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Web / API Security",
+        "Exploit / PoC"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 100.0,
+      "priority_score": 84.22
+    },
+    {
+      "title": "CISA Warns of Windows Ancillary Function 0-Day Vulnerability Exploited in Attacks",
+      "link": "https://cybersecuritynews.com/windows-ancillary-function-0-day-exploited/",
+      "source": "Cyber Security News",
+      "published": "2026-08-13T13:12:38+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Windows / Microsoft",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 93.42,
+      "priority_score": 87.25
+    },
+    {
+      "title": "Adobe Commerce CVE-2026-71362 Comes Under Attack Shortly After Public Disclosure",
+      "link": "https://securityaffairs.com/197149/hacking/adobe-commerce-cve-2026-71362-comes-under-attack-shortly-after-public-disclosure.html",
+      "source": "Security Affairs",
+      "published": "2026-08-13T17:48:54+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 85.14,
+      "priority_score": 87.07
+    },
+    {
+      "title": "U.S. CISA adds Metabase, Windows, and Cisco Secure Firewall flaws to its Known Exploited Vulnerabilities catalog",
+      "link": "https://securityaffairs.com/197110/uncategorized/u-s-cisa-adds-metabase-windows-and-cisco-secure-firewall-flaws-to-its-known-exploited-vulnerabilities-catalog.html",
+      "source": "Security Affairs",
+      "published": "2026-08-13T17:12:45+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Cloud / SaaS",
+        "Exploit / PoC",
+        "Windows / Microsoft",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 83.14,
+      "priority_score": 86.91
+    },
+    {
+      "title": "U.S. CISA adds Metabase, Windows, and Cisco Secure Firewall flaws to its Known Exploited Vulnerabilities catalog",
+      "link": "https://securityaffairs.com/197110/hacking/u-s-cisa-adds-metabase-windows-and-cisco-secure-firewall-flaws-to-its-known-exploited-vulnerabilities-catalog.html",
+      "source": "Security Affairs",
+      "published": "2026-08-13T17:12:45+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Cloud / SaaS",
+        "Exploit / PoC",
+        "Windows / Microsoft",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 83.14,
+      "priority_score": 86.91
+    },
+    {
+      "title": "[tl;dr sec] #341 - Hugging Face Incident Black Hat Talk, CSS Bomb in your Inbox, GitHub Supply Chain Security Improvements",
+      "link": "https://tldrsec.com/p/tldr-sec-341",
+      "source": "tl;dr sec",
+      "published": "2026-08-13T14:30:00+00:00",
+      "smart_groups": [
+        "Exploit / PoC",
+        "Vendors / Product Security"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 75.38,
+      "priority_score": 66.67
+    },
+    {
+      "title": "Attackers target zero-day vulnerability in geospatial data platform GeoServer",
+      "link": "https://www.csoonline.com/article/4209388/attackers-target-zero-day-vulnerability-in-geospatial-data-platform-geoserver.html",
+      "source": "CSO Online",
+      "published": "2026-08-13T20:43:11+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Web / API Security",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 70.35,
+      "priority_score": 89.13
+    },
+    {
+      "title": "ShieldBreak: Nightmare Eclipse’s Windows Zero-Day Exploit Exposed",
+      "link": "https://www.news4hackers.com/shieldbreak-nightmare-eclipses-windows-zero-day-exploit-exposed/",
+      "source": "News4Hackers",
+      "published": "2026-08-13T09:01:56+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Windows / Microsoft",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 70.13,
+      "priority_score": 84.73
+    }
+  ]
+}
