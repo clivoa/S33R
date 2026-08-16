@@ -1,0 +1,185 @@
+{
+  "generated_at": "2026-08-15T07:01:03.063206+00:00",
+  "analysis_date": "2026-08-15",
+  "provider": "openai",
+  "model": "gpt-5.2",
+  "window_hours": 24,
+  "source_file": "data/news_recent.json",
+  "source_generated_at": "2026-08-15T06:48:47.329321+00:00",
+  "source_days_back": 30,
+  "source_total_items": 53710,
+  "total_items_in_window_all": 2692,
+  "total_items_in_window_curated": 15,
+  "total_items_in_window_selected": 40,
+  "context_selection_policy": "curated-plus-operational-signal-v1",
+  "morning_call_markdown": "### Executive Summary\n- Multiple **actively exploited / zero-day** paths this cycle: **GeoServer SQLi (0-day)**, **Windows 0-day used by Lazarus**, and **SAP Commerce Cloud unauth RCE**—validate exposure and hunt for exploitation now.\n- **Citrix NetScaler CVE-2026-8452 PoC** and other public PoCs increase near-term scanning/exploit attempts against edge infrastructure—tighten monitoring and confirm patch levels.\n- Broad **credential/session risk**: **malicious Chrome VPN extensions** intercept traffic; plus **SaaS data targeting** (Salesforce/ServiceNow “City-Forum”)—focus on IdP, browser controls, and SaaS audit trails.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) GeoServer unauth SQL injection 0-day (RCE possible depending on config)**\n- What happened: Researchers report **mass probing/exploitation** of an **unpatched GeoServer SQLi 0-day** with potential **RCE** depending on database/config.\n- Why it matters operationally: Internet-facing GeoServer instances can be **rapidly compromised**; likely leads to webshells, credential theft, and pivoting into internal networks.\n- Recommended immediate actions for the SOC today: **Inventory & confirm exposure** (external attack surface); **block/limit GeoServer access** (WAF/VPN allowlists) and escalate to patch/mitigation owner.\n\n**2) SAP Commerce Cloud CVE-2026-58231 (actively exploited unauth RCE)**\n- What happened: **Active exploitation** reported for **SAP Commerce Cloud RCE** within ~72 hours of patch availability.\n- Why it matters operationally: Commerce platforms are high-value in financial ecosystems (customer data, auth flows, payments) and exploitation commonly becomes **initial access** for ransomware/data theft.\n- Recommended immediate actions for the SOC today: **Confirm patch status with app/platform team**; **hunt in WAF/app logs** for exploit attempts and unusual admin/service execution from Commerce nodes.\n\n**3) Windows 0-day used by DPRK Lazarus in backdoor campaign (job lure / fake PDF viewer)**\n- What happened: Lazarus reportedly uses a **Windows 0-day** in a campaign delivered via **fake job offers** and **trojanized PDF viewer downloads** leading to backdoor activity.\n- Why it matters operationally: Financial institutions are frequent Lazarus targets; this is a **user-driven initial access** path that can bypass perimeter controls and land on endpoints.\n- Recommended immediate actions for the SOC today: **Raise email/web lure vigilance** (HR/recruiting and finance users); **hunt for new/untrusted PDF viewer installs and child-process anomalies** on endpoints.\n\n**4) Edge/remote access exposure spike: Citrix NetScaler CVE-2026-8452 PoC + SharePoint CVE-2026-55040 active exploitation**\n- What happened: **Working PoC** published for **Citrix NetScaler CVE-2026-8452 (pre-auth → root RCE)**; separately **SharePoint CVE-2026-55040** reported **actively exploited** post-PoC.\n- Why it matters operationally: These are classic **internet-edge takeover** vectors; exploitation often yields persistent access, credential dumping, and lateral movement quickly.\n- Recommended immediate actions for the SOC today: **Verify patch/hotfix levels** for Citrix and SharePoint immediately; **increase alerting on perimeter exploit patterns and post-exploit behaviors** (new admin accounts, webshell indicators, config changes).\n\n**5) Browser + SaaS data risk: 737 malicious Chrome “VPN” extensions + SaaS targeting of Salesforce/ServiceNow**\n- What happened: Reports highlight **hundreds of malicious Chrome VPN extensions** intercepting traffic; and a campaign targeting **Salesforce/ServiceNow data** (“City-Forum”, similar to extortion playbooks).\n- Why it matters operationally: Extensions can **steal sessions/credentials** and defeat MFA via token theft; SaaS compromise can expose customer/support workflows and sensitive records.\n- Recommended immediate actions for the SOC today: **Push browser extension review/block policy** (high-risk categories like “VPN”); **review SaaS audit logs** for abnormal exports, bulk access, or suspicious OAuth app grants.\n\n---\n\n### Monitoring & detection recommendations\n- **GeoServer / web app exploitation**: Monitor **WAF/reverse proxy + web server logs** for SQLi patterns, spikes in 4xx/5xx, suspicious POSTs to GeoServer endpoints; follow with **EDR on the host** for webshell-like execution (ATT&CK: T1190).\n- **SAP Commerce Cloud RCE attempts**: Use **WAF/app logs + container/runtime telemetry** for unexpected admin endpoints access, new files in web roots, and unusual outbound connections from Commerce nodes (ATT&CK: T1190, T1105).\n- **Citrix NetScaler & other edge appliances**: Watch **VPN/ADC logs**, config change logs, and auth anomalies; alert on new admin users, unexpected system commands, and sudden process restarts (ATT&CK: T1190, T1562).\n- **SharePoint compromise behavior**: In **IIS/SharePoint ULS logs + EDR**, hunt for unusual .aspx drops, anomalous w3wp.exe child processes, and suspicious PowerShell spawned from web context (ATT&CK: T1505, T1059.001).\n- **Lazarus endpoint tradecraft (job lure / fake software)**: On **EDR + Sysmon**, hunt for new/rare “PDF viewer” executables, unsigned installers from user Downloads, and unusual persistence (Run keys, scheduled tasks) (ATT&CK: T1204, T1547, T1053).\n- **SaaS (Salesforce/ServiceNow) data theft patterns**: Review **SaaS audit trails + IdP logs** for bulk record exports, atypical API usage, new OAuth connected apps, and logins from new geos/ASNs (ATT&CK: T1528, T1078).\n- **Malicious Chrome extensions**: From **MDM/endpoint browser management** and **proxy/DNS logs**, flag new extension installs, unusual traffic to extension backends, and sudden increases in encrypted tunneling from browser processes (ATT&CK: T1552, T1550).\n- **GitHub Gists as C2 (HACKERAI)**: In **proxy/firewall logs + DNS**, detect unusual GitHub/Gist access patterns from servers/non-dev endpoints, high-frequency polling, or large outbound posts to GitHub services (ATT&CK: T1071.001).\n\n---\n\n### Medium-term follow-ups\n- **Patch governance**: Ensure rapid patch/mitigation SLAs for **internet-facing** platforms (Citrix/SharePoint/SAP/GeoServer); validate with continuous external scanning and CMDB reconciliation.\n- **Browser hardening**: Enforce **extension allow-listing**, block high-risk categories (consumer VPN/proxy), and require managed browser profiles for privileged users/admins.\n- **SaaS security controls**: Tighten **OAuth app governance**, restrict bulk export permissions, enable anomaly detections, and confirm logging retention for Salesforce/ServiceNow.\n- **User-driven initial access reduction**: Update awareness playbooks for **recruitment/job-lure** waves; strengthen web download controls (allowlisting for installers) and isolate risky file types.\n- **Mac fleet check (if applicable)**: Validate macOS patching and ensure Screen Sharing is restricted/disabled where not needed (active exploitation reported, though current use-case appears crypto-mining).\n- **IR readiness**: Reconfirm playbooks for **edge appliance compromise** (Citrix/SharePoint): golden configs, rapid credential reset procedures, and segmented admin access paths.",
+  "highlights": [
+    {
+      "title": "SharePoint, SAP, macOS flaws under active exploitation; 737 malicious Chrome extensions",
+      "link": "https://defend.network/briefings/sharepoint-sap-chrome-macos-active-exploits-2026-08-15.html",
+      "source": "defend.network",
+      "published": "2026-08-15T06:30:00+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Cloud / SaaS",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 100.0,
+      "priority_score": 90.15
+    },
+    {
+      "title": "GeoServer jsonArrayContains SQL Injection Zero-Day: Mass Probes Hours After Disclosure, RCE Possible Depending on Configuration",
+      "link": "https://dev.to/anoymask/geoserver-jsonarraycontains-sql-injection-zero-day-mass-probes-hours-after-disclosure-rce-159a",
+      "source": "DEV Community",
+      "published": "2026-08-15T04:22:49+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Web / API Security",
+        "Malware / Payloads",
+        "Threat Actors / APT",
+        "Detection Engineering",
+        "Cloud / SaaS",
+        "Exploit / PoC",
+        "Identity / Access",
+        "OSINT / Community"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 92.58,
+      "priority_score": 92.21
+    },
+    {
+      "title": "SAP Commerce Cloud RCE Flaw Actively Exploited",
+      "link": "https://www.esecurityplanet.com/threats/sap-commerce-cloud-rce-flaw-actively-exploited/",
+      "source": "eSecurityPlanet",
+      "published": "2026-08-14T19:09:53+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 83.19,
+      "priority_score": 87.18
+    },
+    {
+      "title": "Lazarus Group Exploits Windows Zero-Day in Backdoor Campaign – DPRK Cyber Threat",
+      "link": "https://www.news4hackers.com/lazarus-group-exploits-windows-zero-day-in-backdoor-campaign-dprk-cyber-threat/",
+      "source": "News4Hackers",
+      "published": "2026-08-14T18:03:31+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Threat Actors / APT",
+        "Exploit / PoC",
+        "Malware / Payloads",
+        "Windows / Microsoft",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 80.3,
+      "priority_score": 86.35
+    },
+    {
+      "title": "DPRK’s Lazarus Group exploits Windows zero-day in backdoor campaign",
+      "link": "https://www.scworld.com/news/dprks-lazarus-group-exploits-windows-zero-day-in-backdoor-campaign",
+      "source": "SCM feed for Latest",
+      "published": "2026-08-14T11:00:00+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Malware / Payloads",
+        "Threat Actors / APT",
+        "Windows / Microsoft",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 73.99,
+      "priority_score": 82.89
+    },
+    {
+      "title": "Hackers Exploiting Unpatched GeoServer Zero-Day",
+      "link": "https://www.securityweek.com/hackers-exploiting-unpatched-geoserver-zero-day/",
+      "source": "SecurityWeek",
+      "published": "2026-08-14T07:01:56+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Web / API Security",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 70.12,
+      "priority_score": 83.77
+    },
+    {
+      "title": "GeoServer 0-Day Vulnerability Enables Remote Code Execution Attacks",
+      "link": "https://cybersecuritynews.com/geoserver-0-day-vulnerability/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-08-14T07:50:12+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Web / API Security",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 70.06,
+      "priority_score": 84.13
+    },
+    {
+      "title": "CyberPanel Zero Day",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1voeb9c/cyberpanel_zero_day/",
+      "source": "/r/cybersecurity",
+      "published": "2026-08-14T17:52:19+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "OSINT / Community"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 70.03,
+      "priority_score": 84.33
+    },
+    {
+      "title": "CC-4832 - Proof-of-Concept Exploit Released for Citrix NetScaler ADC and NetScaler Gateway Vulnerability",
+      "link": "https://digital.nhs.uk/cyber-alerts/2026/cc-4832",
+      "source": "NHS Digital - Cyber Alert Feed",
+      "published": "2026-08-14T12:06:00+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Government / CERT"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 69.19,
+      "priority_score": 85.89
+    },
+    {
+      "title": "SAP Commerce Cloud CVE-2026-58231: Active Exploit Attempts for Unauthenticated RCE",
+      "link": "https://dev.to/anoymask/sap-commerce-cloud-cve-2026-58231-active-exploit-attempts-for-unauthenticated-rce-4ipp",
+      "source": "DEV Community",
+      "published": "2026-08-15T04:22:24+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Cloud / SaaS",
+        "Threat Actors / APT",
+        "Detection Engineering",
+        "Exploit / PoC",
+        "Identity / Access",
+        "Malware / Payloads",
+        "OSINT / Community"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 67.58,
+      "priority_score": 92.0
+    }
+  ]
+}
