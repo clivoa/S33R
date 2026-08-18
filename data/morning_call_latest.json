@@ -1,175 +1,170 @@
 {
-  "generated_at": "2026-08-17T07:21:18.719740+00:00",
-  "analysis_date": "2026-08-17",
+  "generated_at": "2026-08-18T07:10:29.888288+00:00",
+  "analysis_date": "2026-08-18",
   "provider": "openai",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-08-17T07:05:56.580330+00:00",
+  "source_generated_at": "2026-08-18T06:56:23.127105+00:00",
   "source_days_back": 30,
-  "source_total_items": 53439,
-  "total_items_in_window_all": 1796,
-  "total_items_in_window_curated": 4,
-  "total_items_in_window_selected": 40,
+  "source_total_items": 53977,
+  "total_items_in_window_all": 3066,
+  "total_items_in_window_curated": 20,
+  "total_items_in_window_selected": 42,
   "context_selection_policy": "curated-plus-operational-signal-v1",
-  "morning_call_markdown": "### Executive Summary\n- Active exploitation: critical SharePoint auth bypass (CVE-2026-55040) plus reporting of a Lazarus Windows zero-day backdoor campaign—assume rapid weaponization and opportunistic scanning.\n- GeoServer “0-day” SQLi-to-RCE (GHSA-mqjf-5f49-2fjh) is being exploited in the wild; prioritize any internet-facing GeoServer/GeoTools exposure.\n- Supply-chain risk spike: “ChainDrop” npm/GitHub Actions worm reportedly poisoned hundreds of packages/releases; treat CI/CD and developer endpoints as high-risk ingress this week.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Microsoft SharePoint active exploitation (CVE-2026-55040)**\n- What happened: SharePoint CVE-2026-55040 (CVSS 9.1) reported under active exploitation (auth bypass / remote compromise path implied).\n- Why it matters operationally: Internet-facing SharePoint is a frequent initial access vector leading to webshells, credential theft, and rapid lateral movement in enterprise networks.\n- Recommended immediate actions for the SOC today: Identify all SharePoint instances + exposure (internet/reverse proxy); enforce emergency patch/mitigation and start targeted hunting for post-exploitation on SharePoint/IIS hosts.\n\n**2) GeoServer/GeoTools exploited SQLi → RCE “0-day” (GHSA-mqjf-5f49-2fjh; CVE not yet confirmed)**\n- What happened: GeoServer SQL injection to RCE issue is patched but is being exploited shortly after disclosure (CVE pending/unclear in reporting).\n- Why it matters operationally: GeoServer is often deployed as an internet-facing geospatial service; unauthenticated RCE can become a fast pivot into internal networks.\n- Recommended immediate actions for the SOC today: Inventory GeoServer/GeoTools deployments (including dev/test) and block external access where not required; patch immediately and review WAF/proxy logs for suspicious requests to GeoServer endpoints.\n\n**3) Lazarus-linked activity + Windows zero-day backdoor reporting (targeting defense/aerospace; spillover risk)**\n- What happened: Reporting claims Lazarus is deploying a Windows “zero-day” backdoor in multiple countries; details are limited in the brief.\n- Why it matters operationally: Financial orgs can see spillover (shared tooling, compromised MSPs/suppliers, credential reuse); Lazarus also historically targets financial theft.\n- Recommended immediate actions for the SOC today: Raise alerting thresholds for unusual LSASS/credential access and signed-binary abuse on Windows endpoints; prioritize triage of any new persistence on high-value user workstations and jump hosts.\n\n**4) Supply-chain/CI compromise wave: ChainDrop npm/GitHub Actions trusted publishing worm**\n- What happened: “ChainDrop” campaign reportedly used GitHub account takeover + GitHub Actions/Trusted Publishing to spread malicious releases across ~444 npm packages.\n- Why it matters operationally: Direct path to build pipeline compromise, credential/token theft, and downstream production backdoors—high impact in financial services SDLC.\n- Recommended immediate actions for the SOC today: Coordinate with AppSec/Engineering to freeze/verify recent npm dependency updates and CI workflow changes; hunt for unusual GitHub Actions runs, new OIDC/trusted-publishing settings, and exfil from CI runners.\n\n**5) Identity/SSO edge risk: LemonLDAP::NG Portal auth bypass (CVE-2026-19349)**\n- What happened: LemonLDAP::NG::Portal OAuth2 flow issue allows auth bypass via state parameter handling (GitHub/LinkedIn backends mentioned).\n- Why it matters operationally: If used for SSO portals, this can enable unauthorized access without valid credentials—especially risky for externally exposed portals.\n- Recommended immediate actions for the SOC today: Confirm whether LemonLDAP::NG is in use and where exposed; if present, prioritize patching and add monitoring for abnormal OAuth2 “state” patterns and unexplained successful logins.\n\n---\n\n### Monitoring & detection recommendations\n- **SharePoint/IIS post-exploitation**: Monitor IIS logs + EDR on SharePoint hosts for new/modified ASPX, suspicious child processes from `w3wp.exe` (T1505.003, T1059), and unusual outbound connections from SharePoint servers.\n- **Web exploitation scanning** (SharePoint + GeoServer): Review WAF/reverse-proxy logs for spikes in 4xx/5xx, long query strings, encoded SQLi patterns, and repeated requests across multiple paths from same sources (T1190).\n- **GeoServer compromise indicators**: On GeoServer hosts, hunt for new service accounts, scheduled tasks/cron changes, unexpected JVM spawn behavior, and new binaries in app directories (T1053, T1543).\n- **Windows credential access / lateral movement (Lazarus spillover)**: EDR telemetry for LSASS access attempts, suspicious `rundll32/regsvr32/mshta` usage (T1218), abnormal SMB/RDP fan-out from a single workstation (T1021).\n- **CI/CD and GitHub Actions integrity**: Audit GitHub org logs (if available) for new runners, workflow edits, new secrets, changes to “Trusted Publishing”/OIDC, and anomalous token usage; correlate with build server EDR/network logs (T1552, T1566.001 as follow-on).\n- **Browser extension risk (reported malicious Chrome VPN extensions)**: Enterprise browser management logs for newly installed VPN/proxy extensions and unusual proxy settings changes; watch for credential capture symptoms (T1555).\n- **DNS cache poisoning watch (BIND CVE-2026-11721 mentioned as KEV-like signal)**: On recursive resolvers, alert on sudden cache changes for high-value domains, SERVFAIL spikes, and mismatched DNSSEC validation outcomes (T1565.001).\n\n---\n\n### Medium-term follow-ups\n- **Patch/hardening program**: Add SharePoint CVE-2026-55040 and GeoServer GHSA-mqjf-5f49-2fjh to “emergency” patch SLAs; validate compensating controls (WAF rules, network isolation) where patching lags.\n- **SSO portal assurance**: If LemonLDAP::NG is used, review OAuth2 backend configurations (GitHub/LinkedIn) and enforce strict redirect/state validation; consider temporary restriction of affected backends until patched.\n- **Software supply-chain controls**: Implement/validate dependency pinning, lockfile enforcement, private registry allowlists, SBOM + provenance checks (SLSA), and mandatory code-owner review for CI workflow changes.\n- **Developer endpoint protection**: Increase coverage on developer workstations/CI runners (EDR, device control, token hygiene); rotate CI secrets if any suspicious workflow activity is found.\n- **Exposure management**: Re-run external attack surface scans for GeoServer/SharePoint/SSO endpoints and verify they’re behind MFA-capable access proxies where feasible.\n- **Playbooks**: Ensure IR runbooks for “webserver RCE → webshell → domain compromise” and “CI/CD compromise” are current; pre-stage containment steps (isolate app servers, disable workflows, revoke tokens).",
+  "morning_call_markdown": "### Executive Summary\n- Active exploitation of **VMware vCenter (CVE-2026-59310)** is tied to ransomware deployment (Babuk-derived) — treat any exposed/Internet-reachable vCenter as **at-risk now**.  \n- Multiple **public PoCs for enterprise management stack** (notably **Microsoft SCCM/ConfigMgr CVE-2026-47301** and **Cisco Secure FMC CVE-2026-20079 chain**) increase likelihood of rapid weaponization and lateral movement inside domains.  \n- Elevated ransomware tooling/campaign signals: **AI-assisted operator tradecraft** and a new **Rust backdoor (“C2Looper”) using GitHub as C2** — prioritize detection for credential access + data exfil + “living off the land”.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) VMware vCenter exploitation → ransomware (CVE-2026-59310, CVSS 9.8)**\n- What happened: Reports link **in-the-wild exploitation** of vCenter directory traversal **CVE-2026-59310** to delivery of **Babuk-derived ransomware**.\n- Why it matters operationally: vCenter compromise is a **fast path to hypervisor estate control**, broad outage, and rapid encryption across virtualized workloads.\n- Recommended immediate actions for the SOC today: **Confirm patch status + Internet exposure** of all vCenter; **hunt for webshell/process anomalies on vCenter** and unusual admin session creation; escalate any vCenter alerts as **SEV-1**.\n\n**2) Microsoft SCCM/ConfigMgr Primary Site RCE PoC (CVE-2026-47301)**\n- What happened: **Public PoC** released for **ConfigMgr/SCCM** RCE chain enabling a **low-priv domain user → SYSTEM** on Primary Site Server (per reporting).\n- Why it matters operationally: SCCM is a **tier-0-ish** software distribution/control plane; compromise can enable **mass code execution** and ransomware staging.\n- Recommended immediate actions for the SOC today: **Identify all Primary Site Servers** and ensure they’re monitored with highest telemetry; **hunt for newly created services/tasks, unexpected package deployments, and console/admin logons** to SCCM hosts.\n\n**3) Cisco Secure Firewall Management Center auth-bypass-to-root RCE PoC (CVE-2026-20079)**\n- What happened: A clean-room **PoC implementation** is circulating for the **CVE-2026-20079** auth-bypass-to-root RCE chain.\n- Why it matters operationally: FMC compromise can lead to **network security control tampering**, rule changes, and stealthy persistence for downstream intrusion.\n- Recommended immediate actions for the SOC today: **Verify FMC patch/hotfix level** and restrict management access (VPN/jump only); **review last 72h FMC admin actions/config exports/logins** for anomalies.\n\n**4) Actively exploited Adobe Commerce vulnerability (CERT warning)**\n- What happened: National CERT advisory warns of an **actively exploited critical Adobe Commerce** vulnerability (CVE not provided in the snippet).\n- Why it matters operationally: Commerce platforms are frequent entry points for **webshells, payment-data theft, and footholds into internal networks** via app-to-DB connectivity.\n- Recommended immediate actions for the SOC today: **Locate any Adobe Commerce instances (including subsidiaries/marketing sites)**; prioritize **WAF/app logs review for exploitation attempts** and confirm patching/emergency mitigations from Adobe.\n\n**5) macOS Screen Sharing auth bypass/root exploitation (CVE-2026-65400)**\n- What happened: Multiple sources report **in-the-wild exploitation** of **CVE-2026-65400** in macOS Screen Sharing to gain **root** and deploy cryptominer.\n- Why it matters operationally: While current payload noted is mining, the same access supports **credential theft and remote control** on executive/dev endpoints.\n- Recommended immediate actions for the SOC today: **Query fleet for unpatched macOS versions** and **disable/limit Screen Sharing** where not required; hunt for **unexpected Screen Sharing enablement** and suspicious root-level persistence on Macs.\n\n---\n\n### Monitoring & detection recommendations\n- **vCenter (CVE-2026-59310)**: monitor vCenter/vSphere logs + EDR on vCenter for **new/rare child processes from web services**, file writes to web directories, and suspicious admin sessions (ATT&CK: **T1190**, **T1505.003**).  \n- **SCCM/ConfigMgr**: collect Windows Security + SCCM logs on site servers for **new services (7045), scheduled tasks (4698), WMI/PowerShell bursts**, and unusual package/app deployments (ATT&CK: **T1059**, **T1047**, **T1569.002**).  \n- **Cisco FMC**: monitor FMC auth/admin audit logs for **logins from new source IPs**, privilege changes, policy export/import, and rulebase edits outside change windows (ATT&CK: **T1098**, **T1562.001**).  \n- **Adobe Commerce**: WAF + web server logs for **suspicious POSTs to admin/API endpoints**, unexpected file uploads, and creation/modification of PHP files; alert on **outbound connections from web tier to unfamiliar destinations** (ATT&CK: **T1190**, **T1105**).  \n- **macOS Screen Sharing exploitation**: macOS unified logs + EDR for **ARDAgent/ScreenSharing** activity anomalies, Screen Sharing being enabled, and **new LaunchAgents/Daemons**; watch for crypto-miner-like CPU spikes (ATT&CK: **T1543.001**, **T1562**).  \n- **Ransomware tradecraft + C2Looper (GitHub C2)**: proxy/DNS logs for **endpoints making unusual GitHub API/repo traffic patterns** (rare user agents, high frequency, from servers), and EDR for Rust binaries in user-writable paths (ATT&CK: **T1071.001**, **T1105**).  \n- **Credential access / LDAP theft behaviors (AI-assisted ops theme)**: DC logs (4624/4768/4769/4662) and EDR for **credential dumping, LDAP enumeration spikes, and new local admin creation** (ATT&CK: **T1003**, **T1069.002**, **T1087**).  \n\n---\n\n### Medium-term follow-ups\n- **Patch/hardening program**: ensure rapid-cycle patch SLAs for **vCenter, SCCM, Cisco FMC, macOS**, and any externally facing commerce apps; document compensating controls where patching lags (WAF rules, mgmt-plane isolation).  \n- **Mgmt-plane isolation review**: validate that **vCenter/FMC/SCCM consoles** are reachable only via **jump hosts + MFA**, and not directly from user subnets.  \n- **Supply-chain exposure check (LiteLLM/CI pipeline compromise theme)**: review CI/CD secrets hygiene (rotations, least privilege, short-lived tokens) and scan repos for leaked keys; confirm EDR coverage on build agents.  \n- **Ransomware readiness**: verify immutable/offline backups for virtualization management and critical data stores; test restore paths for **VM images + key SQL systems**.  \n- **AI-enabled attacker tooling**: update analyst playbooks to assume faster iteration on scripts/phishing; prioritize **behavioral detections** over static indicators for credential access and lateral movement.",
   "highlights": [
     {
-      "title": "SharePoint, Windows zero-day exploited; Lazarus backdoor in defense sector",
-      "link": "https://defend.network/briefings/sharepoint-lazarus-windows-chrome-malware-exploits-2026-08-17.html",
-      "source": "defend.network",
-      "published": "2026-08-17T06:30:00+00:00",
+      "title": "Claude Code Helps Ransomware Operator Steal LDAP Passwords, Backdoor VPNs and Exfiltrate SQL Databases",
+      "link": "https://cybersecuritynews.com/claude-code-helps-ransomware-operator/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-08-18T05:56:44+00:00",
       "smart_groups": [
-        "Vulnerabilities / CVEs",
         "Exploit / PoC",
         "Malware / Payloads",
-        "Threat Actors / APT",
-        "Windows / Microsoft",
+        "Ransomware",
         "General Security"
       ],
       "curated": true,
       "signal_tier": "critical",
       "signal_score": 100.0,
-      "priority_score": 90.7
+      "priority_score": 83.68
     },
     {
-      "title": "geoserver-0day-rce",
-      "link": "https://vulners.com/githubexploit/A4039CC7-2E50-5B4C-906C-53025202BDD9?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "title": "Suspected China-Nexus Actor Exploits VMware vCenter Flaw, Deploys Babuk-Derived Ransomware",
+      "link": "https://vulners.com/thn/THN:A2210377593C43BE0D385DB183826945?utm_source=rss&utm_medium=rss&utm_campaign=rss",
       "source": "Vulners.com RSS Feed",
-      "published": "2026-08-16T08:11:26+00:00",
+      "published": "2026-08-17T07:36:00+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Web / API Security",
-        "Crypto / Web3",
-        "Exploit / PoC"
+        "Exploit / PoC",
+        "Threat Actors / APT",
+        "Ransomware"
       ],
       "curated": true,
       "signal_tier": "critical",
       "signal_score": 100.0,
-      "priority_score": 81.02
+      "priority_score": 80.15
     },
     {
-      "title": "Cyber Security Weekly Newsletter – Outlook RCE, Palo Alto, Cisco 0-day and Windows 0-Day Flaws +20 Stories",
-      "link": "https://cybersecuritynews.com/cyber-security-weekly-newsletter-august/",
-      "source": "Cyber Security News (FeedBurner)",
-      "published": "2026-08-16T16:24:03+00:00",
+      "title": "Suspected China-Nexus Actor Exploits VMware vCenter Flaw, Deploys Babuk-Derived Ransomware",
+      "link": "https://thehackernews.com/2026/08/suspected-china-nexus-actor-exploits.html",
+      "source": "The Hacker News",
+      "published": "2026-08-17T07:36:19+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Threat Actors / APT",
-        "Cloud / SaaS",
         "Exploit / PoC",
-        "Linux / Unix",
         "Ransomware",
-        "Windows / Microsoft",
         "General Security"
       ],
-      "curated": false,
+      "curated": true,
       "signal_tier": "critical",
-      "signal_score": 100.0,
-      "priority_score": 75.38
+      "signal_score": 92.59,
+      "priority_score": 81.03
     },
     {
-      "title": "geoserver-0day-rce exploit",
-      "link": "https://sploitus.com/exploit?id=A4039CC7-2E50-5B4C-906C-53025202BDD9&utm_source=rss&utm_medium=rss",
-      "source": "Sploitus – Exploits",
-      "published": "2026-08-16T08:11:26+00:00",
+      "title": "Security advisory: Pre-authentication RCE in Ontotext GraphDB 11.4.3 Free edition (Ontotext / Graphwise)",
+      "link": "https://seclists.org/fulldisclosure/2026/Aug/53",
+      "source": "Full Disclosure",
+      "published": "2026-08-18T06:17:31+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Exploit / PoC"
+        "Exploit / PoC",
+        "OSINT / Community"
       ],
       "curated": true,
       "signal_tier": "critical",
-      "signal_score": 98.78,
-      "priority_score": 72.71
+      "signal_score": 89.31,
+      "priority_score": 96.13
     },
     {
-      "title": "Hackers exploit SharePoint bypass, Snowflake hacker's threats to researcher backfire, CISA warns schools",
-      "link": "https://cybersecuritytoday.libsyn.com/hackers-exploit-sharepoint-bypass-snowflake-hackers-threats-to-researcher-backfire-cisa-warns-schools",
-      "source": "Cybersecurity Today",
-      "published": "2026-08-17T01:00:00+00:00",
+      "title": "Security advisory: Pre-authentication RCE in DataStax Enterprise (DSE) 6.8.49 (DataStax)",
+      "link": "https://seclists.org/fulldisclosure/2026/Aug/52",
+      "source": "Full Disclosure",
+      "published": "2026-08-18T06:17:29+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC",
-        "Identity / Access",
-        "Ransomware",
-        "Community / Briefing"
+        "OSINT / Community"
       ],
-      "curated": false,
+      "curated": true,
       "signal_tier": "critical",
-      "signal_score": 97.03,
-      "priority_score": 78.33
+      "signal_score": 89.31,
+      "priority_score": 96.13
     },
     {
-      "title": "Exploit for Improper Resource Shutdown or Release in Microsoft",
-      "link": "https://vulners.com/githubexploit/772F7610-9633-5066-8D89-2502DEB81FC1?utm_source=rss&utm_medium=rss&utm_campaign=rss",
-      "source": "Vulners.com RSS Feed",
-      "published": "2026-08-17T04:20:38+00:00",
+      "title": "C2Looper: A New Backdoor Likely Tied To Ransomware With GitHub C2",
+      "link": "https://www.zscaler.com/blogs/security-research/c2looper-new-backdoor-likely-tied-ransomware-github-c2",
+      "source": "Zscaler Research Blogs",
+      "published": "2026-08-17T14:06:04+00:00",
       "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "Linux / Unix",
+        "Malware / Payloads",
+        "Ransomware",
+        "Threat Actors / APT",
+        "Data Protection / Privacy",
         "Windows / Microsoft"
       ],
-      "curated": false,
+      "curated": true,
       "signal_tier": "high",
-      "signal_score": 68.42,
-      "priority_score": 76.18
+      "signal_score": 76.21,
+      "priority_score": 85.66
     },
     {
-      "title": "Exploit for CVE-2026-74251",
-      "link": "https://sploitus.com/exploit?id=FFED6F3F-8612-5429-8496-A121DC3A606E&utm_source=rss&utm_medium=rss",
-      "source": "Sploitus – Exploits",
-      "published": "2026-08-17T02:20:42+00:00",
+      "title": "Warning: Actively Exploited Critical Vulnerability in Adobe Commerce, Patch Immediately!",
+      "link": "https://ccb.belgium.be/advisories/warning-actively-exploited-critical-vulnerability-adobe-commerce-patch-immediately",
+      "source": "Cert.be advisories",
+      "published": "2026-08-17T09:14:55+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Exploit / PoC"
+        "Exploit / PoC",
+        "Government / CERT"
       ],
-      "curated": false,
+      "curated": true,
       "signal_tier": "high",
-      "signal_score": 66.78,
-      "priority_score": 65.86
+      "signal_score": 74.91,
+      "priority_score": 76.42
     },
     {
-      "title": "Exploit for CVE-2026-18366",
-      "link": "https://sploitus.com/exploit?id=0D05FDA5-2D32-5BF2-B5F3-D39DFE729B14&utm_source=rss&utm_medium=rss",
-      "source": "Sploitus – Exploits",
-      "published": "2026-08-16T20:21:02+00:00",
+      "title": "[0day-rubbish] Workflow Enterprise 9.1.0.1 Pre-authentication RCE (expression injection) (9.8)",
+      "link": "https://seclists.org/fulldisclosure/2026/Aug/51",
+      "source": "Full Disclosure",
+      "published": "2026-08-18T06:17:27+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Exploit / PoC"
+        "OSINT / Community"
       ],
-      "curated": false,
+      "curated": true,
       "signal_tier": "high",
-      "signal_score": 66.78,
-      "priority_score": 64.26
+      "signal_score": 71.31,
+      "priority_score": 96.13
     },
     {
-      "title": "Exploit for CVE-2026-73678",
-      "link": "https://sploitus.com/exploit?id=AD2D9BCE-BC70-53AB-BF51-85631949BFEB&utm_source=rss&utm_medium=rss",
-      "source": "Sploitus – Exploits",
-      "published": "2026-08-16T14:05:05+00:00",
+      "title": "[0day-rubbish] Call Center Suite 10.10.1 Pre-authentication RCE (auth bypass + webroot write) (9.8)",
+      "link": "https://seclists.org/fulldisclosure/2026/Aug/50",
+      "source": "Full Disclosure",
+      "published": "2026-08-18T06:17:26+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Exploit / PoC"
+        "OSINT / Community"
       ],
-      "curated": false,
+      "curated": true,
       "signal_tier": "high",
-      "signal_score": 66.78,
-      "priority_score": 62.58
+      "signal_score": 71.31,
+      "priority_score": 96.13
     },
     {
-      "title": "Exploit for Insertion of Sensitive Information into Log File in Hitachi Configuration_Manager",
-      "link": "https://sploitus.com/exploit?id=EC9A63D1-5820-58F3-949C-9F444CE56082&utm_source=rss&utm_medium=rss",
-      "source": "Sploitus – Exploits",
-      "published": "2026-08-16T08:53:38+00:00",
+      "title": "[0day-rubbish] Vocia MS-1 Firmware 1.2.27 Pre-authentication RCE (hardcoded credentials + supervisor execution) (9.8)",
+      "link": "https://seclists.org/fulldisclosure/2026/Aug/49",
+      "source": "Full Disclosure",
+      "published": "2026-08-18T06:17:25+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Exploit / PoC"
+        "OSINT / Community"
       ],
-      "curated": false,
+      "curated": true,
       "signal_tier": "high",
-      "signal_score": 66.78,
-      "priority_score": 61.19
+      "signal_score": 71.31,
+      "priority_score": 96.13
     }
   ]
 }
