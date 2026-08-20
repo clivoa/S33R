@@ -1,0 +1,170 @@
+{
+  "generated_at": "2026-08-20T07:07:31.235008+00:00",
+  "analysis_date": "2026-08-20",
+  "provider": "openai",
+  "model": "gpt-5.2",
+  "window_hours": 24,
+  "source_file": "data/news_recent.json",
+  "source_generated_at": "2026-08-20T06:56:37.461871+00:00",
+  "source_days_back": 30,
+  "source_total_items": 55432,
+  "total_items_in_window_all": 4121,
+  "total_items_in_window_curated": 23,
+  "total_items_in_window_selected": 59,
+  "context_selection_policy": "curated-plus-operational-signal-v1",
+  "morning_call_markdown": "### Executive Summary\n- Multiple **internet-facing edge services are under active exploitation / KEV**: Cisco ASA/FTD SSL VPN DoS (CVE-2026-20349), Microsoft Windows IKE RCE (CVE-2026-33824), SharePoint auth bypass (CVE-2026-55040), VMware vCenter path traversal (CVE-2026-59310), and **Zimbra unauth RCE** (CVE-2026-73570).\n- **Citrix NetScaler ADC/Gateway auth bypass (CVE-2026-19490)** is newly highlighted as critical; treat as “likely-to-be-exploited soon” for any exposed appliances.\n- Ransomware pressure tactics evolving: **fake “recovery” outreach** + **Cl0p victim listings tied to a PTC Windchill campaign**; expect pre-ransom extortion and follow-on compromise attempts.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Cisco ASA / FTD SSL VPN unauthenticated DoS (CVE-2026-20349) — confirmed exploited**\n- **What happened:** Unauthenticated attackers can crash/reboot Cisco ASA/FTD devices when **Remote Access SSL VPN** is exposed; exploitation confirmed in the wild.\n- **Why it matters operationally:** Edge firewall reboot = **availability hit**, potential cover for follow-on activity during instability, and customer-impacting outages.\n- **Recommended immediate actions for the SOC today:** Identify all ASA/FTD with SSL VPN internet-exposed; enable/raise alerting for abnormal SSL VPN connection attempts + device reload events; coordinate emergency change window/mitigations per Cisco guidance.\n\n**2) KEV additions under active exploitation: Windows IKE RCE + SharePoint auth weakness + VMware vCenter traversal**\n- **What happened:** CISA KEV additions indicate active exploitation of **Windows IKE Service Extensions RCE (CVE-2026-33824)**, **SharePoint weak auth/bypass (CVE-2026-55040)**, and **VMware vCenter path traversal (CVE-2026-59310)** (plus a macOS item noted in KEV reporting).\n- **Why it matters operationally:** These are common enterprise platforms; exploitation often leads to **initial access → privilege escalation → lateral movement → ransomware** in financial environments.\n- **Recommended immediate actions for the SOC today:** Confirm patch status and internet exposure for SharePoint/vCenter; prioritize detection for exploitation patterns (webshells/new IIS artifacts, vCenter suspicious file reads/writes, unusual IKE-related service/network activity); isolate/contain any suspected compromised hosts pending IR.\n\n**3) Zimbra Collaboration Suite unauthenticated RCE (CVE-2026-73570) — actively exploited**\n- **What happened:** CERT reporting indicates active exploitation of **unauth OS command injection** leading to command execution as the `zimbra` user.\n- **Why it matters operationally:** Email/collaboration servers are high-value; compromise enables **credential theft, mailbox access, internal phishing, and persistence**.\n- **Recommended immediate actions for the SOC today:** Inventory any on-prem Zimbra and verify patch level immediately; monitor for anomalous inbound web requests to Zimbra endpoints + suspicious child processes spawned by Zimbra services; consider temporary access restrictions/WAF rules if patching is delayed.\n\n**4) Citrix NetScaler ADC/Gateway auth bypass (CVE-2026-19490) — critical, likely to be targeted**\n- **What happened:** New advisory for a **remote unauthenticated authentication bypass** affecting NetScaler ADC/Gateway.\n- **Why it matters operationally:** NetScaler is a frequent initial-access vector; auth bypasses often get weaponized rapidly and can expose **VPN sessions, ICA/portal access, and downstream apps**.\n- **Recommended immediate actions for the SOC today:** Validate whether any NetScaler is internet-facing; fast-track patch/mitigation and increase monitoring for unusual admin/API access, config changes, and new sessions from atypical geos/ASNs; prepare containment runbook for suspected appliance compromise.\n\n**5) Ransomware ecosystem: “recovery firm” scam + Cl0p follow-on risk**\n- **What happened:** Reports of a ransomware affiliate impersonating a **data recovery/decryption service** to extract payments; Cl0p names dozens of victims tied to a **PTC Windchill-focused campaign**.\n- **Why it matters operationally:** Expect **social engineering after incidents** and higher likelihood of extortion attempts; Cl0p-style exploitation often precedes rapid data theft and public shaming.\n- **Recommended immediate actions for the SOC today:** Brief IR/comms: **do not engage unsolicited “recovery” contacts**; route to Legal/IR only; add monitoring for Windchill-related exposure (if used) and watch for data exfil signals + suspicious archiving tools on servers.\n\n---\n\n### Monitoring & detection recommendations\n- **Edge/VPN appliances (Cisco ASA/FTD, Citrix NetScaler):** Firewall/VPN logs + device syslog for spikes in SSL VPN handshakes, malformed sessions, auth anomalies, and **unexpected reloads/config writes** (ATT&CK: T1190 Exploit Public-Facing Application).\n- **Windows IKE (CVE-2026-33824):** Windows Event Logs (System/Security), Defender for Endpoint telemetry, network telemetry for unusual IKE/IPsec negotiation patterns and suspicious service behavior/crashes (ATT&CK: T1210 Exploitation of Remote Services).\n- **SharePoint on-prem:** IIS logs, SharePoint ULS logs, EDR for **new/modified ASPX files**, suspicious `w3wp.exe` child processes, and outbound connections from SharePoint servers (ATT&CK: T1505.003 Web Shell).\n- **VMware vCenter:** vCenter/vSphere logs for suspicious file traversal indicators, unexpected admin logins, new accounts/roles, and unusual API calls; alert on vCenter initiating SMB/RDP/WinRM to internal hosts (ATT&CK: T1078 Valid Accounts).\n- **Zimbra:** Web/proxy logs to Zimbra endpoints + host EDR for command execution from Zimbra services (`zimbra` user spawning shells), new cron entries, or unexpected outbound traffic (ATT&CK: T1059 Command and Scripting Interpreter).\n- **Ransomware pre-staging:** EDR hunts for rapid discovery + credential access chains on servers (e.g., `nltest`, `net group`, `adfind`-like behavior), abnormal archive creation, and large outbound transfers (ATT&CK: T1087, T1003, T1560).\n- **“0day-rubbish” disclosures (various products):** If any named products exist internally (assume unknown), add temporary WAF/IDS monitoring for command injection/SQLi patterns and review exposure of admin portals/APIs.\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** Validate that all **KEV-listed** assets (SharePoint, vCenter, Windows IKE, macOS where applicable) are in your **highest SLA patch ring**; track exceptions with compensating controls.\n- **Internet exposure review:** Reconfirm which admin portals/services are externally reachable (SharePoint, vCenter, Zimbra, NetScaler, ASA/FTD); reduce exposure via allowlists/VPN, WAF, and management network segmentation.\n- **Email platform hardening:** For Zimbra (if present), enforce least privilege, review plugin surface area, and tighten outbound egress from mail servers to reduce post-exploitation beaconing.\n- **Ransomware comms playbook:** Update procedures to handle **third-party “recovery” outreach**; ensure front-line staff route such emails/calls to IR/Legal with preservation steps.\n- **Supply-chain / package risk (Logto Tunnel npm CVE-2026-63188):** If used by dev teams, audit dependency inventories and restrict risky tunneling/proxy tooling in production.\n- **Cisco hardening releases:** Review Cisco Secure Workload/Crosswork hardening advisories for planned maintenance adoption; treat as backlog unless exposure/usage dictates otherwise.",
+  "highlights": [
+    {
+      "title": "CVE-2026-20349: Someone Is Crashing Cisco Firewalls. We Need to Talk About Why.",
+      "link": "https://eclypsium.com/blog/cve-2026-20349-someone-is-crashing-cisco-firewalls-we-need-to-talk-about-why/",
+      "source": "Eclypsium | Supply Chain Security for the Modern Enterprise",
+      "published": "2026-08-19T13:00:00+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Vendors / Product Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 100.0,
+      "priority_score": 82.96
+    },
+    {
+      "title": "[0day-rubbish] ONE Reporter 13.1 Authenticated RCE / privilege escalation via CommandExecutor (8.8)",
+      "link": "https://seclists.org/fulldisclosure/2026/Aug/75",
+      "source": "Full Disclosure",
+      "published": "2026-08-20T06:25:25+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Crypto / Web3",
+        "Exploit / PoC",
+        "OSINT / Community"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 88.87,
+      "priority_score": 94.14
+    },
+    {
+      "title": "[0day-rubbish] VMS 6.48.809 Authenticated command injection to root RCE (8.8)",
+      "link": "https://seclists.org/fulldisclosure/2026/Aug/76",
+      "source": "Full Disclosure",
+      "published": "2026-08-20T06:25:27+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "OSINT / Community"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 88.87,
+      "priority_score": 93.96
+    },
+    {
+      "title": "[0day-rubbish] Gemini 7.3.0 Authenticated SQL injection to xp_cmdshell RCE (8.8)",
+      "link": "https://seclists.org/fulldisclosure/2026/Aug/74",
+      "source": "Full Disclosure",
+      "published": "2026-08-20T06:25:22+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Web / API Security",
+        "Exploit / PoC",
+        "OSINT / Community"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 88.87,
+      "priority_score": 93.96
+    },
+    {
+      "title": "[0day-rubbish] ActiveFax Server 10.70 Unauthenticated LPD Ghostscript %pipe% SYSTEM RCE (9.8)",
+      "link": "https://seclists.org/fulldisclosure/2026/Aug/72",
+      "source": "Full Disclosure",
+      "published": "2026-08-20T06:25:17+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "OSINT / Community"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 88.87,
+      "priority_score": 93.96
+    },
+    {
+      "title": "[0day-rubbish] Tornado 2.11.3 Unauthenticated arbitrary file write to root RCE (storeTo=file: to cron) (9.8)",
+      "link": "https://seclists.org/fulldisclosure/2026/Aug/71",
+      "source": "Full Disclosure",
+      "published": "2026-08-20T06:25:14+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "OSINT / Community"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 88.87,
+      "priority_score": 93.96
+    },
+    {
+      "title": "[0day-rubbish] Datalore On-Premises 2026.2.3 Unauthenticated RCE via InteractiveReport access-mapping flaw (9.8)",
+      "link": "https://seclists.org/fulldisclosure/2026/Aug/70",
+      "source": "Full Disclosure",
+      "published": "2026-08-20T06:25:11+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "OSINT / Community"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 88.87,
+      "priority_score": 93.96
+    },
+    {
+      "title": "[0day-rubbish] RoboTask 11.0.5.1229 Unauthenticated REST API remote task execution (9.8)",
+      "link": "https://seclists.org/fulldisclosure/2026/Aug/73",
+      "source": "Full Disclosure",
+      "published": "2026-08-20T06:25:19+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "OSINT / Community"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 88.87,
+      "priority_score": 93.53
+    },
+    {
+      "title": "VPN Vulnerability That Can Reboot Firewalls: Cisco ASA·FTD CVE-2026-20349",
+      "link": "https://blog.criminalip.io/2026/08/20/vpn-vulnerability-that-can-reboot-firewalls-cisco-asa%c2%b7ftd-cve-2026-20349/",
+      "source": "CIP Blog",
+      "published": "2026-08-20T05:27:54+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 86.83,
+      "priority_score": 88.1
+    },
+    {
+      "title": "CISA Adds Microsoft SharePoint Weak Authentication Vulnerability to KEV List",
+      "link": "https://cybersecuritynews.com/microsoft-sharepoint-authentication-vulnerability/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-08-19T15:15:31+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Identity / Access",
+        "General Security"
+      ],
+      "curated": false,
+      "signal_tier": "critical",
+      "signal_score": 85.16,
+      "priority_score": 75.92
+    }
+  ]
+}
