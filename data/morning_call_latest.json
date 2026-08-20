@@ -1,189 +1,170 @@
 {
-  "generated_at": "2026-08-19T07:13:18.438194+00:00",
-  "analysis_date": "2026-08-19",
+  "generated_at": "2026-08-20T07:07:31.235008+00:00",
+  "analysis_date": "2026-08-20",
   "provider": "openai",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-08-19T06:55:32.067582+00:00",
+  "source_generated_at": "2026-08-20T06:56:37.461871+00:00",
   "source_days_back": 30,
-  "source_total_items": 55123,
-  "total_items_in_window_all": 5072,
-  "total_items_in_window_curated": 9,
-  "total_items_in_window_selected": 48,
+  "source_total_items": 55432,
+  "total_items_in_window_all": 4121,
+  "total_items_in_window_curated": 23,
+  "total_items_in_window_selected": 59,
   "context_selection_policy": "curated-plus-operational-signal-v1",
-  "morning_call_markdown": "### Executive Summary\n- Microsoft August Patch Tuesday is massive (400+ fixes) and includes at least one actively exploited Windows zero-day; additional Windows Task Host exploitation is now tied to ransomware activity.\n- CISA KEV added an actively exploited Ray (Anyscale/Ray Project) code injection/RCE (CVE-2025-62593) with tight remediation expectations; treat any exposed Ray surfaces as high risk.\n- Multiple “internet-scale” and supply-chain risks are trending: GitLab GraphQL critical repo tampering (CVE-2026-19478), Portainer missing-authorization host RCE (CVE-2026-44848), and WordPress plugin RCEs with PoCs (Forminator CVE-2026-15748; Pods CVE-2026-19598) plus WordPress sites being repurposed as C2 infrastructure.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Microsoft Windows: actively exploited zero-day + ransomware exploitation of Windows Task Host**\n- **What happened:** Microsoft shipped August patches (400+), including an actively exploited Windows zero-day; CISA also reports ransomware gangs exploiting a Windows Task Host flaw (incl. KEV mentions like CVE-2026-68820 in reporting).\n- **Why it matters operationally:** Direct endpoint/server compromise paths + known ransomware tradecraft; high likelihood of broad scanning and fast weaponization in enterprise Windows estates.\n- **Recommended immediate actions for the SOC today:** Prioritize patch/mitigation validation for internet-facing and Tier-0 Windows systems; raise alerting for Task Scheduler/Task Host abuse and rapid encryption precursors (suspicious service creation, shadow copy deletion).\n\n**2) Ray Project (Anyscale/Ray) KEV: active exploitation of code injection/RCE (CVE-2025-62593)**\n- **What happened:** CISA added Ray code injection/RCE (CVE-2025-62593) to KEV; PoC/exploitation chatter is present and remediation windows are tight.\n- **Why it matters operationally:** Ray is common in ML/analytics clusters; compromise can pivot into cloud credentials, CI/CD, data stores, and internal networks (high impact in quant/analytics environments).\n- **Recommended immediate actions for the SOC today:** Identify any Ray deployments (on-prem/cloud) and confirm they are not exposed to the internet; if found, expedite patching/upgrade and add temporary network controls (restrict Ray dashboard/API access to admin/VPN only).\n\n**3) Critical developer platform exposure: GitLab GraphQL repo tamper/delete (CVE-2026-19478)**\n- **What happened:** GitLab released patches for a critical GraphQL issue enabling unauthenticated repo modification/deletion, plus a high-risk CSRF weakness.\n- **Why it matters operationally:** Supply-chain and SDLC integrity risk—attackers can insert backdoors, delete evidence, or disrupt deployment pipelines; financial institutions are high-value for code tampering.\n- **Recommended immediate actions for the SOC today:** Confirm GitLab versions and apply fixed releases (19.2.4/19.1.6/19.0.8/18.11.11 per reporting); monitor for anomalous unauthenticated GraphQL requests and unexpected repo changes (mass deletes/forced pushes).\n\n**4) Container & web platform RCE chain risk: Portainer authz bypass (CVE-2026-44848) + WordPress plugin RCEs with PoCs**\n- **What happened:** Public PoC released for Portainer missing-authorization leading to host RCE; WordPress plugins Forminator (CVE-2026-15748) and Pods (CVE-2026-19598) have high-severity issues with exploit/PoC activity.\n- **Why it matters operationally:** These are common admin surfaces; compromise often becomes initial access → credential theft → ransomware or data theft (esp. where admin panels are exposed).\n- **Recommended immediate actions for the SOC today:** Inventory Portainer instances and ensure they’re not internet-exposed; for any externally reachable WP assets (corp sites/marketing), confirm patch level and add WAF rules/temporary access restrictions on admin/upload endpoints.\n\n**5) Ransomware ecosystem + C2 infrastructure: WordPress hijacked for “StopAndProtect” C2; “Ransom Busters” extortion follow-on**\n- **What happened:** Campaign reported using thousands of hacked WordPress sites as C2 for data theft/ransomware; a separate actor claims to “delete stolen data” for a fee (likely secondary extortion/social engineering).\n- **Why it matters operationally:** Elevated chance of outbound beaconing to compromised-but-legit WordPress domains; increased risk of fraud/extortion emails targeting IR teams during/after incidents.\n- **Recommended immediate actions for the SOC today:** Increase scrutiny of outbound HTTP(S) to low-reputation WordPress paths from servers and user subnets; brief IR/on-call that “data recovery / ransom busters” emails should be treated as hostile and routed to Security.\n\n---\n\n### Monitoring & detection recommendations\n- **Windows exploitation/ransomware precursors (T1059, T1569, T1486):** EDR + Windows Security logs for suspicious child processes from `taskhostw.exe`, `svchost.exe`, `rundll32.exe`; alert on `vssadmin delete shadows`, `wbadmin delete`, `bcdedit`, mass file renames.\n- **Scheduled task abuse (T1053.005):** Windows TaskScheduler Operational log (`Microsoft-Windows-TaskScheduler/Operational`) for new/modified tasks from unusual users/hosts; correlate with admin logons and remote execution.\n- **Ray service exposure & exploitation (T1190):** Firewall/VPC flow logs + reverse proxy logs for inbound to Ray dashboard/API ports (environment-dependent); hunt for unusual requests to Ray endpoints from non-admin networks.\n- **GitLab compromise/supply-chain (T1190, T1552):** GitLab audit logs for unauthenticated GraphQL activity, repo deletes, unexpected access token creation, runner registration spikes; monitor CI variables/secrets access events.\n- **Portainer/Docker takeover (T1610, T1068):** Portainer logs + Docker daemon logs for plugin/endpoint operations by non-admin identities; alert on container escape indicators and new privileged containers.\n- **WordPress exploit/C2 patterns (T1071.001):** Web server/WAF logs for anomalous upload actions and new PHP file drops; proxy/DNS logs for periodic outbound beaconing to WordPress domains with unusual URI patterns (assume C2 uses “legit” WP hosts).\n- **IdP hardening checks tied to ransomware playbooks (T1556, T1098):** IdP logs (Entra ID/Okta/authentik if present) for Conditional Access changes, MFA disablement, new OAuth apps/consents, and directory export/LDAP diagnostic calls.\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** Treat Microsoft August updates as a coordinated sprint—define a 72-hour plan for internet-facing and Tier-0 assets; validate rollback plans for critical trading/settlement systems.\n- **KEV-driven SLAs:** Align internal remediation SLAs to CISA BOD 26-04-style timelines for KEV items (e.g., 3–14 days based on exposure/criticality); track exceptions formally.\n- **SDLC integrity controls:** Enforce signed commits/releases where feasible; tighten GitLab admin access, runner registration controls, and backup/restore testing for repos.\n- **Reduce admin surface area:** Ensure Portainer/admin panels are behind VPN/SSO + MFA; validate least privilege for Docker socket access and remove unnecessary local admin rights.\n- **Supply-chain hygiene:** Block/alert on typosquatted/malicious packages (RubyGems/npm) in build pipelines; require allowlists/private registries for critical builds.\n- **Ransomware-ready IdP recovery:** Document and test “IdP config backup/restore” (Conditional Access, SSO apps, break-glass accounts), since modern ransomware frequently targets identity controls before encryption.",
+  "morning_call_markdown": "### Executive Summary\n- Multiple **internet-facing edge services are under active exploitation / KEV**: Cisco ASA/FTD SSL VPN DoS (CVE-2026-20349), Microsoft Windows IKE RCE (CVE-2026-33824), SharePoint auth bypass (CVE-2026-55040), VMware vCenter path traversal (CVE-2026-59310), and **Zimbra unauth RCE** (CVE-2026-73570).\n- **Citrix NetScaler ADC/Gateway auth bypass (CVE-2026-19490)** is newly highlighted as critical; treat as “likely-to-be-exploited soon” for any exposed appliances.\n- Ransomware pressure tactics evolving: **fake “recovery” outreach** + **Cl0p victim listings tied to a PTC Windchill campaign**; expect pre-ransom extortion and follow-on compromise attempts.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Cisco ASA / FTD SSL VPN unauthenticated DoS (CVE-2026-20349) — confirmed exploited**\n- **What happened:** Unauthenticated attackers can crash/reboot Cisco ASA/FTD devices when **Remote Access SSL VPN** is exposed; exploitation confirmed in the wild.\n- **Why it matters operationally:** Edge firewall reboot = **availability hit**, potential cover for follow-on activity during instability, and customer-impacting outages.\n- **Recommended immediate actions for the SOC today:** Identify all ASA/FTD with SSL VPN internet-exposed; enable/raise alerting for abnormal SSL VPN connection attempts + device reload events; coordinate emergency change window/mitigations per Cisco guidance.\n\n**2) KEV additions under active exploitation: Windows IKE RCE + SharePoint auth weakness + VMware vCenter traversal**\n- **What happened:** CISA KEV additions indicate active exploitation of **Windows IKE Service Extensions RCE (CVE-2026-33824)**, **SharePoint weak auth/bypass (CVE-2026-55040)**, and **VMware vCenter path traversal (CVE-2026-59310)** (plus a macOS item noted in KEV reporting).\n- **Why it matters operationally:** These are common enterprise platforms; exploitation often leads to **initial access → privilege escalation → lateral movement → ransomware** in financial environments.\n- **Recommended immediate actions for the SOC today:** Confirm patch status and internet exposure for SharePoint/vCenter; prioritize detection for exploitation patterns (webshells/new IIS artifacts, vCenter suspicious file reads/writes, unusual IKE-related service/network activity); isolate/contain any suspected compromised hosts pending IR.\n\n**3) Zimbra Collaboration Suite unauthenticated RCE (CVE-2026-73570) — actively exploited**\n- **What happened:** CERT reporting indicates active exploitation of **unauth OS command injection** leading to command execution as the `zimbra` user.\n- **Why it matters operationally:** Email/collaboration servers are high-value; compromise enables **credential theft, mailbox access, internal phishing, and persistence**.\n- **Recommended immediate actions for the SOC today:** Inventory any on-prem Zimbra and verify patch level immediately; monitor for anomalous inbound web requests to Zimbra endpoints + suspicious child processes spawned by Zimbra services; consider temporary access restrictions/WAF rules if patching is delayed.\n\n**4) Citrix NetScaler ADC/Gateway auth bypass (CVE-2026-19490) — critical, likely to be targeted**\n- **What happened:** New advisory for a **remote unauthenticated authentication bypass** affecting NetScaler ADC/Gateway.\n- **Why it matters operationally:** NetScaler is a frequent initial-access vector; auth bypasses often get weaponized rapidly and can expose **VPN sessions, ICA/portal access, and downstream apps**.\n- **Recommended immediate actions for the SOC today:** Validate whether any NetScaler is internet-facing; fast-track patch/mitigation and increase monitoring for unusual admin/API access, config changes, and new sessions from atypical geos/ASNs; prepare containment runbook for suspected appliance compromise.\n\n**5) Ransomware ecosystem: “recovery firm” scam + Cl0p follow-on risk**\n- **What happened:** Reports of a ransomware affiliate impersonating a **data recovery/decryption service** to extract payments; Cl0p names dozens of victims tied to a **PTC Windchill-focused campaign**.\n- **Why it matters operationally:** Expect **social engineering after incidents** and higher likelihood of extortion attempts; Cl0p-style exploitation often precedes rapid data theft and public shaming.\n- **Recommended immediate actions for the SOC today:** Brief IR/comms: **do not engage unsolicited “recovery” contacts**; route to Legal/IR only; add monitoring for Windchill-related exposure (if used) and watch for data exfil signals + suspicious archiving tools on servers.\n\n---\n\n### Monitoring & detection recommendations\n- **Edge/VPN appliances (Cisco ASA/FTD, Citrix NetScaler):** Firewall/VPN logs + device syslog for spikes in SSL VPN handshakes, malformed sessions, auth anomalies, and **unexpected reloads/config writes** (ATT&CK: T1190 Exploit Public-Facing Application).\n- **Windows IKE (CVE-2026-33824):** Windows Event Logs (System/Security), Defender for Endpoint telemetry, network telemetry for unusual IKE/IPsec negotiation patterns and suspicious service behavior/crashes (ATT&CK: T1210 Exploitation of Remote Services).\n- **SharePoint on-prem:** IIS logs, SharePoint ULS logs, EDR for **new/modified ASPX files**, suspicious `w3wp.exe` child processes, and outbound connections from SharePoint servers (ATT&CK: T1505.003 Web Shell).\n- **VMware vCenter:** vCenter/vSphere logs for suspicious file traversal indicators, unexpected admin logins, new accounts/roles, and unusual API calls; alert on vCenter initiating SMB/RDP/WinRM to internal hosts (ATT&CK: T1078 Valid Accounts).\n- **Zimbra:** Web/proxy logs to Zimbra endpoints + host EDR for command execution from Zimbra services (`zimbra` user spawning shells), new cron entries, or unexpected outbound traffic (ATT&CK: T1059 Command and Scripting Interpreter).\n- **Ransomware pre-staging:** EDR hunts for rapid discovery + credential access chains on servers (e.g., `nltest`, `net group`, `adfind`-like behavior), abnormal archive creation, and large outbound transfers (ATT&CK: T1087, T1003, T1560).\n- **“0day-rubbish” disclosures (various products):** If any named products exist internally (assume unknown), add temporary WAF/IDS monitoring for command injection/SQLi patterns and review exposure of admin portals/APIs.\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** Validate that all **KEV-listed** assets (SharePoint, vCenter, Windows IKE, macOS where applicable) are in your **highest SLA patch ring**; track exceptions with compensating controls.\n- **Internet exposure review:** Reconfirm which admin portals/services are externally reachable (SharePoint, vCenter, Zimbra, NetScaler, ASA/FTD); reduce exposure via allowlists/VPN, WAF, and management network segmentation.\n- **Email platform hardening:** For Zimbra (if present), enforce least privilege, review plugin surface area, and tighten outbound egress from mail servers to reduce post-exploitation beaconing.\n- **Ransomware comms playbook:** Update procedures to handle **third-party “recovery” outreach**; ensure front-line staff route such emails/calls to IR/Legal with preservation steps.\n- **Supply-chain / package risk (Logto Tunnel npm CVE-2026-63188):** If used by dev teams, audit dependency inventories and restrict risky tunneling/proxy tooling in production.\n- **Cisco hardening releases:** Review Cisco Secure Workload/Crosswork hardening advisories for planned maintenance adoption; treat as backlog unless exposure/usage dictates otherwise.",
   "highlights": [
     {
-      "title": "Microsoft’s August Patch Tuesday: 400+ Bugs Fixed, One Zero-Day Under Attack",
-      "link": "https://www.esecurityplanet.com/news/news-microsoft-august-2026-patch-tuesday/",
-      "source": "eSecurityPlanet",
-      "published": "2026-08-18T17:53:12+00:00",
+      "title": "CVE-2026-20349: Someone Is Crashing Cisco Firewalls. We Need to Talk About Why.",
+      "link": "https://eclypsium.com/blog/cve-2026-20349-someone-is-crashing-cisco-firewalls-we-need-to-talk-about-why/",
+      "source": "Eclypsium | Supply Chain Security for the Modern Enterprise",
+      "published": "2026-08-19T13:00:00+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Cloud / SaaS",
         "Exploit / PoC",
-        "Windows / Microsoft"
+        "Vendors / Product Security"
       ],
       "curated": true,
       "signal_tier": "critical",
       "signal_score": 100.0,
-      "priority_score": 86.83
+      "priority_score": 82.96
     },
     {
-      "title": "U.S. CISA adds a Ray-Project Ray flaw to its Known Exploited Vulnerabilities catalog",
-      "link": "https://securityaffairs.com/197419/security/u-s-cisa-adds-a-ray-project-ray-flaw-to-its-known-exploited-vulnerabilities-catalog.html",
-      "source": "Security Affairs",
-      "published": "2026-08-18T08:02:44+00:00",
+      "title": "[0day-rubbish] ONE Reporter 13.1 Authenticated RCE / privilege escalation via CommandExecutor (8.8)",
+      "link": "https://seclists.org/fulldisclosure/2026/Aug/75",
+      "source": "Full Disclosure",
+      "published": "2026-08-20T06:25:25+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
+        "Crypto / Web3",
         "Exploit / PoC",
-        "General Security"
+        "OSINT / Community"
       ],
       "curated": true,
       "signal_tier": "critical",
-      "signal_score": 85.14,
-      "priority_score": 84.59
+      "signal_score": 88.87,
+      "priority_score": 94.14
     },
     {
-      "title": "CISA Warns of Ray-Project Ray Code Injection Vulnerability Exploited in Attacks",
-      "link": "https://cybersecuritynews.com/ray-project-ray-code-injection/",
-      "source": "Cyber Security News (FeedBurner)",
-      "published": "2026-08-18T11:06:28+00:00",
+      "title": "[0day-rubbish] VMS 6.48.809 Authenticated command injection to root RCE (8.8)",
+      "link": "https://seclists.org/fulldisclosure/2026/Aug/76",
+      "source": "Full Disclosure",
+      "published": "2026-08-20T06:25:27+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC",
-        "General Security"
-      ],
-      "curated": false,
-      "signal_tier": "critical",
-      "signal_score": 83.11,
-      "priority_score": 75.26
-    },
-    {
-      "title": "Microsoft Copilot, MLflow, and Windows Task Host under attack; ransomware exploitation confirmed",
-      "link": "https://defend.network/briefings/copilot-mlflow-windows-ransomware-exploitation-2026-08-19.html",
-      "source": "defend.network",
-      "published": "2026-08-19T06:30:00+00:00",
-      "smart_groups": [
-        "Cloud / SaaS",
-        "Exploit / PoC",
-        "Ransomware",
-        "Vulnerabilities / CVEs",
-        "Windows / Microsoft",
-        "General Security"
+        "OSINT / Community"
       ],
       "curated": true,
       "signal_tier": "critical",
-      "signal_score": 80.14,
-      "priority_score": 84.64
+      "signal_score": 88.87,
+      "priority_score": 93.96
     },
     {
-      "title": "CISA: Windows Task Host flaw now exploited by ransomware gangs",
-      "link": "https://www.bleepingcomputer.com/news/security/cisa-windows-task-host-flaw-now-exploited-by-ransomware-gangs/",
-      "source": "BleepingComputer",
-      "published": "2026-08-18T10:32:16+00:00",
+      "title": "[0day-rubbish] Gemini 7.3.0 Authenticated SQL injection to xp_cmdshell RCE (8.8)",
+      "link": "https://seclists.org/fulldisclosure/2026/Aug/74",
+      "source": "Full Disclosure",
+      "published": "2026-08-20T06:25:22+00:00",
       "smart_groups": [
-        "Exploit / PoC",
-        "Ransomware",
         "Vulnerabilities / CVEs",
-        "Windows / Microsoft",
-        "General Security"
+        "Web / API Security",
+        "Exploit / PoC",
+        "OSINT / Community"
       ],
       "curated": true,
       "signal_tier": "critical",
-      "signal_score": 79.96,
-      "priority_score": 78.38
+      "signal_score": 88.87,
+      "priority_score": 93.96
     },
     {
-      "title": "CISA gives feds 3 days to fix actively exploited Ray RCE bug",
-      "link": "https://www.theregister.com/security/2026/08/18/cisa-gives-feds-3-days-to-fix-actively-exploited-ray-rce-bug/5289007",
-      "source": "The Register - Security",
-      "published": "2026-08-18T15:26:00+00:00",
+      "title": "[0day-rubbish] ActiveFax Server 10.70 Unauthenticated LPD Ghostscript %pipe% SYSTEM RCE (9.8)",
+      "link": "https://seclists.org/fulldisclosure/2026/Aug/72",
+      "source": "Full Disclosure",
+      "published": "2026-08-20T06:25:17+00:00",
       "smart_groups": [
-        "Exploit / PoC",
-        "Phishing / Social Engineering",
         "Vulnerabilities / CVEs",
-        "General Security"
+        "Exploit / PoC",
+        "OSINT / Community"
       ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 75.64,
-      "priority_score": 68.1
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 88.87,
+      "priority_score": 93.96
     },
     {
-      "title": "Exploit for Missing Authorization in Portainer",
-      "link": "https://vulners.com/githubexploit/109DCEB3-DE61-5471-8DDB-A813D9ABF3FE?utm_source=rss&utm_medium=rss&utm_campaign=rss",
-      "source": "Vulners.com RSS Feed",
-      "published": "2026-08-18T22:04:23+00:00",
+      "title": "[0day-rubbish] Tornado 2.11.3 Unauthenticated arbitrary file write to root RCE (storeTo=file: to cron) (9.8)",
+      "link": "https://seclists.org/fulldisclosure/2026/Aug/71",
+      "source": "Full Disclosure",
+      "published": "2026-08-20T06:25:14+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "OSINT / Community"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 88.87,
+      "priority_score": 93.96
+    },
+    {
+      "title": "[0day-rubbish] Datalore On-Premises 2026.2.3 Unauthenticated RCE via InteractiveReport access-mapping flaw (9.8)",
+      "link": "https://seclists.org/fulldisclosure/2026/Aug/70",
+      "source": "Full Disclosure",
+      "published": "2026-08-20T06:25:11+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "OSINT / Community"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 88.87,
+      "priority_score": 93.96
+    },
+    {
+      "title": "[0day-rubbish] RoboTask 11.0.5.1229 Unauthenticated REST API remote task execution (9.8)",
+      "link": "https://seclists.org/fulldisclosure/2026/Aug/73",
+      "source": "Full Disclosure",
+      "published": "2026-08-20T06:25:19+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "OSINT / Community"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 88.87,
+      "priority_score": 93.53
+    },
+    {
+      "title": "VPN Vulnerability That Can Reboot Firewalls: Cisco ASA·FTD CVE-2026-20349",
+      "link": "https://blog.criminalip.io/2026/08/20/vpn-vulnerability-that-can-reboot-firewalls-cisco-asa%c2%b7ftd-cve-2026-20349/",
+      "source": "CIP Blog",
+      "published": "2026-08-20T05:27:54+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC"
       ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 68.4,
-      "priority_score": 74.38
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 86.83,
+      "priority_score": 88.1
     },
     {
-      "title": "Hackers Hijack Thousands of WordPress Sites to Use as C2 Servers for StopAndProtect Malware",
-      "link": "https://cybersecuritynews.com/wordpress-sites-stopandprotect-malware/",
+      "title": "CISA Adds Microsoft SharePoint Weak Authentication Vulnerability to KEV List",
+      "link": "https://cybersecuritynews.com/microsoft-sharepoint-authentication-vulnerability/",
       "source": "Cyber Security News (FeedBurner)",
-      "published": "2026-08-18T16:47:24+00:00",
+      "published": "2026-08-19T15:15:31+00:00",
       "smart_groups": [
-        "Threat Actors / APT",
-        "Malware / Payloads",
-        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Identity / Access",
         "General Security"
       ],
-      "curated": true,
-      "signal_tier": "high",
-      "signal_score": 68.11,
-      "priority_score": 81.71
-    },
-    {
-      "title": "Two GitLab GraphQL Vulnerabilities: Unauthenticated Data Tampering and CSRF",
-      "link": "https://dev.to/anoymask/two-gitlab-graphql-vulnerabilities-unauthenticated-data-tampering-and-csrf-2m53",
-      "source": "DEV Community",
-      "published": "2026-08-19T03:30:09+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Supply Chain / Software",
-        "Web / API Security",
-        "Data Breaches / Leaks",
-        "Detection Engineering",
-        "Cloud / SaaS",
-        "Exploit / PoC",
-        "Identity / Access",
-        "Malware / Payloads",
-        "OSINT / Community"
-      ],
-      "curated": true,
-      "signal_tier": "high",
-      "signal_score": 67.7,
-      "priority_score": 92.64
-    },
-    {
-      "title": "Forminator Forms (CVE-2026-15748): Unauthenticated RCE via Forged Upload Settings in Select Fields",
-      "link": "https://dev.to/anoymask/forminator-forms-cve-2026-15748-unauthenticated-rce-via-forged-upload-settings-in-select-fields-350o",
-      "source": "DEV Community",
-      "published": "2026-08-19T03:30:39+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Cloud / SaaS",
-        "Data Protection / Privacy",
-        "Detection Engineering",
-        "Exploit / PoC",
-        "Identity / Access",
-        "Linux / Unix",
-        "Malware / Payloads",
-        "Windows / Microsoft",
-        "OSINT / Community"
-      ],
-      "curated": true,
-      "signal_tier": "high",
-      "signal_score": 67.7,
-      "priority_score": 92.58
+      "curated": false,
+      "signal_tier": "critical",
+      "signal_score": 85.16,
+      "priority_score": 75.92
     }
   ]
 }
