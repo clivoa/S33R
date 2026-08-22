@@ -1,181 +1,184 @@
 {
-  "generated_at": "2026-08-21T07:08:17.261283+00:00",
-  "analysis_date": "2026-08-21",
+  "generated_at": "2026-08-22T07:00:06.211167+00:00",
+  "analysis_date": "2026-08-22",
   "provider": "openai",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-08-21T05:42:26.613055+00:00",
+  "source_generated_at": "2026-08-22T06:50:05.495019+00:00",
   "source_days_back": 30,
-  "source_total_items": 55632,
-  "total_items_in_window_all": 3704,
-  "total_items_in_window_curated": 18,
-  "total_items_in_window_selected": 84,
+  "source_total_items": 55303,
+  "total_items_in_window_all": 3130,
+  "total_items_in_window_curated": 14,
+  "total_items_in_window_selected": 44,
   "context_selection_policy": "curated-plus-operational-signal-v1",
-  "morning_call_markdown": "### Executive Summary\n- Multiple **actively exploited, internet-facing RCEs** reported (Zimbra ZCS CVE-2026-73570, SPIP CVE-2026-77647) — assume scanning and opportunistic compromise attempts ongoing.\n- **Microsoft Entra ID critical RCE (CVE-2026-69836) reportedly exploited in the wild** — highest identity-control risk for financial environments; prioritize tenant telemetry review.\n- **Windows Defender engine zero-day EoP (CVE-2026-69414) with public PoC, no patch yet** — raises post-compromise impact; harden and hunt for local-to-SYSTEM escalation patterns.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Zimbra Collaboration Suite unauth command injection/RCE (CVE-2026-73570) – actively exploited**\n- What happened: Reports indicate **active in-the-wild exploitation** of Zimbra ZCS via **unauth command injection (via SMTP/SNMP exposure)**.\n- Why it matters operationally: **Email platform compromise** enables mailbox theft, internal phishing, persistence, and lateral movement in high-trust paths.\n- Recommended immediate actions for the SOC today: **Confirm patch level / exposure now**; review Zimbra auth/admin logs + webshell indicators; **block/limit external access** to management/SNMP surfaces where possible.\n\n**2) Microsoft Entra ID critical RCE (CVE-2026-69836) – exploited in the wild (cloud IdP)**\n- What happened: A **critical Entra ID RCE** was disclosed and is **reported as exploited in the wild**.\n- Why it matters operationally: IdP compromise can lead to **tenant-wide identity takeover**, token abuse, conditional access bypass, and broad cloud access (banking-grade blast radius).\n- Recommended immediate actions for the SOC today: **Elevate monitoring on Entra audit/sign-in logs** for anomalous app/service principal changes; **tighten admin roles / break-glass review** and verify Conditional Access and MFA enforcement (assumption: mitigations may be configuration-driven until full vendor guidance lands).\n\n**3) Microsoft Defender Malware Protection Engine zero-day EoP (CVE-2026-69414 “ShieldBreak”) – PoC, no patch**\n- What happened: A **local privilege escalation to SYSTEM** in the Defender engine has a **public PoC** and **no patch** yet; CISA BOD clock referenced.\n- Why it matters operationally: Turns commodity footholds into **SYSTEM-level control**, accelerating ransomware/tooling deployment and defense evasion.\n- Recommended immediate actions for the SOC today: Hunt for **suspicious Defender engine interactions** (unexpected mpengine-related crashes/updates, unusual child processes); **reduce local admin**, enforce app control where available, and ensure Defender tamper protection is enabled.\n\n**4) MLflow webhook SSRF leading to cloud credential theft (CVE-2026-64849) – CISA KEV**\n- What happened: **MLflow critical SSRF** (webhooks) added to **CISA KEV**; exploitation associated with **cloud credential theft** scenarios.\n- Why it matters operationally: SSRF frequently pivots to **metadata service access** and **cloud token exfiltration**, enabling cloud resource takeover.\n- Recommended immediate actions for the SOC today: Identify any MLflow instances (prod/dev) and **isolate from internet**; monitor cloud logs for **sudden new API keys/role assumptions** following MLflow webhook activity.\n\n**5) Supply-chain: malicious Rust crates (arrayref/append-only-vec) executing malware during build**\n- What happened: **Compromised Rust crates** delivered **compile-time backdoor behavior via build scripts**, with reporting of overlap with DPRK-like infra.\n- Why it matters operationally: Impacts **CI/CD and developer endpoints**, potentially introducing backdoors into internal tools/services (high risk in fintech SDLC).\n- Recommended immediate actions for the SOC today: Coordinate with AppSec/DevOps to **identify builds pulling affected versions**; monitor CI runners/dev hosts for **unexpected outbound connections during builds** and new persistence immediately after compilation.\n\n---\n\n### Monitoring & detection recommendations\n- **Internet-facing exploit attempts (Zimbra/SPIP/MLflow):** WAF/reverse-proxy + firewall logs for spikes in requests to Zimbra/SPIP/MLflow endpoints; alert on **new server-side process spawns** from web/mail services (ATT&CK: T1190).\n- **Entra ID suspicious control-plane changes:** Entra **AuditLogs** for app registrations, service principal credential additions, role assignments, Conditional Access edits; correlate with unusual sign-ins (ATT&CK: T1098, T1550).\n- **Token abuse / impossible travel / atypical clients:** Entra **SignInLogs** for unfamiliar user agents, legacy auth attempts, new device registrations, atypical geo/ASN; prioritize privileged accounts.\n- **Post-exploitation privilege escalation on Windows (ShieldBreak):** EDR telemetry for rapid transition from user to SYSTEM, unusual **service creation**, scheduled tasks, or LSASS access after Defender activity (ATT&CK: T1068, T1543, T1053).\n- **Defense evasion via legitimate Defender driver misuse (BTR.sys theme):** EDR + Sysmon for **driver loads** and kernel-level file/registry operations preceding AV/EDR outages (ATT&CK: T1562).\n- **Cloud credential theft via SSRF:** CloudTrail/Azure Activity logs for **STS AssumeRole / new access keys / new federated credentials** shortly after requests to MLflow (ATT&CK: T1528, T1550).\n- **Supply-chain/CI build compromise (Rust crates):** CI logs (GitHub Actions/Jenkins/Azure DevOps) + EDR on runners for **network egress during build**, execution from build directories, and newly dropped binaries post-build (ATT&CK: T1195, T1059).\n- **Ransomware staging signals (Exitium/StopAndProtect themes):** EDR for mass file renames/extensions, rapid encryption-like I/O patterns, note-file creation; proxy/DNS for outbound to newly-seen domains from web servers and user endpoints (ATT&CK: T1486).\n\n---\n\n### Medium-term follow-ups\n- **Patch/upgrade backlog sweep:** Validate remediation plans for **Zimbra**, **SPIP (<4.4.20)**, **MLflow**, and other newly surfaced high-severity app CVEs (n8n CVE-2026-77068 if used internally) across prod and dev.\n- **Identity hardening:** Re-validate **privileged access model** in Entra (PIM/JIT, break-glass, admin workstations), and ensure alerting for sensitive control-plane changes is tuned and owned.\n- **Local admin reduction & endpoint controls:** Given Defender engine EoP risk, accelerate **least privilege**, application control (WDAC/AppLocker where feasible), and enforced tamper protection.\n- **CI/CD supply-chain guardrails:** Require **dependency pinning + lockfiles**, artifact signing, and SBOM generation; add automated alerts for **new/typosquatted packages** and unexpected build-script execution.\n- **External attack surface review:** Reconfirm that **admin panels, SNMP, and webhook endpoints** are not internet-exposed without strong controls; ensure WAF rules and rate-limiting for high-risk services.\n- **Ransomware readiness checks:** Validate offline/immutable backups, restore testing cadence, and ensure SOC playbooks cover **rapid containment of mail/IdP compromise** (common high-impact entry points).",
+  "morning_call_markdown": "### Executive Summary\n- Multiple **actively exploited, unauthenticated RCEs** in common enterprise services (GitLab, Zimbra, SPIP, TrueConf) warrant **immediate exposure review + patch/mitigation + hunting**.\n- **Microsoft Defender boot-time driver abuse technique** can be used to **delete/disable security tooling during boot**; prioritize tamper-protection monitoring and “defense evasion” hunts.\n- **Financial-sector pressure rising**: LockBit claims a **US Bank** breach; treat as a reminder to validate extortion-readiness and watch for initial access + data theft precursors.\n\n### High-priority items (immediate attention)\n**1) Active exploitation: GitLab (CVE-2026-19478) + Zimbra (CVE-2026-73570)**\n- What happened: Reports confirm **in-the-wild exploitation** of critical flaws enabling unauthenticated attackers to manipulate GitLab projects and achieve RCE on Zimbra.\n- Why it matters operationally: These apps are often **internet-facing** and can lead to **code execution, data tampering, credential theft, and rapid ransomware staging**.\n- Recommended immediate actions for the SOC today: **Identify exposed instances + confirm patch levels**; hunt for **suspicious unauthenticated requests to GraphQL (GitLab)** and **new webshell/process spawns on Zimbra hosts**.\n\n**2) Active exploitation: SPIP CMS unauth RCE (CVE-2026-77806)**\n- What happened: SPIP < 4.4.21 has an **actively exploited unauth RCE** via a crafted `X-Spip-Filtre` HTTP header.\n- Why it matters operationally: Any forgotten/legacy CMS footprint can be a **quiet initial access path** leading to **webshells, credential dumping, and pivoting**.\n- Recommended immediate actions for the SOC today: **Scan web inventories for SPIP and patch/disable**; add a **WAF/edge rule to flag/block `X-Spip-Filtre` usage** pending remediation.\n\n**3) KEV: TrueConf Server exploitation delivering “PhantomCore”**\n- What happened: CISA KEV adds **TrueConf Server CVE-2026-72529 / CVE-2026-72530**, used to deliver PhantomCore malware (reported by Kaspersky ICS CERT; “Head Mare” attributed).\n- Why it matters operationally: Video/UC servers can bridge **internal user endpoints** (meeting participants) and become a **high-trust malware distribution node**.\n- Recommended immediate actions for the SOC today: **Locate any TrueConf deployments (including shadow IT) and patch/isolate immediately**; hunt for **new persistence + unusual outbound from the TrueConf host** and **endpoint alerts on meeting participant systems**.\n\n**4) Windows defense evasion: Microsoft Defender remediation driver abuse (signed driver)**\n- What happened: Technique disclosed to weaponize Microsoft Defender’s **boot-time remediation driver** to perform arbitrary kernel file/registry operations (no traditional exploit needed).\n- Why it matters operationally: Enables **pre-boot disabling/deletion of EDR/AV** and can materially reduce visibility right before ransomware detonation (MITRE **T1562 Impair Defenses**).\n- Recommended immediate actions for the SOC today: Monitor for **unexpected Defender remediation/boot repair activity** and **security product service/driver deletions**; validate **Tamper Protection** and alerting for **disabled AV/EDR and removed startup drivers**.\n\n**5) Supply-chain risk: malicious Rust crates (crates.io) + trojanized npm packages (RedC2) + AWS key exposure**\n- What happened: Backdoored Rust packages published to crates.io; separate reporting highlights trojanized npm packages delivering a Linux backdoor and a large set of exposed AWS keys (details incomplete in this feed).\n- Why it matters operationally: Builds/CI runners can become **initial access** into production and cloud; exposed keys increase risk of **cloud takeover** (MITRE **T1195 Supply Chain Compromise**, **T1552 Unsecured Credentials**).\n- Recommended immediate actions for the SOC today: **Alert DevOps to freeze/verify dependencies** (lockfiles, checksums, version pinning) and **rotate/disable any exposed or suspicious AWS access keys**; monitor CI for **unexpected outbound, new npm/crate downloads, and anomalous AWS API calls**.\n\n### Monitoring & detection recommendations\n- **Internet-facing app exploit attempts (GitLab/Zimbra/SPIP/TrueConf):** WAF/Reverse-proxy + web server logs; hunt for **unauth POST bursts, odd headers (e.g., `X-Spip-Filtre`), GraphQL endpoint abuse**, spikes in 4xx/5xx (MITRE **T1190 Exploit Public-Facing Application**).\n- **Post-exploitation on servers:** EDR on GitLab/Zimbra/web hosts; watch for **new interpreter processes** (bash, python, powershell), **webshell-like child processes from nginx/apache**, and **cron/systemd persistence** (MITRE **T1059**, **T1505.003**, **T1053**).\n- **Email/collab compromise signals (Zimbra):** Mail server auth logs + IAM/SSO; detect **new admin accounts, token issuance anomalies, mailbox export/search spikes**, and **new forwarding rules** (MITRE **T1098**, **T1114**).\n- **Defender driver abuse / security tooling deletion:** Windows event logs + EDR tamper alerts; hunt for **Defender remediation driver activity**, unexpected **driver/service deletions**, and **AV/EDR disabled events** (MITRE **T1562**, **T1112 Modify Registry**).\n- **Ransomware pre-staging behavior (context + LockBit pressure):** EDR + AD logs; look for **credential dumping precursors**, abnormal **LSASS access**, **lateral movement via SMB/WinRM**, and **mass remote service creation** (MITRE **T1003**, **T1021**, **T1569.002**).\n- **Supply-chain/CI compromise:** CI/CD logs (GitLab runners, build agents) + network telemetry; detect **new/rare package downloads**, build steps executing **curl/wget**, and **unexpected outbound to paste/code hosting** (MITRE **T1195**, **T1105 Ingress Tool Transfer**).\n- **Cloud key misuse (AWS):** CloudTrail/GuardDuty; alert on **new access keys**, **unusual regions**, **STS AssumeRole anomalies**, and **sudden IAM policy changes** (MITRE **T1550.001**, **T1098.003**).\n\n### Medium-term follow-ups\n- **Patch governance:** Confirm emergency patch SLAs for **GitLab/Zimbra/SPIP/TrueConf** and validate compensating controls for systems that cannot patch (WAF rules, network segmentation).\n- **Exposure management:** Reconcile asset inventory for **internet-facing collaboration/dev platforms** (incl. forgotten CMS) and ensure continuous scanning for high-risk CVEs.\n- **Hardening for identity services:** Entra ID item had **conflicting “exploited” reporting** (MSRC indicates status corrected to “not exploited”); still review **conditional access, MFA enforcement, and risky sign-in alerting**.\n- **Tamper-resilience testing:** Run a tabletop/validation on **EDR/AV impairment scenarios** (driver/service removal at boot) and ensure alerting + response playbooks cover “visibility loss” events.\n- **Software supply-chain controls:** Enforce **dependency allowlisting, version pinning, artifact signing/verification**, and isolate CI runners with least-privilege cloud permissions.\n- **Extortion readiness:** Given LockBit’s banking-focused pressure, verify **DLP + egress monitoring**, incident comms path, and **leak-site monitoring process** (no assumption that the claim is valid).",
   "highlights": [
     {
-      "title": "Zimbra CVE-2026-73570: Unauthenticated Command Injection via SMTP",
-      "link": "https://dev.to/anoymask/zimbra-cve-2026-73570-unauthenticated-command-injection-via-smtp-kl4",
-      "source": "DEV Community",
-      "published": "2026-08-21T02:48:23+00:00",
+      "title": "Critical Microsoft Entra ID vulnerability exploited in the wild (CVE-2026-69836)",
+      "link": "https://www.helpnetsecurity.com/2026/08/21/microsoft-entra-id-vulnerability-cve-2026-69836/",
+      "source": "Help Net Security",
+      "published": "2026-08-21T12:20:33+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Detection Engineering",
+        "Windows / Microsoft",
+        "Identity / Access",
+        "Cloud / SaaS",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 87.1,
+      "priority_score": 85.41
+    },
+    {
+      "title": "TrueConf Server Exploitation: PhantomCore Delivered via CVE-2026-72529 / 72530",
+      "link": "https://dev.to/anoymask/trueconf-server-exploitation-phantomcore-delivered-via-cve-2026-72529-72530-3dc3",
+      "source": "DEV Community",
+      "published": "2026-08-22T02:01:00+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
         "Threat Actors / APT",
+        "Linux / Unix",
+        "Malware / Payloads",
+        "Supply Chain / Software",
+        "Detection Engineering",
         "Cloud / SaaS",
         "Exploit / PoC",
         "Identity / Access",
-        "Linux / Unix",
-        "Malware / Payloads",
+        "Network / OT / ICS",
+        "Windows / Microsoft",
         "OSINT / Community"
       ],
       "curated": true,
       "signal_tier": "critical",
-      "signal_score": 100.0,
-      "priority_score": 92.47
+      "signal_score": 85.69,
+      "priority_score": 92.1
     },
     {
-      "title": "CVE-2026-69414 ShieldBreak Zero-Day: No Patch, and CISA BOD 26-04 Gives You 14 Days",
-      "link": "https://blog.qualys.com/product-tech/2026/08/20/shieldbreak-the-windows-defender-zero-day-with-no-patch-detect-it-mitigate-it-with-qualys",
-      "source": "Qualys Security Blog",
-      "published": "2026-08-20T14:02:12+00:00",
+      "title": "Poland’s CERT Warns of Active Exploitation of Critical Zimbra Collaboration Suite Flaw",
+      "link": "https://securityaffairs.com/197610/security/polands-cert-warns-of-active-exploitation-of-critical-zimbra-collaboration-suite-flaw.html",
+      "source": "Security Affairs",
+      "published": "2026-08-21T09:14:02+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Malware / Payloads",
-        "Vendors / Product Security"
+        "Threat Actors / APT",
+        "Exploit / PoC",
+        "General Security"
       ],
       "curated": true,
       "signal_tier": "critical",
-      "signal_score": 86.24,
-      "priority_score": 81.94
+      "signal_score": 85.15,
+      "priority_score": 84.94
     },
     {
-      "title": "CVE-2026-69414 ShieldBreak Zero-Day: No Patch, and CISA BOD 26-04 Gives You 14 Days",
-      "link": "https://blog.qualys.com/category/product-tech/vulnmgmt-detection-response",
-      "source": "Product and Tech – Qualys Security Blog",
-      "published": "2026-08-20T14:02:12+00:00",
+      "title": "GitLab Warns of Active Exploitation of Critical GraphQL Flaw",
+      "link": "https://securityaffairs.com/197622/uncategorized/gitlab-warns-of-active-exploitation-of-critical-graphql-flaw.html",
+      "source": "Security Affairs",
+      "published": "2026-08-21T09:49:02+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Malware / Payloads",
-        "Vendors / Product Security"
+        "Exploit / PoC",
+        "Web / API Security",
+        "General Security"
       ],
       "curated": true,
       "signal_tier": "critical",
-      "signal_score": 85.1,
-      "priority_score": 76.28
+      "signal_score": 85.15,
+      "priority_score": 83.38
     },
     {
-      "title": "CVE-2026-77647 - SPIP Remote Code Execution Vulnerability",
-      "link": "https://cvefeed.io/vuln/detail/CVE-2026-77647",
+      "title": "CVE-2026-77806 - SPIP Remote Code Execution Vulnerability",
+      "link": "https://cvefeed.io/vuln/detail/CVE-2026-77806",
       "source": "CVEfeed.io - Latest Vulnerabilities",
-      "published": "2026-08-20T23:16:28+00:00",
+      "published": "2026-08-21T14:16:53+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC"
       ],
       "curated": true,
       "signal_tier": "critical",
-      "signal_score": 84.93,
-      "priority_score": 87.79
+      "signal_score": 84.92,
+      "priority_score": 85.0
     },
     {
-      "title": "Microsoft Entra ID Remote Code Execution Vulnerability Exploited in the Wild",
-      "link": "https://cybersecuritynews.com/entra-id-rce-vulnerability-exploited/",
+      "title": "GitLab CVE-2026-19478 Comes Under Active Exploitation Within Days of Disclosure",
+      "link": "https://thehackernews.com/2026/08/gitlab-cve-2026-19478-comes-under.html",
+      "source": "The Hacker News",
+      "published": "2026-08-21T07:04:25+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 84.73,
+      "priority_score": 81.63
+    },
+    {
+      "title": "GitLab CVE-2026-19478 Comes Under Active Exploitation Within Days of Disclosure",
+      "link": "https://vulners.com/thn/THN:10F1BAF1B3748C8A151C18DCD4994885?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-08-21T07:04:00+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Web / API Security"
+      ],
+      "curated": false,
+      "signal_tier": "critical",
+      "signal_score": 84.39,
+      "priority_score": 69.93
+    },
+    {
+      "title": "Critical GitLab Code Injection Vulnerability Actively Exploited in Attacks",
+      "link": "https://cybersecuritynews.com/gitlab-code-injection-vulnerability-exploited/",
       "source": "Cyber Security News (FeedBurner)",
-      "published": "2026-08-21T03:38:36+00:00",
+      "published": "2026-08-21T13:06:02+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Identity / Access",
+        "Web / API Security",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 83.1,
+      "priority_score": 85.09
+    },
+    {
+      "title": "CVE-2026-77806",
+      "link": "https://vuldb.com/cve/CVE-2026-77806",
+      "source": "VulDB CVE",
+      "published": "2026-08-21T14:02:53+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "critical",
+      "signal_score": 83.0,
+      "priority_score": 73.73
+    },
+    {
+      "title": "CVE-2026-69836 Microsoft Entra ID Remote Code Execution Vulnerability",
+      "link": "https://msrc.microsoft.com/update-guide/vulnerability/CVE-2026-69836",
+      "source": "MSRC Security Update Guide",
+      "published": "2026-08-21T14:00:00+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Identity / Access",
         "Windows / Microsoft",
         "Exploit / PoC",
-        "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 83.05,
-      "priority_score": 89.54
-    },
-    {
-      "title": "CVE-2026-77647",
-      "link": "https://vuldb.com/cve/CVE-2026-77647",
-      "source": "VulDB CVE",
-      "published": "2026-08-20T22:50:20+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
+        "Government / CERT"
       ],
       "curated": false,
       "signal_tier": "critical",
-      "signal_score": 83.04,
-      "priority_score": 76.62
-    },
-    {
-      "title": "Attackers Exploit Zimbra SNMP Flaw for Unauthenticated Remote Code Execution",
-      "link": "https://thehackernews.com/2026/08/attackers-exploit-zimbra-snmp-flaw-for.html",
-      "source": "The Hacker News",
-      "published": "2026-08-20T13:24:28+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 82.75,
-      "priority_score": 84.24
-    },
-    {
-      "title": "CVE-2026-77647",
-      "link": "https://vulners.com/cvelist/CVELIST:CVE-2026-77647?utm_source=rss&utm_medium=rss&utm_campaign=rss",
-      "source": "Vulners.com RSS Feed",
-      "published": "2026-08-20T22:24:39+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": false,
-      "signal_tier": "critical",
-      "signal_score": 82.4,
-      "priority_score": 73.27
-    },
-    {
-      "title": "MLflow CVE-2026-64849: Cloud Credential Theft via Webhook SSRF",
-      "link": "https://dev.to/anoymask/mlflow-cve-2026-64849-cloud-credential-theft-via-webhook-ssrf-2j",
-      "source": "DEV Community",
-      "published": "2026-08-21T02:48:58+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Detection Engineering",
-        "Cloud / SaaS",
-        "Threat Actors / APT",
-        "Exploit / PoC",
-        "Identity / Access",
-        "Malware / Payloads",
-        "Web / API Security",
-        "OSINT / Community"
-      ],
-      "curated": false,
-      "signal_tier": "critical",
-      "signal_score": 81.7,
-      "priority_score": 82.47
-    },
-    {
-      "title": "Exploit for CVE-2026-16723",
-      "link": "https://vulners.com/githubexploit/D07DAAB9-2AD8-516D-96E8-55801167F281?utm_source=rss&utm_medium=rss&utm_campaign=rss",
-      "source": "Vulners.com RSS Feed",
-      "published": "2026-08-21T04:18:38+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Crypto / Web3",
-        "Exploit / PoC",
-        "Malware / Payloads",
-        "Web / API Security"
-      ],
-      "curated": false,
-      "signal_tier": "critical",
-      "signal_score": 80.4,
-      "priority_score": 76.58
+      "signal_score": 82.61,
+      "priority_score": 73.41
     }
   ]
 }
