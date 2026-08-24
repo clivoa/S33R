@@ -1,164 +1,186 @@
 {
-  "generated_at": "2026-08-23T07:01:52.543940+00:00",
-  "analysis_date": "2026-08-23",
+  "generated_at": "2026-08-24T07:21:01.884072+00:00",
+  "analysis_date": "2026-08-24",
   "provider": "openai",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-08-23T06:51:47.801579+00:00",
+  "source_generated_at": "2026-08-24T07:07:46.162251+00:00",
   "source_days_back": 30,
-  "source_total_items": 54967,
-  "total_items_in_window_all": 2264,
-  "total_items_in_window_curated": 3,
+  "source_total_items": 54836,
+  "total_items_in_window_all": 2164,
+  "total_items_in_window_curated": 10,
   "total_items_in_window_selected": 40,
   "context_selection_policy": "curated-plus-operational-signal-v1",
-  "morning_call_markdown": "### Executive Summary\n- CISA KEV update: **Zimbra Collaboration Suite CVE-2026-73570** is confirmed exploited—treat any internet-exposed Zimbra as at-risk until patched/mitigated.\n- Multiple **public PoCs for critical perimeter/enterprise components** (Cisco ASA, SAP Commerce Cloud adapter, UniFi OS server, OPNsense) increase likelihood of opportunistic scanning and rapid exploitation.\n- **Supply-chain activity** is prominent (compromised Rust crates executing payloads at build time; Android car head-unit update-chain malware), reinforcing the need to watch CI/CD and third-party software ingestion paths.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Zimbra Collaboration Suite (ZCS) added to CISA KEV (CVE-2026-73570)**\n- What happened: CISA added **CVE-2026-73570 (Zimbra ZCS)** to the **Known Exploited Vulnerabilities** catalog (active exploitation).\n- Why it matters operationally: Email/collaboration is a high-value foothold; exploitation commonly leads to **credential theft, mailbox access, and lateral movement** in enterprise environments.\n- Recommended immediate actions for the SOC today: **Confirm patch/mitigation status** for all Zimbra; **hunt for webshell/abnormal admin activity** on Zimbra hosts and isolate any suspicious server.\n\n**2) Public PoCs for edge/perimeter platforms (Cisco ASA, OPNsense, UniFi OS server)**\n- What happened: New PoCs surfaced for **Cisco ASA (CVE-2025-20333 / CVE-2025-20362, CVSS 9.9)**, **OPNsense (CVE-2026-53582)**, and **UniFi OS Server (CVE-2026-34909 / CVE-2026-34910, CVSS 10)**.\n- Why it matters operationally: These are typical **initial access** targets; public PoCs tend to drive **mass scanning → rapid compromise**, especially for internet-facing admin interfaces/VPN edges.\n- Recommended immediate actions for the SOC today: **Inventory exposure + block/limit management interfaces** from the internet; **alert on new inbound scanning/exploit patterns** to these services and escalate any edge device anomaly immediately.\n\n**3) SAP Commerce Cloud Data Hub Adapter critical authz flaw with PoC (CVE-2026-58231, CVSS 10)**\n- What happened: PoC/detection tooling published for **CVE-2026-58231** (improper authorization) in **SAP Commerce Cloud Data Hub Adapter**.\n- Why it matters operationally: Commerce platforms often contain customer/transaction data; authz bypass/RCE-class issues can enable **unauthenticated compromise** and downstream fraud/data access.\n- Recommended immediate actions for the SOC today: **Identify any SAP Commerce Cloud/Data Hub Adapter deployments** and confirm patch guidance; **monitor for unusual unauthenticated requests** to adapter endpoints and suspicious service account activity.\n\n**4) Supply-chain: Rust crates.io compromise leads to build-time payload execution**\n- What happened: A compromised maintainer account published versions of popular crates (**arrayref, internment, append-only-vec**) pulling a typosquat dep (**proc-macro1**) that **downloads/executes a payload during build**.\n- Why it matters operationally: This can poison **CI/CD runners and developer workstations**, potentially leaking secrets (tokens, signing keys) and implanting backdoors into built artifacts.\n- Recommended immediate actions for the SOC today: **Block/flag builds using affected versions/typosquat dependency** (coordinate with DevSecOps); **review CI runner EDR telemetry** for unexpected outbound fetch + execution from build steps and rotate exposed tokens if suspected.\n\n**5) Banking malware activity spotlight (Manic / Grandoreiro / ToxicPanda 2.0)**\n- What happened: Reporting highlights continued/expanded campaigns of **banking trojans** (multiple families; targeting varies by region).\n- Why it matters operationally: Direct fraud risk via **credential theft, session hijack, overlay attacks**, and potential employee endpoint compromise leading to internal access.\n- Recommended immediate actions for the SOC today: **Increase monitoring for banking-trojan TTPs** on endpoints (browser injection, unusual accessibility/service installs); **tighten alerts on anomalous outbound** to newly seen infra (no specific IOCs provided—use behavior-based detections).\n\n---\n\n### Monitoring & detection recommendations\n- **Email/collaboration (Zimbra)**: Monitor Zimbra audit/auth logs + web access logs for **new admin sessions, unusual mailbox exports, unexpected JSP/ASPX-like drops**; map to **T1505.003 (Web Shell)**, **T1078 (Valid Accounts)**.\n- **Perimeter devices (ASA/OPNsense/UniFi)**: From firewall/VPN/IDS logs, hunt for **bursty scans, repeated auth attempts, and admin endpoint probing**; correlate with config changes and new outbound connections from edge appliances (ATT&CK: **T1190 Exploit Public-Facing Application**).\n- **SAP Commerce/Data Hub Adapter**: In reverse-proxy/WAF/app logs, watch for **unauthenticated requests to adapter APIs**, privilege errors followed by success, and sudden spikes in 4xx→2xx patterns (ATT&CK: **T1068 Exploitation for Privilege Escalation** / **T1190** depending on exposure).\n- **CI/CD and dev endpoints (Rust supply chain)**: EDR + proxy/DNS logs on build agents for **compiler/build processes spawning curl/wget/powershell** and executing newly dropped binaries; monitor secret stores for unusual access (ATT&CK: **T1552 Unsecured Credentials**, **T1105 Ingress Tool Transfer**).\n- **Linux priv-esc chatter (kernel/netfilter/ext4 + device PoCs)**: On Linux servers, alert on **new local users, sudoers edits, kernel module loads, and abnormal privilege boundary crossings**; prioritize exposed multi-tenant hosts (ATT&CK: **T1068**).\n- **Banking trojan behaviors**: Endpoint telemetry for **browser credential store access, suspicious extensions, accessibility service abuse, and anomalous process injection**; network for **long-lived C2 over HTTPS** with uncommon user-agents (ATT&CK: **T1055 Process Injection**, **T1555 Credentials from Password Stores**).\n- **Windows IPC hardening theme (Named Pipes)**: EDR/Sysmon to hunt for **unusual cross-process named pipe access** from low-priv processes to privileged services; focus on endpoints used by admins (ATT&CK: **T1559.002 Inter-Process Communication: Named Pipes**).\n\n---\n\n### Medium-term follow-ups\n- **Patch/mitigation program**: Validate patch SLAs and exposure management for **Zimbra + edge appliances**; ensure internet-facing management is behind VPN/allowlists and MFA.\n- **Software supply-chain controls**: Enforce **dependency pinning, allowlists, and checksum/signature verification** in CI; add detection for typosquat packages and unexpected build-script networking.\n- **Asset & service inventory gaps**: Confirm ownership and inventory for **SAP Commerce components**, UniFi controllers/OS servers, and any Joomla/WordPress ancillary apps that may exist in business units.\n- **WAF/IDS coverage**: Review whether WAF signatures/rulesets cover **authz bypass/RCE patterns** for common web stacks; ensure logging is retained and searchable for rapid retro-hunts.\n- **Linux hardening**: Reduce local attack surface on critical Linux hosts (limit local accounts, tighten sudo, kernel live-patching cadence) given ongoing kernel priv-esc disclosures.\n- **Fraud + endpoint coordination**: Align SOC + fraud teams on **banking trojan** surge handling (customer impact vs. employee endpoint risk), including playbooks for session/token theft scenarios.",
+  "morning_call_markdown": "### Executive Summary\n- Patch/exploit pressure is high: multiple **KEV-listed, internet-facing** products (Zimbra, Ivanti Connect Secure, Exchange, PAN-OS/GlobalProtect, MOVEit, SonicWall SMA, Confluence, Cisco IOS XE) have fresh exploit/PoC chatter—assume scanning and opportunistic compromise attempts today.\n- Microsoft updates include a **max-severity Entra ID server-side fix** plus noise around a **Defender driver abuse** scenario; expect increased identity probing and endpoint tampering tradecraft in the wild.\n- Supply-chain and “developer tooling” risk remains elevated (npm “ChainDrop”-style persistence + malicious PyPI packages); watch for unusual outbound, new services, and CI/CD runner drift.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Internet-facing email/groupware exploitation (Zimbra + Exchange)**\n- **What happened:** Zimbra command injection via crafted SMTP requests (KEV; deadline noted) and Exchange SSRF→RCE (KEV referenced) remain high-risk; exploitation activity/scanning is expected.\n- **Why it matters operationally:** Email platforms are high-value in financial services; compromise enables credential theft, mailbox access, lateral movement, and business email compromise (BEC) staging.\n- **Recommended immediate actions for the SOC today:** Verify external exposure and patch level; hunt for abnormal SMTP traffic patterns + suspicious child processes from mail services; confirm EDR coverage on mail servers and isolate on signs of webshell/command exec.\n\n**2) Remote access/VPN & edge device KEV cluster (Ivanti / PAN-OS GlobalProtect / SonicWall SMA / Zyxel)**\n- **What happened:** Active-exploitation/KEV signals and exploit/PoC availability referenced for multiple edge products (Ivanti Connect Secure auth bypass→RCE; PAN-OS command injection; SonicWall SMA traversal; Zyxel firewall command injection).\n- **Why it matters operationally:** These are typical initial-access paths for ransomware and hands-on-keyboard intrusions; compromise can yield rapid foothold and privileged access (esp. if MFA/session handling is weak).\n- **Recommended immediate actions for the SOC today:** Pull an inventory of internet-facing appliances + versions; prioritize emergency patch/mitigation verification and rotate exposed creds/sessions; review device logs for new admin users, config exports, unusual VPN logins, and unexpected outbound connections.\n\n**3) Microsoft ecosystem: Entra ID critical flaw + identity attack surface**\n- **What happened:** Microsoft patched a max-severity Entra ID deserialization RCE (server-side deployed); continued community focus on Entra/Graph/PowerShell scripts for identifying MFA gaps and password spray patterns.\n- **Why it matters operationally:** Even with server-side fixes, attackers will pivot to **credential-based access** (sprays, legacy auth, consent grants) to reach O365/Azure resources—common in financial-sector intrusions.\n- **Recommended immediate actions for the SOC today:** Run an Entra “MFA coverage and exceptions” check (focus on privileged roles and service accounts); hunt for password spray/failed logon storms and anomalous OAuth consent grants; validate conditional access policies for legacy auth blocks and high-risk sign-in responses.\n\n**4) Software supply-chain: npm persistence (“ChainDrop”-style) + malicious PyPI packages**\n- **What happened:** Reporting describes a supply-chain worm persisting via developer tool hook files despite credential rotation; new malicious PyPI packages flagged (install-time executable download/persistence/mining behaviors).\n- **Why it matters operationally:** Impacts CI/CD runners and developer endpoints; can lead to cloud credential theft, token reuse, and covert outbound channels—high blast radius in regulated environments.\n- **Recommended immediate actions for the SOC today:** Monitor CI/CD runners for new processes/services, unexpected network egress, and modified hook/config files; scan artifact repos and build logs for unexpected dependency additions; enforce/verify allowlisted package sources and block known-bad packages in dependency management.\n\n---\n\n### Monitoring & detection recommendations\n- **Edge/VPN appliances (Ivanti/PAN-OS/SonicWall/Zyxel):** Monitor VPN/firewall logs for admin logins from new geos, config changes, and spikes in 4xx/5xx errors; hunt for post-exploitation outbound from appliances (ATT&CK: Valid Accounts **T1078**, Exploit Public-Facing App **T1190**).\n- **Zimbra/Exchange:** Collect SMTP gateway + server process telemetry; alert on mail-related services spawning shells/interpreters or writing to web directories (ATT&CK: Command and Scripting Interpreter **T1059**, Web Shell **T1505.003**).\n- **Entra ID / Azure AD:** Watch sign-in logs for password spray patterns (many users/one IP; one user/many IPs), impossible travel, and “MFA required but not satisfied”; review audit logs for app registrations/consent grants and role assignments (ATT&CK: Cloud Accounts **T1087.004**, Account Manipulation **T1098**).\n- **Microsoft Defender tampering signals:** EDR alerts for security tool disablement, suspicious driver/service installation, and boot-time persistence attempts (ATT&CK: Impair Defenses **T1562**, Boot or Logon Autostart Execution **T1547**).\n- **Supply-chain/CI telemetry:** On build runners, alert on package install scripts spawning curl/wget/powershell + writing systemd services/cron; track outbound to new domains during builds (ATT&CK: Trusted Relationship **T1199**, Ingress Tool Transfer **T1105**).\n- **GitLab package registry path traversal (CVE-2026-10053 PoC):** If GitLab/npm registries are self-hosted, monitor for abnormal file writes by git user, registry API abuse, and unexpected repository/runner changes.\n- **Confluence/MOVEit exposure checks:** WAF/reverse-proxy logs for exploit-like request patterns to known admin/template/upload endpoints; validate that vulnerable versions are not internet-facing (ATT&CK: Exploit Public-Facing App **T1190**).\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** Reconcile asset inventory vs. KEV list for: Zimbra, Ivanti, PAN-OS, Exchange, SonicWall SMA, Zyxel, Confluence, Cisco IOS XE, MOVEit; document compensating controls where patching is delayed.\n- **Identity hardening:** Reduce MFA exceptions; enforce phishing-resistant MFA for privileged roles; review conditional access for legacy protocols and risky sign-in automation/response.\n- **CI/CD security controls:** Implement dependency allowlisting, lockfiles enforcement, private mirrors with malware scanning, and build isolation; require short-lived tokens for pipelines and verify rotation actually invalidates sessions.\n- **Mail platform resilience:** Ensure immutable logging for mail servers, restrict outbound from mail tiers, and validate incident runbooks for BEC + mailbox rule abuse.\n- **Third-party/meeting software exposure:** If TrueConf (or similar conferencing) is in environment, verify versions and isolate from critical segments; add to vulnerability management queue due to KEV mention (details incomplete—confirm applicability).\n- **Threat hunting enablement:** Add detections for Java “memory shell” behaviors in web stacks where applicable (unusual reflective class loading, in-memory-only backdoors) and ensure JVM telemetry is available on critical apps.",
   "highlights": [
     {
-      "title": "Exploit for CVE-2026-58231",
-      "link": "https://sploitus.com/exploit?id=E10C0347-A487-529C-A636-E98E109449EE&utm_source=rss&utm_medium=rss",
-      "source": "Sploitus – Exploits",
-      "published": "2026-08-22T20:12:25+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 66.65,
-      "priority_score": 63.64
-    },
-    {
-      "title": "Exploit for Classic Buffer Overflow in Cisco Adaptive_Security_Appliance_Software",
-      "link": "https://sploitus.com/exploit?id=89EF59E9-C994-5617-9C60-64831E998DC3&utm_source=rss&utm_medium=rss",
-      "source": "Sploitus – Exploits",
-      "published": "2026-08-22T10:23:21+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 66.65,
-      "priority_score": 62.2
-    },
-    {
-      "title": "Exploit for CVE-2026-19478",
-      "link": "https://sploitus.com/exploit?id=984EBFC8-DFDC-570D-B24C-33816EBAC399&utm_source=rss&utm_medium=rss",
-      "source": "Sploitus – Exploits",
-      "published": "2026-08-22T12:07:07+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 66.65,
-      "priority_score": 61.48
-    },
-    {
-      "title": "Exploit for Improper Input Validation in Ui Unifi_Os_Server",
-      "link": "https://sploitus.com/exploit?id=7DE61A96-49A3-5639-89C4-BE8191552CB3&utm_source=rss&utm_medium=rss",
-      "source": "Sploitus – Exploits",
-      "published": "2026-08-22T11:22:33+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 66.65,
-      "priority_score": 61.28
-    },
-    {
-      "title": "Exploit for Code Injection in Langflow",
-      "link": "https://sploitus.com/exploit?id=B0B587A7-09F3-5DBA-ACDE-DF3AECC56FB5&utm_source=rss&utm_medium=rss",
-      "source": "Sploitus – Exploits",
-      "published": "2026-08-22T15:55:09+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 64.65,
-      "priority_score": 62.49
-    },
-    {
-      "title": "Exploit for Code Injection in Vmware Spring_Cloud_Function",
-      "link": "https://sploitus.com/exploit?id=5423CECE-181F-5F68-AC03-189C2DB2328A&utm_source=rss&utm_medium=rss",
-      "source": "Sploitus – Exploits",
-      "published": "2026-08-22T09:45:30+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 64.65,
-      "priority_score": 60.84
-    },
-    {
-      "title": "CVE-2024-6387",
-      "link": "https://kitploit.com/en/tools/github/hasan8babiker/cve-2024-6387",
-      "source": "KitPloit - PenTest Tools!",
-      "published": "2026-08-22T11:08:52+00:00",
+      "title": "Microsoft patches perfect-ten Entra ID flaw, Defender driver deletes Defender at boot, Malware turns cars into proxy botnet",
+      "link": "https://cybersecuritytoday.libsyn.com/microsoft-patches-perfect-ten-entra-id-flaw-defender-driver-deletes-defender-at-boot-malware-turns-cars-into-proxy-botnet",
+      "source": "Cybersecurity Today",
+      "published": "2026-08-24T01:00:00+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC",
-        "Linux / Unix"
+        "Malware / Payloads",
+        "Identity / Access",
+        "Windows / Microsoft",
+        "Data Protection / Privacy",
+        "Cloud / SaaS",
+        "Supply Chain / Software",
+        "Mobile Security",
+        "Community / Briefing"
       ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 63.81,
-      "priority_score": 78.31
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 100.0,
+      "priority_score": 87.65
     },
     {
-      "title": "CVE-2026-45901 | Linux Kernel up to 6.19.3 netfilter commit_mutex privilege escalation (WID-SEC-2026-1700)",
-      "link": "https://vuldb.com/vuln/366085",
-      "source": "VulDB Updates",
-      "published": "2026-08-23T00:22:13+00:00",
+      "title": "Microsoft patches 398 flaws; Zimbra exploitation deadline looms; Android cars compromised",
+      "link": "https://defend.network/briefings/microsoft-patch-tuesday-zimbra-exploitation-android-veh-2026-08-24.html",
+      "source": "defend.network",
+      "published": "2026-08-24T06:30:00+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Linux / Unix",
+        "Malware / Payloads",
+        "Cloud / SaaS",
+        "Exploit / PoC",
+        "Supply Chain / Software",
+        "Mobile Security",
+        "General Security"
+      ],
+      "curated": false,
+      "signal_tier": "critical",
+      "signal_score": 100.0,
+      "priority_score": 78.57
+    },
+    {
+      "title": "Weekly Cyber Security Newsletter Bulletin – Entra ID RCE, Claude Code Ransomware, T-Mobile Cable, Azure Credential Theft +20 Stories",
+      "link": "https://cybersecuritynews.com/cyber-security-newsletter-bulletin-august/",
+      "source": "Cyber Security News",
+      "published": "2026-08-23T16:45:52+00:00",
+      "smart_groups": [
+        "Malware / Payloads",
+        "Identity / Access",
+        "Windows / Microsoft",
+        "Cloud / SaaS",
+        "Exploit / PoC",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "Mobile Security",
+        "General Security"
+      ],
+      "curated": false,
+      "signal_tier": "critical",
+      "signal_score": 100.0,
+      "priority_score": 74.4
+    },
+    {
+      "title": "Exploit for CVE-2026-10053",
+      "link": "https://vulners.com/githubexploit/0EA9307C-5E8F-5065-ACB7-BC40C37AFBD0?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-08-23T15:32:22+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Supply Chain / Software",
         "Exploit / PoC"
       ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 63.34,
-      "priority_score": 79.79
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 88.39,
+      "priority_score": 82.53
     },
     {
-      "title": "Exploit for Use After Free in Linux Linux_Kernel",
-      "link": "https://vulners.com/githubexploit/0E069C06-6785-5F77-8FDF-57883A08D4DB?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "title": "Exploit for CVE-2026-31337",
+      "link": "https://vulners.com/githubexploit/2CCC349C-40E3-561F-9845-A298471CD6DD?utm_source=rss&utm_medium=rss&utm_campaign=rss",
       "source": "Vulners.com RSS Feed",
-      "published": "2026-08-23T02:28:12+00:00",
+      "published": "2026-08-24T03:01:16+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Linux / Unix",
+        "Supply Chain / Software",
+        "Exploit / PoC"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 86.39,
+      "priority_score": 85.79
+    },
+    {
+      "title": "Exploit for CVE-2026-19843",
+      "link": "https://vulners.com/githubexploit/084A427F-B9F8-5100-98F1-9000293893F8?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-08-24T03:02:14+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
         "Exploit / PoC",
         "Mobile Security"
       ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 62.4,
-      "priority_score": 75.63
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 86.39,
+      "priority_score": 85.66
     },
     {
-      "title": "U.S. CISA adds Zimbra Collaboration Suite (ZCS) flaw to its Known Exploited Vulnerabilities catalog",
-      "link": "https://securityaffairs.com/197693/security/u-s-cisa-adds-zimbra-collaboration-suite-zcs-flaw-to-its-known-exploited-vulnerabilities-catalog.html",
-      "source": "Security Affairs",
-      "published": "2026-08-22T07:17:49+00:00",
+      "title": "Exploit for CVE-2026-09881",
+      "link": "https://vulners.com/githubexploit/7713929B-EE5C-51CC-8F6E-7A5F8B3D1EE3?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-08-24T03:02:37+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Threat Actors / APT",
+        "Exploit / PoC"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 86.39,
+      "priority_score": 85.61
+    },
+    {
+      "title": "Exploit for CVE-2026-15502",
+      "link": "https://vulners.com/githubexploit/2F59AB5D-61B6-5E6D-AAC3-53061A216151?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-08-24T03:02:18+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Windows / Microsoft",
+        "Exploit / PoC",
+        "Web / API Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 86.39,
+      "priority_score": 85.61
+    },
+    {
+      "title": "SANS Stormcast Monday, August 24th, 2026: More Entra Powershell; Entra Vulnerability; GitLab Vuln (and PoC); GTA 6 Leak Malware",
+      "link": "https://isc.sans.edu/podcastdetail/10064",
+      "source": "SANS Internet Stormcenter Daily Cyber Security Podcast (Stormcast)",
+      "published": "2026-08-24T02:00:02+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Identity / Access",
+        "Windows / Microsoft",
+        "Malware / Payloads",
+        "Community / Briefing"
+      ],
+      "curated": false,
+      "signal_tier": "critical",
+      "signal_score": 81.04,
+      "priority_score": 78.69
+    },
+    {
+      "title": "Slopsquatting in the Supply Chain: Weaponized AI Hallucinations",
+      "link": "https://www.govtech.com/blogs/lohrmann-on-cybersecurity/slopsquatting-in-the-supply-chain-weaponized-ai-hallucinations",
+      "source": "Lohrmann on Cybersecurity",
+      "published": "2026-08-23T09:23:00+00:00",
+      "smart_groups": [
         "Exploit / PoC",
         "General Security"
       ],
       "curated": true,
       "signal_tier": "high",
-      "signal_score": 59.12,
-      "priority_score": 83.64
+      "signal_score": 75.38,
+      "priority_score": 75.11
     }
   ]
 }
