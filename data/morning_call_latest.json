@@ -1,41 +1,102 @@
 {
-  "generated_at": "2026-08-27T17:48:26.550927+00:00",
-  "analysis_date": "2026-08-27",
+  "generated_at": "2026-08-28T18:41:08.085443+00:00",
+  "analysis_date": "2026-08-28",
   "provider": "openai",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-08-27T16:20:33.191253+00:00",
+  "source_generated_at": "2026-08-28T14:04:01.133137+00:00",
   "source_days_back": 30,
-  "source_total_items": 56897,
-  "total_items_in_window_all": 1922,
-  "total_items_in_window_curated": 3,
+  "source_total_items": 57067,
+  "total_items_in_window_all": 1555,
+  "total_items_in_window_curated": 11,
   "total_items_in_window_selected": 40,
   "context_selection_policy": "curated-plus-operational-signal-v1",
-  "morning_call_markdown": "### Executive Summary\n- Active exploitation: Citrix NetScaler ADC/Gateway RCE (CVE-2026-8452) added to CISA KEV; patch/mitigate internet-facing appliances immediately.\n- Exploit availability spike: New/updated PoCs circulating for Cisco ISE RCE, HashiCorp Vault privesc-to-RCE, SAML/XML signature tooling, and multiple web app RCEs—expect opportunistic scanning.\n- Evasion trend: Continued focus on BYOVD/EDR-kill techniques and malware frameworks (e.g., PackClient; Spark RAT abusing a vulnerable driver) — tighten driver/EDR tamper controls and watch for disablement events.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Citrix NetScaler ADC/Gateway RCE (CVE-2026-8452) – actively exploited / KEV**\n- **What happened:** CISA added NetScaler CVE-2026-8452 to KEV; multiple sources report in-the-wild exploitation and urgent patch deadlines.\n- **Why it matters operationally:** Internet-facing ADC/VPN appliances are high-leverage initial access; exploitation often leads to rapid lateral movement and credential theft in financial networks.\n- **Recommended immediate actions for the SOC today:** Confirm asset inventory + exposure; enforce emergency patch/mitigation and restrict management interfaces; hunt for post-exploitation on NetScaler hosts (new admin users/config changes/webshell-like artifacts) and suspicious outbound connections from the appliance segment.\n\n**2) “KEV adds six exploited flaws” (Microsoft/Linux/Red Hat/Citrix + others) – assume broad scanning**\n- **What happened:** CISA added six vulnerabilities to KEV (details vary by recap source); indicates confirmed exploitation, not just theoretical risk.\n- **Why it matters operationally:** KEV additions reliably drive mass exploitation; even older CVEs can re-surge when weaponized by new toolchains.\n- **Recommended immediate actions for the SOC today:** Pull the KEV list and map to your CMDB/vuln scanner results; prioritize any internet-facing or authentication-adjacent systems; add temporary detection for exploitation attempts in WAF/IDS and correlate with new process/service creation on affected platforms.\n\n**3) Cisco ISE unauth RCE PoC (CVE-2025-20281) – PoC published**\n- **What happened:** A Python PoC for unauthenticated RCE against Cisco ISE ERS API is circulating (per exploit feed).\n- **Why it matters operationally:** ISE is a high-value identity/network control point; compromise can enable NAC bypass, credential exposure, and broad network pivoting.\n- **Recommended immediate actions for the SOC today:** Verify ISE patch level and restrict ERS/API exposure to admin subnets only; monitor ISE logs for anomalous ERS calls and unexpected command execution indicators; increase alerting for new privileged accounts/endpoint authorization changes originating from ISE.\n\n**4) HashiCorp Vault privesc-to-RCE PoC (CVE-2025-6000) – plugin directory write-to-exec pattern**\n- **What happened:** PoC released describing a path from privileged audit device configuration to code execution via writing an executable into the Vault plugin directory.\n- **Why it matters operationally:** Vault compromise equals secrets compromise (DB creds, API keys, signing material) and can cascade to cloud and CI/CD takeover.\n- **Recommended immediate actions for the SOC today:** Identify Vault instances and review audit device configurations and plugin directory permissions; alert on changes to audit backends, plugin registration, or writes to plugin paths; validate that only tightly scoped admins can modify audit devices.\n\n**5) Identity/SSO abuse tooling + OAuth/SAML-related vulns (Spring Auth Server, xml-crypto PoC, KubePi SSO config exposure)**\n- **What happened:** New vulnerability disclosures/PoC activity around OAuth2 client registration validation and SAML/XML signing abuse (xml-crypto PoC), plus KubePi SSO management endpoints exposure.\n- **Why it matters operationally:** SSO/OAuth/SAML issues can translate into account takeover, token theft, and persistence without malware (high impact, low noise).\n- **Recommended immediate actions for the SOC today:** Check if Dynamic Client Registration is enabled anywhere (Spring OAuth2 Auth Server) and restrict/disable if not required; monitor IdP/SP logs for anomalous client registrations, metadata changes, and unusual assertion audiences; validate KubePi admin/SSO APIs are not exposed publicly.\n\n---\n\n### Monitoring & detection recommendations\n- **NetScaler exploitation & follow-on:** WAF/IDS + NetScaler/ADC logs + firewall egress; hunt for unusual requests to ADC/Gateway endpoints and new outbound sessions from the appliance VLAN (ATT&CK: T1190).\n- **Post-exploitation on edge appliances:** SIEM correlation of VPN/ADC admin logins + config changes + new local users; alert on management interface access from non-admin networks (T1078).\n- **Cisco ISE abuse:** ISE ERS/API audit logs + network device AAA changes; alert on spikes in ERS calls, new endpoint authorization rules, and unexpected admin sessions (T1565.001, T1556).\n- **Vault compromise signals:** Vault audit logs + Linux file integrity on plugin directories; alert on audit backend modifications, plugin registration, or execution from Vault directories (T1552.001, T1505).\n- **SSO/OAuth anomalies:** IdP (Okta/AAD/other) + app auth server logs; monitor for new OAuth clients, unusual redirect URIs, token issuance bursts, and SAML assertion validation failures (T1556, T1606).\n- **BYOVD / EDR tamper attempts:** EDR telemetry + Windows Security logs; alert on new driver installs/services, signed-but-vulnerable driver loading, and security tool disable events (T1562.001, T1543.003).\n- **Opportunistic scanning after PoC releases:** Firewall/WAF/Reverse proxy logs; detect high-rate 404/500 patterns, unusual User-Agents, and repeated hits across multiple apps/paths from the same sources (T1595).\n\n---\n\n### Medium-term follow-ups\n- **KEV program alignment:** Automate daily KEV-to-asset mapping and enforce SLA-based patching for internet-facing systems (Citrix/Cisco/SSO components first).\n- **Harden identity surfaces:** Reassess need for Dynamic Client Registration and “debug logging” in OAuth-related plugins; restrict token/log exposure paths (notably WordPress OAuth Server plugin debug log risk).\n- **Driver control posture:** Expand allowlisting/driver block rules (where feasible), and ensure EDR tamper protection is enforced org-wide; document IR playbook for BYOVD events.\n- **UniFi/Ubiquiti and other edge device patching:** If present in branches/remote sites, schedule updates and restrict management access; treat as potential footholds into the enterprise.\n- **Secure secrets management:** Review Vault admin role scoping, plugin directory permissions, and change control; add periodic audit reviews for high-risk configuration changes.\n- **Threat intel enrichment:** Track Proofpoint’s TA4922/PackClient and Spark RAT tradecraft for email/network detections; update SOC watchlists once vendor publishes concrete TTP/telemetry details (no IOC assumptions until confirmed).",
+  "morning_call_markdown": "### Executive Summary\n- Active exploitation of **PaperCut NG/MF zero-day (pre-auth RCE)** is the top risk today; treat any exposed PaperCut server as potentially compromised.\n- **Actively exploited Zimbra unauth RCE (CVE-2026-73570)** and **Linux kernel local privesc (CVE-2026-53362; KEV-listed)** raise immediate intrusion + post-exploitation escalation risk.\n- **Supply-chain firmware implants in ZBT routers** and multiple **KEV additions (Citrix NetScaler / SQL Server / etc.)** require rapid exposure validation and targeted hunting.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) PaperCut NG/MF zero-day (pre-auth RCE) — exploited in the wild**\n- **What happened:** PaperCut confirmed customer incidents; researchers reproduced a **pre-auth RCE chain** and PaperCut released **emergency patches (v25/v26)** (no CVE yet).\n- **Why it matters operationally:** PaperCut servers are commonly internal but often reachable from user subnets/DMZ; RCE is a fast path to **domain compromise + ransomware staging**.\n- **Recommended immediate actions for the SOC today:** Identify all PaperCut instances + internet/DMZ exposure; apply emergency patches/mitigations or isolate; begin compromise assessment (EDR on server, review recent process/service creation, web/app logs, and outbound connections).\n\n**2) Zimbra Collaboration unauth OS command execution (CVE-2026-73570) — active exploitation**\n- **What happened:** Public reporting indicates **CVE-2026-73570** enables **unauthenticated RCE** in Zimbra and is **actively exploited**.\n- **Why it matters operationally:** Email/collaboration systems are high-value footholds for **credential theft, mailbox access, BEC enablement, and lateral movement** in financial environments.\n- **Recommended immediate actions for the SOC today:** Confirm if Zimbra exists in our environment (including subsidiaries/3rd parties); validate patch level and external exposure; hunt for anomalous web requests/auth bypass patterns and suspicious child processes spawned by Zimbra services.\n\n**3) Linux kernel IPv6 subsystem local privilege escalation (CVE-2026-53362) — KEV-listed**\n- **What happened:** CISA added **CVE-2026-53362** to KEV; exploitation observed in real attacks (local privesc).\n- **Why it matters operationally:** Turns a low-priv foothold into root on Linux—key for **container/host breakout chains** and persistence on critical infra (app servers, security tooling, CI/CD).\n- **Recommended immediate actions for the SOC today:** Prioritize patching on internet-facing Linux, jump hosts, and Kubernetes/worker nodes; hunt for post-exploitation signals (unexpected kernel exploit artifacts, new root users, unusual `sudo`/capabilities changes) especially where initial access alerts already exist.\n\n**4) “KEV batch” additions (Citrix NetScaler / Microsoft SQL Server / Red Hat / Ajax.NET, etc.)**\n- **What happened:** CISA added multiple additional vulnerabilities to the **Known Exploited Vulnerabilities** catalog (details vary by product).\n- **Why it matters operationally:** These products commonly sit on the edge (NetScaler) or host sensitive data (SQL Server); KEV status implies **real-world exploitation** and higher likelihood of scanning.\n- **Recommended immediate actions for the SOC today:** Cross-check asset inventory for affected products and confirm patch/mitigation status; increase alerting on edge devices and database servers for suspicious auth events, web shell-like behavior, and unusual admin actions.\n\n**5) ZBT router firmware “implants” (SPEAKINGSTONE / DARKLANTERN) — unauth root access**\n- **What happened:** Researchers disclosed **two undocumented firmware implants** in certain ZBT routers allowing **unauthenticated command execution as root**.\n- **Why it matters operationally:** Supply-chain/firmware backdoors can bypass normal vuln management; routers can enable **traffic interception, credential harvesting, and stealthy persistence**.\n- **Recommended immediate actions for the SOC today:** Validate whether any ZBT hardware exists in corp/branch/lab networks (including vendor-managed sites); if present, isolate from sensitive segments and review egress/DNS anomalies from those networks pending remediation guidance.\n\n---\n\n### Monitoring & detection recommendations\n- **PaperCut exploitation hunting (TA0001/TA0002):** On PaperCut hosts, watch EDR for new child processes from PaperCut services (e.g., `cmd`, `powershell`, shells), new services/scheduled tasks (T1053), and unusual outbound to internet; review PaperCut/app/web logs for spikes in unauth requests.\n- **Zimbra RCE indicators (T1190 Exploit Public-Facing App):** Web server/proxy logs for Zimbra endpoints with abnormal request volume, odd user agents, or repeated 4xx/5xx preceding success; EDR on mail servers for shell spawns and unexpected binaries in temp/web directories.\n- **Linux privesc follow-through (T1068 Exploitation for Privilege Escalation):** Linux auditd/EDR for unusual compilation/tooling (`gcc`, `make`), creation of SUID binaries, capability changes (`setcap`), and unexpected root shells shortly after a low-priv session starts.\n- **Edge/VPN appliance focus (NetScaler class) (T1190):** WAF/reverse-proxy/firewall logs for admin path access from new geos, sudden config export/download attempts, and repeated exploitation-style requests; monitor for new management sessions outside change windows.\n- **SQL Server abuse patterns (T1078 Valid Accounts / T1003 Credential Dumping):** Windows Security logs + SQL audit for new logins, role changes, enabling xp_cmdshell-like functionality (if applicable), or service account credential misuse; correlate with lateral movement to DB subnets.\n- **Firmware/backdoor suspicion (ZBT routers):** Network telemetry (DNS, NetFlow) for routers/branch gateways initiating unusual outbound sessions, new beacon-like periodicity, and unexpected management-plane access from user VLANs.\n- **Ransomware pre-staging via “legit tools” (T1219 Remote Access Tools):** Detect new installs/executions of remote admin tools (AnyDesk/ScreenConnect-like patterns) on servers where not approved; alert on first-seen binaries + unsigned tools in admin shares.\n\n---\n\n### Medium-term follow-ups\n- **Exposure management:** Add/refresh continuous discovery for “non-traditional” externally reachable apps (print mgmt, collaboration, low-code platforms) and enforce ownership + patch SLAs.\n- **Patch governance:** Treat **KEV-listed** items as “expedite” with documented risk acceptance if not patched; ensure compensating controls (segmentation, WAF rules, admin-plane restrictions).\n- **Hardening:** Ensure PaperCut/Zimbra (if used) follow least privilege, restrict admin interfaces, enforce allowlisting to management networks, and block direct internet exposure where possible.\n- **Router/branch supply-chain risk:** Validate branch/network device procurement and firmware integrity processes; require vendor attestations and maintain an approved hardware list.\n- **Detection engineering:** Convert today’s hunts into durable detections (PaperCut/Zimbra process trees, Linux privesc sequences, edge-device anomalous admin access) with clear tuning guidance.\n- **Third-party risk check:** Ask key vendors/outsourcers (managed print, managed email/collab, branch networking) to confirm status vs. PaperCut/Zimbra/ZBT-related issues and provide remediation timelines.",
   "highlights": [
     {
-      "title": "CISA Adds Six Exploited Flaws to KEV, Including NetScaler, Linux, and SQL Server Bugs",
-      "link": "https://thehackernews.com/2026/08/cisa-adds-six-exploited-flaws-to-kev.html",
-      "source": "The Hacker News",
-      "published": "2026-08-27T07:05:28+00:00",
+      "title": "PaperCut Zero-Day: Active Exploitation and Pre-Auth RCE",
+      "link": "https://www.huntress.com/blog/papercut-actively-exploited",
+      "source": "Huntress Blog",
+      "published": "2026-08-28T03:00:00+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Cloud / SaaS",
         "Exploit / PoC",
-        "Linux / Unix",
-        "General Security"
+        "Vendors / Product Security"
       ],
-      "curated": false,
+      "curated": true,
       "signal_tier": "critical",
-      "signal_score": 82.73,
-      "priority_score": 76.17
+      "signal_score": 100.0,
+      "priority_score": 85.96
     },
     {
-      "title": "CISA orders feds to patch Citrix NetScaler RCE flaw by Saturday",
-      "link": "https://www.bleepingcomputer.com/news/security/cisa-hackers-now-exploiting-citrix-netscaler-rce-flaw-in-attacks/",
-      "source": "BleepingComputer",
-      "published": "2026-08-27T09:16:50+00:00",
+      "title": "PaperCut NG/MF Critical Zero-Day Exploited in the Wild",
+      "link": "https://www.rapid7.com/blog/post/etr-papercut-ng-mf-critical-zero-day-exploited-in-the-wild",
+      "source": "Rapid7 Blog",
+      "published": "2026-08-28T10:09:12+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Identity / Access",
+        "Network / OT / ICS",
+        "Ransomware",
+        "Vendors / Product Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 93.07,
+      "priority_score": 89.36
+    },
+    {
+      "title": "Zimbra Vulnerability Allowing Unauthenticated OS Command Execution: CVE-2026-73570 and External Exposure Analysis",
+      "link": "https://blog.criminalip.io/2026/08/28/zimbra/",
+      "source": "CIP Blog",
+      "published": "2026-08-28T00:00:00+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 87.04,
+      "priority_score": 86.29
+    },
+    {
+      "title": "CISA Warns of Linux Kernel Privilege Escalation Vulnerability Exploited in Attacks",
+      "link": "https://cybersecuritynews.com/linux-kernel-privilege-escalation-vulnerability-exploited/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-08-28T06:41:27+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Linux / Unix",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 83.03,
+      "priority_score": 88.11
+    },
+    {
+      "title": "China-Made ZBT Routers Ship With Two Implants Giving Unauthenticated Attackers Root Access",
+      "link": "https://thehackernews.com/2026/08/china-made-zbt-routers-ship-with-two.html",
+      "source": "The Hacker News",
+      "published": "2026-08-28T10:58:29+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Network / OT / ICS",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 78.74,
+      "priority_score": 87.73
+    },
+    {
+      "title": "PaperCut Zero-Day Under Active Attack: Emergency Patch Released",
+      "link": "https://securityaffairs.com/197980/uncategorized/papercut-zero-day-under-active-attack-emergency-patch-released.html",
+      "source": "Security Affairs",
+      "published": "2026-08-28T09:43:35+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC",
@@ -43,119 +104,66 @@
       ],
       "curated": true,
       "signal_tier": "high",
-      "signal_score": 76.06,
-      "priority_score": 87.77
+      "signal_score": 70.07,
+      "priority_score": 87.46
     },
     {
-      "title": "Exploit for CVE-2020-14750",
-      "link": "https://sploitus.com/exploit?id=90FFADCA-78A8-5917-B155-93B58E3AE18D&utm_source=rss&utm_medium=rss",
-      "source": "Sploitus – Exploits",
-      "published": "2026-08-27T12:57:46+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 70.44,
-      "priority_score": 74.56
-    },
-    {
-      "title": "Exploit for Code Injection in Hashicorp Vault",
-      "link": "https://vulners.com/githubexploit/FED5EEA3-3D08-54B1-99A8-EF713F4D9223?utm_source=rss&utm_medium=rss&utm_campaign=rss",
-      "source": "Vulners.com RSS Feed",
-      "published": "2026-08-27T15:14:23+00:00",
+      "title": "PaperCut Releases Emergency Patch for Exploited Zero-Day",
+      "link": "https://www.securityweek.com/papercut-releases-emergency-patch-for-exploited-zero-day/",
+      "source": "SecurityWeek",
+      "published": "2026-08-28T08:40:36+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC",
-        "Linux / Unix"
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 70.05,
+      "priority_score": 87.05
+    },
+    {
+      "title": "SANS Stormcast Friday, August 28th, 2026: Broken Polymorphic Phishing; Router Implants; llms.txt exploits; Papercut 0-Day",
+      "link": "https://isc.sans.edu/podcastdetail/10072",
+      "source": "SANS Internet Stormcenter Daily Cyber Security Podcast (Stormcast)",
+      "published": "2026-08-28T02:00:02+00:00",
+      "smart_groups": [
+        "Exploit / PoC",
+        "Phishing / Social Engineering",
+        "Community / Briefing"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 68.37,
-      "priority_score": 75.86
+      "signal_score": 70.04,
+      "priority_score": 71.02
     },
     {
-      "title": "CVE-2025-20281-2-Cisco-ISE-RCE",
-      "link": "https://vulners.com/kitploit/KITPLOIT:TOOLS-GITHUB-ABREWER251-CVE-2025-20281-2-CISCO-ISE-RCE?utm_source=rss&utm_medium=rss&utm_campaign=rss",
-      "source": "Vulners.com RSS Feed",
-      "published": "2026-08-27T02:35:30+00:00",
+      "title": "Print management outfit PaperCut is under 0-day attack, and it’s drawing customers’ blood",
+      "link": "https://www.theregister.com/security/2026/08/28/print-management-outfit-papercut-is-under-0-day-attack-and-its-drawing-customers-blood/5293168",
+      "source": "The Register - Security",
+      "published": "2026-08-28T05:29:53+00:00",
+      "smart_groups": [
+        "General Security"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 69.76,
+      "priority_score": 66.8
+    },
+    {
+      "title": "PaperCut Zero-Day Exploited in Attacks, Affecting All NG and MF Versions",
+      "link": "https://thehackernews.com/2026/08/papercut-zero-day-exploited-in-attacks.html",
+      "source": "The Hacker News",
+      "published": "2026-08-28T08:25:36+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Crypto / Web3"
+        "Exploit / PoC",
+        "General Security"
       ],
-      "curated": false,
+      "curated": true,
       "signal_tier": "high",
-      "signal_score": 67.37,
-      "priority_score": 72.48
-    },
-    {
-      "title": "CVE-2026-0006-openapv-poc",
-      "link": "https://vulners.com/kitploit/KITPLOIT:TOOLS-GITHUB-MOBILEHACKINGLAB-CVE-2026-0006-OPENAPV-POC?utm_source=rss&utm_medium=rss&utm_campaign=rss",
-      "source": "Vulners.com RSS Feed",
-      "published": "2026-08-27T02:34:54+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Mobile Security"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 66.37,
-      "priority_score": 71.39
-    },
-    {
-      "title": "CVE-2023-30258-RCE-POC",
-      "link": "https://vulners.com/kitploit/KITPLOIT:TOOLS-GITHUB-N00O00B-CVE-2023-30258-RCE-POC?utm_source=rss&utm_medium=rss&utm_campaign=rss",
-      "source": "Vulners.com RSS Feed",
-      "published": "2026-08-27T15:11:08+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 64.37,
-      "priority_score": 75.85
-    },
-    {
-      "title": "CVE-2023-22621-POC",
-      "link": "https://vulners.com/kitploit/KITPLOIT:TOOLS-GITHUB-SOFIANEELHOR-CVE-2023-22621-POC?utm_source=rss&utm_medium=rss&utm_campaign=rss",
-      "source": "Vulners.com RSS Feed",
-      "published": "2026-08-27T02:34:49+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 64.37,
-      "priority_score": 72.47
-    },
-    {
-      "title": "CVE-2025-51679 | OpenRISC OR1200 Local Privilege Escalation",
-      "link": "https://vuldb.com/vuln/395997",
-      "source": "VulDB Recent Entries",
-      "published": "2026-08-26T21:17:58+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 63.36,
-      "priority_score": 76.52
-    },
-    {
-      "title": "CVE-2026-76784 | TP-Link KL125 Local Device Communication Protocol authentication replay",
-      "link": "https://vuldb.com/vuln/395922",
-      "source": "VulDB Recent Entries",
-      "published": "2026-08-26T18:14:18+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 63.36,
-      "priority_score": 75.7
+      "signal_score": 69.74,
+      "priority_score": 86.54
     }
   ]
 }
