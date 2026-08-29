@@ -1,169 +1,168 @@
 {
-  "generated_at": "2026-08-28T18:41:08.085443+00:00",
-  "analysis_date": "2026-08-28",
+  "generated_at": "2026-08-29T12:43:22.979105+00:00",
+  "analysis_date": "2026-08-29",
   "provider": "openai",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-08-28T14:04:01.133137+00:00",
+  "source_generated_at": "2026-08-29T06:08:05.863959+00:00",
   "source_days_back": 30,
-  "source_total_items": 57067,
-  "total_items_in_window_all": 1555,
-  "total_items_in_window_curated": 11,
+  "source_total_items": 58514,
+  "total_items_in_window_all": 1509,
+  "total_items_in_window_curated": 4,
   "total_items_in_window_selected": 40,
   "context_selection_policy": "curated-plus-operational-signal-v1",
-  "morning_call_markdown": "### Executive Summary\n- Active exploitation of **PaperCut NG/MF zero-day (pre-auth RCE)** is the top risk today; treat any exposed PaperCut server as potentially compromised.\n- **Actively exploited Zimbra unauth RCE (CVE-2026-73570)** and **Linux kernel local privesc (CVE-2026-53362; KEV-listed)** raise immediate intrusion + post-exploitation escalation risk.\n- **Supply-chain firmware implants in ZBT routers** and multiple **KEV additions (Citrix NetScaler / SQL Server / etc.)** require rapid exposure validation and targeted hunting.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) PaperCut NG/MF zero-day (pre-auth RCE) — exploited in the wild**\n- **What happened:** PaperCut confirmed customer incidents; researchers reproduced a **pre-auth RCE chain** and PaperCut released **emergency patches (v25/v26)** (no CVE yet).\n- **Why it matters operationally:** PaperCut servers are commonly internal but often reachable from user subnets/DMZ; RCE is a fast path to **domain compromise + ransomware staging**.\n- **Recommended immediate actions for the SOC today:** Identify all PaperCut instances + internet/DMZ exposure; apply emergency patches/mitigations or isolate; begin compromise assessment (EDR on server, review recent process/service creation, web/app logs, and outbound connections).\n\n**2) Zimbra Collaboration unauth OS command execution (CVE-2026-73570) — active exploitation**\n- **What happened:** Public reporting indicates **CVE-2026-73570** enables **unauthenticated RCE** in Zimbra and is **actively exploited**.\n- **Why it matters operationally:** Email/collaboration systems are high-value footholds for **credential theft, mailbox access, BEC enablement, and lateral movement** in financial environments.\n- **Recommended immediate actions for the SOC today:** Confirm if Zimbra exists in our environment (including subsidiaries/3rd parties); validate patch level and external exposure; hunt for anomalous web requests/auth bypass patterns and suspicious child processes spawned by Zimbra services.\n\n**3) Linux kernel IPv6 subsystem local privilege escalation (CVE-2026-53362) — KEV-listed**\n- **What happened:** CISA added **CVE-2026-53362** to KEV; exploitation observed in real attacks (local privesc).\n- **Why it matters operationally:** Turns a low-priv foothold into root on Linux—key for **container/host breakout chains** and persistence on critical infra (app servers, security tooling, CI/CD).\n- **Recommended immediate actions for the SOC today:** Prioritize patching on internet-facing Linux, jump hosts, and Kubernetes/worker nodes; hunt for post-exploitation signals (unexpected kernel exploit artifacts, new root users, unusual `sudo`/capabilities changes) especially where initial access alerts already exist.\n\n**4) “KEV batch” additions (Citrix NetScaler / Microsoft SQL Server / Red Hat / Ajax.NET, etc.)**\n- **What happened:** CISA added multiple additional vulnerabilities to the **Known Exploited Vulnerabilities** catalog (details vary by product).\n- **Why it matters operationally:** These products commonly sit on the edge (NetScaler) or host sensitive data (SQL Server); KEV status implies **real-world exploitation** and higher likelihood of scanning.\n- **Recommended immediate actions for the SOC today:** Cross-check asset inventory for affected products and confirm patch/mitigation status; increase alerting on edge devices and database servers for suspicious auth events, web shell-like behavior, and unusual admin actions.\n\n**5) ZBT router firmware “implants” (SPEAKINGSTONE / DARKLANTERN) — unauth root access**\n- **What happened:** Researchers disclosed **two undocumented firmware implants** in certain ZBT routers allowing **unauthenticated command execution as root**.\n- **Why it matters operationally:** Supply-chain/firmware backdoors can bypass normal vuln management; routers can enable **traffic interception, credential harvesting, and stealthy persistence**.\n- **Recommended immediate actions for the SOC today:** Validate whether any ZBT hardware exists in corp/branch/lab networks (including vendor-managed sites); if present, isolate from sensitive segments and review egress/DNS anomalies from those networks pending remediation guidance.\n\n---\n\n### Monitoring & detection recommendations\n- **PaperCut exploitation hunting (TA0001/TA0002):** On PaperCut hosts, watch EDR for new child processes from PaperCut services (e.g., `cmd`, `powershell`, shells), new services/scheduled tasks (T1053), and unusual outbound to internet; review PaperCut/app/web logs for spikes in unauth requests.\n- **Zimbra RCE indicators (T1190 Exploit Public-Facing App):** Web server/proxy logs for Zimbra endpoints with abnormal request volume, odd user agents, or repeated 4xx/5xx preceding success; EDR on mail servers for shell spawns and unexpected binaries in temp/web directories.\n- **Linux privesc follow-through (T1068 Exploitation for Privilege Escalation):** Linux auditd/EDR for unusual compilation/tooling (`gcc`, `make`), creation of SUID binaries, capability changes (`setcap`), and unexpected root shells shortly after a low-priv session starts.\n- **Edge/VPN appliance focus (NetScaler class) (T1190):** WAF/reverse-proxy/firewall logs for admin path access from new geos, sudden config export/download attempts, and repeated exploitation-style requests; monitor for new management sessions outside change windows.\n- **SQL Server abuse patterns (T1078 Valid Accounts / T1003 Credential Dumping):** Windows Security logs + SQL audit for new logins, role changes, enabling xp_cmdshell-like functionality (if applicable), or service account credential misuse; correlate with lateral movement to DB subnets.\n- **Firmware/backdoor suspicion (ZBT routers):** Network telemetry (DNS, NetFlow) for routers/branch gateways initiating unusual outbound sessions, new beacon-like periodicity, and unexpected management-plane access from user VLANs.\n- **Ransomware pre-staging via “legit tools” (T1219 Remote Access Tools):** Detect new installs/executions of remote admin tools (AnyDesk/ScreenConnect-like patterns) on servers where not approved; alert on first-seen binaries + unsigned tools in admin shares.\n\n---\n\n### Medium-term follow-ups\n- **Exposure management:** Add/refresh continuous discovery for “non-traditional” externally reachable apps (print mgmt, collaboration, low-code platforms) and enforce ownership + patch SLAs.\n- **Patch governance:** Treat **KEV-listed** items as “expedite” with documented risk acceptance if not patched; ensure compensating controls (segmentation, WAF rules, admin-plane restrictions).\n- **Hardening:** Ensure PaperCut/Zimbra (if used) follow least privilege, restrict admin interfaces, enforce allowlisting to management networks, and block direct internet exposure where possible.\n- **Router/branch supply-chain risk:** Validate branch/network device procurement and firmware integrity processes; require vendor attestations and maintain an approved hardware list.\n- **Detection engineering:** Convert today’s hunts into durable detections (PaperCut/Zimbra process trees, Linux privesc sequences, edge-device anomalous admin access) with clear tuning guidance.\n- **Third-party risk check:** Ask key vendors/outsourcers (managed print, managed email/collab, branch networking) to confirm status vs. PaperCut/Zimbra/ZBT-related issues and provide remediation timelines.",
+  "morning_call_markdown": "### Executive Summary\n- CISA KEV updates highlight **actively exploited** flaws in **ownCloud, Linux kernel, and JFrog Artifactory**—treat any exposed instances as high-risk and verify patching/mitigations now.  \n- **PaperCut NG/MF** issued a **second emergency patch** due to bypasses of initial fixes; exploitation is ongoing and commonly leads to domain-wide impact.  \n- Multiple new/high-severity disclosures with PoCs (e.g., **Gnu inetutils argument injection**, **ServiceNow max-severity**, various edge/automation platform CVEs) increase opportunistic scanning—prioritize external exposure review and rapid containment playbooks.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) CISA KEV: ownCloud (CVE-2023-49105), Linux kernel, JFrog Artifactory — confirmed exploitation**\n- What happened: CISA added **ownCloud + Linux kernel + JFrog Artifactory** vulnerabilities to **KEV**; reporting indicates ownCloud exploitation in targeted intrusion activity.\n- Why it matters operationally: These are common enterprise components; compromise can lead to **data theft, credential access, and lateral movement** (especially if Artifactory holds build secrets/tokens).\n- Recommended immediate actions for the SOC today: **Identify any internet-exposed/externally reachable instances + confirm patch levels**; **triage logs for exploit attempts and suspicious admin/API access** on these systems.\n\n**2) PaperCut NG/MF actively exploited; second emergency patch due to bypasses**\n- What happened: PaperCut released a **second emergency update** for **actively exploited** flaws after researchers found **bypass paths** to earlier fixes.\n- Why it matters operationally: PaperCut compromises have historically led to **rapid privilege escalation and ransomware staging** in Windows-heavy estates.\n- Recommended immediate actions for the SOC today: **Confirm all PaperCut servers are on the latest emergency build** (not just “patched once”); **isolate/limit admin interfaces to management networks and hunt for post-exploitation** on print/app servers.\n\n**3) ServiceNow “maximum severity” patch set (3 flaws) — enterprise data at risk**\n- What happened: ServiceNow published patches for **three maximum severity** issues (code/SQL injection class vulnerabilities per reporting).\n- Why it matters operationally: ServiceNow often holds **sensitive tickets, CMDB, credentials/notes, workflow automations**; exploitation could enable **data exfiltration or workflow abuse** in a high-trust SaaS.\n- Recommended immediate actions for the SOC today: **Validate your ServiceNow instance patch status / hotfix cadence with platform owners**; **review recent privileged changes, scripted components, and abnormal API usage** (assumption: attacker would target admins/integration users).\n\n**4) Public PoC/exploit releases for high-severity RCE classes (opportunistic scanning risk)**\n- What happened: New PoCs surfaced (e.g., **Gnu inetutils argument injection CVE-2026-24061**, plus additional PoC/tooling posts for older-but-abused RCEs).\n- Why it matters operationally: PoC availability drives **mass scanning and quick-hit compromises**, especially on **legacy Linux utilities, edge services, and dev tooling**.\n- Recommended immediate actions for the SOC today: **Increase internet-edge exploit scanning detection and block obvious exploit patterns at WAF/IDS where possible**; **prioritize exposure checks for affected services** (especially anything externally reachable).\n\n---\n\n### Monitoring & detection recommendations\n- **KEV/ownCloud & similar web-app exploitation:** WAF/Reverse proxy + web server logs; look for unusual requests to **ownCloud endpoints**, spikes in 4xx/5xx, and new admin sessions; map to **T1190 (Exploit Public-Facing Application)**.\n- **JFrog Artifactory abuse (secrets risk):** Artifactory audit logs + IAM logs; hunt for **new/accessed API tokens**, unusual repository downloads, new users/perms; map to **T1552 (Unsecured Credentials)** and **T1078 (Valid Accounts)**.\n- **Linux kernel exploitation follow-on behavior:** EDR + syslog/auditd; hunt for **unexpected privilege escalation**, new kernel modules, suspicious `sudo`/setuid activity; map to **T1068 (Privilege Escalation)**.\n- **PaperCut post-exploitation:** Windows EDR + PaperCut app logs + AD logs; hunt for **new services/scheduled tasks**, `cmd/powershell` spawned by PaperCut services, and abnormal authentication from the PaperCut host; map to **T1059 (Command and Scripting Interpreter)**, **T1543 (Create/Modify System Process)**.\n- **ServiceNow attack surface:** ServiceNow security/audit logs + IdP (SAML/OIDC) logs; monitor **new integration users, API token creation, suspicious scripted changes**, abnormal source geos; map to **T1562.001 (Impair Defenses)** (workflow tampering) and **T1078**.\n- **Email-delivered malware (HOOKEDGE-like macro lures):** Email gateway + M365/Google Workspace + EDR; detect **macro-enabled doc delivery**, Mark-of-the-Web bypass attempts, and child processes from Office (Word → PowerShell); map to **T1566 (Phishing)**, **T1204 (User Execution)**.\n- **Browser RCE patch awareness (Edge CVEs):** Endpoint patch telemetry + EDR; monitor for **outdated Edge versions** on privileged/admin workstations and unusual browser child processes (Edge → cmd/pwsh); map to **T1203 (Exploitation for Client Execution)**.\n\n---\n\n### Medium-term follow-ups\n- **Asset/exposure hygiene:** Re-run external attack surface inventory for **file sharing (ownCloud), dev tooling (Artifactory/Git services), and print management**; ensure only required services are internet-facing.\n- **Patch governance:** Add today’s KEV items + PaperCut emergency update into **“48-hour patch SLA”** queues; track exceptions with compensating controls (WAF, network ACLs).\n- **ServiceNow hardening:** Review **least-privilege** for integration accounts, rotate API tokens, and enforce **MFA/conditional access** for admins; confirm logging retention sufficient for investigations.\n- **Credential & secret handling:** If Artifactory or similar repos exist, perform a **targeted secret review** (tokens in build configs, CI variables) and ensure rapid revocation capability.\n- **Ransomware readiness:** Given continued ransomware pressure (incl. “AI-assisted” victim data mining claims), validate **exfil detection**, DLP alerts, and **IR playbooks** for data-theft-first extortion.\n- **Awareness/controls for macro lures:** Tighten Office macro policies where possible and refresh user comms for **“enable content/macros”** prompts; confirm EDR rules for Office child-process blocking on high-risk groups.",
   "highlights": [
     {
-      "title": "PaperCut Zero-Day: Active Exploitation and Pre-Auth RCE",
-      "link": "https://www.huntress.com/blog/papercut-actively-exploited",
-      "source": "Huntress Blog",
-      "published": "2026-08-28T03:00:00+00:00",
+      "title": "U.S. CISA adds ownCloud, Linux Kernel, and JFrog Artifactory flaws to its Known Exploited Vulnerabilities catalog",
+      "link": "https://securityaffairs.com/198014/hacking/u-s-cisa-adds-owncloud-linux-kernel-and-jfrog-artifactory-flaws-to-its-known-exploited-vulnerabilities-catalog.html",
+      "source": "Security Affairs",
+      "published": "2026-08-28T13:54:50+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
+        "Linux / Unix",
+        "Cloud / SaaS",
         "Exploit / PoC",
-        "Vendors / Product Security"
+        "General Security"
       ],
       "curated": true,
       "signal_tier": "critical",
-      "signal_score": 100.0,
-      "priority_score": 85.96
+      "signal_score": 83.07,
+      "priority_score": 85.36
     },
     {
-      "title": "PaperCut NG/MF Critical Zero-Day Exploited in the Wild",
-      "link": "https://www.rapid7.com/blog/post/etr-papercut-ng-mf-critical-zero-day-exploited-in-the-wild",
-      "source": "Rapid7 Blog",
-      "published": "2026-08-28T10:09:12+00:00",
+      "title": "ownCloud Flaw Exploited to Steal Nuclear Records From Philippine Research Body",
+      "link": "https://thehackernews.com/2026/08/snowflake-github-actions-flaw-lets.html",
+      "source": "The Hacker News",
+      "published": "2026-08-28T15:56:55+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC",
-        "Identity / Access",
-        "Network / OT / ICS",
-        "Ransomware",
-        "Vendors / Product Security"
+        "Threat Actors / APT",
+        "General Security"
       ],
-      "curated": true,
+      "curated": false,
       "signal_tier": "critical",
-      "signal_score": 93.07,
-      "priority_score": 89.36
+      "signal_score": 78.77,
+      "priority_score": 74.8
     },
     {
-      "title": "Zimbra Vulnerability Allowing Unauthenticated OS Command Execution: CVE-2026-73570 and External Exposure Analysis",
-      "link": "https://blog.criminalip.io/2026/08/28/zimbra/",
-      "source": "CIP Blog",
-      "published": "2026-08-28T00:00:00+00:00",
+      "title": "PaperCut releases second emergency patch for exploited flaws",
+      "link": "https://www.bleepingcomputer.com/news/security/papercut-releases-second-emergency-patch-for-exploited-flaws/",
+      "source": "BleepingComputer",
+      "published": "2026-08-28T19:08:26+00:00",
+      "smart_groups": [
+        "Cloud / SaaS",
+        "Exploit / PoC",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 76.04,
+      "priority_score": 81.32
+    },
+    {
+      "title": "Exploit for Argument Injection in Gnu Inetutils",
+      "link": "https://sploitus.com/exploit?id=DAE6869B-8E41-52CA-B337-1EEBDA7A294B&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-08-28T20:14:45+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC"
       ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 87.04,
-      "priority_score": 86.29
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 66.27,
+      "priority_score": 71.96
     },
     {
-      "title": "CISA Warns of Linux Kernel Privilege Escalation Vulnerability Exploited in Attacks",
-      "link": "https://cybersecuritynews.com/linux-kernel-privilege-escalation-vulnerability-exploited/",
+      "title": "In Other News: Log4j RCE Scare, Minimus Shutdown, Iranian Hacker Sanctions",
+      "link": "https://www.securityweek.com/in-other-news-log4j-rce-scare-minimus-shutdown-iranian-hacker-sanctions/",
+      "source": "SecurityWeek",
+      "published": "2026-08-28T15:35:34+00:00",
+      "smart_groups": [
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 64.04,
+      "priority_score": 80.36
+    },
+    {
+      "title": "CVE-2026-23744-PoC",
+      "link": "https://vulners.com/kitploit/KITPLOIT:TOOLS-GITHUB-MRR0B0T19-CVE-2026-23744-POC?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-08-28T12:49:20+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Crypto / Web3",
+        "Ransomware"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 62.3,
+      "priority_score": 71.2
+    },
+    {
+      "title": "android712-blueborne",
+      "link": "https://vulners.com/kitploit/KITPLOIT:TOOLS-GITHUB-X3ERO0-ANDROID712-BLUEBORNE?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-08-28T12:44:44+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Identity / Access",
+        "Mobile Security"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 62.3,
+      "priority_score": 71.18
+    },
+    {
+      "title": "Ransomware Gang Claims AI Can Analyze 700GB of Stolen Data Every Hour",
+      "link": "https://cybersecuritynews.com/ransomware-gang-claims-ai/",
       "source": "Cyber Security News (FeedBurner)",
-      "published": "2026-08-28T06:41:27+00:00",
+      "published": "2026-08-28T15:04:48+00:00",
+      "smart_groups": [
+        "Ransomware",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 62.09,
+      "priority_score": 80.45
+    },
+    {
+      "title": "Hermes Agent 0.18.2 < 0.19.0 MCP Catalog Supply Chain RCE via Mutable Branch ...",
+      "link": "https://cve.threatint.com/CVE/CVE-2026-82021?utm_campaign=info&utm_medium=rss&utm_source=website",
+      "source": "CVE | THREATINT - NEW",
+      "published": "2026-08-28T18:50:38+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 60.07,
+      "priority_score": 74.98
+    },
+    {
+      "title": "XZ-Utils_CVE-2024-3094",
+      "link": "https://vulners.com/kitploit/KITPLOIT:TOOLS-GITHUB-MRBUGLF-XZ-UTILS_CVE-2024-3094?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-08-28T12:45:51+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Linux / Unix",
-        "Exploit / PoC",
-        "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 83.03,
-      "priority_score": 88.11
-    },
-    {
-      "title": "China-Made ZBT Routers Ship With Two Implants Giving Unauthenticated Attackers Root Access",
-      "link": "https://thehackernews.com/2026/08/china-made-zbt-routers-ship-with-two.html",
-      "source": "The Hacker News",
-      "published": "2026-08-28T10:58:29+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Network / OT / ICS",
-        "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 78.74,
-      "priority_score": 87.73
-    },
-    {
-      "title": "PaperCut Zero-Day Under Active Attack: Emergency Patch Released",
-      "link": "https://securityaffairs.com/197980/uncategorized/papercut-zero-day-under-active-attack-emergency-patch-released.html",
-      "source": "Security Affairs",
-      "published": "2026-08-28T09:43:35+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "high",
-      "signal_score": 70.07,
-      "priority_score": 87.46
-    },
-    {
-      "title": "PaperCut Releases Emergency Patch for Exploited Zero-Day",
-      "link": "https://www.securityweek.com/papercut-releases-emergency-patch-for-exploited-zero-day/",
-      "source": "SecurityWeek",
-      "published": "2026-08-28T08:40:36+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "high",
-      "signal_score": 70.05,
-      "priority_score": 87.05
-    },
-    {
-      "title": "SANS Stormcast Friday, August 28th, 2026: Broken Polymorphic Phishing; Router Implants; llms.txt exploits; Papercut 0-Day",
-      "link": "https://isc.sans.edu/podcastdetail/10072",
-      "source": "SANS Internet Stormcenter Daily Cyber Security Podcast (Stormcast)",
-      "published": "2026-08-28T02:00:02+00:00",
-      "smart_groups": [
-        "Exploit / PoC",
-        "Phishing / Social Engineering",
-        "Community / Briefing"
+        "Malware / Payloads"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 70.04,
-      "priority_score": 71.02
-    },
-    {
-      "title": "Print management outfit PaperCut is under 0-day attack, and it’s drawing customers’ blood",
-      "link": "https://www.theregister.com/security/2026/08/28/print-management-outfit-papercut-is-under-0-day-attack-and-its-drawing-customers-blood/5293168",
-      "source": "The Register - Security",
-      "published": "2026-08-28T05:29:53+00:00",
-      "smart_groups": [
-        "General Security"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 69.76,
-      "priority_score": 66.8
-    },
-    {
-      "title": "PaperCut Zero-Day Exploited in Attacks, Affecting All NG and MF Versions",
-      "link": "https://thehackernews.com/2026/08/papercut-zero-day-exploited-in-attacks.html",
-      "source": "The Hacker News",
-      "published": "2026-08-28T08:25:36+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "high",
-      "signal_score": 69.74,
-      "priority_score": 86.54
+      "signal_score": 56.3,
+      "priority_score": 71.18
     }
   ]
 }
