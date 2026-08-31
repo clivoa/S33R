@@ -1,0 +1,162 @@
+{
+  "generated_at": "2026-08-30T11:55:23.594047+00:00",
+  "analysis_date": "2026-08-30",
+  "provider": "openai",
+  "model": "gpt-5.2",
+  "window_hours": 24,
+  "source_file": "data/news_recent.json",
+  "source_generated_at": "2026-08-30T08:09:51.142959+00:00",
+  "source_days_back": 30,
+  "source_total_items": 58257,
+  "total_items_in_window_all": 1195,
+  "total_items_in_window_curated": 4,
+  "total_items_in_window_selected": 40,
+  "context_selection_policy": "curated-plus-operational-signal-v1",
+  "morning_call_markdown": "### Executive Summary\n- Multiple **public PoCs for critical RCE/auth-bypass CVEs** surfaced (notably **VMware vCenter CVE-2021-21972** and several high-CVSS items), increasing the likelihood of **opportunistic scanning/exploitation**.\n- New **identity/authentication weaknesses** reported (SAML/OIDC libs and WordPress SSO plugin) that can enable **impersonation, auth bypass, or forced logout**, impacting SSO-integrated apps.\n- A new **critical mail-stack RCE** is flagged (**Open-Xchange Dovecot Pro/CE CVE-2026-40018**)—treat as high risk if we run these components internet-facing.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) VMware vCenter pre-auth RCE PoC (CVE-2021-21972)**\n- **What happened:** A fresh, widely-circulated **PoC exploit** for **vCenter 6.5/7.0 RCE** is being promoted.\n- **Why it matters operationally:** vCenter compromise is a common pivot to **hypervisor control, credential access, and ransomware staging** in enterprise environments.\n- **Recommended immediate actions for the SOC today:** Validate vCenter exposure/versions and patch level; hunt for **sudden vCenter service process spawns / webshell-like behavior** and **new admin accounts** on vCenter.\n\n**2) Mail infrastructure risk: Open-Xchange Dovecot RCE (CVE-2026-40018)**\n- **What happened:** **Critical RCE** disclosed affecting **Open-Xchange Dovecot Pro / Dovecot CE** (no exploit noted yet).\n- **Why it matters operationally:** Email components are high-value; RCE can lead to **mailbox access, credential theft, and internal lateral movement**.\n- **Recommended immediate actions for the SOC today:** Confirm whether any Dovecot/Open‑Xchange instances exist and are externally reachable; add temporary **WAF/IPS signatures/blocks where possible** and monitor for **abnormal IMAP/POP auth patterns** and unexpected service restarts.\n\n**3) Identity/auth bypass & token validation issues (SAML/OIDC ecosystem)**\n- **What happened:** Multiple high-signal identity issues: **WordPress SAML SSO plugin auth bypass (CVE-2026-75807)**, **erlef oidcc OIDC impersonation (CVE-2026-75759)**, and **pac4j** authz/logout validation weaknesses (CVE-2026-82463 / CVE-2026-82465).\n- **Why it matters operationally:** These can enable **account impersonation (T1078)**, session disruption, and access to SSO-protected apps—especially risky where these libs are embedded in internal services.\n- **Recommended immediate actions for the SOC today:** Identify apps using **pac4j-saml / erlef oidcc** and any public-facing WordPress SSO usage; monitor IdP/SP logs for **anomalous assertion usage, certificate changes, unexpected logout storms**, and **new sessions for privileged users**.\n\n**4) “Patch-gap” exploitation pressure: older but commonly abused RCEs resurfacing**\n- **What happened:** New/recirculated exploit content for well-known RCEs (e.g., **Apache HTTPD path traversal/RCE CVE-2021-41773**, **F5 BIG-IP CVE-2022-1388**, **Atlassian Confluence CVE-2022-26134**, **Laravel debug RCE CVE-2021-3129**) and new high-CVSS PoCs (CVE-2026-1357; plus curated PoCs like CVE-2022-34718, CVE-2025-30065/59528).\n- **Why it matters operationally:** Expect **internet-wide scanning**; these vulnerabilities frequently appear in **initial access** leading to ransomware and data theft.\n- **Recommended immediate actions for the SOC today:** Ensure perimeter detection for **web exploit scanning** (URI traversal patterns, suspicious headers, exploit endpoints); verify external attack surface for any affected products and prioritize patching/mitigations where present.\n\n---\n\n### Monitoring & detection recommendations\n- **Perimeter web exploit scanning (T1190):** WAF/reverse proxy + web server logs—alert on **path traversal strings** (`/.%2e/` patterns), **unexpected POSTs to admin/debug endpoints**, spikes in 404s across many paths (themes: CVE-2021-41773, Laravel/Confluence).\n- **vCenter compromise indicators (T1190, T1059):** vCenter/ESXi logs + EDR on vCenter appliances—watch for **new processes from web services**, **unexpected shell/command execution**, and **creation of new vCenter users/roles** (theme: CVE-2021-21972).\n- **Email stack anomalies (T1190, T1505):** Mail server auth logs (IMAP/POP/SMTP), systemd/journald—flag **repeated auth failures from diverse sources**, **unexpected daemon restarts**, and **new binaries or scripts** under mail service directories (theme: Dovecot/Open‑Xchange RCE).\n- **SSO integrity monitoring (T1078):** IdP logs (Azure AD/ADFS/Okta) + app SP logs—alert on **new sessions for privileged users from new geos/ASN**, **sudden changes to SAML cert/config**, and **logout request volume spikes** (themes: CVE-2026-75807, CVE-2026-82465, CVE-2026-75759).\n- **WordPress-focused exploitation (T1190):** Web logs for WordPress sites—monitor calls to **`wp-admin/admin-ajax.php`**, plugin-specific endpoints, and unusual payload sizes/parameters (themes: multiple WP plugin auth bypass/XSS/priv-esc CVEs).\n- **Container/runtime escape attempts (T1611/T1610 as applicable):** Kubernetes audit + container runtime logs—look for **unexpected mounts/symlink activity** and privilege boundary violations (theme: runc CVE-2025-31133 mention/PoC context).\n- **Credential access + persistence post-exploit (T1003, T1543):** EDR + Windows Event Logs—watch for **LSASS access**, new services/scheduled tasks, and local admin additions following any perimeter exploit alert burst (cross-cutting theme: initial access via public-facing RCE).\n\n---\n\n### Medium-term follow-ups\n- **Asset/app dependency mapping for SSO libraries:** Build/refresh inventory of services embedding **pac4j-saml, erlef oidcc**, and other SAML/OIDC components; ensure owners can patch quickly when releases drop.\n- **External attack surface review:** Re-validate that legacy high-risk services (older **Apache, Confluence, F5 BIG-IP, Laravel debug**) are not internet-exposed; enforce “no debug in prod” checks.\n- **Mail environment hardening:** If Dovecot/Open‑Xchange exists, confirm **segmentation**, restrict admin interfaces, and ensure **EDR/telemetry coverage** on mail hosts.\n- **WordPress governance:** If any business unit runs WordPress, enforce **plugin allowlisting**, automatic updates, and restrict access to **admin and AJAX endpoints** where feasible.\n- **Exploit/Patch SLAs:** Given multiple PoCs circulating, re-confirm patch SLAs for **internet-facing systems** and ensure emergency change path is available this week.\n- **Detection content tuning:** Add/validate SIEM rules for **SAML/OIDC anomalies** (unexpected cert changes, unsigned logout patterns) and **vCenter web-process execution**; run tabletop for “vCenter initial access” response.",
+  "highlights": [
+    {
+      "title": "cve-2019-1458_POC",
+      "link": "https://vulners.com/kitploit/KITPLOIT:TOOLS-GITHUB-PIOTRFLORCZYK-CVE-2019-1458_POC?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-08-29T20:38:01+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Cloud / SaaS",
+        "Exploit / PoC",
+        "Linux / Unix"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 70.32,
+      "priority_score": 73.38
+    },
+    {
+      "title": "Exploit for CVE-2026-1357",
+      "link": "https://sploitus.com/exploit?id=2A60DAEE-BB8B-5330-8F43-785913A667A8&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-08-29T19:38:29+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.35,
+      "priority_score": 71.63
+    },
+    {
+      "title": "cve-2021-41773",
+      "link": "https://vulners.com/kitploit/KITPLOIT:TOOLS-GITHUB-VULNMACHINES-CVE-2021-41773?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-08-30T05:44:12+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 64.32,
+      "priority_score": 75.31
+    },
+    {
+      "title": "CVE-2026-40018 | Open-Xchange Dovecot Pro/Dovecot CE Remote Code Execution (Nessus ID 341528 / WID-SEC-2026-3076)",
+      "link": "https://vuldb.com/vuln/396680",
+      "source": "VulDB Updates",
+      "published": "2026-08-30T04:24:11+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 63.32,
+      "priority_score": 80.43
+    },
+    {
+      "title": "CVE-2022-34718-PoC exploit",
+      "link": "https://sploitus.com/exploit?id=KITPLOIT:TOOLS-GITHUB-SECLABRESEARCHBV-CVE-2022-34718-POC&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-08-29T23:49:50+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 62.35,
+      "priority_score": 82.75
+    },
+    {
+      "title": "CVE-2021-21972-vCenter-6.5-7.0-RCE-POC exploit",
+      "link": "https://sploitus.com/exploit?id=KITPLOIT:TOOLS-GITHUB-QMF0C3UK-CVE-2021-21972-VCENTER-6.5-7.0-RCE-POC&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-08-29T17:55:19+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 62.35,
+      "priority_score": 82.25
+    },
+    {
+      "title": "CVE-2025-59528-PoC exploit",
+      "link": "https://sploitus.com/exploit?id=KITPLOIT:TOOLS-GITHUB-MANANISPIWPIW-CVE-2025-59528-POC&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-08-29T16:12:12+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 62.35,
+      "priority_score": 80.71
+    },
+    {
+      "title": "CVE-2025-30065-PoC exploit",
+      "link": "https://sploitus.com/exploit?id=KITPLOIT:TOOLS-GITHUB-RON-IMPERVA-CVE-2025-30065-POC&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-08-29T16:10:20+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 62.35,
+      "priority_score": 80.7
+    },
+    {
+      "title": "CVE-2021-21972-vCenter-6.5-7.0-RCE-POC",
+      "link": "https://vulners.com/kitploit/KITPLOIT:TOOLS-GITHUB-QMF0C3UK-CVE-2021-21972-VCENTER-6.5-7.0-RCE-POC?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-08-29T17:55:19+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 62.32,
+      "priority_score": 72.14
+    },
+    {
+      "title": "CVE-2020-17103",
+      "link": "https://vulners.com/kitploit/KITPLOIT:TOOLS-GITHUB-0XBLACKASH-CVE-2020-17103?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-08-29T17:52:04+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Detection Engineering",
+        "Exploit / PoC",
+        "Identity / Access",
+        "Linux / Unix",
+        "Windows / Microsoft"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 56.32,
+      "priority_score": 72.64
+    }
+  ]
+}
