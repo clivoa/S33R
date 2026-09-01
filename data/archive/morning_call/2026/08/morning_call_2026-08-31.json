@@ -1,0 +1,182 @@
+{
+  "generated_at": "2026-08-31T13:43:49.477803+00:00",
+  "analysis_date": "2026-08-31",
+  "provider": "openai",
+  "model": "gpt-5.2",
+  "window_hours": 24,
+  "source_file": "data/news_recent.json",
+  "source_generated_at": "2026-08-31T11:33:42.548216+00:00",
+  "source_days_back": 30,
+  "source_total_items": 58630,
+  "total_items_in_window_all": 1673,
+  "total_items_in_window_curated": 7,
+  "total_items_in_window_selected": 40,
+  "context_selection_policy": "curated-plus-operational-signal-v1",
+  "morning_call_markdown": "### Executive Summary\n- Active exploitation focus: PaperCut NG/MF chained vulns and at least one Microsoft zero-day are being used in the wild—prioritize exposure checks + patch/mitigation validation today.\n- User-endpoint risk spike: “ClickFix”/TerminalFix-style backdoor activity and weaponized Chrome/Edge extension supply-chain updates increase likelihood of initial access via endpoints.\n- Web app perimeter noise increasing: multiple critical WordPress plugin auth-bypass/RCE patches plus fresh public PoCs (Gitea/Chrome/other high-CVSS CVEs) raise scanning/exploitation attempts against internet-facing services.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) PaperCut NG/MF actively exploited (chained vulnerabilities; emergency patch cycle)**\n- What happened: PaperCut released a second emergency patch; flaws tracked as CVE-2026-82078 and CVE-2026-81578 are reported exploited in the wild.\n- Why it matters operationally: PaperCut is often internet-exposed and commonly leads to rapid server compromise → credential theft, lateral movement, and ransomware staging.\n- Recommended immediate actions for the SOC today: Confirm inventory/exposure (internet-facing + internal admin interfaces) and patch status; hunt for post-exploitation on PaperCut hosts (new admin users/services, unexpected outbound connections), isolate any suspicious hosts.\n\n**2) Microsoft Patch Tuesday scale + one zero-day in active exploitation**\n- What happened: Microsoft shipped ~398 fixes, including a zero-day reported as actively exploited (details not fully provided in the feed).\n- Why it matters operationally: Patch volume + active exploitation drives opportunistic scanning; Windows endpoint/server compromise remains the #1 pathway to domain-wide impact in financial environments.\n- Recommended immediate actions for the SOC today: Coordinate with vuln mgmt to fast-track patching of exploited/critical items (prioritize externally reachable services and Tier-0 adjacent systems); monitor for exploit-like behavior on unpatched systems (new scheduled tasks/services, LSASS access attempts) and escalate quickly.\n\n**3) TerminalFix “ClickFix” variant hijacking Windows Terminal → reverse-tunnel backdoor**\n- What happened: A new TerminalFix backdoor technique abuses a ClickFix-like infection flow to hijack Windows Terminal and establish reverse-tunnel access.\n- Why it matters operationally: Reverse tunnels bypass inbound controls and can enable stealthy remote control, data staging, and lateral movement from a single user click.\n- Recommended immediate actions for the SOC today: Hunt on endpoints for unusual Windows Terminal execution chains and anomalous tunneling tools/behaviors; tighten/verify EDR blocking for script-driven payload drops and suspicious child processes from terminal hosts.\n\n**4) Browser extension supply-chain: previously trusted Chrome/Edge extensions weaponized**\n- What happened: Attackers acquired legitimate extensions and pushed malicious updates impacting 19 Chrome/Edge extensions (per Socket reporting).\n- Why it matters operationally: Extensions can steal session tokens, manipulate web traffic, and exfiltrate data—high risk for finance users accessing SaaS, email, and internal web apps.\n- Recommended immediate actions for the SOC today: Use browser management tooling to review installed extensions enterprise-wide and block/allowlist where possible; watch for suspicious browser-to-external traffic spikes and token/session anomalies, and triage any users reporting new prompts/redirects.\n\n**5) Internet-facing app vuln exploitation pressure: WordPress plugin criticals + public PoCs (Gitea/Chrome/others)**\n- What happened: Multiple WordPress plugins (WPMU DEV, Avada, TranslatePress, Pods, GiveWP) received patches for critical auth bypass/RCE; public PoCs surfaced for several high-severity CVEs including Gitea RCE (CVE-2026-60004) and a Chrome type confusion (CVE-2026-78904).\n- Why it matters operationally: Even if not actively exploited yet, public PoC availability typically triggers mass scanning and rapid compromise of exposed services/dev tooling.\n- Recommended immediate actions for the SOC today: Validate WAF/IDS coverage and scan results for WordPress/Gitea exposures; enforce rapid patching/mitigation on any internet-facing WordPress/Gitea and ensure admin interfaces are not exposed (or are behind VPN/SSO with MFA).\n\n---\n\n### Monitoring & detection recommendations\n- **PaperCut exploitation/post-exploitation**: Monitor PaperCut app/server logs + Windows/Linux auth logs + EDR for new admin accounts, service installs, webshell-like file writes, and unusual outbound from PaperCut hosts (ATT&CK: T1190, T1505).\n- **Windows zero-day/patch gap hunting**: From EDR + Sysmon (if available), alert on new scheduled tasks/services (T1053.005/T1543.003), suspicious PowerShell/wscript/mshta chains (T1059), and credential access behaviors (LSASS access attempts; T1003).\n- **TerminalFix / reverse tunneling**: On EDR + proxy/DNS, hunt for “living-off-the-land” staging followed by long-lived outbound sessions to rare domains/IPs, unusual ports, or tunneling patterns (T1572, T1090); flag Windows Terminal spawning script engines or unknown binaries.\n- **Malicious browser extension behavior**: Use proxy/SWG + browser telemetry/MDM + EDR to detect new/rare extension IDs, unusual browser network beacons, and credential/token replay symptoms in IdP logs (T1550).\n- **WordPress plugin exploit attempts**: WAF/web logs: spikes in requests to plugin-specific endpoints, auth-bypass patterns, abnormal POSTs, and creation of new PHP files in web roots; correlate with EDR file integrity events on web servers (T1190, T1505.003).\n- **Gitea RCE scanning**: Reverse proxy/app logs for unusual Git hook / diff/patch related requests and sudden process execution on the Gitea host; monitor outbound from CI/dev servers (common pivot points).\n- **Malvertising-driven malware distribution (general)**: Endpoint + DNS/proxy: look for new infections originating from browser ad chains, drive-by downloads, and new persistence shortly after web browsing sessions (T1189, T1547).\n\n---\n\n### Medium-term follow-ups\n- **Patch governance**: Given the “398 Microsoft fixes” volume, align with IT to ensure exploited/critical patches are deployed first, with clear SLAs for Tier-0 systems and internet-facing servers.\n- **PaperCut hardening**: Reduce exposure (admin UI behind VPN/SSO), validate MFA where supported, and add compensating controls (WAF rules, EDR server policies) for print management servers.\n- **Browser extension controls**: Implement/expand enterprise allowlisting, forced extension review, and automated revocation workflows when publishers/ownership changes are detected (assumption: browser management available via Intune/GPO).\n- **Web platform hygiene**: Enforce continuous external attack surface monitoring for WordPress/Gitea and standardize rapid plugin update processes; ensure backups and restore tests for web properties.\n- **User tradecraft awareness**: Refresh comms on ClickFix-style “copy/paste to fix” lures and fake recruiter/job-offer malware themes (noting Lazarus reporting); route reports to SOC with a simple intake path.\n- **Threat hunting playbooks**: Add a standing hunt for reverse-tunnel behaviors and “trusted software turned malicious” supply-chain signals (extensions, auto-updaters), focusing on high-privilege users and trading/treasury endpoints.",
+  "highlights": [
+    {
+      "title": "TerminalFix backdoor, WordPress plugin RCEs, PaperCut chain exploit; Microsoft patches 398 vulns",
+      "link": "https://defend.network/briefings/terminalfix-wordpress-papercut-microsoft-rce-2026-08-31.html",
+      "source": "defend.network",
+      "published": "2026-08-31T06:30:00+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Cloud / SaaS",
+        "Exploit / PoC",
+        "Malware / Payloads",
+        "Web / API Security",
+        "Windows / Microsoft",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 100.0,
+      "priority_score": 88.23
+    },
+    {
+      "title": "Trusted Chrome, Edge extensions weaponized in supply chain campaign",
+      "link": "https://www.csoonline.com/article/4215792/trusted-chrome-edge-extensions-weaponized-in-supply-chain-campaign.html",
+      "source": "CSO Online",
+      "published": "2026-08-31T09:46:01+00:00",
+      "smart_groups": [
+        "Threat Actors / APT",
+        "Data Protection / Privacy",
+        "Detection Engineering",
+        "Cloud / SaaS",
+        "Crypto / Web3",
+        "Exploit / PoC",
+        "Linux / Unix",
+        "Malware / Payloads",
+        "Ransomware",
+        "Supply Chain / Software",
+        "Mobile Security",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 100.0,
+      "priority_score": 85.52
+    },
+    {
+      "title": "Lazarus Exploited a Windows Zero-Day: Inside CVE-2026-68820 and AFD.sys",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1w2vst6/lazarus_exploited_a_windows_zeroday_inside/",
+      "source": "/r/cybersecurity",
+      "published": "2026-08-30T22:43:55+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Malware / Payloads",
+        "Detection Engineering",
+        "Exploit / PoC",
+        "Threat Actors / APT",
+        "Windows / Microsoft",
+        "OSINT / Community"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 74.84,
+      "priority_score": 85.74
+    },
+    {
+      "title": "Cybercriminals’ Weaponized Ad Networks: How They Exploit for Malware Distribution",
+      "link": "https://www.news4hackers.com/cybercriminals-weaponized-ad-networks-how-they-exploit-for-malware-distribution/",
+      "source": "News4Hackers",
+      "published": "2026-08-30T17:06:55+00:00",
+      "smart_groups": [
+        "Exploit / PoC",
+        "Threat Actors / APT",
+        "Malware / Payloads",
+        "Network / OT / ICS",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 72.15,
+      "priority_score": 83.44
+    },
+    {
+      "title": "Exploit for CVE-2026-18963",
+      "link": "https://sploitus.com/exploit?id=08CE2F6C-5548-5FF0-BDF8-4DF00322D89F&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-08-31T00:59:48+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 70.38,
+      "priority_score": 72.29
+    },
+    {
+      "title": "Exploit for CVE-2026-18963",
+      "link": "https://sploitus.com/exploit?id=6BA66D15-4D58-52B5-99B1-5E48A1880BB9&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-08-31T00:59:48+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 70.38,
+      "priority_score": 72.29
+    },
+    {
+      "title": "Exploit for CVE-2026-56121",
+      "link": "https://sploitus.com/exploit?id=84AD9049-C94A-5135-9932-B151026A60B1&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-08-30T20:51:53+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.38,
+      "priority_score": 71.19
+    },
+    {
+      "title": "Exploit for SQL Injection in Wordpress",
+      "link": "https://sploitus.com/exploit?id=7F70FE80-6744-5D99-A8A3-68D6ED530992&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-08-30T15:56:18+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Web / API Security"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.38,
+      "priority_score": 69.87
+    },
+    {
+      "title": "Exploit for CVE-2026-48611",
+      "link": "https://sploitus.com/exploit?id=73D790FA-1413-5E4C-A008-7FFE6E2DCE29&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-08-30T15:35:30+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.38,
+      "priority_score": 69.78
+    },
+    {
+      "title": "Exploit for Type Confusion in Google Chrome",
+      "link": "https://sploitus.com/exploit?id=DC1CC02F-589C-5B5A-ACE3-627027E0C631&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-08-30T21:57:18+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 66.38,
+      "priority_score": 71.48
+    }
+  ]
+}
