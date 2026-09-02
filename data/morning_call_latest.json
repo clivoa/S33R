@@ -1,55 +1,24 @@
 {
-  "generated_at": "2026-09-01T11:41:06.423158+00:00",
-  "analysis_date": "2026-09-01",
+  "generated_at": "2026-09-02T11:16:25.064311+00:00",
+  "analysis_date": "2026-09-02",
   "provider": "openai",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-09-01T09:26:04.956513+00:00",
+  "source_generated_at": "2026-09-02T08:40:24.246386+00:00",
   "source_days_back": 30,
-  "source_total_items": 56570,
-  "total_items_in_window_all": 2231,
-  "total_items_in_window_curated": 11,
+  "source_total_items": 57475,
+  "total_items_in_window_all": 2925,
+  "total_items_in_window_curated": 7,
   "total_items_in_window_selected": 40,
   "context_selection_policy": "curated-plus-operational-signal-v1",
-  "morning_call_markdown": "### Executive Summary\n- **PaperCut NG/MF vulnerabilities are now in CISA KEV with reports of active intrusions/data theft**—treat any exposed PaperCut as potentially compromised until proven otherwise.\n- **Multiple “edge/perimeter” and high-impact PoCs surfaced (FortiOS auth bypass, PAN-OS GlobalProtect RCE, NetScaler auth bypass)**—prioritize exposure validation and threat hunting on remote-access infrastructure.\n- **Credential/session theft and LPE tooling noise is rising (infostealers targeting SaaS/AI sessions; new Windows LPE PoC + unverified Kaspersky EPP LPE claim)**—tighten token/session monitoring and watch for post-exploitation escalation.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) PaperCut NG/MF — KEV + active exploitation/intrusions**\n- **What happened:** CISA added **PaperCut NG/MF** flaws (reported as CVE-2026-81578 and CVE-2026-82078) to **KEV**; multiple sources report exploitation escalating to intrusions/data theft.\n- **Why it matters operationally:** PaperCut often runs on Windows servers with broad AD reach; exploitation commonly becomes a fast path to **domain foothold + lateral movement** in enterprise networks.\n- **Recommended immediate actions for the SOC today:** Validate if **any PaperCut is internet-reachable**; prioritize patch/mitigation + isolate if uncertain; start compromise checks (new admin accounts/services, suspicious child processes from PaperCut services, unusual outbound from PaperCut host).\n\n**2) Perimeter access stack risk — FortiOS auth bypass PoC + PAN-OS GlobalProtect RCE PoC + NetScaler auth bypass analysis**\n- **What happened:** Public PoCs/analysis circulated for **FortiOS auth bypass (CVE-2024-55591)**, **PAN-OS GlobalProtect command injection/RCE (CVE-2024-3400)**, and **NetScaler ADC/Gateway auth bypass (CVE-2026-19490)**.\n- **Why it matters operationally:** These are commonly internet-facing appliances; successful exploitation can lead to **credential theft, config tampering, VPN session abuse, and rapid ransomware staging**.\n- **Recommended immediate actions for the SOC today:** Confirm inventory/exposure (CMDB + external scan + WAF/VPN VIPs); review last 7–14 days for **anomalous admin logins/config changes**; ensure latest vendor mitigations/patches are applied and restrict management interfaces to trusted IPs.\n\n**3) Identity/Auth bypass themes — Keycloak (Red Hat) auth bypass + Pangolin auth bypass**\n- **What happened:** New disclosures include **Keycloak on Red Hat auth bypass (CVE-2026-9798)** and **Pangolin pre-1.22.0 auth bypass (CVE-2026-72001)** (no public exploit noted for Keycloak).\n- **Why it matters operationally:** Auth bypass on IdP/proxy layers can enable **unauthorized access to protected apps** and stealthy session establishment without password guessing.\n- **Recommended immediate actions for the SOC today:** Identify any **Keycloak** deployments and verify version/advisory status; add temporary detections for **unexpected auth success paths** (logins without normal factors/flows) and unusual spikes in token issuance/redirect patterns.\n\n**4) Credential/session theft uptick — infostealers targeting SaaS sessions (incl. Anthropic/Claude)**\n- **What happened:** Reporting indicates threat actors using **infostealers to steal session material** (cookies/tokens) to access accounts; broader infostealer activity noted hitting major vendors/users.\n- **Why it matters operationally:** SOC and engineering users may reuse browsers/profiles across work SaaS; stolen sessions can bypass MFA and enable **data access + persistence via API keys**.\n- **Recommended immediate actions for the SOC today:** Hunt for **impossible travel / abnormal user-agent / new device** signals in SSO/SaaS; force re-authentication and revoke sessions for suspicious accounts; remind staff not to install “helper” tools/extensions and keep EDR tamper protections enforced.\n\n---\n\n### Monitoring & detection recommendations\n- **PaperCut servers (Windows/Linux):** EDR + Windows Security logs (4688/4697/7045) for PaperCut service spawning shells/utilities; hunt for webshell-like activity and unusual outbound (MITRE **T1190**, **T1059**, **T1105**).\n- **VPN/edge appliances (Fortinet/Palo Alto/NetScaler):** VPN/firewall/admin audit logs for **new admin users**, config export, policy changes, and login anomalies; alert on management access from new geos/IPs (MITRE **T1078**, **T1562**).\n- **Web exploitation patterns:** WAF/reverse-proxy logs for spikes in 4xx/5xx, traversal/command-injection strings, and repeated requests to auth endpoints; correlate with backend process creation on the same host (MITRE **T1190**).\n- **Identity (Keycloak/SSO):** IdP logs for **unexpected auth success**, token issuance volume spikes, abnormal redirect URIs, and sessions created without typical MFA step-up (MITRE **T1556**, **T1606**).\n- **Infostealers/session theft:** EDR detections for credential access from browsers (Chrome/Edge/Firefox profile reads), suspicious archive/exfil tools, and unusual processes accessing cookie stores (MITRE **T1555**, **T1005**, **T1041**).\n- **Privilege escalation on endpoints:** Watch for exploitation chaining after initial access—new LPE PoCs (e.g., Windows kernel streaming LPE) increase risk of **rapid SYSTEM escalation**; alert on token manipulation and high-integrity process spawning from user context (MITRE **T1068**, **T1134**).\n- **Email-to-code execution (legacy but resurfacing):** Given renewed PoC chatter (e.g., Follina), keep email gateway + EDR tuned for Office spawning msdt/powershell/cmd; quarantine suspicious attachments/links (MITRE **T1204**, **T1059**).\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** Re-validate patch SLAs for **internet-facing** systems (print mgmt, VPNs, gateways, IdP); ensure KEV items trigger emergency change windows.\n- **Exposure management:** Add continuous external discovery for “shadow IT” services (e.g., PaperCut instances, admin portals) and enforce **management plane allowlisting**.\n- **Session hygiene program:** Standardize rapid response for session theft—session revocation playbooks, conditional access “new device” step-up, and API key rotation procedures.\n- **Hardening:** Ensure EDR tamper protection on all endpoints; restrict local admin rights; enforce application allowlisting for high-risk user groups (SOC/IT admins).\n- **Vendor follow-up (uncertain claims):** Track the **unverified Kaspersky Endpoint LPE** claim—assume possible until vendor confirms; ensure product is updated and monitor vendor advisories before taking disruptive action.",
+  "morning_call_markdown": "### Executive Summary\n- Active exploitation: SonicWall SMA1000 zero-days being chained for RCE — treat any exposed SMA as potentially compromised until proven otherwise.\n- Active exploitation: JFrog Artifactory auth bypass enabling attackers to “mint” admin tokens; plus Langflow/Rails exploitation for key theft/RCE — prioritize internet-facing dev tooling and AI/low-code platforms.\n- Supply-chain + infostealers: malicious PyPI package exfiltrating sensitive files and fake “Claude/AI model” lures dropping Windows stealers/RATs — tighten controls around developer endpoints and software installs.\n\n### High-priority items (immediate attention)\n**1) SonicWall SMA1000 zero-days (active exploitation, chained for RCE)**\n- What happened: SonicWall warns threat actors are actively chaining two new SMA1000 zero-day flaws for remote code execution.\n- Why it matters operationally: SMA appliances are high-value edge access points; compromise typically leads to credential theft, internal pivoting, and rapid ransomware staging.\n- Recommended immediate actions for the SOC today: Identify all SMA1000 exposure (external + internal mgmt), enable emergency mitigations/patches per vendor guidance; hunt last 7 days for anomalous admin logins/new sessions/config changes and isolate suspicious appliances.\n\n**2) JFrog Artifactory auth bypass (CVE-2026-82329) under active attack**\n- What happened: A critical Artifactory auth bypass is being actively exploited to create/admin “mint” tokens and gain administrator-level access.\n- Why it matters operationally: Compromise of artifact repos can become a supply-chain incident (trojaned builds/dependencies) and a rapid path to secrets (API keys, signing keys, CI creds).\n- Recommended immediate actions for the SOC today: Locate all Artifactory instances (esp. internet-facing), restrict access to trusted networks/VPN immediately; review audit logs for token creation, privilege changes, new users, and unusual API usage—escalate to IR if found.\n\n**3) Langflow RCE (CVE-2026-0768) + “Rails vulnerability” exploitation (telemetry indicates active campaigns)**\n- What happened: Vuln telemetry reports active exploitation against Langflow (low-code/AI workflow platform) and Ruby on Rails deployments, with follow-on secret harvesting and RCE behavior.\n- Why it matters operationally: These platforms often hold API keys (LLM, cloud, DB) and are frequently deployed quickly with weak hardening; exploitation can lead to broad credential exposure.\n- Recommended immediate actions for the SOC today: Inventory Langflow/Rails services exposed to untrusted networks; add temporary WAF/ACL blocks and rotate exposed API keys/secrets if compromise suspected.\n\n**4) Endpoint supply-chain & “fake AI app/model” malware (RevStealer / RAT campaigns)**\n- What happened: Fake “Claude Opus 5” GitHub repo distributes an infostealer; a trojanized Exodus wallet installer includes a hidden RAT; malicious PyPI package (`gcphelpit`) exfiltrates sensitive files during CLI init.\n- Why it matters operationally: Financial orgs are high-risk for credential/session theft; developer workstations are especially exposed (GitHub, PyPI, API tokens) and can become initial access for broader compromise.\n- Recommended immediate actions for the SOC today: Block unapproved installers/scripts from user-writable paths (ASR/AppLocker/WDAC where available) and alert on new Python package installs; hunt for unusual browser credential access, wallet/crypto tooling execution, and suspicious outbound connections from dev endpoints.\n\n### Monitoring & detection recommendations\n- **SonicWall SMA1000 edge monitoring (T1190 Exploit Public-Facing App):** VPN/SMA logs + firewall logs — alert on new admin sessions from unusual geo/IPs, config export/import, sudden spikes in failed logins, and post-auth access from atypical user agents.\n- **Artifactory token/admin abuse (T1550 Use Alternate Auth Material, T1098 Account Manipulation):** Artifactory audit logs + IdP logs — hunt for new API tokens, elevated privileges, new users/groups, and high-volume artifact downloads outside CI schedules.\n- **Langflow/Rails exploitation + secret theft (T1552 Unsecured Credentials):** Web server/WAF logs + application logs — look for exploit-like request patterns, unexpected endpoints, deserialization/templating errors, and subsequent outbound calls to cloud APIs from app hosts.\n- **Supply-chain package exfiltration (PyPI `gcphelpit`) (T1059 Command/Scripting, T1041 Exfiltration Over C2):** EDR + proxy/DNS — alert on `pip install`/Python execution followed by reads of SSH keys, cloud creds, `.env`, and rapid outbound connections to new domains.\n- **Infostealer/RAT via fake AI tooling (T1204 User Execution, T1003 Credential Dumping):** EDR + browser telemetry — detect suspicious access to browser credential stores, password manager DB files, and unusual child processes from installers/archives.\n- **Legacy Exchange exploit tooling resurfacing (ProxyLogon/ProxyNotShell PoCs):** Exchange/IIS logs + perimeter IDS — alert on known exploit paths and abnormal POSTs to Exchange endpoints; prioritize any Exchange server with external exposure.\n- **Network device/web admin XSS risk (HPE Fabric Composer):** Web access logs — monitor for unusual admin UI access and suspicious referrers/parameters; ensure admin portals not internet-exposed.\n\n### Medium-term follow-ups\n- Patch/harden backlog review for **edge appliances and dev tooling**: confirm SMA1000 patch/mitigation status; ensure Artifactory and CI/CD components are not directly internet-facing and use MFA/SSO where possible.\n- Implement/verify **secrets hygiene**: rotate API tokens and signing keys on any suspected Artifactory/Langflow exposure; enforce short-lived tokens and scoped permissions.\n- Tighten **developer supply-chain controls**: require internal package mirrors/allowlists for PyPI; add detection for new dependency additions in build pipelines; baseline “normal” Artifactory access patterns.\n- Improve **endpoint execution controls**: expand WDAC/AppLocker/ASR coverage to block unsigned/untrusted binaries and script execution from Downloads/Temp; review exceptions used by dev teams.\n- Validate **monitoring coverage**: ensure Artifactory audit logs, WAF logs, and VPN appliance logs are centralized and retained (minimum 30–90 days) for retro-hunts.\n- Awareness micro-brief for staff: “AI tool” and “free model/app” lures are actively used; reinforce policy for software installs and reporting suspicious repos/installers (assumption: users have GitHub access and can install tooling).",
   "highlights": [
     {
-      "title": "CVE-2023-36802-MSKSSRV-LPE",
-      "link": "https://vulners.com/kitploit/KITPLOIT:TOOLS-GITHUB-X0RB3L-CVE-2023-36802-MSKSSRV-LPE?utm_source=rss&utm_medium=rss&utm_campaign=rss",
-      "source": "Vulners.com RSS Feed",
-      "published": "2026-09-01T08:16:58+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "Linux / Unix",
-        "Windows / Microsoft"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 100.0,
-      "priority_score": 86.33
-    },
-    {
-      "title": "HardBreacher PoC Claims Kaspersky Endpoint 0-Day Privilege Escalation on Windows 11",
-      "link": "https://cybersecuritynews.com/hardbreacher-kaspersky-zero-day/",
-      "source": "Cyber Security News (FeedBurner)",
-      "published": "2026-08-31T15:16:02+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Windows / Microsoft",
-        "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 87.95,
-      "priority_score": 84.7
-    },
-    {
-      "title": "CISA Warns of Multiple PaperCut NG/MF Vulnerabilities Actively Exploited in Attacks",
-      "link": "https://cybersecuritynews.com/papercut-ng-mf-vulnerabilities-exploited/",
-      "source": "Cyber Security News (FeedBurner)",
-      "published": "2026-08-31T15:56:28+00:00",
+      "title": "SonicWall warns of actively exploited SMA1000 zero-day flaws",
+      "link": "https://www.bleepingcomputer.com/news/security/sonicwall-warns-of-actively-exploited-sma1000-zero-day-flaws/",
+      "source": "BleepingComputer",
+      "published": "2026-09-02T06:39:29+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Threat Actors / APT",
@@ -59,106 +28,141 @@
       ],
       "curated": true,
       "signal_tier": "critical",
-      "signal_score": 84.95,
-      "priority_score": 84.4
+      "signal_score": 100.0,
+      "priority_score": 89.83
     },
     {
-      "title": "U.S. CISA adds PaperCut NG/MF flaws to its Known Exploited Vulnerabilities catalog",
-      "link": "https://securityaffairs.com/198200/security/u-s-cisa-adds-papercut-ng-mf-flaws-to-its-known-exploited-vulnerabilities-catalog.html",
+      "title": "Chaotic Eclipse Releases GenDigital Avast Antivirus ZeroDay PrettyPrague",
+      "link": "https://securityaffairs.com/198243/hacking/chaotic-eclipse-releases-gendigital-avast-antivirus-zeroday-prettyprague.html",
       "source": "Security Affairs",
-      "published": "2026-09-01T08:13:38+00:00",
+      "published": "2026-09-01T14:33:00+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Cloud / SaaS",
         "Exploit / PoC",
         "General Security"
       ],
       "curated": true,
       "signal_tier": "critical",
-      "signal_score": 83.04,
-      "priority_score": 89.72
+      "signal_score": 88.08,
+      "priority_score": 85.37
     },
     {
-      "title": "CVE-2025-55182-poc",
-      "link": "https://vulners.com/kitploit/KITPLOIT:TOOLS-GITHUB-WHITEOV3RFLOW-CVE-2025-55182-POC?utm_source=rss&utm_medium=rss&utm_campaign=rss",
-      "source": "Vulners.com RSS Feed",
-      "published": "2026-09-01T08:34:39+00:00",
+      "title": "SonicWall Issues Critical Alert: SMA1000 Zero-Day Vulnerabilities Actively Exploited",
+      "link": "https://www.news4hackers.com/sonicwall-issues-critical-alert-sma1000-zero-day-vulnerabilities-actively-exploited/",
+      "source": "News4Hackers",
+      "published": "2026-09-02T08:03:24+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Exploit / PoC"
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 86.23,
+      "priority_score": 90.34
+    },
+    {
+      "title": "Hackers Actively Exploiting Critical Langflow RCE and Rails Vulnerability",
+      "link": "https://cybersecuritynews.com/langflow-rce-and-rails-vulnerability-exploited/",
+      "source": "Cyber Security News",
+      "published": "2026-09-01T13:52:27+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 83.27,
+      "priority_score": 86.34
+    },
+    {
+      "title": "JFrog Artifactory Auth Bypass Exploited in Attacks to Gain Admin Access",
+      "link": "https://cybersecuritynews.com/jfrog-artifactory-auth-bypass-exploited/",
+      "source": "Cyber Security News",
+      "published": "2026-09-01T13:06:01+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": false,
+      "signal_tier": "critical",
+      "signal_score": 83.27,
+      "priority_score": 75.93
+    },
+    {
+      "title": "JFrog Artifactory, Langflow critical flaws exploited; TeamPCP arrested",
+      "link": "https://defend.network/briefings/jfrog-langflow-teamcpp-active-exploits-2026-09-02.html",
+      "source": "defend.network",
+      "published": "2026-09-02T06:30:00+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Cloud / SaaS",
+        "Exploit / PoC",
+        "Supply Chain / Software",
+        "Mobile Security",
+        "General Security"
+      ],
+      "curated": false,
+      "signal_tier": "critical",
+      "signal_score": 83.11,
+      "priority_score": 79.32
+    },
+    {
+      "title": "Another Artifactory CVE under attack by AI agents or humans",
+      "link": "https://www.theregister.com/security/2026/09/01/another-artifactory-cve-under-attack-by-ai-agents-or-humans/5293769",
+      "source": "The Register - Security",
+      "published": "2026-09-01T21:07:13+00:00",
+      "smart_groups": [
+        "General Security"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 73.32,
-      "priority_score": 76.21
+      "signal_score": 75.65,
+      "priority_score": 65.47
     },
     {
-      "title": "Exploit for Code Injection in Langflow",
-      "link": "https://sploitus.com/exploit?id=DCF80D2B-C6A1-5090-B356-71A1B6079E90&utm_source=rss&utm_medium=rss",
+      "title": "Exploit for CVE-2026-82592",
+      "link": "https://sploitus.com/exploit?id=AE38148F-C00C-5A5C-87F5-DA9FEA8D6FD9&utm_source=rss&utm_medium=rss",
       "source": "Sploitus – Exploits",
-      "published": "2026-09-01T08:01:23+00:00",
+      "published": "2026-09-01T11:55:01+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 66.41,
-      "priority_score": 74.9
+      "signal_score": 68.36,
+      "priority_score": 69.48
     },
     {
-      "title": "fortios-auth-bypass-poc-CVE-2024-55591",
-      "link": "https://vulners.com/kitploit/KITPLOIT:TOOLS-GITHUB-SYSIRQ-FORTIOS-AUTH-BYPASS-POC-CVE-2024-55591?utm_source=rss&utm_medium=rss&utm_campaign=rss",
-      "source": "Vulners.com RSS Feed",
-      "published": "2026-09-01T08:21:01+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 66.32,
-      "priority_score": 75.73
-    },
-    {
-      "title": "CVE-2022-44877-CWP7",
-      "link": "https://vulners.com/kitploit/KITPLOIT:TOOLS-GITHUB-COLDFUSIONX-CVE-2022-44877-CWP7?utm_source=rss&utm_medium=rss&utm_campaign=rss",
-      "source": "Vulners.com RSS Feed",
-      "published": "2026-09-01T08:33:06+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 64.32,
-      "priority_score": 76.21
-    },
-    {
-      "title": "CVE-2018-14772",
-      "link": "https://vulners.com/kitploit/KITPLOIT:TOOLS-GITHUB-KILLVXK-CVE-2018-14772?utm_source=rss&utm_medium=rss&utm_campaign=rss",
-      "source": "Vulners.com RSS Feed",
-      "published": "2026-09-01T08:18:48+00:00",
+      "title": "Exploit for Argument Injection in Gnu Inetutils",
+      "link": "https://sploitus.com/exploit?id=161BBA2D-365A-5283-9A03-9BEBFCC93AED&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-09-01T20:26:43+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 64.32,
-      "priority_score": 76.14
+      "signal_score": 66.36,
+      "priority_score": 71.76
     },
     {
-      "title": "CVE-2024-3400",
-      "link": "https://vulners.com/kitploit/KITPLOIT:TOOLS-GITHUB-IHEBSKI-CVE-2024-3400?utm_source=rss&utm_medium=rss&utm_campaign=rss",
-      "source": "Vulners.com RSS Feed",
-      "published": "2026-09-01T08:21:39+00:00",
+      "title": "Exploit for Out-of-bounds Write in Fortinet Fortiproxy",
+      "link": "https://sploitus.com/exploit?id=5C790E5A-E7ED-5094-A8AD-F17E24E1851E&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-09-01T20:04:23+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 64.32,
-      "priority_score": 75.63
+      "signal_score": 66.36,
+      "priority_score": 71.66
     }
   ]
 }
