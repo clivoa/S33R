@@ -1,168 +1,179 @@
 {
-  "generated_at": "2026-09-02T11:16:25.064311+00:00",
-  "analysis_date": "2026-09-02",
+  "generated_at": "2026-09-03T11:12:49.876603+00:00",
+  "analysis_date": "2026-09-03",
   "provider": "openai",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-09-02T08:40:24.246386+00:00",
+  "source_generated_at": "2026-09-03T08:48:46.251595+00:00",
   "source_days_back": 30,
-  "source_total_items": 57475,
-  "total_items_in_window_all": 2925,
-  "total_items_in_window_curated": 7,
-  "total_items_in_window_selected": 40,
+  "source_total_items": 57606,
+  "total_items_in_window_all": 2334,
+  "total_items_in_window_curated": 14,
+  "total_items_in_window_selected": 46,
   "context_selection_policy": "curated-plus-operational-signal-v1",
-  "morning_call_markdown": "### Executive Summary\n- Active exploitation: SonicWall SMA1000 zero-days being chained for RCE — treat any exposed SMA as potentially compromised until proven otherwise.\n- Active exploitation: JFrog Artifactory auth bypass enabling attackers to “mint” admin tokens; plus Langflow/Rails exploitation for key theft/RCE — prioritize internet-facing dev tooling and AI/low-code platforms.\n- Supply-chain + infostealers: malicious PyPI package exfiltrating sensitive files and fake “Claude/AI model” lures dropping Windows stealers/RATs — tighten controls around developer endpoints and software installs.\n\n### High-priority items (immediate attention)\n**1) SonicWall SMA1000 zero-days (active exploitation, chained for RCE)**\n- What happened: SonicWall warns threat actors are actively chaining two new SMA1000 zero-day flaws for remote code execution.\n- Why it matters operationally: SMA appliances are high-value edge access points; compromise typically leads to credential theft, internal pivoting, and rapid ransomware staging.\n- Recommended immediate actions for the SOC today: Identify all SMA1000 exposure (external + internal mgmt), enable emergency mitigations/patches per vendor guidance; hunt last 7 days for anomalous admin logins/new sessions/config changes and isolate suspicious appliances.\n\n**2) JFrog Artifactory auth bypass (CVE-2026-82329) under active attack**\n- What happened: A critical Artifactory auth bypass is being actively exploited to create/admin “mint” tokens and gain administrator-level access.\n- Why it matters operationally: Compromise of artifact repos can become a supply-chain incident (trojaned builds/dependencies) and a rapid path to secrets (API keys, signing keys, CI creds).\n- Recommended immediate actions for the SOC today: Locate all Artifactory instances (esp. internet-facing), restrict access to trusted networks/VPN immediately; review audit logs for token creation, privilege changes, new users, and unusual API usage—escalate to IR if found.\n\n**3) Langflow RCE (CVE-2026-0768) + “Rails vulnerability” exploitation (telemetry indicates active campaigns)**\n- What happened: Vuln telemetry reports active exploitation against Langflow (low-code/AI workflow platform) and Ruby on Rails deployments, with follow-on secret harvesting and RCE behavior.\n- Why it matters operationally: These platforms often hold API keys (LLM, cloud, DB) and are frequently deployed quickly with weak hardening; exploitation can lead to broad credential exposure.\n- Recommended immediate actions for the SOC today: Inventory Langflow/Rails services exposed to untrusted networks; add temporary WAF/ACL blocks and rotate exposed API keys/secrets if compromise suspected.\n\n**4) Endpoint supply-chain & “fake AI app/model” malware (RevStealer / RAT campaigns)**\n- What happened: Fake “Claude Opus 5” GitHub repo distributes an infostealer; a trojanized Exodus wallet installer includes a hidden RAT; malicious PyPI package (`gcphelpit`) exfiltrates sensitive files during CLI init.\n- Why it matters operationally: Financial orgs are high-risk for credential/session theft; developer workstations are especially exposed (GitHub, PyPI, API tokens) and can become initial access for broader compromise.\n- Recommended immediate actions for the SOC today: Block unapproved installers/scripts from user-writable paths (ASR/AppLocker/WDAC where available) and alert on new Python package installs; hunt for unusual browser credential access, wallet/crypto tooling execution, and suspicious outbound connections from dev endpoints.\n\n### Monitoring & detection recommendations\n- **SonicWall SMA1000 edge monitoring (T1190 Exploit Public-Facing App):** VPN/SMA logs + firewall logs — alert on new admin sessions from unusual geo/IPs, config export/import, sudden spikes in failed logins, and post-auth access from atypical user agents.\n- **Artifactory token/admin abuse (T1550 Use Alternate Auth Material, T1098 Account Manipulation):** Artifactory audit logs + IdP logs — hunt for new API tokens, elevated privileges, new users/groups, and high-volume artifact downloads outside CI schedules.\n- **Langflow/Rails exploitation + secret theft (T1552 Unsecured Credentials):** Web server/WAF logs + application logs — look for exploit-like request patterns, unexpected endpoints, deserialization/templating errors, and subsequent outbound calls to cloud APIs from app hosts.\n- **Supply-chain package exfiltration (PyPI `gcphelpit`) (T1059 Command/Scripting, T1041 Exfiltration Over C2):** EDR + proxy/DNS — alert on `pip install`/Python execution followed by reads of SSH keys, cloud creds, `.env`, and rapid outbound connections to new domains.\n- **Infostealer/RAT via fake AI tooling (T1204 User Execution, T1003 Credential Dumping):** EDR + browser telemetry — detect suspicious access to browser credential stores, password manager DB files, and unusual child processes from installers/archives.\n- **Legacy Exchange exploit tooling resurfacing (ProxyLogon/ProxyNotShell PoCs):** Exchange/IIS logs + perimeter IDS — alert on known exploit paths and abnormal POSTs to Exchange endpoints; prioritize any Exchange server with external exposure.\n- **Network device/web admin XSS risk (HPE Fabric Composer):** Web access logs — monitor for unusual admin UI access and suspicious referrers/parameters; ensure admin portals not internet-exposed.\n\n### Medium-term follow-ups\n- Patch/harden backlog review for **edge appliances and dev tooling**: confirm SMA1000 patch/mitigation status; ensure Artifactory and CI/CD components are not directly internet-facing and use MFA/SSO where possible.\n- Implement/verify **secrets hygiene**: rotate API tokens and signing keys on any suspected Artifactory/Langflow exposure; enforce short-lived tokens and scoped permissions.\n- Tighten **developer supply-chain controls**: require internal package mirrors/allowlists for PyPI; add detection for new dependency additions in build pipelines; baseline “normal” Artifactory access patterns.\n- Improve **endpoint execution controls**: expand WDAC/AppLocker/ASR coverage to block unsigned/untrusted binaries and script execution from Downloads/Temp; review exceptions used by dev teams.\n- Validate **monitoring coverage**: ensure Artifactory audit logs, WAF logs, and VPN appliance logs are centralized and retained (minimum 30–90 days) for retro-hunts.\n- Awareness micro-brief for staff: “AI tool” and “free model/app” lures are actively used; reinforce policy for software installs and reporting suspicious repos/installers (assumption: users have GitHub access and can install tooling).",
+  "morning_call_markdown": "### Executive Summary\n- Active exploitation of **edge and supply-chain platforms**: SonicWall **SMA1000 pre-auth RCE chain** and **JFrog Artifactory auth bypass** are being exploited in the wild—treat any exposed instances as at-risk.\n- **Endpoint risk spike**: A publicly released PoC claims a **CrowdStrike Falcon Sensor local privilege escalation “0-day”**; assume attackers will incorporate it quickly for post-compromise escalation.\n- **Identity/session abuse trend**: Reports highlight **session-cookie replay** (Claude → potential access paths into corporate Gmail via grants) consistent with infostealer-led intrusions—prioritize token/session anomaly monitoring.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Actively exploited SonicWall SMA1000 vulnerabilities (pre-auth chain to RCE)**\n- What happened: SonicWall disclosed **CVE-2026-83548 / CVE-2026-83549** with **confirmed in-the-wild exploitation** and patch availability.\n- Why it matters operationally: SMA appliances are perimeter access points; exploitation commonly leads to **initial access → credential theft → ransomware** in hours.\n- Recommended immediate actions for the SOC today: **Identify all SMA1000 exposure (internet-facing/VPN portals) + verify patch/hotfix status; hunt for new admin sessions/config changes and suspicious outbound “reverse shell” behavior from the appliance segment.**\n\n**2) JFrog Artifactory critical auth bypass (supply-chain exposure, exploited)**\n- What happened: **CVE-2026-82329** (critical) is being **actively exploited**; attackers observed generating **administrator tokens** and probing sensitive Artifactory data; PoC now circulating.\n- Why it matters operationally: Artifactory is a **software supply-chain control plane**; compromise can enable **artifact tampering, secret exposure, CI/CD credential theft**, and downstream persistence.\n- Recommended immediate actions for the SOC today: **Locate all Artifactory instances and confirm remediation/mitigations; review for abnormal token creation/admin API activity and unexpected repository permission changes or new remote endpoints.**\n\n**3) PaperCut NG/MF active attack chain (auth bypass → pre-auth RCE)**\n- What happened: PaperCut is responding to **active attacks** chaining zero-days including **CVE-2026-81578** to achieve **unauthenticated RCE**.\n- Why it matters operationally: Print management servers often sit **inside trusted networks** with broad AD reach; PaperCut exploitation has a strong history as a **rapid ransomware foothold**.\n- Recommended immediate actions for the SOC today: **Confirm whether any PaperCut servers exist and their external exposure; monitor for new service creation/scheduled tasks and unusual child processes from PaperCut services (cmd/powershell/wget/curl).**\n\n**4) CrowdStrike Falcon “FalconFlank” PoC (local privilege escalation claim)**\n- What happened: A researcher released a PoC claiming a **CrowdStrike Falcon Sensor privilege escalation 0-day** (“FalconFlank”) abusing a remediation feature path.\n- Why it matters operationally: Even if “local-only,” this is valuable to intruders post-phish/infostealer to **become SYSTEM**, disable defenses, and dump credentials.\n- Recommended immediate actions for the SOC today: **Engage endpoint engineering/vendor for validation and any sensor/content updates; hunt for suspicious local admin escalation patterns on endpoints (unexpected service installs, token manipulation, EDR tamper attempts).**\n\n**5) Session-cookie replay / SaaS grant persistence (Claude → corporate Gmail access path)**\n- What happened: Reporting indicates **stolen Claude session cookies** can be replayed into paid accounts and leveraged via **grants** that **IT admins can’t revoke** in some scenarios (self-serve accounts).\n- Why it matters operationally: This aligns with infostealer tradecraft: **bypass MFA/SSO via session tokens**, maintain access, and pivot into mail/data without classic login signals.\n- Recommended immediate actions for the SOC today: **Prioritize investigations with “impossible travel” absent but token reuse present; review SaaS/OAuth grants and anomalous access to corporate email from new devices/ASNs even when interactive login logs look clean.**\n\n---\n\n### Monitoring & detection recommendations\n- **SonicWall SMA1000 (edge/VPN logs + firewall)**: alert on spikes in failed auth followed by success, new admin sessions, config export/import, and unusual outbound from VPN subnet (T1041 Exfiltration Over C2 Channel, T1059 Command and Scripting Interpreter).\n- **Artifactory (app logs + IAM/secrets + CI/CD)**: hunt for **token creation anomalies**, admin API calls from new IPs, repo permission changes, and new/modified remote repositories; correlate with unusual CI runner behavior (T1552 Unsecured Credentials, T1195 Supply Chain Compromise).\n- **PaperCut (Windows/Linux server logs + EDR)**: monitor PaperCut service processes spawning shells or network tools; watch for new scheduled tasks/services and outbound to rare destinations (T1053 Scheduled Task, T1105 Ingress Tool Transfer).\n- **Endpoint escalation (EDR + Windows security logs)**: hunt for privilege escalation and defense evasion indicators—new services/drivers, SYSTEM-level process tree anomalies, and EDR tamper events (T1068 Exploitation for Privilege Escalation, T1562 Impair Defenses).\n- **Session/token replay (IdP + SaaS audit + email)**: look for access patterns where **no interactive login** occurs but mailbox access/downloads spike; review OAuth/app grants, refresh token usage, and new device sessions (T1528 Steal Application Access Token).\n- **Crypto-miner / reverse shells post-exploit (NDR + DNS + proxy)**: detect sudden outbound long-lived connections from servers/appliances and abnormal CPU/network utilization on edge-adjacent hosts (T1071 Application Layer Protocol, T1496 Resource Hijacking).\n- **Exploit scanning noise (WAF + perimeter IDS/IPS)**: watch for broad probing against known CVEs mentioned (SonicWall/JFrog/PaperCut); rate-limit and block where safe; escalate if scanning originates from targeted regions or repeats across assets.\n\n---\n\n### Medium-term follow-ups\n- **Patch/hardening program**: validate patch SLAs for **internet-facing appliances** (SMA1000) and **build systems** (Artifactory) with emergency change windows; ensure compensating controls if patching is delayed.\n- **Supply-chain guardrails**: enforce signed artifacts/immutability, reduce Artifactory admin token scope, rotate credentials potentially stored in repositories, and review CI/CD service account permissions.\n- **Print infrastructure minimization**: segment PaperCut servers, remove internet exposure, and restrict admin interfaces to management networks with MFA and device posture checks.\n- **Identity/token resilience**: expand coverage for **token/session theft**—shorten session lifetimes where feasible, tighten OAuth grant governance, and implement periodic review of unmanaged/self-serve SaaS accounts (assumption: some business units may use them outside central IdP).\n- **Vendor coordination**: open/track cases with **CrowdStrike** for FalconFlank validation and mitigations; ensure sensor/content updates and response playbooks are ready if exploitation becomes widespread.\n- **Threat hunting playbooks**: add a focused hunt pack for “**edge exploit → internal pivot → ransomware staging**” (VPN/appliance logs + new admin creation + lateral movement + backup tampering) and rehearse containment steps for appliance compromise.",
   "highlights": [
     {
-      "title": "SonicWall warns of actively exploited SMA1000 zero-day flaws",
-      "link": "https://www.bleepingcomputer.com/news/security/sonicwall-warns-of-actively-exploited-sma1000-zero-day-flaws/",
-      "source": "BleepingComputer",
-      "published": "2026-09-02T06:39:29+00:00",
+      "title": "Exploited JFrog Artifactory bug puts software supply chain on alert",
+      "link": "https://www.csoonline.com/article/4217534/exploited-jfrog-artifactory-bug-puts-software-supply-chain-on-alert.html",
+      "source": "CSO Online",
+      "published": "2026-09-02T12:24:40+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
+        "Supply Chain / Software",
         "Threat Actors / APT",
-        "Cloud / SaaS",
+        "Data Protection / Privacy",
         "Exploit / PoC",
+        "Malware / Payloads",
         "General Security"
       ],
       "curated": true,
       "signal_tier": "critical",
       "signal_score": 100.0,
-      "priority_score": 89.83
+      "priority_score": 86.25
     },
     {
-      "title": "Chaotic Eclipse Releases GenDigital Avast Antivirus ZeroDay PrettyPrague",
-      "link": "https://securityaffairs.com/198243/hacking/chaotic-eclipse-releases-gendigital-avast-antivirus-zeroday-prettyprague.html",
-      "source": "Security Affairs",
-      "published": "2026-09-01T14:33:00+00:00",
+      "title": "Critical SonicWall SMA1000 Vulnerabilities CVE-2026-83548, CVE-2026-83549 Exploited in the Wild",
+      "link": "https://www.rapid7.com/blog/post/etr-critical-sonicwall-sma1000-vulnerabilities-cve-2026-83548-cve-2026-83549-exploited-in-the-wild",
+      "source": "Rapid7 Blog",
+      "published": "2026-09-02T16:58:45+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC",
-        "General Security"
+        "Web / API Security",
+        "Vendors / Product Security"
       ],
       "curated": true,
       "signal_tier": "critical",
-      "signal_score": 88.08,
-      "priority_score": 85.37
+      "signal_score": 95.86,
+      "priority_score": 85.07
     },
     {
-      "title": "SonicWall Issues Critical Alert: SMA1000 Zero-Day Vulnerabilities Actively Exploited",
-      "link": "https://www.news4hackers.com/sonicwall-issues-critical-alert-sma1000-zero-day-vulnerabilities-actively-exploited/",
-      "source": "News4Hackers",
-      "published": "2026-09-02T08:03:24+00:00",
+      "title": "SonicWall reports two major security holes under active exploit",
+      "link": "https://www.csoonline.com/article/4217682/sonicwall-reports-two-major-security-holes-under-active-exploit-2.html",
+      "source": "CSO Online",
+      "published": "2026-09-02T23:22:10+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC",
-        "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 86.23,
-      "priority_score": 90.34
-    },
-    {
-      "title": "Hackers Actively Exploiting Critical Langflow RCE and Rails Vulnerability",
-      "link": "https://cybersecuritynews.com/langflow-rce-and-rails-vulnerability-exploited/",
-      "source": "Cyber Security News",
-      "published": "2026-09-01T13:52:27+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 83.27,
-      "priority_score": 86.34
-    },
-    {
-      "title": "JFrog Artifactory Auth Bypass Exploited in Attacks to Gain Admin Access",
-      "link": "https://cybersecuritynews.com/jfrog-artifactory-auth-bypass-exploited/",
-      "source": "Cyber Security News",
-      "published": "2026-09-01T13:06:01+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "General Security"
-      ],
-      "curated": false,
-      "signal_tier": "critical",
-      "signal_score": 83.27,
-      "priority_score": 75.93
-    },
-    {
-      "title": "JFrog Artifactory, Langflow critical flaws exploited; TeamPCP arrested",
-      "link": "https://defend.network/briefings/jfrog-langflow-teamcpp-active-exploits-2026-09-02.html",
-      "source": "defend.network",
-      "published": "2026-09-02T06:30:00+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Cloud / SaaS",
-        "Exploit / PoC",
-        "Supply Chain / Software",
+        "Threat Actors / APT",
+        "Identity / Access",
+        "Ransomware",
+        "Web / API Security",
         "Mobile Security",
         "General Security"
       ],
       "curated": false,
       "signal_tier": "critical",
-      "signal_score": 83.11,
-      "priority_score": 79.32
+      "signal_score": 89.35,
+      "priority_score": 79.09
     },
     {
-      "title": "Another Artifactory CVE under attack by AI agents or humans",
-      "link": "https://www.theregister.com/security/2026/09/01/another-artifactory-cve-under-attack-by-ai-agents-or-humans/5293769",
-      "source": "The Register - Security",
-      "published": "2026-09-01T21:07:13+00:00",
+      "title": "Researcher Releases FalconFlank PoC Showing Privilege Escalation in CrowdStrike Falcon",
+      "link": "https://thehackernews.com/2026/09/researcher-releases-falconflank-poc.html",
+      "source": "The Hacker News",
+      "published": "2026-09-03T06:26:59+00:00",
       "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 87.8,
+      "priority_score": 88.33
+    },
+    {
+      "title": "CVE-2026-82329: Critical JFrog Artifactory Authentication Bypass Exploited in the Wild",
+      "link": "https://socprime.com/blog/cve-2026-82329-analysis/",
+      "source": "SOC Prime Blog",
+      "published": "2026-09-02T14:47:27+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Vendors / Product Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 87.35,
+      "priority_score": 86.72
+    },
+    {
+      "title": "CISA Adds Seven Exploited Flaws as Attackers Deploy Reverse Shells and Crypto Miners",
+      "link": "https://thehackernews.com/2026/09/cisa-adds-seven-exploited-flaws-as.html",
+      "source": "The Hacker News",
+      "published": "2026-09-03T05:19:04+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Cloud / SaaS",
+        "Exploit / PoC",
         "General Security"
       ],
       "curated": false,
-      "signal_tier": "high",
-      "signal_score": 75.65,
-      "priority_score": 65.47
+      "signal_tier": "critical",
+      "signal_score": 82.8,
+      "priority_score": 77.81
     },
     {
-      "title": "Exploit for CVE-2026-82592",
-      "link": "https://sploitus.com/exploit?id=AE38148F-C00C-5A5C-87F5-DA9FEA8D6FD9&utm_source=rss&utm_medium=rss",
-      "source": "Sploitus – Exploits",
-      "published": "2026-09-01T11:55:01+00:00",
+      "title": "CVE-2026-81578: Exploited PaperCut Authentication Bypass Chains to Pre-Auth RCE",
+      "link": "https://socprime.com/blog/cve-2026-81578-analysis/",
+      "source": "SOC Prime Blog",
+      "published": "2026-09-02T14:34:25+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Exploit / PoC"
+        "Cloud / SaaS",
+        "Exploit / PoC",
+        "Vendors / Product Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 81.35,
+      "priority_score": 86.9
+    },
+    {
+      "title": "SonicWall Patches Two New Actively Exploited Zero-Days in SMA 1000 VPNs",
+      "link": "https://securityaffairs.com/198303/security/sonicwall-patches-two-new-actively-exploited-zero-days-in-sma-1000-vpns.html",
+      "source": "Security Affairs",
+      "published": "2026-09-02T14:22:40+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Web / API Security",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 76.12,
+      "priority_score": 84.99
+    },
+    {
+      "title": "CVE-2024-30851-jasmin-ransomware-path-traversal-poc",
+      "link": "https://vulners.com/kitploit/KITPLOIT:TOOLS-GITHUB-CHEBUYA-CVE-2024-30851-JASMIN-RANSOMWARE-PATH-TRAVERSAL-POC?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-09-03T07:47:32+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Crypto / Web3",
+        "Ransomware"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 68.36,
-      "priority_score": 69.48
+      "signal_score": 70.33,
+      "priority_score": 74.63
     },
     {
-      "title": "Exploit for Argument Injection in Gnu Inetutils",
-      "link": "https://sploitus.com/exploit?id=161BBA2D-365A-5283-9A03-9BEBFCC93AED&utm_source=rss&utm_medium=rss",
-      "source": "Sploitus – Exploits",
-      "published": "2026-09-01T20:26:43+00:00",
+      "title": "Researcher Claims CrowdStrike Falcon 0-Day Privilege Escalation Vulnerability",
+      "link": "https://cybersecuritynews.com/crowdstrike-falcon-0-day/",
+      "source": "Cyber Security News",
+      "published": "2026-09-03T05:35:43+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Exploit / PoC"
+        "General Security"
       ],
-      "curated": false,
+      "curated": true,
       "signal_tier": "high",
-      "signal_score": 66.36,
-      "priority_score": 71.76
-    },
-    {
-      "title": "Exploit for Out-of-bounds Write in Fortinet Fortiproxy",
-      "link": "https://sploitus.com/exploit?id=5C790E5A-E7ED-5094-A8AD-F17E24E1851E&utm_source=rss&utm_medium=rss",
-      "source": "Sploitus – Exploits",
-      "published": "2026-09-01T20:04:23+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 66.36,
-      "priority_score": 71.66
+      "signal_score": 70.3,
+      "priority_score": 88.64
     }
   ]
 }
