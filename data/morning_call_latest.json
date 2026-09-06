@@ -1,171 +1,162 @@
 {
-  "generated_at": "2026-09-05T10:34:48.424991+00:00",
-  "analysis_date": "2026-09-05",
+  "generated_at": "2026-09-06T10:55:26.883144+00:00",
+  "analysis_date": "2026-09-06",
   "provider": "openai",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-09-05T08:16:52.911672+00:00",
+  "source_generated_at": "2026-09-06T10:34:53.048386+00:00",
   "source_days_back": 30,
-  "source_total_items": 57744,
-  "total_items_in_window_all": 2675,
-  "total_items_in_window_curated": 15,
-  "total_items_in_window_selected": 47,
+  "source_total_items": 58910,
+  "total_items_in_window_all": 1817,
+  "total_items_in_window_curated": 7,
+  "total_items_in_window_selected": 40,
   "context_selection_policy": "curated-plus-operational-signal-v1",
-  "morning_call_markdown": "### Executive Summary\n- Active exploitation confirmed for a new Chrome V8 zero-day (CVE-2026-85046) and for Sangoma Switchvox (CVE-2026-9586); both are “patch fast / detect now” items.\n- Public PoC now available for a **critical unauthenticated JetBrains TeamCity RCE** (CVE-2026-63077); treat any exposed TeamCity as high-risk.\n- Multiple “internet-facing edge / tooling” exploit signals (SonicWall SMA SSRF PoC, WordPress arbitrary upload RCE PoC, AWS bulletins affecting open-source tooling) increase likelihood of opportunistic scanning and initial access attempts.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Chrome / Chromium V8 zero-day actively exploited (CVE-2026-85046)**\n- **What happened:** Google shipped an emergency Chrome update for an in-the-wild exploited V8 type confusion (CVE-2026-85046); CISA added it to KEV.\n- **Why it matters operationally:** High-likelihood endpoint compromise via drive-by/web content; often pairs with follow-on payload delivery and credential theft.\n- **Recommended immediate actions for the SOC today:** Verify fleet is on **Chrome 152.0.7977.82/.83+** (or managed equivalent) and enforce auto-update; prioritize investigations of recent “browser spawned” process trees and unusual download/execution events.\n\n**2) Sangoma Switchvox exploited in the wild (CVE-2026-9586)**\n- **What happened:** Unauthenticated SQLi in Switchvox is being exploited, reportedly leading to remote code execution.\n- **Why it matters operationally:** VoIP/admin appliances are frequently internet-facing; compromise can enable credential access, call fraud, pivoting into internal networks.\n- **Recommended immediate actions for the SOC today:** Identify any Switchvox exposure (external scan + CMDB) and confirm patch/hotfix status; hunt for abnormal web requests to Switchvox interfaces and any new admin users/config changes.\n\n**3) JetBrains TeamCity critical unauthenticated RCE PoC (CVE-2026-63077)**\n- **What happened:** A fully functional PoC was released for CVE-2026-63077 (deserialization) enabling unauthenticated RCE; item notes “actively exploited” (treat as probable even if not independently confirmed here).\n- **Why it matters operationally:** CI/CD compromise is a direct path to source code, secrets, build pipelines, and downstream supply-chain impact—high value in financial environments.\n- **Recommended immediate actions for the SOC today:** Locate TeamCity instances (on-prem/cloud), confirm not internet-exposed, and expedite patching/mitigations; review TeamCity server logs for suspicious unauthenticated endpoints, new tokens, new build steps, or sudden agent registrations.\n\n**4) Edge/perimeter & web platform PoCs gaining traction (SonicWall SMA SSRF, WordPress RCE/upload)**\n- **What happened:** PoCs published for SonicWall SMA8200V SSRF chain (CVE-2026-83548/83549, CVSS 10) and a WordPress cookie-consent plugin unauthenticated file upload → RCE (CVE-2026-75865); additional WP plugin account takeover tooling also surfaced.\n- **Why it matters operationally:** These are commonly mass-scanned targets; if any are present in DMZ/marketing environments, compromise can become a beachhead for phishing, brand abuse, or internal pivoting.\n- **Recommended immediate actions for the SOC today:** Ask infra/web teams to confirm whether SonicWall SMA and the referenced WP plugins exist anywhere (including subsidiaries/brand sites); temporarily tighten WAF/IPS rules and block unexpected admin paths/uploads while patching/validation is underway.\n\n**5) AWS security bulletins for tooling used in cloud/dev workflows (postgres-mcp-server, log4j hotpatch tool)**\n- **What happened:** AWS published bulletins for CVE-2026-85787 (awslabs postgres-mcp-server SQL validation bypass leading to out-of-scope data modification) and CVE-2026-85656 (command injection in an AWS log4j hotpatch tool).\n- **Why it matters operationally:** These impact developer/automation components; exploitation could alter data, implant CI/CD backdoors, or tamper with production telemetry/response tooling.\n- **Recommended immediate actions for the SOC today:** Inventory whether these components are used in any internal repos/AMIs/containers and flag to platform engineering for immediate upgrade; monitor for unusual changes to DB content “read-only” workflows and unexpected shell execution from utility hosts.\n\n---\n\n### Monitoring & detection recommendations\n- **Chrome zero-day follow-on behaviors:** EDR telemetry for browser child processes (chrome.exe/Chromium) spawning scripting/rundll32/powershell/mshta (T1203, T1059); correlate with web proxy download logs and Mark-of-the-Web events.\n- **Switchvox exploitation signals:** WAF/reverse-proxy + appliance HTTP logs for SQLi patterns and unauthenticated access to admin endpoints (T1190); watch for new user creation, config exports, and any outbound connections from the appliance.\n- **TeamCity compromise/hardening hunts:** TeamCity application logs + host EDR for new services, unusual `java` child processes, suspicious build step additions, and credential/secret access attempts (T1190, T1552); alert on new agent registrations from unexpected IP ranges.\n- **Perimeter scanning / exploit attempts:** Firewall/IDS/IPS for spikes in inbound requests to VPN/web management ports and known appliance paths (SonicWall SMA web endpoints) (T1595); add rate-based alerts for repeated 4xx/5xx bursts per source.\n- **WordPress RCE/account takeover:** Web server/WAF logs for file upload endpoints, unexpected `.php` drops in wp-content/uploads, and abnormal password reset flows (T1190); monitor DNS/HTTP for new outbound traffic from web hosts.\n- **Cloud/dev tool abuse (AWS bulletin themes):** CloudTrail + EKS/container runtime logs for unexpected exec into pods, new image pulls, or mutation of “read-only” DB operations (T1059, T1565); flag shell activity on build runners/utility hosts.\n- **RMM-phishing “legit tool as trap” trend:** Email security + endpoint for first-time execution/installation of ScreenConnect/ConnectWise/LogMeIn and newly created remote access services (T1566, T1219); require ticket/approval correlation for any RMM installs.\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** Add CVE-2026-85046 (Chrome) and CVE-2026-9586 (Switchvox) to “expedite within 24–48h” SLAs; validate compliance via endpoint management and vuln scanning.\n- **CI/CD exposure reduction:** Ensure TeamCity and similar CI tools are not internet-facing; enforce SSO/MFA, IP allowlisting, and secrets rotation playbooks for CI compromise scenarios.\n- **Edge appliance posture:** Review SonicWall SMA and other remote-access devices for management plane exposure, WAF/IPS coverage, and log forwarding completeness (many incidents fail due to missing appliance logs).\n- **Web/plugin hygiene:** Establish/refresh an allowlist of WordPress plugins for any corporate sites; implement automated plugin inventory + alerting for vulnerable versions.\n- **Cloud/tooling supply-chain controls:** For internal use of OSS utilities (including MCP-related tooling), require version pinning, signing/attestation where possible, and rapid deprecation of ad-hoc admin “hotpatch” tools.\n- **Playbook refresh:** Update SOC runbooks for “browser zero-day suspected compromise” (rapid triage steps, isolation criteria, credential reset triggers) and for “CI server compromise” (secret rotation + build integrity validation).",
+  "morning_call_markdown": "### Executive Summary\n- Active exploitation reported for an **unpatched Magento/Adobe Commerce zero-day RCE (“StyleSmuggler”)**; prioritize any exposed e-commerce/integration assets and webshell/backdoor hunts.\n- Community reporting indicates an **actively exploited Chromium sandbox RCE (CVE-2026-85046)**; treat as a drive‑by/browser compromise risk and accelerate browser patching/controls.\n- A **CrowdStrike Falcon Sensor local privilege-escalation PoC (“FalconFlank”)** is public; assume attacker post-compromise hardening/EDR-tamper attempts and tighten monitoring on sensor/driver events.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Unpatched Magento / Adobe Commerce zero-day RCE (active exploitation)**\n- What happened: Researchers report **ongoing in-the-wild exploitation** of an **unauthenticated RCE** affecting Magento Open Source and Adobe Commerce; **no official patch yet**.\n- Why it matters operationally: Any internet-facing commerce app (or internally exposed admin endpoints) could be **remotely backdoored** → credential theft, payment/data compromise, and foothold into core networks.\n- Recommended immediate actions for the SOC today: **Identify all Magento/Adobe Commerce instances + exposures**; **hunt for new admin users, unexpected PHP files, cron changes, and outbound C2** on those hosts.\n\n**2) Actively exploited Chromium sandbox RCE (CVE-2026-85046)**\n- What happened: Community reporting claims an **actively exploited sandbox escape/RCE** impacting **all Chromium versions** (Chrome/Edge/Chromium-based apps).\n- Why it matters operationally: High likelihood of **phishing/drive-by** leading to workstation compromise, session theft, and rapid lateral movement in financial environments.\n- Recommended immediate actions for the SOC today: **Push/accelerate browser updates or emergency mitigations** (if vendor guidance exists); **increase alerting for browser-spawned child processes** (cmd/powershell/mshta/rundll32).\n\n**3) CrowdStrike Falcon Sensor “FalconFlank” local privilege escalation PoC (unverified vendor fix)**\n- What happened: A PoC is published claiming **privilege escalation on fully patched Windows** when **CrowdStrike Falcon Sensor** is installed.\n- Why it matters operationally: If weaponized, attackers with an initial foothold could **escalate to SYSTEM**, potentially **tamper with defenses** and accelerate ransomware-style actions.\n- Recommended immediate actions for the SOC today: **Monitor for Falcon service/driver tamper attempts and unusual sensor-related events**; **validate sensor versions/config baselines** and engage vendor support/TAM for status/mitigations.\n\n**4) “Exploit chatter” spike: multiple high-severity PoCs for common internet-facing components**\n- What happened: New/recirculated PoCs surfaced for **Grafana code injection (CVE-2026-27876)**, **cPanel auth issues (CVE-2026-41940)**, **Next.js improper auth (CVE-2025-29927)**, plus other exploit tool drops.\n- Why it matters operationally: PoC availability increases opportunistic scanning and exploitation, especially against **monitoring/admin panels** often mis-exposed to the internet.\n- Recommended immediate actions for the SOC today: **Confirm external exposure** (Grafana/cPanel/Next.js apps) and **block/geo-fence/admin-restrict** where possible; **watch WAF/edge logs for exploit patterns** and unusual POSTs to admin/API routes.\n\n---\n\n### Monitoring & detection recommendations\n- **Web app compromise (Magento/Commerce)**: WAF/CDN + web server logs (Nginx/Apache), app logs, file integrity monitoring; hunt for **new PHP files/webshell-like behavior** and **unexpected admin logins** (ATT&CK: T1505.003, T1190).\n- **Browser exploitation / post-browser execution**: EDR telemetry on endpoints; alert on **chrome.exe/msedge.exe spawning** `powershell.exe`, `cmd.exe`, `mshta.exe`, `wscript.exe`, `rundll32.exe` (ATT&CK: T1204, T1059).\n- **Privilege escalation + defense evasion (FalconFlank theme)**: EDR + Windows Event Logs (System/Security), Sysmon (if deployed); watch for **service/driver install/stop**, token manipulation, and suspicious kernel/driver interactions (ATT&CK: T1068, T1562.001).\n- **Edge scanning & exploitation attempts (Grafana/cPanel/Next.js)**: Firewall/WAF logs; look for **bursts of 4xx/5xx**, unusual URL paths to `/grafana`, `/api`, `/admin`, `/cpanel`, and anomalous request sizes/encoded payloads (ATT&CK: T1190).\n- **Credential exposure / cloud key misuse (briefing mentions TeamCity/AWS creds compromise but details unclear)**: Cloud audit logs (AWS CloudTrail, IAM, GuardDuty) + CI/CD logs; hunt for **new access keys**, **unfamiliar IPs**, and **suspicious AssumeRole activity** (ATT&CK: T1078.004).\n- **Linux kernel privilege escalation advisories (local network requirement in notes)**: Linux auth logs + EDR for Linux; monitor for **sudden root escalations**, unusual `cap_setuid`, kernel exploit tooling execution, and new setuid binaries (ATT&CK: T1068).\n- **Ransomware ecosystem (Rhysida/“Vanilla Tempest” coverage)**: EDR + Windows Security + backup logs; watch for **mass file renames/encryption**, `vssadmin delete`, disabled services, and anomalous SMB activity (ATT&CK: T1486, T1490).\n\n---\n\n### Medium-term follow-ups\n- **Magento/Adobe Commerce**: Track vendor advisory for an official fix; plan **rapid maintenance window** and ensure **WAF virtual patching** + strict admin access until patched.\n- **Chromium enterprise controls**: Review **auto-update compliance**, enforce **isolation/sandbox policies**, and consider **disabling risky features** per vendor hardening guidance (assumption: policy-managed browsers are in use).\n- **CrowdStrike Falcon Sensor**: Engage CrowdStrike for **validated impact, fixed versions, and mitigations**; ensure **tamper protection** is enabled and tested across fleets.\n- **Exposure management**: Revalidate that **Grafana/cPanel/CI/CD/admin panels are not internet-facing**; enforce VPN/IdP/SSO + MFA access paths only.\n- **Patch backlog hygiene**: Where applicable, prioritize remediation of **high-CVSS internet-facing CVEs with fresh PoCs** (Grafana/cPanel/Next.js), and confirm vuln scanners are updated with new detections.\n- **Ransomware readiness**: Re-test **restore procedures**, validate **immutable backups**, and confirm **EDR containment playbooks** are current for rapid workstation isolation and credential resets.",
   "highlights": [
     {
-      "title": "Google patches actively exploited Chrome zero-day (CVE-2026-85046)",
-      "link": "https://www.helpnetsecurity.com/2026/09/04/google-chrome-zero-day-cve-2026-85046/",
-      "source": "Help Net Security",
-      "published": "2026-09-04T12:09:13+00:00",
+      "title": "Hackers Actively Exploiting Magento and Adobe Commerce 0-Day RCE Vulnerability",
+      "link": "https://cybersecuritynews.com/magento-and-adobe-commerce-0-day-rce/",
+      "source": "Cyber Security News",
+      "published": "2026-09-06T03:52:46+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC",
-        "Linux / Unix",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 100.0,
+      "priority_score": 88.17
+    },
+    {
+      "title": "Log4J-RCE-Proof-Of-Concept",
+      "link": "https://vulners.com/kitploit/KITPLOIT:TOOLS-GITHUB-HYCRAFTHD-LOG4J-RCE-PROOF-OF-CONCEPT?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-09-05T18:35:21+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 96.42,
+      "priority_score": 82.82
+    },
+    {
+      "title": "Actively exploited sandbox RCE in all Chromium versions (CVE-2026-85046)",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1w8sh0c/actively_exploited_sandbox_rce_in_all_chromium/",
+      "source": "/r/cybersecurity",
+      "published": "2026-09-06T10:23:39+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "OSINT / Community"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 82.93,
+      "priority_score": 88.91
+    },
+    {
+      "title": "FalconFlank Zero-Day Hits CrowdStrike Falcon Sensor",
+      "link": "https://databreaches.net/2026/09/05/falconflank-zero-day-hits-crowdstrike-falcon-sensor/",
+      "source": "DataBreaches.net",
+      "published": "2026-09-05T15:41:50+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
         "Windows / Microsoft",
-        "General Security"
+        "Data Breaches / Leaks"
       ],
       "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 100.0,
-      "priority_score": 85.79
+      "signal_tier": "high",
+      "signal_score": 70.2,
+      "priority_score": 85.29
     },
     {
-      "title": "Exploit for Deserialization of Untrusted Data in Jetbrains Teamcity",
-      "link": "https://vulners.com/githubexploit/D072227E-AF67-52D5-8E22-084F14733963?utm_source=rss&utm_medium=rss&utm_campaign=rss",
-      "source": "Vulners.com RSS Feed",
-      "published": "2026-09-04T13:32:31+00:00",
+      "title": "Exploit for CVE-2026-18963",
+      "link": "https://sploitus.com/exploit?id=88FAD2B1-66D0-5B36-903D-3E231116548C&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-09-05T20:52:28+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC"
       ],
       "curated": false,
-      "signal_tier": "critical",
-      "signal_score": 100.0,
-      "priority_score": 71.82
+      "signal_tier": "high",
+      "signal_score": 68.46,
+      "priority_score": 71.86
     },
     {
-      "title": "CVE-2026-85046: Actively Exploited Chrome V8 Zero-Day Enables Code Execution",
-      "link": "https://socprime.com/blog/cve-2026-85046-analysis/",
-      "source": "SOC Prime Blog",
-      "published": "2026-09-04T13:51:54+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "Vendors / Product Security"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 97.35,
-      "priority_score": 86.77
-    },
-    {
-      "title": "Google Fixes Chrome Zero-Day Vulnerability (CVE-2026-85046) – Actively Exploited",
-      "link": "https://www.news4hackers.com/google-fixes-chrome-zero-day-vulnerability-cve-2026-85046-actively-exploited/",
-      "source": "News4Hackers",
-      "published": "2026-09-04T13:14:24+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 95.06,
-      "priority_score": 85.22
-    },
-    {
-      "title": "Google’s Chrome Update Patches Sixth Zero-Day Exploited in 2026",
-      "link": "https://www.esecurityplanet.com/threats/news-google-chrome-cve-2026-85046-zero-day/",
-      "source": "eSecurityPlanet",
-      "published": "2026-09-04T19:37:50+00:00",
+      "title": "Exploit for CVE-2026-0920",
+      "link": "https://sploitus.com/exploit?id=D4ED2ECD-B56D-5DCE-8F56-59F309E29B35&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-09-05T16:39:31+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC"
       ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 93.2,
-      "priority_score": 87.47
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.46,
+      "priority_score": 70.73
     },
     {
-      "title": "Google warns of new Chrome zero-day flaw exploited in attacks",
-      "link": "https://www.bleepingcomputer.com/news/security/google-warns-of-new-chrome-zero-day-flaw-exploited-in-attacks/",
-      "source": "BleepingComputer",
-      "published": "2026-09-04T11:48:17+00:00",
+      "title": "Exploit for Code Injection in Grafana",
+      "link": "https://sploitus.com/exploit?id=3DD6C67A-5A26-5371-B94C-F392EB87292A&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-09-05T23:39:36+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 86.07,
-      "priority_score": 84.18
-    },
-    {
-      "title": "Sangoma Switchvox Vulnerabilities Exploited in the Wild",
-      "link": "https://www.securityweek.com/sangoma-switchvox-vulnerabilities-exploited-in-the-wild/",
-      "source": "SecurityWeek",
-      "published": "2026-09-04T13:23:12+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Web / API Security",
-        "Exploit / PoC",
-        "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 83.15,
-      "priority_score": 85.01
-    },
-    {
-      "title": "Exploit for CVE-2026-75865",
-      "link": "https://vulners.com/githubexploit/6D94DAEE-65FA-509B-AEB3-62A778D41C33?utm_source=rss&utm_medium=rss&utm_campaign=rss",
-      "source": "Vulners.com RSS Feed",
-      "published": "2026-09-05T07:42:38+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Data Protection / Privacy",
-        "Exploit / PoC",
-        "Cloud / SaaS"
+        "Exploit / PoC"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 72.37,
-      "priority_score": 76.25
+      "signal_score": 66.46,
+      "priority_score": 72.61
     },
     {
-      "title": "AirBorne-PoC",
-      "link": "https://vulners.com/kitploit/KITPLOIT:TOOLS-GITHUB-EKOMSSAVIOR-AIRBORNE-POC?utm_source=rss&utm_medium=rss&utm_campaign=rss",
-      "source": "Vulners.com RSS Feed",
-      "published": "2026-09-04T21:36:53+00:00",
+      "title": "Exploit for Improper Authorization in Vercel Next.Js",
+      "link": "https://sploitus.com/exploit?id=DD629C00-2E2D-5D29-B5B7-1E74EAF37DBF&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-09-05T12:41:19+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "Threat Actors / APT",
-        "Windows / Microsoft"
+        "Exploit / PoC"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 72.37,
-      "priority_score": 73.34
+      "signal_score": 66.46,
+      "priority_score": 70.75
     },
     {
-      "title": "cve-2015-0313",
-      "link": "https://vulners.com/kitploit/KITPLOIT:TOOLS-GITHUB-SECURITYOBSCURITY-CVE-2015-0313?utm_source=rss&utm_medium=rss&utm_campaign=rss",
-      "source": "Vulners.com RSS Feed",
-      "published": "2026-09-04T13:50:31+00:00",
+      "title": "Exploit for Missing Authentication for Critical Function in Cpanel",
+      "link": "https://sploitus.com/exploit?id=69927260-D18A-5031-8470-51E4EC5EA4AF&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-09-05T11:19:21+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "Malware / Payloads"
+        "Exploit / PoC"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 72.37,
-      "priority_score": 71.94
+      "signal_score": 66.46,
+      "priority_score": 69.3
+    },
+    {
+      "title": "CVE-2021-25094-tatsu-preauth-rce",
+      "link": "https://vulners.com/kitploit/KITPLOIT:TOOLS-GITHUB-DARKPILLS-CVE-2021-25094-TATSU-PREAUTH-RCE?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-09-05T18:31:12+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 64.42,
+      "priority_score": 72.11
     }
   ]
 }
