@@ -1,162 +1,171 @@
 {
-  "generated_at": "2026-09-06T10:55:26.883144+00:00",
-  "analysis_date": "2026-09-06",
+  "generated_at": "2026-09-07T12:28:51.889798+00:00",
+  "analysis_date": "2026-09-07",
   "provider": "openai",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-09-06T10:34:53.048386+00:00",
+  "source_generated_at": "2026-09-07T09:10:50.415580+00:00",
   "source_days_back": 30,
-  "source_total_items": 58910,
-  "total_items_in_window_all": 1817,
-  "total_items_in_window_curated": 7,
+  "source_total_items": 56847,
+  "total_items_in_window_all": 1813,
+  "total_items_in_window_curated": 6,
   "total_items_in_window_selected": 40,
   "context_selection_policy": "curated-plus-operational-signal-v1",
-  "morning_call_markdown": "### Executive Summary\n- Active exploitation reported for an **unpatched Magento/Adobe Commerce zero-day RCE (“StyleSmuggler”)**; prioritize any exposed e-commerce/integration assets and webshell/backdoor hunts.\n- Community reporting indicates an **actively exploited Chromium sandbox RCE (CVE-2026-85046)**; treat as a drive‑by/browser compromise risk and accelerate browser patching/controls.\n- A **CrowdStrike Falcon Sensor local privilege-escalation PoC (“FalconFlank”)** is public; assume attacker post-compromise hardening/EDR-tamper attempts and tighten monitoring on sensor/driver events.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Unpatched Magento / Adobe Commerce zero-day RCE (active exploitation)**\n- What happened: Researchers report **ongoing in-the-wild exploitation** of an **unauthenticated RCE** affecting Magento Open Source and Adobe Commerce; **no official patch yet**.\n- Why it matters operationally: Any internet-facing commerce app (or internally exposed admin endpoints) could be **remotely backdoored** → credential theft, payment/data compromise, and foothold into core networks.\n- Recommended immediate actions for the SOC today: **Identify all Magento/Adobe Commerce instances + exposures**; **hunt for new admin users, unexpected PHP files, cron changes, and outbound C2** on those hosts.\n\n**2) Actively exploited Chromium sandbox RCE (CVE-2026-85046)**\n- What happened: Community reporting claims an **actively exploited sandbox escape/RCE** impacting **all Chromium versions** (Chrome/Edge/Chromium-based apps).\n- Why it matters operationally: High likelihood of **phishing/drive-by** leading to workstation compromise, session theft, and rapid lateral movement in financial environments.\n- Recommended immediate actions for the SOC today: **Push/accelerate browser updates or emergency mitigations** (if vendor guidance exists); **increase alerting for browser-spawned child processes** (cmd/powershell/mshta/rundll32).\n\n**3) CrowdStrike Falcon Sensor “FalconFlank” local privilege escalation PoC (unverified vendor fix)**\n- What happened: A PoC is published claiming **privilege escalation on fully patched Windows** when **CrowdStrike Falcon Sensor** is installed.\n- Why it matters operationally: If weaponized, attackers with an initial foothold could **escalate to SYSTEM**, potentially **tamper with defenses** and accelerate ransomware-style actions.\n- Recommended immediate actions for the SOC today: **Monitor for Falcon service/driver tamper attempts and unusual sensor-related events**; **validate sensor versions/config baselines** and engage vendor support/TAM for status/mitigations.\n\n**4) “Exploit chatter” spike: multiple high-severity PoCs for common internet-facing components**\n- What happened: New/recirculated PoCs surfaced for **Grafana code injection (CVE-2026-27876)**, **cPanel auth issues (CVE-2026-41940)**, **Next.js improper auth (CVE-2025-29927)**, plus other exploit tool drops.\n- Why it matters operationally: PoC availability increases opportunistic scanning and exploitation, especially against **monitoring/admin panels** often mis-exposed to the internet.\n- Recommended immediate actions for the SOC today: **Confirm external exposure** (Grafana/cPanel/Next.js apps) and **block/geo-fence/admin-restrict** where possible; **watch WAF/edge logs for exploit patterns** and unusual POSTs to admin/API routes.\n\n---\n\n### Monitoring & detection recommendations\n- **Web app compromise (Magento/Commerce)**: WAF/CDN + web server logs (Nginx/Apache), app logs, file integrity monitoring; hunt for **new PHP files/webshell-like behavior** and **unexpected admin logins** (ATT&CK: T1505.003, T1190).\n- **Browser exploitation / post-browser execution**: EDR telemetry on endpoints; alert on **chrome.exe/msedge.exe spawning** `powershell.exe`, `cmd.exe`, `mshta.exe`, `wscript.exe`, `rundll32.exe` (ATT&CK: T1204, T1059).\n- **Privilege escalation + defense evasion (FalconFlank theme)**: EDR + Windows Event Logs (System/Security), Sysmon (if deployed); watch for **service/driver install/stop**, token manipulation, and suspicious kernel/driver interactions (ATT&CK: T1068, T1562.001).\n- **Edge scanning & exploitation attempts (Grafana/cPanel/Next.js)**: Firewall/WAF logs; look for **bursts of 4xx/5xx**, unusual URL paths to `/grafana`, `/api`, `/admin`, `/cpanel`, and anomalous request sizes/encoded payloads (ATT&CK: T1190).\n- **Credential exposure / cloud key misuse (briefing mentions TeamCity/AWS creds compromise but details unclear)**: Cloud audit logs (AWS CloudTrail, IAM, GuardDuty) + CI/CD logs; hunt for **new access keys**, **unfamiliar IPs**, and **suspicious AssumeRole activity** (ATT&CK: T1078.004).\n- **Linux kernel privilege escalation advisories (local network requirement in notes)**: Linux auth logs + EDR for Linux; monitor for **sudden root escalations**, unusual `cap_setuid`, kernel exploit tooling execution, and new setuid binaries (ATT&CK: T1068).\n- **Ransomware ecosystem (Rhysida/“Vanilla Tempest” coverage)**: EDR + Windows Security + backup logs; watch for **mass file renames/encryption**, `vssadmin delete`, disabled services, and anomalous SMB activity (ATT&CK: T1486, T1490).\n\n---\n\n### Medium-term follow-ups\n- **Magento/Adobe Commerce**: Track vendor advisory for an official fix; plan **rapid maintenance window** and ensure **WAF virtual patching** + strict admin access until patched.\n- **Chromium enterprise controls**: Review **auto-update compliance**, enforce **isolation/sandbox policies**, and consider **disabling risky features** per vendor hardening guidance (assumption: policy-managed browsers are in use).\n- **CrowdStrike Falcon Sensor**: Engage CrowdStrike for **validated impact, fixed versions, and mitigations**; ensure **tamper protection** is enabled and tested across fleets.\n- **Exposure management**: Revalidate that **Grafana/cPanel/CI/CD/admin panels are not internet-facing**; enforce VPN/IdP/SSO + MFA access paths only.\n- **Patch backlog hygiene**: Where applicable, prioritize remediation of **high-CVSS internet-facing CVEs with fresh PoCs** (Grafana/cPanel/Next.js), and confirm vuln scanners are updated with new detections.\n- **Ransomware readiness**: Re-test **restore procedures**, validate **immutable backups**, and confirm **EDR containment playbooks** are current for rapid workstation isolation and credential resets.",
+  "morning_call_markdown": "### Executive Summary\n- Multiple **actively exploited / zero-day** issues surfaced: **MikroTik RouterOS SSH compromise**, **Magento/Adobe Commerce zero-day backdoors**, and **Chromium/V8 exploitation (KEV)** — prioritize exposure checks and patching/mitigation.\n- A **CrowdStrike Falcon privilege-escalation zero-day** is public; treat as **high-risk for post-compromise escalation** on endpoints running Falcon.\n- **PaperCut server command execution flaws** reported as **actively exploited**; confirm inventory and patch level immediately (common foothold in enterprise environments).\n\n---\n\n### High-priority items (immediate attention)\n\n**1) MikroTik RouterOS SSH compromise / “-2” user indicator (active exploitation)**\n- What happened: Reports indicate **MikroTik routers are being hijacked without authentication**, with a notable artifact **SSH user “-2”** and guidance to patch RouterOS urgently.\n- Why it matters operationally: Edge/router compromise enables **traffic interception, credential theft, lateral movement, and persistence** into internal financial networks.\n- Recommended immediate actions for the SOC today: **Identify all MikroTik in environment + internet exposure; pull SSH/auth logs for “-2” user and suspicious config changes; isolate/IR any exposed devices and prioritize patching to vendor-fixed versions** (treat exposed as potentially compromised).\n\n**2) Magento / Adobe Commerce zero-day + backdoored stores (active exploitation; no patch in some reports)**\n- What happened: **Magento/Adobe Commerce zero-day** is being exploited and **stores are being backdoored**, with some reporting “no patch”/unclear remediation state.\n- Why it matters operationally: Direct risk to **payment flows**, customer data, webshell persistence, and **credential harvesting**; common pivot into internal networks via app servers.\n- Recommended immediate actions for the SOC today: **Confirm any Adobe Commerce/Magento presence (prod/dev); review web/app logs for new admin users, unexpected plugin/theme changes, and suspicious POSTs to admin endpoints; if exposed, place behind WAF/allowlists and initiate targeted compromise assessment**.\n\n**3) Chromium V8 exploitation (in KEV / active exploit theme)**\n- What happened: Briefings note **Chromium V8 is actively exploited** and referenced in **CISA KEV** context (exact CVE not provided in the feed—assume mainstream Chrome/Edge patch-gap risk).\n- Why it matters operationally: Browser RCE chains are a frequent entry for **credential theft and initial access**, especially for high-value finance users.\n- Recommended immediate actions for the SOC today: **Force-update Chrome/Edge fleet (verify via endpoint inventory); hunt for abnormal child processes from browsers (cmd/powershell/wscript/mshta); tighten browser hardening for privileged users (disable risky extensions, enforce download controls)**.\n\n**4) PaperCut server command execution vulnerabilities (active exploitation)**\n- What happened: **PaperCut servers** reportedly being **actively exploited** (CVE-2026-81578 / CVE-2026-82078) to run commands, steal creds, and create privileged accounts.\n- Why it matters operationally: Print management servers often sit **inside trusted networks**; exploitation can yield **domain-level credential access** and rapid lateral movement.\n- Recommended immediate actions for the SOC today: **Inventory PaperCut instances and check patch status; review server logs for admin account creation, suspicious process execution, and outbound connections; restrict admin interfaces to management networks/VPN and consider temporary isolation if exploitation suspected**.\n\n**5) CrowdStrike Falcon privilege escalation zero-day (public exploit)**\n- What happened: A **CrowdStrike Falcon privilege escalation zero-day** exploit was published (details limited in feed; assume local post-compromise escalation vector).\n- Why it matters operationally: If an attacker lands as a user, this may enable **SYSTEM/root escalation** and **EDR evasion/tampering** (high impact in ransomware playbooks).\n- Recommended immediate actions for the SOC today: **Check CrowdStrike advisories/console for hotfix guidance; monitor for Falcon sensor/service tampering and unusual privilege escalation events; ensure local admin rights are minimized and isolate hosts showing exploitation patterns**.\n\n---\n\n### Monitoring & detection recommendations\n- **Edge/network devices (MikroTik):** Firewall/VPN/router syslogs + config audit logs; hunt for **new SSH users (“-2”), unexpected SSH enablement, NAT/port-forward changes, new scheduled tasks** (ATT&CK: T1136, T1562, T1059).\n- **E-commerce/web tier (Magento/Adobe Commerce):** WAF + web server access logs + app admin logs; look for **new admin creation, unusual requests to admin/ajax endpoints, file writes in web roots, new PHP files/webshell patterns** (T1505.003, T1190).\n- **Browser exploitation:** EDR telemetry + proxy/DNS; alert on **browser spawning scripting engines or LOLBins** (chrome.exe/msedge.exe → powershell/cmd/wscript/mshta/rundll32) and suspicious download-to-execution sequences (T1203, T1059).\n- **PaperCut servers:** Windows/Linux audit + application logs; detect **new local/admin users, service account logons outside baseline, process creation from PaperCut service context, credential dumping precursors** (T1190, T1078, T1003).\n- **CrowdStrike zero-day abuse signals (assumption: local privesc):** EDR + Windows Security logs; watch for **sudden integrity-level jumps, token manipulation, unusual driver/service operations, Falcon-related registry/service changes** (T1068, T1562.001).\n- **Supply-chain driver malware (Geekom AMD mini PC drivers):** Endpoint device inventory + EDR; identify endpoints with **affected OEM images/drivers**, and hunt for **unsigned/unexpected driver installs and new persistence via services/tasks** (T1547, T1068).\n- **Crypto-mining/Defender tamper theme (REVSTEALER mention):** Defender/AV logs + EDR; alert on **Defender exclusions added, tamper protection changes, sustained high CPU + suspicious miner processes/network to pools** (T1562.001, T1496).\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** Add **MikroTik RouterOS, PaperCut, Chromium/Edge, and Adobe Commerce/Magento** to a “fast lane” patch SLA with weekly exposure validation (internet-facing first).\n- **E-commerce hardening:** Enforce **WAF virtual patching, admin MFA, IP allowlisting, file integrity monitoring** on web roots, and separate PCI-related assets from general corp networks.\n- **Endpoint privilege reduction:** Re-audit **local admin entitlements** (especially IT/helpdesk and developers) to reduce impact of local privilege escalation (CrowdStrike theme).\n- **Router/switch logging baseline:** Ensure all edge devices forward **auth/config logs** centrally; add automated detections for **new users, config drift, and remote admin exposure**.\n- **Supply-chain intake controls:** Strengthen procurement/onboarding checks for **OEM images/drivers**; require verification and controlled deployment pipeline for vendor driver packages.\n- **SaaS/IdP library risk (Perl SAML bypass CVE-2026-86304):** If any internal apps use **MojoX::Authentication SAML2**, schedule upgrade and validate SAML cert/trust-anchor configuration (lower urgency unless confirmed in inventory).",
   "highlights": [
     {
-      "title": "Hackers Actively Exploiting Magento and Adobe Commerce 0-Day RCE Vulnerability",
-      "link": "https://cybersecuritynews.com/magento-and-adobe-commerce-0-day-rce/",
+      "title": "IDScan sued over 153 million licence breach, FalconFlank zero-day hijacks CrowdStrike, Magento stores backdoored with no patch",
+      "link": "https://cybersecuritytoday.libsyn.com/idscan-sued-over-153-million-licence-breach-falconflank-zero-day-hijacks-crowdstrike-magento-stores-backdoored-with-no-patch",
+      "source": "Cybersecurity Today",
+      "published": "2026-09-07T00:45:00+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Cloud / SaaS",
+        "Malware / Payloads",
+        "Community / Briefing"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 100.0,
+      "priority_score": 87.89
+    },
+    {
+      "title": "MikroTik routers, Magento zero-day, and Chromium V8 actively exploited",
+      "link": "https://defend.network/briefings/mikrotik-router-magento-adobe-commerce-chromium-exploit-2026-09-07.html",
+      "source": "defend.network",
+      "published": "2026-09-07T06:30:00+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Malware / Payloads",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 86.11,
+      "priority_score": 89.17
+    },
+    {
+      "title": "Weekly Cybersecurity Newsletter Bulletin – CrowdStrike Falcon, Chrome 0-Day, GPT-6 Astra, Dropbox Breach and 20+ Stories",
+      "link": "https://cybersecuritynews.com/weekly-cybersecurity-newsletter-bulletin-sept-2026/",
       "source": "Cyber Security News",
-      "published": "2026-09-06T03:52:46+00:00",
+      "published": "2026-09-07T02:53:00+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": false,
+      "signal_tier": "critical",
+      "signal_score": 84.06,
+      "priority_score": 78.03
+    },
+    {
+      "title": "CVE-2025-54253-Inside-the-Adobe-AEM-Forms-Zero-Day exploit",
+      "link": "https://sploitus.com/exploit?id=KITPLOIT:TOOLS-GITHUB-ADITYABHATT3010-CVE-2025-54253-INSIDE-THE-ADOBE-AEM-FORMS-ZERO-DAY&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-09-07T03:08:23+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 80.45,
+      "priority_score": 85.48
+    },
+    {
+      "title": "DEF CON SG1 - CSIT Village - Jun Rong And Javier Koh - Cve 2025 52692 Rogue Request Roots Router",
+      "link": "https://www.youtube.com/watch?v=nxtikf--Zzc",
+      "source": "DEFCONConference",
+      "published": "2026-09-06T23:31:56+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Community / Briefing"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 77.32,
+      "priority_score": 79.04
+    },
+    {
+      "title": "S2-052",
+      "link": "https://vulners.com/kitploit/KITPLOIT:TOOLS-GITHUB-BEYONDCY-S2-052?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-09-06T15:38:53+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Linux / Unix",
+        "Windows / Microsoft"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 72.45,
+      "priority_score": 72.51
+    },
+    {
+      "title": "CVE-2025-50165-x64-Exploit",
+      "link": "https://vulners.com/kitploit/KITPLOIT:TOOLS-GITHUB-ENCRYPTER15-CVE-2025-50165-X64-EXPLOIT?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-09-06T19:41:48+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Detection Engineering",
+        "Windows / Microsoft"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 70.45,
+      "priority_score": 72.96
+    },
+    {
+      "title": "Researcher Publishes CrowdStrike Privilege Escalation Zero Day",
+      "link": "https://www.infosecurity-magazine.com/news/crowdstrike-privilege-escalation/",
+      "source": "Infosecurity Magazine – News",
+      "published": "2026-09-07T08:28:00+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC",
         "General Security"
       ],
       "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 100.0,
-      "priority_score": 88.17
+      "signal_tier": "high",
+      "signal_score": 69.63,
+      "priority_score": 87.37
     },
     {
-      "title": "Log4J-RCE-Proof-Of-Concept",
-      "link": "https://vulners.com/kitploit/KITPLOIT:TOOLS-GITHUB-HYCRAFTHD-LOG4J-RCE-PROOF-OF-CONCEPT?utm_source=rss&utm_medium=rss&utm_campaign=rss",
-      "source": "Vulners.com RSS Feed",
-      "published": "2026-09-05T18:35:21+00:00",
+      "title": "Exploit for CVE-2026-67276",
+      "link": "https://sploitus.com/exploit?id=07106AE4-4035-5003-8EFC-3BD281F05DE2&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-09-07T06:52:28+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC"
       ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 96.42,
-      "priority_score": 82.82
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.45,
+      "priority_score": 74.89
     },
     {
-      "title": "Actively exploited sandbox RCE in all Chromium versions (CVE-2026-85046)",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1w8sh0c/actively_exploited_sandbox_rce_in_all_chromium/",
-      "source": "/r/cybersecurity",
-      "published": "2026-09-06T10:23:39+00:00",
+      "title": "CVE-2022-46364-Poc",
+      "link": "https://vulners.com/kitploit/KITPLOIT:TOOLS-GITHUB-KASEM545-CVE-2022-46364-POC?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-09-06T15:36:32+00:00",
       "smart_groups": [
+        "Cloud / SaaS",
         "Vulnerabilities / CVEs",
         "Exploit / PoC",
-        "OSINT / Community"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 82.93,
-      "priority_score": 88.91
-    },
-    {
-      "title": "FalconFlank Zero-Day Hits CrowdStrike Falcon Sensor",
-      "link": "https://databreaches.net/2026/09/05/falconflank-zero-day-hits-crowdstrike-falcon-sensor/",
-      "source": "DataBreaches.net",
-      "published": "2026-09-05T15:41:50+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "Windows / Microsoft",
-        "Data Breaches / Leaks"
-      ],
-      "curated": true,
-      "signal_tier": "high",
-      "signal_score": 70.2,
-      "priority_score": 85.29
-    },
-    {
-      "title": "Exploit for CVE-2026-18963",
-      "link": "https://sploitus.com/exploit?id=88FAD2B1-66D0-5B36-903D-3E231116548C&utm_source=rss&utm_medium=rss",
-      "source": "Sploitus – Exploits",
-      "published": "2026-09-05T20:52:28+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
+        "Ransomware",
+        "Web / API Security"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 68.46,
-      "priority_score": 71.86
-    },
-    {
-      "title": "Exploit for CVE-2026-0920",
-      "link": "https://sploitus.com/exploit?id=D4ED2ECD-B56D-5DCE-8F56-59F309E29B35&utm_source=rss&utm_medium=rss",
-      "source": "Sploitus – Exploits",
-      "published": "2026-09-05T16:39:31+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 68.46,
-      "priority_score": 70.73
-    },
-    {
-      "title": "Exploit for Code Injection in Grafana",
-      "link": "https://sploitus.com/exploit?id=3DD6C67A-5A26-5371-B94C-F392EB87292A&utm_source=rss&utm_medium=rss",
-      "source": "Sploitus – Exploits",
-      "published": "2026-09-05T23:39:36+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 66.46,
-      "priority_score": 72.61
-    },
-    {
-      "title": "Exploit for Improper Authorization in Vercel Next.Js",
-      "link": "https://sploitus.com/exploit?id=DD629C00-2E2D-5D29-B5B7-1E74EAF37DBF&utm_source=rss&utm_medium=rss",
-      "source": "Sploitus – Exploits",
-      "published": "2026-09-05T12:41:19+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 66.46,
-      "priority_score": 70.75
-    },
-    {
-      "title": "Exploit for Missing Authentication for Critical Function in Cpanel",
-      "link": "https://sploitus.com/exploit?id=69927260-D18A-5031-8470-51E4EC5EA4AF&utm_source=rss&utm_medium=rss",
-      "source": "Sploitus – Exploits",
-      "published": "2026-09-05T11:19:21+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 66.46,
-      "priority_score": 69.3
-    },
-    {
-      "title": "CVE-2021-25094-tatsu-preauth-rce",
-      "link": "https://vulners.com/kitploit/KITPLOIT:TOOLS-GITHUB-DARKPILLS-CVE-2021-25094-TATSU-PREAUTH-RCE?utm_source=rss&utm_medium=rss&utm_campaign=rss",
-      "source": "Vulners.com RSS Feed",
-      "published": "2026-09-05T18:31:12+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 64.42,
-      "priority_score": 72.11
+      "signal_score": 68.45,
+      "priority_score": 71.63
     }
   ]
 }
