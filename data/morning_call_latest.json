@@ -1,169 +1,148 @@
 {
-  "generated_at": "2026-09-08T11:17:21.286836+00:00",
-  "analysis_date": "2026-09-08",
+  "generated_at": "2026-09-09T11:20:13.585852+00:00",
+  "analysis_date": "2026-09-09",
   "provider": "openai",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-09-08T10:53:06.461199+00:00",
+  "source_generated_at": "2026-09-09T08:52:22.550490+00:00",
   "source_days_back": 30,
-  "source_total_items": 56644,
-  "total_items_in_window_all": 2098,
-  "total_items_in_window_curated": 25,
-  "total_items_in_window_selected": 49,
+  "source_total_items": 58402,
+  "total_items_in_window_all": 4893,
+  "total_items_in_window_curated": 23,
+  "total_items_in_window_selected": 53,
   "context_selection_policy": "curated-plus-operational-signal-v1",
-  "morning_call_markdown": "### Executive Summary\n- Active zero-days with real-world exploitation: **Adobe Commerce/Magento (CVE-2026-75650)** and **N-able N-central (CVE-2026-86218)**; both enable **pre-auth RCE** and are being used to gain footholds/backdoor systems.\n- **MikroTik RouterOS SSH auth bypass (CVE-2026-67276)** is under active exploitation for router takeover—high risk for perimeter compromise and traffic manipulation.\n- Credential theft pressure is rising: reporting indicates **Microsoft 365 phishing at scale** (MFA bypass/credential theft), and extortion campaigns leveraging **Oracle EBS zero-day** continue to generate confirmed breaches.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Adobe Commerce / Magento “StyleSmuggler” zero-day (CVE-2026-75650, CVSS 10) — exploited**\n- What happened: Adobe released patches for a Magento/Adobe Commerce max-severity zero-day being exploited to deploy **PHP web shells** and **Rust/Linux backdoors**.\n- Why it matters operationally: Internet-facing commerce stacks are common in partner ecosystems; compromise can lead to **data theft, payment fraud, pivoting**, and persistent footholds.\n- Recommended immediate actions for the SOC today: Confirm asset inventory for Adobe Commerce/Magento; **patch/mitigate immediately** and hunt for web shells/new admin users/unknown cron or services on e-commerce hosts.\n\n**2) N-able N-central unauthenticated RCE zero-day (CVE-2026-86218) — exploited**\n- What happened: N-able shipped an emergency hotfix for an **unauthenticated RCE** in N-central with active exploitation and multiple advisories/alerts.\n- Why it matters operationally: RMM tooling is a **high-leverage control plane**; compromise can enable mass endpoint takeover, lateral movement, and ransomware deployment.\n- Recommended immediate actions for the SOC today: Identify any **internal or third-party managed** N-central exposure; **apply hotfix + restrict access** (VPN/allowlist), and review N-central audit logs for new/unknown actions and admin changes.\n\n**3) MikroTik RouterOS SSH auth bypass (CVE-2026-67276) — exploited**\n- What happened: Emergency RouterOS updates released after active exploitation of an SSH authentication bypass enabling attacker login as an existing user.\n- Why it matters operationally: Router compromise enables **credential interception, traffic redirection, remote access staging**, and can bypass endpoint controls.\n- Recommended immediate actions for the SOC today: Check for MikroTik in perimeter/branch networks; **patch ASAP**, rotate router creds/keys, and validate configs (new users, changed DNS, NAT/port forwards).\n\n**4) Microsoft 365 phishing/credential theft at scale (reported MFA bypass + thousands of creds stolen)**\n- What happened: Reporting indicates a phishing framework operating at scale against Microsoft 365, including MFA-bypass patterns (details limited in the feed; assume adversary-in-the-middle / token theft).\n- Why it matters operationally: Financial institutions are prime targets; successful token/session theft leads to **immediate mailbox access**, internal phishing, and fraudulent payments.\n- Recommended immediate actions for the SOC today: Elevate monitoring for **impossible travel + risky sign-ins + new device/session**; fast-track response playbooks for **token revocation, password reset, and conditional access lock-down**.\n\n**5) Oracle E-Business Suite zero-day leveraged in extortion campaigns (Clop-related breach reporting)**\n- What happened: A major org confirmed employee data theft tied to exploitation of an Oracle EBS zero-day associated with ongoing extortion activity.\n- Why it matters operationally: If we (or key vendors) run EBS, exploitation may yield **HR/finance data exposure** and downstream fraud/extortion.\n- Recommended immediate actions for the SOC today: Validate whether any Oracle EBS is present (including vendors/outsourcers); increase monitoring on EBS/app servers for **web-access anomalies and post-exploit process execution**, and ensure incident comms path is ready if vendor-notified.\n\n---\n\n### Monitoring & detection recommendations\n- **Web app compromise (Magento/Commerce/EBS):** WAF + web server logs (NGINX/Apache/IIS) for unusual POSTs to admin/API endpoints, new file writes in web roots, and suspicious PHP execution; map to **T1190 (Exploit Public-Facing Application)**.\n- **Web shells/backdoors (StyleSmuggler themes):** EDR on web hosts for suspicious interpreter spawning (php/python/node) and outbound connections from web servers; hunt **new cron/systemd services** and unexpected binaries in writable dirs (**T1505.003 Web Shell**).\n- **RMM control plane abuse (N-central):** N-central audit logs + IdP logs for new admins, token creations, mass task execution, and unusual agent deployment; correlate with endpoint EDR for remote tool spawning (**T1219 Remote Access Tools**).\n- **Router compromise (MikroTik):** Firewall/VPN logs for management access to router SSH from unusual IPs; router syslog (if centralized) for login events and config changes; watch for DNS/NTP changes (**T1565.001 Stored Data Manipulation** / config tampering).\n- **M365 phishing/token theft:** Entra ID sign-in logs, Conditional Access, Defender for Cloud Apps for OAuth consent grants, new devices, atypical session lifetimes, legacy auth attempts; map to **T1550.003 (Web Session Cookie)** and **T1566 (Phishing)**.\n- **Privilege escalation PoCs (CrowdStrike/NVIDIA/Avast themes):** Treat as “increased PoC noise”; watch EDR for local SYSTEM escalation patterns (service creation, driver loads, token manipulation) on admin workstations/VDI (**T1068 Privilege Escalation**).\n- **Supply-chain/terminal injection (developer tooling):** CI/CD logs and developer endpoint telemetry for unusual package metadata/output control sequences; flag unexpected dependency updates; map to **T1195 (Supply Chain Compromise)**.\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** Add CVE-2026-75650 (Adobe Commerce/Magento), CVE-2026-86218 (N-central), CVE-2026-67276 (MikroTik) to “24–72h” patch SLAs; confirm compensating controls for any systems that cannot patch immediately.\n- **RMM hardening:** Require N-central access via VPN/zero-trust, enforce MFA/admin IP allowlists, and review least-privilege roles; validate backups of RMM config and rapid disable procedures.\n- **M365 resilience:** Tighten Conditional Access (phish-resistant MFA where possible), disable legacy auth, and ensure rapid **session revocation** workflow is practiced (tabletop).\n- **Third-party/vendor risk:** Proactively ask MSPs and critical vendors about exposure to N-central and Oracle EBS exploitation; ensure notification and evidence-sharing expectations are clear.\n- **Network device assurance:** Ensure MikroTik (and other edge devices) send syslog centrally; schedule periodic config integrity checks and credential/key rotation.\n- **Exploit/P0C intake:** Several new PoCs are circulating (various CVEs); keep them in a “watch” queue and prioritize only those matching our tech stack/external attack surface (avoid chasing low-relevance PoC chatter).",
+  "morning_call_markdown": "### Executive Summary\n- Multiple **actively exploited zero-days** with direct enterprise impact: **Chrome (CVE-2026-87491)**, **Adobe Commerce/Magento (CVE-2026-75650 “StyleSmuggler”)**, and **N-able N-central (CVE-2026-86218)**.\n- **Perimeter/network device compromise remains hot**: FortiGate exploitation reported with **custom Node.js RAT** deployment; MikroTik reports **active SSH zero-day chain** (details still emerging).\n- **Patch pressure spike**: Microsoft shipped a record **~966–974 fixes** including **two exploited Windows zero-days** (CVE IDs not consistently stated across sources in this feed) — prioritize exposure-based patching and compensating controls.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Actively exploited Chrome zero-day (CVE-2026-87491) / Chromium 0-day activity**\n- What happened: Google released **Chrome 153** patches including **CVE-2026-87491** with confirmed in-the-wild exploitation (plus separate Chromium/V8 0-day chatter in the window).\n- Why it matters operationally: High-likelihood **drive-by compromise** path leading to endpoint footholds and credential theft in enterprise browsing sessions.\n- Recommended immediate actions for the SOC today: **Force-update Chrome to 153.0.8010.36/.37** via endpoint management; **hunt for unusual child processes from chrome.exe** (script hosts, LOLBins) and new persistence shortly after browser activity.\n\n**2) Adobe Commerce / Magento unauthenticated RCE zero-day exploited (CVE-2026-75650 “StyleSmuggler”)**\n- What happened: Adobe issued an emergency fix for **actively exploited** max-severity **unauth RCE** used to **backdoor servers**.\n- Why it matters operationally: Direct risk to **internet-facing e-commerce** stacks (payment flows, customer PII) and potential pivot into internal networks; high ransomware/financial fraud adjacency.\n- Recommended immediate actions for the SOC today: **Identify any Adobe Commerce/Magento assets** (prod + staging) and validate patch/hotfix status; **review web/app logs for anomalous requests tied to email/template rendering/payment failure flows** and isolate any host showing new webshell/backdoor behavior.\n\n**3) N-able N-central pre-auth RCE exploited (CVE-2026-86218)**\n- What happened: N-able shipped an emergency hotfix; CISA added **CVE-2026-86218** to KEV with exploitation reported.\n- Why it matters operationally: RMM tooling compromise is a **high-impact supply-chain/management plane** event—rapid mass deployment of malware and credential access is typical.\n- Recommended immediate actions for the SOC today: **Confirm whether we run N-central (internal or via MSP)** and apply the vendor hotfix immediately; **monitor N-central server and downstream endpoints** for new admin accounts, remote script execution, and sudden tool distribution spikes.\n\n**4) Network edge exploitation: FortiGate malware deployment + MikroTik SSH zero-day chain**\n- What happened: Reporting indicates **FortiGate devices** are being exploited to deploy **custom Node.js malware/RAT**; MikroTik routers reportedly targeted via **SSH auth bypass + privilege escalation chain** (CVE-2026-67276 / CVE-2026-86060).\n- Why it matters operationally: Compromised perimeter gear enables **stealthy long-term access**, traffic interception, and lateral movement—especially damaging for financial services.\n- Recommended immediate actions for the SOC today: **Inventory internet-facing FortiGate/MikroTik** and validate firmware/mitigations; **review firewall/router telemetry** for new/unknown processes, unexpected outbound connections from the device, config changes, and newly enabled management services.\n\n**5) Microsoft Patch Tuesday: record volume + two exploited Windows zero-days (CVE IDs unclear in feed)**\n- What happened: Microsoft released **~966–974 patches** including **two exploited-in-the-wild Windows zero-days** (sources mention CVE-2026-81963 / CVE-2026-85880 as notable but do not clearly align them to “exploited” in this context—treat as high risk until confirmed internally).\n- Why it matters operationally: Attackers rapidly weaponize “Patch Tuesday” diffing; exposed Windows endpoints/servers are at elevated risk over the next 7–10 days.\n- Recommended immediate actions for the SOC today: **Prioritize patching for internet-facing and Tier-0 systems** (AD, EDR mgmt, jump hosts); **add compensating detections** for exploitation patterns (new services, scheduled tasks, suspicious DLL loads) on unpatched populations.\n\n---\n\n### Monitoring & detection recommendations\n- **Browser-led intrusion chain (Chrome/Chromium 0-days)**: EDR process trees + Sysmon (if deployed) for **chrome.exe spawning cmd/powershell/wscript/mshta/rundll32** (MITRE **T1204, T1059, T1218**); correlate with fresh downloads and new autoruns.\n- **Magento/Adobe Commerce exploitation**: WAF/web server logs + app logs for **unusual POSTs to commerce endpoints**, spikes in **500s**, template/email rendering anomalies; EDR on web hosts for **new PHP files, unexpected node/python binaries, or outbound C2** (MITRE **T1190, T1505**).\n- **RMM/N-central compromise signals**: N-central server Windows logs + application logs for **new local admins**, service installs, scheduled tasks, and remote execution jobs; endpoint telemetry for **simultaneous tool drops** across many hosts (MITRE **T1210, T1569, T1053**).\n- **FortiGate/MikroTik device foothold**: Firewall/router audit logs for **admin login from new IPs**, config export/import, new VPN users, and changes to DNS/NTP; NetFlow for **new outbound destinations from the appliance itself** (MITRE **T1098, T1562**).\n- **Microsoft “post-patch weaponization” window**: Watch domain controllers and file servers for **new service creation**, **LSASS access attempts**, and **remote WMI/SMB exec** surges; prioritize alerts from previously quiet admin hosts (MITRE **T1047, T1021**).\n- **Mobile banking trojan theme (Gigabud w/ app-cloning add-on)**: Fraud/telemetry teams: monitor **device binding changes**, **new payees**, and **high-risk transaction patterns** from Android sessions; SOC to flag user reports mentioning “work profile/app cloner/Shelter” behavior (MITRE **T1437, T1629**).\n\n---\n\n### Medium-term follow-ups\n- **Patch governance**: Build an exposure-based plan for the **Microsoft 966–974** release (Tier-0 first, then internet-facing, then broad endpoints); ensure rollback/testing steps are ready due to volume.\n- **Edge device assurance**: Schedule quarterly (or faster) **firewall/router integrity checks** (known-good configs, signed firmware validation where supported, admin MFA, management plane allowlisting).\n- **E-commerce hardening** (if applicable): Enforce **WAF virtual patching**, restrict admin panels by IP/VPN, rotate credentials/API keys per Adobe guidance after **CVE-2026-75650** response.\n- **RMM risk control**: Validate contractual/technical controls with any MSP: **segmentation of management networks**, least privilege, app allowlisting for remote tools, and dedicated monitored jump infrastructure.\n- **Zero-day readiness**: Ensure rapid comms path for “KEV-added” events (N-central/Chrome-class) with **SLA for emergency patch deployment** and pre-approved change windows.\n- **Track “public disclosure/PoC” items** (e.g., Defender “ShieldCrash” claims and various Full Disclosure posts): treat as **watchlist** until vendor confirmation/our asset exposure is validated; prepare detections for privilege escalation attempts rather than chasing unverified IOCs.",
   "highlights": [
     {
-      "title": "Adobe Patches Magento Zero-Day Exploited to Deploy Rust Backdoor and PHP Web Shell",
-      "link": "https://thehackernews.com/2026/09/adobe-patches-magento-zero-day.html",
-      "source": "The Hacker News",
-      "published": "2026-09-08T09:13:47+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "Malware / Payloads",
-        "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 100.0,
-      "priority_score": 88.41
-    },
-    {
-      "title": "N-able patches critical N-central zero-day exploited in the wild (CVE-2026-86218)",
-      "link": "https://www.helpnetsecurity.com/2026/09/07/n-able-n-central-hotfix-cve-2026-86218/",
+      "title": "Google fixes yet another actively exploited Chrome zero-day (CVE-2026-87491)",
+      "link": "https://www.helpnetsecurity.com/2026/09/09/google-chrome-cve-2026-87491-zero-day-flaw/",
       "source": "Help Net Security",
-      "published": "2026-09-07T11:55:57+00:00",
+      "published": "2026-09-09T07:53:57+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC",
-        "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 100.0,
-      "priority_score": 84.96
-    },
-    {
-      "title": "Bimbo Bakeries USA Confirms Data Breach in Oracle EBS Zero-Day Attack",
-      "link": "https://cybersecuritynews.com/bimbo-oracle-ebs-data-breach/",
-      "source": "Cyber Security News",
-      "published": "2026-09-07T17:12:09+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Ransomware",
-        "Data Breaches / Leaks",
-        "Exploit / PoC",
-        "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 100.0,
-      "priority_score": 84.71
-    },
-    {
-      "title": "Back-to-back N-able bugs send admins on a patching spree",
-      "link": "https://www.csoonline.com/article/4219242/back-to-back-n-able-bugs-send-admins-on-a-patching-spree.html",
-      "source": "CSO Online",
-      "published": "2026-09-07T11:53:54+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Cloud / SaaS",
-        "Crypto / Web3",
-        "Exploit / PoC",
-        "General Security"
-      ],
-      "curated": false,
-      "signal_tier": "critical",
-      "signal_score": 100.0,
-      "priority_score": 75.68
-    },
-    {
-      "title": "Nightmare Eclipse Drops CrowdStrike, Nvidia, Avast Zero-Day Exploits",
-      "link": "https://www.securityweek.com/nightmare-eclipse-drops-crowdstrike-nvidia-avast-zero-day-exploits/",
-      "source": "SecurityWeek",
-      "published": "2026-09-07T12:15:57+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 93.96,
-      "priority_score": 83.19
-    },
-    {
-      "title": "llm-supply-chain-backdoor-lab",
-      "link": "https://vulners.com/githubexploit/BAC2ECC6-AEF0-5EC1-AE81-69001175BE55?utm_source=rss&utm_medium=rss&utm_campaign=rss",
-      "source": "Vulners.com RSS Feed",
-      "published": "2026-09-08T03:17:39+00:00",
-      "smart_groups": [
-        "Crypto / Web3",
-        "Malware / Payloads",
-        "Supply Chain / Software",
-        "Vulnerabilities / CVEs"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 91.45,
-      "priority_score": 79.25
-    },
-    {
-      "title": "Chrome/Edge backdoors, Magento zero-day, Microsoft 365 phishing at scale",
-      "link": "https://defend.network/briefings/chrome-edge-magento-backdoor-microsoft-365-phishing-2026-09-08.html",
-      "source": "defend.network",
-      "published": "2026-09-08T06:30:00+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "Identity / Access",
         "Linux / Unix",
-        "Malware / Payloads",
-        "Phishing / Social Engineering",
+        "Windows / Microsoft",
         "General Security"
       ],
       "curated": true,
       "signal_tier": "critical",
-      "signal_score": 86.11,
-      "priority_score": 87.63
+      "signal_score": 100.0,
+      "priority_score": 91.24
     },
     {
-      "title": "CC-4845 - Active Exploitation of Critical N-central Unauthenticated RCE Vulnerability",
-      "link": "https://digital.nhs.uk/cyber-alerts/2026/cc-4845",
-      "source": "NHS Digital - Cyber Alert Feed",
-      "published": "2026-09-07T14:18:00+00:00",
+      "title": "N-able N-central CVE-2026-86218: Emergency Hotfix for Unauthenticated RCE Zero-Day",
+      "link": "https://dev.to/anoymask/n-able-n-central-cve-2026-86218-emergency-hotfix-for-unauthenticated-rce-zero-day-4mln",
+      "source": "DEV Community",
+      "published": "2026-09-08T23:25:07+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
+        "Identity / Access",
+        "Crypto / Web3",
         "Exploit / PoC",
-        "Government / CERT"
+        "OSINT / Community"
       ],
       "curated": true,
       "signal_tier": "critical",
-      "signal_score": 85.2,
-      "priority_score": 85.46
+      "signal_score": 100.0,
+      "priority_score": 89.35
     },
     {
-      "title": "CVE-2026-67276: MikroTik RouterOS SSH Zero-Day Exploited in Router Takeover Attacks",
-      "link": "https://socprime.com/blog/cve-2026-67276-mikrotik-routeros-ssh-zero-day/",
+      "title": "StyleSmuggler: Unauthenticated RCE via Adobe Commerce Failed Payment Email Rendering",
+      "link": "https://dev.to/anoymask/stylesmuggler-unauthenticated-rce-via-adobe-commerce-failed-payment-email-rendering-5249",
+      "source": "DEV Community",
+      "published": "2026-09-08T23:22:16+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Identity / Access",
+        "Malware / Payloads",
+        "Detection Engineering",
+        "Exploit / PoC",
+        "Linux / Unix",
+        "Ransomware",
+        "OSINT / Community"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 100.0,
+      "priority_score": 89.31
+    },
+    {
+      "title": "CVE-2026-75650: Adobe Patches Actively Exploited Magento Zero-Day Used to Deploy Backdoors",
+      "link": "https://socprime.com/blog/cve-2026-75650-critical-magento-zero-day-rce/",
       "source": "SOC Prime Blog",
-      "published": "2026-09-07T15:06:29+00:00",
+      "published": "2026-09-08T14:16:22+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC",
+        "Malware / Payloads",
         "Vendors / Product Security"
       ],
       "curated": true,
       "signal_tier": "critical",
-      "signal_score": 81.4,
-      "priority_score": 86.73
+      "signal_score": 100.0,
+      "priority_score": 87.77
     },
     {
-      "title": "Critical Zero-Day Exploit (CVE-2026-86218) in N-Central: N-able Releases Urgent Patch",
-      "link": "https://www.news4hackers.com/critical-zero-day-exploit-cve-2026-86218-in-n-central-n-able-releases-urgent-patch/",
-      "source": "News4Hackers",
-      "published": "2026-09-07T12:10:11+00:00",
+      "title": "Hackers Actively Exploiting FortiGate Firewalls to Deploy Custom Node.js Malware",
+      "link": "https://cybersecuritynews.com/fortigate-firewalls-hacked-to-deploy-malware/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-09-08T16:50:52+00:00",
+      "smart_groups": [
+        "Malware / Payloads",
+        "Vulnerabilities / CVEs",
+        "Threat Actors / APT",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 100.0,
+      "priority_score": 86.27
+    },
+    {
+      "title": "Adobe fixes critical Magento zero-day exploited to backdoor servers",
+      "link": "https://www.bleepingcomputer.com/news/security/adobe-fixes-critical-magento-zero-day-exploited-to-backdoor-servers/",
+      "source": "BleepingComputer",
+      "published": "2026-09-08T13:34:47+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Malware / Payloads",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 100.0,
+      "priority_score": 85.78
+    },
+    {
+      "title": "StyleSmuggler (CVE-2026-75650): Frequently asked questions about Adobe Commerce and Magento zero-day",
+      "link": "https://www.tenable.com/blog/stylesmuggler-cve-2026-75650-frequently-asked-questions-about-adobe-commerce-and-magento-zero",
+      "source": "Tenable Blog",
+      "published": "2026-09-08T14:00:43+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Identity / Access",
+        "Exploit / PoC",
+        "Linux / Unix",
+        "Threat Actors / APT",
+        "Malware / Payloads",
+        "Network / OT / ICS",
+        "Web / API Security",
+        "Vendors / Product Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 100.0,
+      "priority_score": 85.74
+    },
+    {
+      "title": "CISA Warns of Chromium Type Confusion 0-Day Vulnerability Actively Exploited in Attacks",
+      "link": "https://cybersecuritynews.com/chromium-type-confusion-0-day-vulnerability/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-09-08T16:25:59+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC",
@@ -171,8 +150,40 @@
       ],
       "curated": true,
       "signal_tier": "critical",
-      "signal_score": 81.22,
-      "priority_score": 85.02
+      "signal_score": 95.24,
+      "priority_score": 86.55
+    },
+    {
+      "title": "Chrome 153 Fixes 230 Vulnerabilities, Including One 0-Day Exploited in the Wild",
+      "link": "https://cybersecuritynews.com/chrome-153-released/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-09-09T04:46:12+00:00",
+      "smart_groups": [
+        "Exploit / PoC",
+        "Linux / Unix",
+        "Vulnerabilities / CVEs",
+        "Windows / Microsoft",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 86.24,
+      "priority_score": 84.14
+    },
+    {
+      "title": "Google warns of new Chrome zero-day bug exploited in attacks",
+      "link": "https://www.bleepingcomputer.com/news/security/google-patches-seventh-chrome-zero-day-exploited-in-attacks-this-year/",
+      "source": "BleepingComputer",
+      "published": "2026-09-09T06:25:48+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 86.19,
+      "priority_score": 90.04
     }
   ]
 }
