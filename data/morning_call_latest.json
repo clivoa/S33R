@@ -1,189 +1,174 @@
 {
-  "generated_at": "2026-09-09T11:20:13.585852+00:00",
-  "analysis_date": "2026-09-09",
+  "generated_at": "2026-09-10T11:18:12.804807+00:00",
+  "analysis_date": "2026-09-10",
   "provider": "openai",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-09-09T08:52:22.550490+00:00",
+  "source_generated_at": "2026-09-10T10:56:41.653373+00:00",
   "source_days_back": 30,
-  "source_total_items": 58402,
-  "total_items_in_window_all": 4893,
-  "total_items_in_window_curated": 23,
-  "total_items_in_window_selected": 53,
+  "source_total_items": 60003,
+  "total_items_in_window_all": 2632,
+  "total_items_in_window_curated": 14,
+  "total_items_in_window_selected": 40,
   "context_selection_policy": "curated-plus-operational-signal-v1",
-  "morning_call_markdown": "### Executive Summary\n- Multiple **actively exploited zero-days** with direct enterprise impact: **Chrome (CVE-2026-87491)**, **Adobe Commerce/Magento (CVE-2026-75650 “StyleSmuggler”)**, and **N-able N-central (CVE-2026-86218)**.\n- **Perimeter/network device compromise remains hot**: FortiGate exploitation reported with **custom Node.js RAT** deployment; MikroTik reports **active SSH zero-day chain** (details still emerging).\n- **Patch pressure spike**: Microsoft shipped a record **~966–974 fixes** including **two exploited Windows zero-days** (CVE IDs not consistently stated across sources in this feed) — prioritize exposure-based patching and compensating controls.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Actively exploited Chrome zero-day (CVE-2026-87491) / Chromium 0-day activity**\n- What happened: Google released **Chrome 153** patches including **CVE-2026-87491** with confirmed in-the-wild exploitation (plus separate Chromium/V8 0-day chatter in the window).\n- Why it matters operationally: High-likelihood **drive-by compromise** path leading to endpoint footholds and credential theft in enterprise browsing sessions.\n- Recommended immediate actions for the SOC today: **Force-update Chrome to 153.0.8010.36/.37** via endpoint management; **hunt for unusual child processes from chrome.exe** (script hosts, LOLBins) and new persistence shortly after browser activity.\n\n**2) Adobe Commerce / Magento unauthenticated RCE zero-day exploited (CVE-2026-75650 “StyleSmuggler”)**\n- What happened: Adobe issued an emergency fix for **actively exploited** max-severity **unauth RCE** used to **backdoor servers**.\n- Why it matters operationally: Direct risk to **internet-facing e-commerce** stacks (payment flows, customer PII) and potential pivot into internal networks; high ransomware/financial fraud adjacency.\n- Recommended immediate actions for the SOC today: **Identify any Adobe Commerce/Magento assets** (prod + staging) and validate patch/hotfix status; **review web/app logs for anomalous requests tied to email/template rendering/payment failure flows** and isolate any host showing new webshell/backdoor behavior.\n\n**3) N-able N-central pre-auth RCE exploited (CVE-2026-86218)**\n- What happened: N-able shipped an emergency hotfix; CISA added **CVE-2026-86218** to KEV with exploitation reported.\n- Why it matters operationally: RMM tooling compromise is a **high-impact supply-chain/management plane** event—rapid mass deployment of malware and credential access is typical.\n- Recommended immediate actions for the SOC today: **Confirm whether we run N-central (internal or via MSP)** and apply the vendor hotfix immediately; **monitor N-central server and downstream endpoints** for new admin accounts, remote script execution, and sudden tool distribution spikes.\n\n**4) Network edge exploitation: FortiGate malware deployment + MikroTik SSH zero-day chain**\n- What happened: Reporting indicates **FortiGate devices** are being exploited to deploy **custom Node.js malware/RAT**; MikroTik routers reportedly targeted via **SSH auth bypass + privilege escalation chain** (CVE-2026-67276 / CVE-2026-86060).\n- Why it matters operationally: Compromised perimeter gear enables **stealthy long-term access**, traffic interception, and lateral movement—especially damaging for financial services.\n- Recommended immediate actions for the SOC today: **Inventory internet-facing FortiGate/MikroTik** and validate firmware/mitigations; **review firewall/router telemetry** for new/unknown processes, unexpected outbound connections from the device, config changes, and newly enabled management services.\n\n**5) Microsoft Patch Tuesday: record volume + two exploited Windows zero-days (CVE IDs unclear in feed)**\n- What happened: Microsoft released **~966–974 patches** including **two exploited-in-the-wild Windows zero-days** (sources mention CVE-2026-81963 / CVE-2026-85880 as notable but do not clearly align them to “exploited” in this context—treat as high risk until confirmed internally).\n- Why it matters operationally: Attackers rapidly weaponize “Patch Tuesday” diffing; exposed Windows endpoints/servers are at elevated risk over the next 7–10 days.\n- Recommended immediate actions for the SOC today: **Prioritize patching for internet-facing and Tier-0 systems** (AD, EDR mgmt, jump hosts); **add compensating detections** for exploitation patterns (new services, scheduled tasks, suspicious DLL loads) on unpatched populations.\n\n---\n\n### Monitoring & detection recommendations\n- **Browser-led intrusion chain (Chrome/Chromium 0-days)**: EDR process trees + Sysmon (if deployed) for **chrome.exe spawning cmd/powershell/wscript/mshta/rundll32** (MITRE **T1204, T1059, T1218**); correlate with fresh downloads and new autoruns.\n- **Magento/Adobe Commerce exploitation**: WAF/web server logs + app logs for **unusual POSTs to commerce endpoints**, spikes in **500s**, template/email rendering anomalies; EDR on web hosts for **new PHP files, unexpected node/python binaries, or outbound C2** (MITRE **T1190, T1505**).\n- **RMM/N-central compromise signals**: N-central server Windows logs + application logs for **new local admins**, service installs, scheduled tasks, and remote execution jobs; endpoint telemetry for **simultaneous tool drops** across many hosts (MITRE **T1210, T1569, T1053**).\n- **FortiGate/MikroTik device foothold**: Firewall/router audit logs for **admin login from new IPs**, config export/import, new VPN users, and changes to DNS/NTP; NetFlow for **new outbound destinations from the appliance itself** (MITRE **T1098, T1562**).\n- **Microsoft “post-patch weaponization” window**: Watch domain controllers and file servers for **new service creation**, **LSASS access attempts**, and **remote WMI/SMB exec** surges; prioritize alerts from previously quiet admin hosts (MITRE **T1047, T1021**).\n- **Mobile banking trojan theme (Gigabud w/ app-cloning add-on)**: Fraud/telemetry teams: monitor **device binding changes**, **new payees**, and **high-risk transaction patterns** from Android sessions; SOC to flag user reports mentioning “work profile/app cloner/Shelter” behavior (MITRE **T1437, T1629**).\n\n---\n\n### Medium-term follow-ups\n- **Patch governance**: Build an exposure-based plan for the **Microsoft 966–974** release (Tier-0 first, then internet-facing, then broad endpoints); ensure rollback/testing steps are ready due to volume.\n- **Edge device assurance**: Schedule quarterly (or faster) **firewall/router integrity checks** (known-good configs, signed firmware validation where supported, admin MFA, management plane allowlisting).\n- **E-commerce hardening** (if applicable): Enforce **WAF virtual patching**, restrict admin panels by IP/VPN, rotate credentials/API keys per Adobe guidance after **CVE-2026-75650** response.\n- **RMM risk control**: Validate contractual/technical controls with any MSP: **segmentation of management networks**, least privilege, app allowlisting for remote tools, and dedicated monitored jump infrastructure.\n- **Zero-day readiness**: Ensure rapid comms path for “KEV-added” events (N-central/Chrome-class) with **SLA for emergency patch deployment** and pre-approved change windows.\n- **Track “public disclosure/PoC” items** (e.g., Defender “ShieldCrash” claims and various Full Disclosure posts): treat as **watchlist** until vendor confirmation/our asset exposure is validated; prepare detections for privilege escalation attempts rather than chasing unverified IOCs.",
+  "morning_call_markdown": "### Executive Summary\n- Multiple **actively exploited / KEV** vulnerabilities with direct perimeter and endpoint impact: **Cisco Secure FMC auth bypass (CVSS 10)**, **WatchGuard Firebox RCE used by ransomware**, **N-able N-central RCE**, plus **Windows privesc zero-days** and a **Chrome V8 zero-day**.\n- **Exploit chaining risk is elevated** (Chrome + Windows kit “BlueMoon” reported used by multiple nation-state actors); expect drive-by / web-delivered footholds turning into SYSTEM-level control.\n- Prioritize **asset identification + emergency patching/mitigations + targeted hunting** for exposed management interfaces (FMC/N-central/Firebox) and post-exploitation behaviors.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Cisco Secure Firewall Management Center (FMC) CVE-2026-20079 (auth bypass, CVSS 10) — actively exploited**\n- **What happened:** Cisco confirmed active exploitation of an unauthenticated auth bypass in Secure FMC web interface enabling root-level compromise.\n- **Why it matters operationally:** If FMC is internet-exposed or reachable from low-trust networks, attacker can take over firewall management and push policy changes / enable lateral movement.\n- **Recommended immediate actions for the SOC today:** Identify all FMC instances + exposure paths; **patch immediately** and restrict management access (VPN/jump hosts) while hunting for suspicious FMC web requests and new/changed firewall policies.\n\n**2) WatchGuard Firebox critical RCE — now leveraged in ransomware operations**\n- **What happened:** CISA reports ransomware actors are exploiting a critical WatchGuard Firebox firewall RCE previously flagged as actively exploited.\n- **Why it matters operationally:** Firewall compromise can become a rapid enterprise-wide breach: credential theft, VPN tampering, traffic interception, and staging ransomware.\n- **Recommended immediate actions for the SOC today:** Confirm Firebox inventory + versions; apply vendor fix/emergency upgrades and **review/lock down admin interfaces**; hunt for new admin users, unexpected config exports, and unusual outbound connections from the appliance.\n\n**3) N-able N-central CVE-2026-86218 (RCE, CVSS 10) — KEV / active exploitation**\n- **What happened:** CISA added a max-severity N-central RCE to KEV; exploitation in the wild is confirmed.\n- **Why it matters operationally:** RMM compromise is “instant scale” for attackers—remote code execution and lateral push to managed endpoints (high ransomware risk).\n- **Recommended immediate actions for the SOC today:** Verify if we run N-central (or vendors/MSPs do); **patch/upgrade and isolate** N-central from internet; monitor for abnormal agent tasks/script pushes and unexpected admin token use.\n\n**4) Web-to-endpoint exploit chain risk: Chrome V8 zero-day + Windows privesc zero-days (KEV)**\n- **What happened:** Chrome V8 zero-day (CVE-2026-87491) is exploited in the wild; Microsoft patched two actively exploited Windows privilege-escalation zero-days (CVE-2026-85880, CVE-2026-81963). Reporting indicates exploit kits chaining browser + Windows.\n- **Why it matters operationally:** In a financial environment, this is a common path: phishing/web hit → code execution in user context → privesc to SYSTEM → credential theft and rapid lateral movement.\n- **Recommended immediate actions for the SOC today:** Force-update Chrome/Edge channels enterprise-wide and prioritize Windows patches on user endpoints + VDI; increase monitoring for browser-spawned LOLBins (powershell/mshta/rundll32) and rapid privilege escalation events.\n\n**5) Adobe Commerce (Magento) CVE-2026-75650 zero-day — patch not sufficient (post-compromise actions needed)**\n- **What happened:** Adobe patched an actively exploited Magento zero-day; reporting emphasizes that compromised stores require malware hunting and credential rotation beyond patching.\n- **Why it matters operationally:** If any internet-facing commerce components exist (including subsidiaries/brands), attackers may have implanted web shells/skimmers and stolen credentials prior to patching.\n- **Recommended immediate actions for the SOC today:** If we have Magento anywhere: validate patch level, **hunt for webshells and suspicious cron/jobs**, and perform targeted credential/session key rotation (admin users, API keys, DB creds) with WAF review.\n\n---\n\n### Monitoring & detection recommendations\n- **Perimeter management exploitation (Cisco FMC / WatchGuard / N-central):** Monitor **WAF/reverse-proxy, firewall, appliance audit logs** for spikes in unauthenticated requests to management UIs, new admin sessions, config changes (ATT&CK **T1190** Exploit Public-Facing Application).\n- **RMM abuse patterns (N-central):** In **N-central logs + EDR**, hunt for mass remote script execution, new scheduled tasks, and new agent deployment waves; correlate with unusual admin logins (ATT&CK **T1219** Remote Access Tools, **T1053** Scheduled Task).\n- **Browser-to-code-exec from user endpoints (Chrome V8):** In **EDR + Windows Security logs**, alert on Chrome/Edge spawning `powershell.exe`, `cmd.exe`, `mshta.exe`, `wscript.exe`, `rundll32.exe` (ATT&CK **T1204**, **T1059**).\n- **Windows privesc post-compromise:** Watch for **Event ID 4672** (special privileges), unexpected service creation, driver installs, and token manipulation behaviors in **EDR** (ATT&CK **T1068** Exploitation for Privilege Escalation).\n- **Firewall policy tampering / traffic diversion:** On network/security platforms, alert on new/changed NAT rules, VPN settings changes, new admin accounts, and unexpected outbound DNS/HTTP from appliances (ATT&CK **T1562.007** Disable/Modify Firewall).\n- **Web app compromise indicators (Magento):** In **web server logs (IIS/Apache/Nginx), PHP logs, file integrity monitoring**, hunt for new `.php` files in upload/tmp paths, unusual POSTs to admin endpoints, and persistence via cron (ATT&CK **T1505.003** Web Shell).\n- **Credential replay / session hijack risk (general):** In **IdP/SSO logs**, monitor impossible travel, new device registrations, MFA fatigue/bypass patterns, and token reuse anomalies (ATT&CK **T1078** Valid Accounts).\n\n---\n\n### Medium-term follow-ups\n- **Exposure reduction:** Ensure all security management planes (FMC, Firebox admin, RMM consoles) are **not internet-exposed**, gated behind VPN + PAM, and protected with allowlists and admin MFA.\n- **Patch governance:** Create a **KEV-driven “48-hour” patch lane** for perimeter/RMM/browser/OS items; confirm emergency change windows are usable for firewall/RMM platforms.\n- **Post-compromise playbooks:** Update runbooks for **RMM compromise** and **firewall management compromise** (containment steps, credential resets, config validation, downstream endpoint sweep).\n- **Supply-chain hygiene (AWS bulletins / MCP server issues):** If any teams use **awslabs postgres-mcp-server** or similar MCP tooling, enforce version pinning, repository allowlists, and CI scanning; validate no unauthenticated data-modifying endpoints are exposed.\n- **AppSec/WAF baselines:** Review WAF rules and admin access patterns for any externally facing commerce/web properties; ensure file integrity monitoring and secrets rotation procedures are tested.\n- **Threat hunting enablement:** Validate telemetry coverage for **appliances and RMM** (centralized logs, admin audit trails) to avoid blind spots during exploitation waves.",
   "highlights": [
     {
-      "title": "Google fixes yet another actively exploited Chrome zero-day (CVE-2026-87491)",
-      "link": "https://www.helpnetsecurity.com/2026/09/09/google-chrome-cve-2026-87491-zero-day-flaw/",
-      "source": "Help Net Security",
-      "published": "2026-09-09T07:53:57+00:00",
+      "title": "CISA: WatchGuard RCE flaw now exploited in ransomware attacks",
+      "link": "https://www.bleepingcomputer.com/news/security/cisa-watchguard-rce-flaw-now-exploited-in-ransomware-attacks/",
+      "source": "BleepingComputer",
+      "published": "2026-09-10T09:10:20+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC",
-        "Linux / Unix",
-        "Windows / Microsoft",
-        "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 100.0,
-      "priority_score": 91.24
-    },
-    {
-      "title": "N-able N-central CVE-2026-86218: Emergency Hotfix for Unauthenticated RCE Zero-Day",
-      "link": "https://dev.to/anoymask/n-able-n-central-cve-2026-86218-emergency-hotfix-for-unauthenticated-rce-zero-day-4mln",
-      "source": "DEV Community",
-      "published": "2026-09-08T23:25:07+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Identity / Access",
-        "Crypto / Web3",
-        "Exploit / PoC",
-        "OSINT / Community"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 100.0,
-      "priority_score": 89.35
-    },
-    {
-      "title": "StyleSmuggler: Unauthenticated RCE via Adobe Commerce Failed Payment Email Rendering",
-      "link": "https://dev.to/anoymask/stylesmuggler-unauthenticated-rce-via-adobe-commerce-failed-payment-email-rendering-5249",
-      "source": "DEV Community",
-      "published": "2026-09-08T23:22:16+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Identity / Access",
-        "Malware / Payloads",
-        "Detection Engineering",
-        "Exploit / PoC",
-        "Linux / Unix",
         "Ransomware",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 100.0,
+      "priority_score": 88.26
+    },
+    {
+      "title": "CVE-2026-75650 Adobe Commerce Zero-Day: Patch Isn’t Enough",
+      "link": "https://www.esecurityplanet.com/threats/news-adobe-commerce-cve-2026-75650-stylesmuggler/",
+      "source": "eSecurityPlanet",
+      "published": "2026-09-09T17:11:37+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Malware / Payloads"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 100.0,
+      "priority_score": 86.29
+    },
+    {
+      "title": "CVE-2026-87491: Chrome V8 Zero-Day Exploited in the Wild Enables Arbitrary Code Execution",
+      "link": "https://socprime.com/blog/cve-2026-87491-chrome-v8-zero-day-exploited/",
+      "source": "SOC Prime Blog",
+      "published": "2026-09-09T20:49:30+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Vendors / Product Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 97.53,
+      "priority_score": 88.81
+    },
+    {
+      "title": "Google fixes the seventh actively exploited Chrome zero-day of 2026",
+      "link": "https://securityaffairs.com/198757/security/google-fixes-the-seventh-actively-exploited-chrome-zero-day-of-2026.html",
+      "source": "Security Affairs",
+      "published": "2026-09-09T13:47:16+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Cloud / SaaS",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 93.11,
+      "priority_score": 84.92
+    },
+    {
+      "title": "CVE-2026-85880 and CVE-2026-81963: Microsoft Patches Two Actively Exploited Windows Zero-Days",
+      "link": "https://socprime.com/blog/cve-2026-85880-and-cve-2026-81963-analysis/",
+      "source": "SOC Prime Blog",
+      "published": "2026-09-09T20:54:55+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Cloud / SaaS",
+        "Exploit / PoC",
+        "Windows / Microsoft",
+        "Vendors / Product Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 90.53,
+      "priority_score": 88.89
+    },
+    {
+      "title": "Cisco confirms CVE-2026-20079 Secure FMC flaw exploited in attacks",
+      "link": "https://www.bleepingcomputer.com/news/security/cisco-confirms-cve-2026-20079-secure-fmc-flaw-exploited-in-attacks/",
+      "source": "BleepingComputer",
+      "published": "2026-09-09T21:40:44+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 85.22,
+      "priority_score": 87.34
+    },
+    {
+      "title": "Cisco confirms max-severity FMC bug (CVE-2026-20079) is being exploited in the wild",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1wbzdsv/cisco_confirms_maxseverity_fmc_bug_cve202620079/",
+      "source": "/r/cybersecurity",
+      "published": "2026-09-09T21:44:38+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
         "OSINT / Community"
       ],
       "curated": true,
       "signal_tier": "critical",
-      "signal_score": 100.0,
-      "priority_score": 89.31
+      "signal_score": 85.01,
+      "priority_score": 84.77
     },
     {
-      "title": "CVE-2026-75650: Adobe Patches Actively Exploited Magento Zero-Day Used to Deploy Backdoors",
-      "link": "https://socprime.com/blog/cve-2026-75650-critical-magento-zero-day-rce/",
-      "source": "SOC Prime Blog",
-      "published": "2026-09-08T14:16:22+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "Malware / Payloads",
-        "Vendors / Product Security"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 100.0,
-      "priority_score": 87.77
-    },
-    {
-      "title": "Hackers Actively Exploiting FortiGate Firewalls to Deploy Custom Node.js Malware",
-      "link": "https://cybersecuritynews.com/fortigate-firewalls-hacked-to-deploy-malware/",
+      "title": "CISA Warns of N-able N-central RCE Vulnerability Exploited in the Wild",
+      "link": "https://cybersecuritynews.com/n-able-n-central-rce/",
       "source": "Cyber Security News (FeedBurner)",
-      "published": "2026-09-08T16:50:52+00:00",
+      "published": "2026-09-09T13:31:10+00:00",
       "smart_groups": [
-        "Malware / Payloads",
         "Vulnerabilities / CVEs",
-        "Threat Actors / APT",
         "Exploit / PoC",
         "General Security"
       ],
       "curated": true,
       "signal_tier": "critical",
-      "signal_score": 100.0,
-      "priority_score": 86.27
+      "signal_score": 83.29,
+      "priority_score": 85.71
     },
     {
-      "title": "Adobe fixes critical Magento zero-day exploited to backdoor servers",
-      "link": "https://www.bleepingcomputer.com/news/security/adobe-fixes-critical-magento-zero-day-exploited-to-backdoor-servers/",
-      "source": "BleepingComputer",
-      "published": "2026-09-08T13:34:47+00:00",
+      "title": "Cisco FMC actively exploited; BlueMoon exploit kit chains Chrome & Windows; AI tokens bypass MFA",
+      "link": "https://defend.network/briefings/cisco-deepseek-chrome-exploit-kit-ai-threats-2026-09-10.html",
+      "source": "defend.network",
+      "published": "2026-09-10T06:30:00+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Exploit / PoC",
         "Malware / Payloads",
-        "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 100.0,
-      "priority_score": 85.78
-    },
-    {
-      "title": "StyleSmuggler (CVE-2026-75650): Frequently asked questions about Adobe Commerce and Magento zero-day",
-      "link": "https://www.tenable.com/blog/stylesmuggler-cve-2026-75650-frequently-asked-questions-about-adobe-commerce-and-magento-zero",
-      "source": "Tenable Blog",
-      "published": "2026-09-08T14:00:43+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
         "Identity / Access",
-        "Exploit / PoC",
-        "Linux / Unix",
-        "Threat Actors / APT",
-        "Malware / Payloads",
-        "Network / OT / ICS",
-        "Web / API Security",
-        "Vendors / Product Security"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 100.0,
-      "priority_score": 85.74
-    },
-    {
-      "title": "CISA Warns of Chromium Type Confusion 0-Day Vulnerability Actively Exploited in Attacks",
-      "link": "https://cybersecuritynews.com/chromium-type-confusion-0-day-vulnerability/",
-      "source": "Cyber Security News (FeedBurner)",
-      "published": "2026-09-08T16:25:59+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 95.24,
-      "priority_score": 86.55
-    },
-    {
-      "title": "Chrome 153 Fixes 230 Vulnerabilities, Including One 0-Day Exploited in the Wild",
-      "link": "https://cybersecuritynews.com/chrome-153-released/",
-      "source": "Cyber Security News (FeedBurner)",
-      "published": "2026-09-09T04:46:12+00:00",
-      "smart_groups": [
-        "Exploit / PoC",
-        "Linux / Unix",
-        "Vulnerabilities / CVEs",
         "Windows / Microsoft",
         "General Security"
       ],
       "curated": true,
       "signal_tier": "critical",
-      "signal_score": 86.24,
-      "priority_score": 84.14
+      "signal_score": 79.13,
+      "priority_score": 87.72
     },
     {
-      "title": "Google warns of new Chrome zero-day bug exploited in attacks",
-      "link": "https://www.bleepingcomputer.com/news/security/google-patches-seventh-chrome-zero-day-exploited-in-attacks-this-year/",
-      "source": "BleepingComputer",
-      "published": "2026-09-09T06:25:48+00:00",
+      "title": "Exploit for CVE-2026-76578",
+      "link": "https://sploitus.com/exploit?id=EDA76119-7B8C-53D2-A4B1-38396AB1D337&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-09-09T20:08:15+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "General Security"
+        "Exploit / PoC"
       ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 86.19,
-      "priority_score": 90.04
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 70.46,
+      "priority_score": 71.58
     }
   ]
 }
