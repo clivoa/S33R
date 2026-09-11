@@ -1,174 +1,190 @@
 {
-  "generated_at": "2026-09-10T11:18:12.804807+00:00",
-  "analysis_date": "2026-09-10",
+  "generated_at": "2026-09-11T11:19:13.244963+00:00",
+  "analysis_date": "2026-09-11",
   "provider": "openai",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-09-10T10:56:41.653373+00:00",
+  "source_generated_at": "2026-09-11T08:50:56.565739+00:00",
   "source_days_back": 30,
-  "source_total_items": 60003,
-  "total_items_in_window_all": 2632,
-  "total_items_in_window_curated": 14,
+  "source_total_items": 58130,
+  "total_items_in_window_all": 2741,
+  "total_items_in_window_curated": 12,
   "total_items_in_window_selected": 40,
   "context_selection_policy": "curated-plus-operational-signal-v1",
-  "morning_call_markdown": "### Executive Summary\n- Multiple **actively exploited / KEV** vulnerabilities with direct perimeter and endpoint impact: **Cisco Secure FMC auth bypass (CVSS 10)**, **WatchGuard Firebox RCE used by ransomware**, **N-able N-central RCE**, plus **Windows privesc zero-days** and a **Chrome V8 zero-day**.\n- **Exploit chaining risk is elevated** (Chrome + Windows kit “BlueMoon” reported used by multiple nation-state actors); expect drive-by / web-delivered footholds turning into SYSTEM-level control.\n- Prioritize **asset identification + emergency patching/mitigations + targeted hunting** for exposed management interfaces (FMC/N-central/Firebox) and post-exploitation behaviors.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Cisco Secure Firewall Management Center (FMC) CVE-2026-20079 (auth bypass, CVSS 10) — actively exploited**\n- **What happened:** Cisco confirmed active exploitation of an unauthenticated auth bypass in Secure FMC web interface enabling root-level compromise.\n- **Why it matters operationally:** If FMC is internet-exposed or reachable from low-trust networks, attacker can take over firewall management and push policy changes / enable lateral movement.\n- **Recommended immediate actions for the SOC today:** Identify all FMC instances + exposure paths; **patch immediately** and restrict management access (VPN/jump hosts) while hunting for suspicious FMC web requests and new/changed firewall policies.\n\n**2) WatchGuard Firebox critical RCE — now leveraged in ransomware operations**\n- **What happened:** CISA reports ransomware actors are exploiting a critical WatchGuard Firebox firewall RCE previously flagged as actively exploited.\n- **Why it matters operationally:** Firewall compromise can become a rapid enterprise-wide breach: credential theft, VPN tampering, traffic interception, and staging ransomware.\n- **Recommended immediate actions for the SOC today:** Confirm Firebox inventory + versions; apply vendor fix/emergency upgrades and **review/lock down admin interfaces**; hunt for new admin users, unexpected config exports, and unusual outbound connections from the appliance.\n\n**3) N-able N-central CVE-2026-86218 (RCE, CVSS 10) — KEV / active exploitation**\n- **What happened:** CISA added a max-severity N-central RCE to KEV; exploitation in the wild is confirmed.\n- **Why it matters operationally:** RMM compromise is “instant scale” for attackers—remote code execution and lateral push to managed endpoints (high ransomware risk).\n- **Recommended immediate actions for the SOC today:** Verify if we run N-central (or vendors/MSPs do); **patch/upgrade and isolate** N-central from internet; monitor for abnormal agent tasks/script pushes and unexpected admin token use.\n\n**4) Web-to-endpoint exploit chain risk: Chrome V8 zero-day + Windows privesc zero-days (KEV)**\n- **What happened:** Chrome V8 zero-day (CVE-2026-87491) is exploited in the wild; Microsoft patched two actively exploited Windows privilege-escalation zero-days (CVE-2026-85880, CVE-2026-81963). Reporting indicates exploit kits chaining browser + Windows.\n- **Why it matters operationally:** In a financial environment, this is a common path: phishing/web hit → code execution in user context → privesc to SYSTEM → credential theft and rapid lateral movement.\n- **Recommended immediate actions for the SOC today:** Force-update Chrome/Edge channels enterprise-wide and prioritize Windows patches on user endpoints + VDI; increase monitoring for browser-spawned LOLBins (powershell/mshta/rundll32) and rapid privilege escalation events.\n\n**5) Adobe Commerce (Magento) CVE-2026-75650 zero-day — patch not sufficient (post-compromise actions needed)**\n- **What happened:** Adobe patched an actively exploited Magento zero-day; reporting emphasizes that compromised stores require malware hunting and credential rotation beyond patching.\n- **Why it matters operationally:** If any internet-facing commerce components exist (including subsidiaries/brands), attackers may have implanted web shells/skimmers and stolen credentials prior to patching.\n- **Recommended immediate actions for the SOC today:** If we have Magento anywhere: validate patch level, **hunt for webshells and suspicious cron/jobs**, and perform targeted credential/session key rotation (admin users, API keys, DB creds) with WAF review.\n\n---\n\n### Monitoring & detection recommendations\n- **Perimeter management exploitation (Cisco FMC / WatchGuard / N-central):** Monitor **WAF/reverse-proxy, firewall, appliance audit logs** for spikes in unauthenticated requests to management UIs, new admin sessions, config changes (ATT&CK **T1190** Exploit Public-Facing Application).\n- **RMM abuse patterns (N-central):** In **N-central logs + EDR**, hunt for mass remote script execution, new scheduled tasks, and new agent deployment waves; correlate with unusual admin logins (ATT&CK **T1219** Remote Access Tools, **T1053** Scheduled Task).\n- **Browser-to-code-exec from user endpoints (Chrome V8):** In **EDR + Windows Security logs**, alert on Chrome/Edge spawning `powershell.exe`, `cmd.exe`, `mshta.exe`, `wscript.exe`, `rundll32.exe` (ATT&CK **T1204**, **T1059**).\n- **Windows privesc post-compromise:** Watch for **Event ID 4672** (special privileges), unexpected service creation, driver installs, and token manipulation behaviors in **EDR** (ATT&CK **T1068** Exploitation for Privilege Escalation).\n- **Firewall policy tampering / traffic diversion:** On network/security platforms, alert on new/changed NAT rules, VPN settings changes, new admin accounts, and unexpected outbound DNS/HTTP from appliances (ATT&CK **T1562.007** Disable/Modify Firewall).\n- **Web app compromise indicators (Magento):** In **web server logs (IIS/Apache/Nginx), PHP logs, file integrity monitoring**, hunt for new `.php` files in upload/tmp paths, unusual POSTs to admin endpoints, and persistence via cron (ATT&CK **T1505.003** Web Shell).\n- **Credential replay / session hijack risk (general):** In **IdP/SSO logs**, monitor impossible travel, new device registrations, MFA fatigue/bypass patterns, and token reuse anomalies (ATT&CK **T1078** Valid Accounts).\n\n---\n\n### Medium-term follow-ups\n- **Exposure reduction:** Ensure all security management planes (FMC, Firebox admin, RMM consoles) are **not internet-exposed**, gated behind VPN + PAM, and protected with allowlists and admin MFA.\n- **Patch governance:** Create a **KEV-driven “48-hour” patch lane** for perimeter/RMM/browser/OS items; confirm emergency change windows are usable for firewall/RMM platforms.\n- **Post-compromise playbooks:** Update runbooks for **RMM compromise** and **firewall management compromise** (containment steps, credential resets, config validation, downstream endpoint sweep).\n- **Supply-chain hygiene (AWS bulletins / MCP server issues):** If any teams use **awslabs postgres-mcp-server** or similar MCP tooling, enforce version pinning, repository allowlists, and CI scanning; validate no unauthenticated data-modifying endpoints are exposed.\n- **AppSec/WAF baselines:** Review WAF rules and admin access patterns for any externally facing commerce/web properties; ensure file integrity monitoring and secrets rotation procedures are tested.\n- **Threat hunting enablement:** Validate telemetry coverage for **appliances and RMM** (centralized logs, admin audit trails) to avoid blind spots during exploitation waves.",
+  "morning_call_markdown": "### Executive Summary\n- Multiple edge/admin-plane products are **actively exploited** (Cisco FMC, Citrix NetScaler, JFrog Artifactory) with direct paths to **credential theft + ransomware staging**.\n- **Ransomware tradecraft is tightening**: Cisco FMC exploitation tied to **Qilin**, plus new tooling (SloppyRAT) using **ClickFix**-style initial access.\n- A **Microsoft Defender/Malware Protection Engine fix-bypass PoC (“ShieldCrash”)** suggests rapid exploit iteration—validate Defender/engine update posture and watch for abnormal engine behavior.\n\n### High-priority items (immediate attention)\n\n**1) Cisco Secure Firewall Management Center (FMC) — active exploitation leading to ransomware**\n- What happened: Cisco/Talos reporting **in-the-wild exploitation** of FMC flaws (incl. auth bypass) used by multiple clusters; reporting ties activity to **Qilin ransomware** deployment.\n- Why it matters operationally: FMC is a high-value management plane; compromise enables **root access, credential theft, lateral movement**, and fast ransomware staging in enterprise networks.\n- Recommended immediate actions for the SOC today: **Confirm patch levels / hotfixes applied** on all FMC instances; **isolate/restrict FMC admin access** (VPN + allowlists) and **review FMC admin logins + new local users/keys** since Sept 3.\n\n**2) Citrix NetScaler ADC/Gateway auth bypass (CVE-2026-19490) — KEV / active exploitation**\n- What happened: CISA added **CVE-2026-19490** to KEV; exploitation observed against NetScaler appliances configured in affected modes.\n- Why it matters operationally: NetScaler is common in financial services for remote access; auth bypass can enable **session hijack, credential exposure, and downstream IdP/VPN compromise**.\n- Recommended immediate actions for the SOC today: **Apply vendor mitigations/patch immediately**; **hunt for anomalous AAA/session patterns** (unexpected logins, new sessions from unusual geos/IPs) and **review appliance config changes**.\n\n**3) JFrog Artifactory — active exploit chains to admin control (supply-chain risk)**\n- What happened: Multiple reports of **active exploitation** of chained Artifactory vulns (CVE-2026-42016 / -42018 / -82329) to bypass auth and gain **administrative control**.\n- Why it matters operationally: Artifactory compromise is a **software supply-chain blast radius** issue (poisoned artifacts, credential/token theft, CI/CD compromise).\n- Recommended immediate actions for the SOC today: **Identify any internet-exposed Artifactory** and **restrict access immediately**; **audit admin creation, API token issuance, and repository config changes** in the last 7 days.\n\n**4) “Edge device” exploitation cluster: Fortinet + WatchGuard + PaperCut (active exploitation signals)**\n- What happened: KEV/agency and vendor reporting indicates **active exploitation** for Fortinet (CVE-2025-25249), WatchGuard Firebox (ransomware-linked), and PaperCut releasing **replacement fixes** for actively exploited flaws.\n- Why it matters operationally: These are common perimeter/infra services; exploitation frequently leads to **initial access**, credential dumping, and rapid domain compromise.\n- Recommended immediate actions for the SOC today: **Verify patch/firmware levels + exposure** for Fortinet/WatchGuard and **upgrade PaperCut to fixed maintenance releases**; **increase alerting on edge-device admin logins + config exports + unusual outbound from these servers**.\n\n**5) Microsoft Defender “ShieldCrash” fix bypass PoC (Defender engine)**\n- What happened: A new PoC reportedly bypasses a recent Defender/Malware Protection Engine fix (follow-on to CVE-2026-69414 / “ShieldBreak” storyline).\n- Why it matters operationally: Even without confirmed mass exploitation, rapid bypass publication increases likelihood of **malware evasion and defense impairment** attempts.\n- Recommended immediate actions for the SOC today: **Confirm Defender platform + engine + signatures are updating successfully** across estate; **hunt for Defender tampering/impairment events** and unexpected service restarts/crashes.\n\n### Monitoring & detection recommendations\n- **Cisco FMC / network management-plane compromise**: Monitor FMC syslogs/audit logs + firewall management logs for **new admin accounts, privilege changes, auth bypass indicators**; hunt lateral movement from FMC into AD (T1078, T1021).\n- **NetScaler auth bypass / session abuse**: Use NetScaler AAA/session logs + WAF/reverse-proxy logs for **spikes in session creation**, atypical user-agents, repeated failed→success patterns, and **config write events** (T1190).\n- **Artifactory takeover / supply-chain manipulation**: In Artifactory access/audit logs, alert on **admin role grants, API token creation, repo permission changes, new remote repos**; correlate with CI/CD runner logs and unusual artifact publish/download bursts (T1552, T1565).\n- **Edge VPN/firewall exploitation (Fortinet/WatchGuard)**: From VPN/firewall logs, flag **new VPN users, new device registrations, unusual admin logins**, and **sudden config exports/backups**; watch for outbound C2 from appliances if supported (T1190, T1133).\n- **PaperCut exploitation**: On PaperCut servers, monitor Windows/Linux auth logs + application logs for **new service creation, suspicious child processes (cmd/powershell), unexpected network connections** (T1505, T1059).\n- **Ransomware staging (Qilin-linked behaviors)**: EDR alerts for **credential dumping tools, LSASS access attempts, remote service creation, SMB/PSExec bursts**, and rapid encryption precursors (T1003, T1569.002, T1486).\n- **ClickFix / SloppyRAT-style execution**: Endpoint telemetry for **user-initiated PowerShell with encoded commands**, clipboard-driven command execution patterns, and unusual script block logging events; prioritize high-risk user groups (T1059.001).\n- **Defender impairment attempts**: Microsoft Defender for Endpoint + Windows Event Logs for **security product disablement, tamper events, engine crashes/restarts**, and policy changes (T1562.001).\n\n### Medium-term follow-ups\n- **Patch governance sweep**: Validate asset inventory and patch SLAs for perimeter/admin-plane systems (NetScaler, FMC, Fortinet/WatchGuard, PaperCut, Artifactory); confirm no “orphan” appliances outside management.\n- **Exposure reduction**: Move admin interfaces (FMC/Artifactory/NetScaler management) behind **dedicated admin VPN + MFA + IP allowlists**; remove direct internet exposure where business-possible.\n- **CI/CD hardening**: Rotate Artifactory/CI tokens, enforce least privilege on build service accounts, and implement artifact integrity checks/signing where supported.\n- **Ransomware readiness**: Reconfirm immutable backups + restore testing cadence; ensure egress controls and segmentation from management planes to Tier-0 assets.\n- **Threat intel alignment (assumption: no IOCs provided in sources)**: Request vendor/Talos/Wiz detection content (queries/YARA/rules) and integrate into SIEM/EDR; track KEV deadlines and internal remediation status.\n- **User awareness (targeted, not broad)**: Brief helpdesk and high-risk teams on **ClickFix/social-engineering execution prompts** and tighten application control for script interpreters where feasible.",
   "highlights": [
     {
-      "title": "CISA: WatchGuard RCE flaw now exploited in ransomware attacks",
-      "link": "https://www.bleepingcomputer.com/news/security/cisa-watchguard-rce-flaw-now-exploited-in-ransomware-attacks/",
-      "source": "BleepingComputer",
-      "published": "2026-09-10T09:10:20+00:00",
+      "title": "sap-netweaver-0day-CVE-2025-31324",
+      "link": "https://vulners.com/kitploit/KITPLOIT:TOOLS-GITHUB-ANTICHAINALYSIS-SAP-NETWEAVER-0DAY-CVE-2025-31324?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-09-10T19:02:31+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Exploit / PoC",
         "Ransomware",
-        "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 100.0,
-      "priority_score": 88.26
-    },
-    {
-      "title": "CVE-2026-75650 Adobe Commerce Zero-Day: Patch Isn’t Enough",
-      "link": "https://www.esecurityplanet.com/threats/news-adobe-commerce-cve-2026-75650-stylesmuggler/",
-      "source": "eSecurityPlanet",
-      "published": "2026-09-09T17:11:37+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "Malware / Payloads"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 100.0,
-      "priority_score": 86.29
-    },
-    {
-      "title": "CVE-2026-87491: Chrome V8 Zero-Day Exploited in the Wild Enables Arbitrary Code Execution",
-      "link": "https://socprime.com/blog/cve-2026-87491-chrome-v8-zero-day-exploited/",
-      "source": "SOC Prime Blog",
-      "published": "2026-09-09T20:49:30+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "Vendors / Product Security"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 97.53,
-      "priority_score": 88.81
-    },
-    {
-      "title": "Google fixes the seventh actively exploited Chrome zero-day of 2026",
-      "link": "https://securityaffairs.com/198757/security/google-fixes-the-seventh-actively-exploited-chrome-zero-day-of-2026.html",
-      "source": "Security Affairs",
-      "published": "2026-09-09T13:47:16+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Cloud / SaaS",
-        "Exploit / PoC",
-        "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 93.11,
-      "priority_score": 84.92
-    },
-    {
-      "title": "CVE-2026-85880 and CVE-2026-81963: Microsoft Patches Two Actively Exploited Windows Zero-Days",
-      "link": "https://socprime.com/blog/cve-2026-85880-and-cve-2026-81963-analysis/",
-      "source": "SOC Prime Blog",
-      "published": "2026-09-09T20:54:55+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Cloud / SaaS",
-        "Exploit / PoC",
-        "Windows / Microsoft",
-        "Vendors / Product Security"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 90.53,
-      "priority_score": 88.89
-    },
-    {
-      "title": "Cisco confirms CVE-2026-20079 Secure FMC flaw exploited in attacks",
-      "link": "https://www.bleepingcomputer.com/news/security/cisco-confirms-cve-2026-20079-secure-fmc-flaw-exploited-in-attacks/",
-      "source": "BleepingComputer",
-      "published": "2026-09-09T21:40:44+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 85.22,
-      "priority_score": 87.34
-    },
-    {
-      "title": "Cisco confirms max-severity FMC bug (CVE-2026-20079) is being exploited in the wild",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1wbzdsv/cisco_confirms_maxseverity_fmc_bug_cve202620079/",
-      "source": "/r/cybersecurity",
-      "published": "2026-09-09T21:44:38+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "OSINT / Community"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 85.01,
-      "priority_score": 84.77
-    },
-    {
-      "title": "CISA Warns of N-able N-central RCE Vulnerability Exploited in the Wild",
-      "link": "https://cybersecuritynews.com/n-able-n-central-rce/",
-      "source": "Cyber Security News (FeedBurner)",
-      "published": "2026-09-09T13:31:10+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 83.29,
-      "priority_score": 85.71
-    },
-    {
-      "title": "Cisco FMC actively exploited; BlueMoon exploit kit chains Chrome & Windows; AI tokens bypass MFA",
-      "link": "https://defend.network/briefings/cisco-deepseek-chrome-exploit-kit-ai-threats-2026-09-10.html",
-      "source": "defend.network",
-      "published": "2026-09-10T06:30:00+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Malware / Payloads",
-        "Exploit / PoC",
-        "Identity / Access",
-        "Windows / Microsoft",
-        "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 79.13,
-      "priority_score": 87.72
-    },
-    {
-      "title": "Exploit for CVE-2026-76578",
-      "link": "https://sploitus.com/exploit?id=EDA76119-7B8C-53D2-A4B1-38396AB1D337&utm_source=rss&utm_medium=rss",
-      "source": "Sploitus – Exploits",
-      "published": "2026-09-09T20:08:15+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
         "Exploit / PoC"
       ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 100.0,
+      "priority_score": 83.66
+    },
+    {
+      "title": "Hackers Exploit Critical Cisco Firewall Flaw to Gain Root Access and Deploy Malware",
+      "link": "https://cybersecuritynews.com/cisco-firewall-root-access-flaw/",
+      "source": "Cyber Security News",
+      "published": "2026-09-10T13:33:41+00:00",
+      "smart_groups": [
+        "Cloud / SaaS",
+        "Exploit / PoC",
+        "Malware / Payloads",
+        "Ransomware",
+        "Threat Actors / APT",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 100.0,
+      "priority_score": 79.9
+    },
+    {
+      "title": "JFrog Artifactory Vulnerabilities Actively Exploited in the Wild to Gain Administrative Control",
+      "link": "https://cybersecuritynews.com/jfrog-artifactory-vulnerabilities-actively-exploited/",
+      "source": "Cyber Security News",
+      "published": "2026-09-11T08:17:33+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Cloud / SaaS",
+        "Exploit / PoC",
+        "Supply Chain / Software",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 87.2,
+      "priority_score": 90.2
+    },
+    {
+      "title": "CISA Warns of Citrix NetScaler Authentication Bypass Vulnerability Exploited in Attacks",
+      "link": "https://cybersecuritynews.com/cisa-citrix-netscaler-authentication/",
+      "source": "Cyber Security News",
+      "published": "2026-09-10T13:23:50+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 85.2,
+      "priority_score": 85.76
+    },
+    {
+      "title": "Critical Check Point VPN Vulnerabilities Enable Remote Code Execution Attacks",
+      "link": "https://cybersecuritynews.com/check-point-vpn-vulnerabilities/",
+      "source": "Cyber Security News",
+      "published": "2026-09-10T12:31:31+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Cloud / SaaS",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 85.2,
+      "priority_score": 85.43
+    },
+    {
+      "title": "Cisco FMC Flaws Exploited to Steal Credentials and Deploy Qilin Ransomware",
+      "link": "https://thehackernews.com/2026/09/cisco-fmc-flaws-exploited-to-steal.html",
+      "source": "The Hacker News",
+      "published": "2026-09-11T06:19:59+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Cloud / SaaS",
+        "Exploit / PoC",
+        "Ransomware",
+        "Threat Actors / APT",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 84.87,
+      "priority_score": 88.61
+    },
+    {
+      "title": "Critical NetScaler Vulnerability Exploited in Attacks",
+      "link": "https://www.securityweek.com/critical-netscaler-vulnerability-exploited-in-attacks/",
+      "source": "SecurityWeek",
+      "published": "2026-09-10T12:20:21+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "General Security"
+      ],
       "curated": false,
+      "signal_tier": "critical",
+      "signal_score": 83.18,
+      "priority_score": 75.21
+    },
+    {
+      "title": "U.S. CISA adds Cisco, Google Chromium V8, Fortinet, and Citrix NetScaler flaws to its Known Exploited Vulnerabilities catalog",
+      "link": "https://securityaffairs.com/198850/security/u-s-cisa-adds-cisco-google-chromium-v8-fortinet-and-citrix-netscaler-flaws-to-its-known-exploited-vulnerabilities-catalog.html",
+      "source": "Security Affairs",
+      "published": "2026-09-10T18:57:21+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Cloud / SaaS",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 83.1,
+      "priority_score": 86.58
+    },
+    {
+      "title": "SloppyRAT: A New Tool For Ransomware Attacks",
+      "link": "https://www.zscaler.com/blogs/security-research/sloppyrat-new-tool-ransomware-attacks",
+      "source": "Zscaler Research Blogs",
+      "published": "2026-09-10T14:43:37+00:00",
+      "smart_groups": [
+        "Crypto / Web3",
+        "Identity / Access",
+        "Malware / Payloads",
+        "Windows / Microsoft",
+        "Threat Actors / APT",
+        "Detection Engineering",
+        "Cloud / SaaS",
+        "Linux / Unix",
+        "Ransomware",
+        "Web / API Security"
+      ],
+      "curated": true,
       "signal_tier": "high",
-      "signal_score": 70.46,
-      "priority_score": 71.58
+      "signal_score": 76.44,
+      "priority_score": 85.35
+    },
+    {
+      "title": "NetScaler vulnerability exploited, AdaptHealth suffers breach, new Android malware",
+      "link": "https://cisoseries.libsyn.com/netscaler-vulnerability-exploited-adapthealth-suffers-breach-new-android-malware",
+      "source": "CISO Series",
+      "published": "2026-09-11T07:00:00+00:00",
+      "smart_groups": [
+        "Mobile Security",
+        "Vulnerabilities / CVEs",
+        "Data Breaches / Leaks",
+        "Exploit / PoC",
+        "Malware / Payloads",
+        "Ransomware",
+        "Community / Briefing"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 75.85,
+      "priority_score": 87.31
     }
   ]
 }
