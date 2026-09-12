@@ -1,0 +1,172 @@
+{
+  "generated_at": "2026-09-12T10:45:45.621336+00:00",
+  "analysis_date": "2026-09-12",
+  "provider": "openai",
+  "model": "gpt-5.2",
+  "window_hours": 24,
+  "source_file": "data/news_recent.json",
+  "source_generated_at": "2026-09-12T08:37:20.744674+00:00",
+  "source_days_back": 30,
+  "source_total_items": 57744,
+  "total_items_in_window_all": 2831,
+  "total_items_in_window_curated": 3,
+  "total_items_in_window_selected": 40,
+  "context_selection_policy": "curated-plus-operational-signal-v1",
+  "morning_call_markdown": "### Executive Summary\n- Active exploitation: **GitLab CE/EE path traversal (CVE-2026-85706, CVSS 10) is in CISA KEV**—prioritize internet-facing GitLab patching + compromise checks today.\n- Confirmed in-the-wild chaining: **JFrog Artifactory vulnerabilities (CVE-2026-42016 / -42018 / -82329)** used to gain admin control—treat exposed Artifactory as at-risk.\n- Exploit/PoC churn is high: new public exploit chains for **n8n**, **Joomla Helix3**, and multiple **Linux kernel priv-esc** issues increase post-compromise escalation risk.\n\n### High-priority items (immediate attention)\n**1) GitLab CE/EE path traversal – KEV / actively exploited (CVE-2026-85706)**\n- What happened: CISA (and NCSC-NL) flagged a **GitLab repository commits API path traversal** enabling unauthenticated file reads; exploitation reported.\n- Why it matters operationally: Internet-facing GitLab can leak secrets (tokens/keys/config) enabling rapid lateral movement and CI/CD pipeline abuse in enterprise environments.\n- Recommended immediate actions for the SOC today: **Identify all GitLab instances + versions and patch/mitigate ASAP;** run rapid compromise checks (unusual API access, suspicious file reads, new tokens/keys, unexpected runner/job changes).\n\n**2) JFrog Artifactory – in-the-wild exploitation of chained vulns (CVE-2026-42016 / CVE-2026-42018 / CVE-2026-82329)**\n- What happened: Research reporting **active exploitation chaining multiple Artifactory flaws** to bypass auth and obtain admin control of self-hosted servers.\n- Why it matters operationally: Artifactory compromise is a **software supply-chain and credential access** event (build artifacts, signing material, API tokens, CI integrations) with high blast radius in financial environments.\n- Recommended immediate actions for the SOC today: **Confirm exposure (internet-facing/reachable) and prioritize patching;** hunt for admin creation/privilege changes, new access tokens, and abnormal repository/download patterns since mid-August (per reporting window).\n\n**3) Public exploit chains/PoCs emerging for automation & web platforms (n8n, Joomla Helix3, plus generic “Microsoft improper authorization” PoC references)**\n- What happened: New public exploit/scan tooling advertised for **n8n** (chain references incl. CVE-2025-68613 / CVE-2026-20805 / CVE-2026-21858) and **Joomla Helix3** arbitrary file write leading to RCE (CVE-2026-49049).\n- Why it matters operationally: These are commonly deployed in internal automation/workflow and web stacks; public PoCs drive **opportunistic scanning → initial access**.\n- Recommended immediate actions for the SOC today: **Inventory for n8n/Joomla Helix3 exposure (especially DMZ/partner-facing) and restrict access;** add/raise WAF/IDS coverage for traversal/file-write patterns and monitor for new webshell-like writes in web roots.\n\n**4) Mobile threat: Android ransomware + spyware behavior (“Mantax Otax”)**\n- What happened: New Android malware reported combining **ransomware + screen recording + OTP interception + covert camera use**.\n- Why it matters operationally: Direct risk to **MFA/OTP** integrity and employee privacy; can enable account takeover and fraudulent transaction approval if BYOD/enterprise mobile is impacted.\n- Recommended immediate actions for the SOC today: **Alert Service Desk/IR to treat mobile OTP compromise as a security incident;** monitor for anomalous MFA/SSO events and enforce step-up auth for high-risk logins (new device, impossible travel).\n\n### Monitoring & detection recommendations\n- **GitLab exploitation monitoring (T1190 Exploit Public-Facing Application):** GitLab audit logs + reverse proxy/WAF logs—look for spikes in commits API requests, path traversal indicators (`../`-style patterns), and unusual 4xx/5xx bursts followed by successful auth/token actions.\n- **Artifactory compromise hunting (T1190, T1552 Unsecured Credentials):** Artifactory access/audit logs + EDR on host—detect new admin users, token creation, privilege changes, and large/atypical artifact pulls (especially from unusual IPs/ASNs).\n- **CI/CD abuse signals (T1578 Modify Cloud Compute Infrastructure / pipeline equivalents):** GitLab runner/job logs + build system logs—unexpected pipeline edits, new runners, jobs executing curl/wget, credential dumping steps, or outbound connections to paste/code-sharing sites.\n- **Webshell/file-write detection for Joomla Helix3/n8n themes (T1505.003 Web Shell):** EDR file events + web server logs—new/modified `.php` in web-accessible dirs, suspicious uploads, and POSTs to component endpoints followed by execution requests.\n- **Linux privilege escalation watch (T1068 Exploitation for Privilege Escalation):** EDR on Linux + auditd—alerts for kernel exploit-like behavior (unexpected ptrace, namespace abuse, suspicious compilation/execution in `/tmp`), especially on internet-facing app servers.\n- **IoT/Mirai-style activity (KATARU theme):** Network telemetry (NetFlow/firewall) for outbound DDoS patterns, repeated Telnet auth attempts, and unusual egress from embedded/device VLANs to many destinations/ports.\n- **Mobile OTP interception risk (T1114 Email Collection adjacent; focus on auth telemetry):** IdP/MFA logs—multiple OTP failures then success, MFA method changes, new device enrollments, and token replay patterns; correlate with HR/MDM device posture if available.\n\n### Medium-term follow-ups\n- **Patch governance:** Track remediation SLAs for **GitLab (KEV)** and **Artifactory** across all environments (prod/dev), including vendor-managed or subsidiary-owned instances.\n- **Secret hygiene after app-layer exposure:** Plan token/key rotation playbooks for GitLab/Artifactory (PATs, deploy keys, CI variables, signing keys) if exploitation is suspected or confirmed.\n- **Reduce external exposure:** Re-validate that developer tooling (GitLab, Artifactory, n8n) is **not directly internet-exposed**; enforce VPN/zero-trust access and IP allowlisting where feasible.\n- **Mobile security posture:** Review BYOD/MDM controls (install source restrictions, accessibility permissions, camera/mic policies) and user comms focused on “install-from-link” risks.\n- **Supply-chain monitoring:** Strengthen dependency intake controls (RubyGems/third-party packages) and CI sandboxing assumptions; require allowlisted registries and provenance checks where possible.\n- **Metasploit/PoC operationalization:** Use the latest public modules/PoCs as a cue to tune detections (WAF rules, EDR behavioral) and prioritize scans for exposed services before adversaries do.",
+  "highlights": [
+    {
+      "title": "Exploit for Improper Input Validation in N8N",
+      "link": "https://sploitus.com/exploit?id=B8999BFA-BF67-513C-AA37-7ADE8D43C0DA&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-09-12T00:03:07+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.41,
+      "priority_score": 73.03
+    },
+    {
+      "title": "Exploit for Improper Authorization in Microsoft",
+      "link": "https://sploitus.com/exploit?id=238D0F6B-E4C8-57D9-8EAD-3ED01491B1C4&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-09-11T23:08:16+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.41,
+      "priority_score": 72.79
+    },
+    {
+      "title": "Exploit for CVE-2026-78997",
+      "link": "https://sploitus.com/exploit?id=B04ACA8E-5DCB-5B84-A726-E5A24D936F87&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-09-11T11:32:56+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.41,
+      "priority_score": 69.68
+    },
+    {
+      "title": "New Android Ransomware Records Screens, Steals OTPs and Secretly Takes Photos of Victims",
+      "link": "https://cybersecuritynews.com/new-android-ransomware/",
+      "source": "Cyber Security News",
+      "published": "2026-09-11T12:14:12+00:00",
+      "smart_groups": [
+        "Data Protection / Privacy",
+        "Malware / Payloads",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "Mobile Security",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 68.23,
+      "priority_score": 80.47
+    },
+    {
+      "title": "Exploit for Improper Access Control in Ollyo Helix3",
+      "link": "https://vulners.com/githubexploit/9DF2E7F8-5383-524D-A3CA-8453F151033D?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-09-12T00:39:46+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 66.51,
+      "priority_score": 75.4
+    },
+    {
+      "title": "nns-ctf-php-is-my-passion exploit",
+      "link": "https://sploitus.com/exploit?id=62D7394D-F264-50EA-8659-5CA513BCC4B7&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-09-11T19:20:28+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 66.41,
+      "priority_score": 71.77
+    },
+    {
+      "title": "Vulnerabilty-Assessment-Detection-Lab exploit",
+      "link": "https://sploitus.com/exploit?id=AD3753A6-4B86-5E3B-9D75-BDF6E00E4DF4&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-09-11T16:39:58+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 66.41,
+      "priority_score": 71.05
+    },
+    {
+      "title": "Metasploit Wrap Up: This One Goes to Sixteen!",
+      "link": "https://www.rapid7.com/blog/post/pt-metasploit-wrap-up-goes-to-sixteen",
+      "source": "Rapid7 Blog",
+      "published": "2026-09-11T13:35:11+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Web / API Security",
+        "Linux / Unix",
+        "Exploit / PoC",
+        "Identity / Access",
+        "Malware / Payloads",
+        "Network / OT / ICS",
+        "Windows / Microsoft",
+        "Vendors / Product Security"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 65.1,
+      "priority_score": 75.48
+    },
+    {
+      "title": "CVE-2026-82535 - Chamilo LMS Stored XSS via Survey Answer Submission in reporting.php",
+      "link": "https://cvefeed.io/vuln/detail/CVE-2026-82535",
+      "source": "CVEfeed.io - Latest Vulnerabilities",
+      "published": "2026-09-11T18:16:59+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Web / API Security",
+        "Exploit / PoC",
+        "Malware / Payloads"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 64.92,
+      "priority_score": 75.11
+    },
+    {
+      "title": "CVE-2025-71299 | Linux Kernel up to 6.18.15/6.19.5 DT Parser clk.c pm_runtime_disable privilege escalation (WID-SEC-2026-1454)",
+      "link": "https://vuldb.com/vuln/362060",
+      "source": "VulDB Updates",
+      "published": "2026-09-12T04:42:12+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Linux / Unix",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 63.35,
+      "priority_score": 80.51
+    }
+  ]
+}
