@@ -1,164 +1,168 @@
 {
-  "generated_at": "2026-09-13T11:49:55.046087+00:00",
-  "analysis_date": "2026-09-13",
+  "generated_at": "2026-09-14T12:42:19.667365+00:00",
+  "analysis_date": "2026-09-14",
   "provider": "openai",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-09-13T09:20:07.265997+00:00",
+  "source_generated_at": "2026-09-14T12:10:01.658604+00:00",
   "source_days_back": 30,
-  "source_total_items": 58725,
-  "total_items_in_window_all": 1318,
-  "total_items_in_window_curated": 6,
+  "source_total_items": 58183,
+  "total_items_in_window_all": 1866,
+  "total_items_in_window_curated": 5,
   "total_items_in_window_selected": 40,
   "context_selection_policy": "curated-plus-operational-signal-v1",
-  "morning_call_markdown": "### Executive Summary\n- Active exploitation signals and fresh PoCs dropped for multiple **internet-facing enterprise platforms** (GitLab file read; Citrix ADC/Gateway auth bypass; CISA KEV items incl. Artifactory/ScreenConnect/RouterOS) — treat as **high likelihood scanning** today.\n- New technical write-ups/PoCs for **web app RCE chains** (Magento “StyleSmuggler”, Metabase RCE, CrushFTP) increase attacker accessibility; validate exposure in DMZ and third-party hosted apps.\n- Emerging **AI/ML supply-chain/runtime risk**: vLLM RCE (trust_remote_code bypass) + TanStack npm compromise checker tooling resurfacing—review dev/CI and internal model-serving deployments.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) GitLab CE/EE unauthenticated arbitrary file read (CVE-2026-85706) — PoC available, “exploited in the wild”**\n- What happened: Public PoC released for **CVE-2026-85706** (GitLab CE/EE 18.7–19.3.1) enabling **unauthenticated local file read**; fixed in 19.1.8/19.2.6/19.3.2.\n- Why it matters operationally: Internet-exposed GitLab can leak secrets (tokens/keys/config) → rapid pivot to repo compromise, CI abuse, and credential theft.\n- Recommended immediate actions for the SOC today: **Confirm version/exposure and emergency patch/mitigate**; **hunt for suspicious unauthenticated requests** to GitLab endpoints and review recent access logs for unusual file read patterns.\n\n**2) CISA KEV additions: JFrog Artifactory + ConnectWise ScreenConnect + MikroTik RouterOS (5 flaws) — actively exploited**\n- What happened: CISA added **five vulnerabilities** affecting **Artifactory, ScreenConnect, RouterOS** to KEV due to active exploitation (exact CVEs not fully enumerated in the context).\n- Why it matters operationally: These products are commonly **externally reachable and high-privilege** (software artifacts, remote support, edge routing) → strong ransomware/initial access value.\n- Recommended immediate actions for the SOC today: **Identify any exposed instances and prioritize patching/compensating controls**; **increase alerting on admin logins/config changes/new sessions** on these platforms and isolate any anomalous device immediately.\n\n**3) Citrix ADC/Gateway auth-bypass signals (CVE-2026-19490) + NetScaler pre-auth RCE detection tooling referenced**\n- What happened: VulDB flags **CVE-2026-19490** (Citrix ADC/Gateway auth bypass “alternate channel,” exploit reportedly available); separate tooling references **NetScaler pre-auth RCE (CVE-2026-8452)** detection artifact generator.\n- Why it matters operationally: Citrix gateways are frequent **financial-sector perimeter targets**; auth bypass/pre-auth paths can lead to session hijack, credential access, and rapid lateral movement.\n- Recommended immediate actions for the SOC today: **Confirm if any Citrix ADC/Gateway are internet-facing and validate patch levels**; **monitor for abnormal auth flows, new/rare user agents, unexpected endpoints, and spikes in failed/success logins** from unusual geos.\n\n**4) Web app RCE/attack-chain PoCs: Magento “StyleSmuggler” (CVE-2026-75650), Metabase (CVE-2023-38646), CrushFTP (CVE-2024-4040)**\n- What happened: New/renewed exploit content and deep technical write-up for **Magento unauthenticated RCE chain**, plus **Metabase RCE** and **CrushFTP critical** PoC.\n- Why it matters operationally: These are typical DMZ apps; successful compromise often becomes a foothold for **credential harvesting and ransomware staging**.\n- Recommended immediate actions for the SOC today: **Inventory and confirm whether any of these services are reachable externally (including subsidiaries/vendors)**; **enable/raise WAF/IDS rules and review web logs for exploit-like request bursts** and unusual POSTs to admin/reporting endpoints.\n\n**5) AI/Dev supply-chain risk: vLLM RCE (CVE-2026-90553) + TanStack npm compromise detection tooling**\n- What happened: **CVE-2026-90553** allows RCE in **vLLM < 0.28.0** by ignoring `trust_remote_code` when loading remote processor classes; tooling resurfaced to detect **TanStack npm supply-chain attack** indicators.\n- Why it matters operationally: Model-serving nodes and CI runners often hold **high-value secrets** (cloud keys, artifact credentials) and have outbound access—prime for stealthy compromise.\n- Recommended immediate actions for the SOC today: **Identify any internal vLLM deployments and block/limit remote model/processor loading until patched**; **have DevOps run TanStack compromise checks on CI runners/dev workstations if TanStack packages are in use**.\n\n---\n\n### Monitoring & detection recommendations\n- **GitLab (CVE-2026-85706):** Monitor GitLab NGINX/app logs for **unauthenticated requests** with abnormal paths/parameters and sudden increases in 4xx/5xx; correlate with **new PAT creation / SSH key additions** in GitLab audit logs (ATT&CK: T1552 Unsecured Credentials, T1078 Valid Accounts).\n- **Citrix ADC/Gateway:** Collect/alert on **AAA/auth logs, VPN session creation, and config changes**; hunt for **impossible travel**, new devices, and atypical “alternate channel” auth behavior (ATT&CK: T1078, T1098 Account Manipulation).\n- **Artifactory/ScreenConnect/RouterOS (KEV):** From platform audit logs + firewall/VPN logs, flag **new admin users, new API tokens, remote-control session starts, and router config diffs**; prioritize any events preceded by **internet scan spikes** (ATT&CK: T1190 Exploit Public-Facing App).\n- **Magento/Metabase/CrushFTP web exploitation:** Use WAF/reverse-proxy logs to detect **endpoint probing, template/include/file path patterns, and abnormal multipart uploads**; alert on **new PHP/webshell-like file writes** via EDR on web hosts (ATT&CK: T1505.003 Web Shell).\n- **Linux privilege escalation CVEs (multiple kernel issues):** On Linux servers, alert on **sudden privilege transitions**, abnormal `sudo`/setuid usage, and suspicious kernel module/BPF activity; enrich with EDR “process tree” anomalies (ATT&CK: T1068 Exploitation for Privilege Escalation).\n- **vLLM/model-serving:** On AI hosts, monitor **outbound connections** from model-serving processes to unapproved repositories and unusual file writes under model/cache directories; alert on **new long-running shell children** spawned by inference services (ATT&CK: T1105 Ingress Tool Transfer, T1059 Command and Scripting).\n- **CI/dev supply chain (TanStack):** In CI logs, flag **unexpected npm install scripts, postinstall execution, and new dependencies**; correlate with secrets access events in vault/CI secret stores (ATT&CK: T1195 Supply Chain Compromise).\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** Ensure GitLab, Citrix ADC/Gateway, Artifactory, ScreenConnect, RouterOS have **defined emergency patch SLAs** and an owner per platform (include third-party hosted instances).\n- **External exposure review:** Re-validate DMZ inventory for **Metabase/Magento/CrushFTP** and decommission/segment any “forgotten” services; enforce WAF in front of admin/reporting interfaces.\n- **Hardening controls:** For Citrix and other remote access, enforce **MFA everywhere**, reduce external management exposure, and restrict admin interfaces to jump hosts.\n- **AI platform policy:** For model-serving, mandate **pinned/trusted model sources**, disable remote code execution paths by policy, and isolate AI workloads in a constrained network zone.\n- **CI/CD guardrails:** Require **dependency allowlists, lockfiles, SCA gating**, and routine compromise scans (use TanStack checker where relevant) on runners and developer endpoints.\n- **Detection engineering:** Translate today’s exploit themes into **repeatable detections** (web exploit burst + subsequent credential/token creation + lateral movement) and validate coverage via purple-team tests.",
+  "morning_call_markdown": "### Executive Summary\n- Active exploitation: Critical GitLab path traversal (CVE-2026-85706, CVSS 10) now has public PoCs—treat internet-facing GitLab as high-risk until confirmed patched.\n- Perimeter risk rising: Dutch NCSC warning on critical Check Point VPN flaws with “imminent exploitation” language; multiple other high-impact edge/app PoCs surfaced (Cisco FMC auth bypass, Ivanti Sentry).\n- Targeting & supply-chain pressure: Tencent Sogou IM flaw used to deploy GrayRabbit malware; separate reporting flags RubyGems/Ruby ecosystem RCE activity being leveraged for server access (details still developing).\n\n---\n\n### High-priority items (immediate attention)\n\n**1) GitLab CE/EE critical path traversal exploited in the wild (CVE-2026-85706) + PoCs public**\n- What happened: Rapid7 reports in-the-wild exploitation of CVE-2026-85706; multiple PoCs are circulating.\n- Why it matters operationally: Likely rapid commoditization against exposed GitLab (source code theft, CI/CD secret access, lateral movement) in financial environments.\n- Recommended immediate actions for the SOC today: Validate patch level on all GitLab CE/EE immediately; review GitLab access logs for suspicious commits API traversal patterns and unusual token usage; consider temporarily restricting GitLab exposure (WAF/allowlists/VPN) until confirmed remediated.\n\n**2) Critical VPN/perimeter device exposure: Check Point VPN “imminent exploitation” + Cisco FMC auth bypass PoC + Ivanti Sentry exploit repo**\n- What happened: NCSC warning on two critical Check Point VPN flaws (CVSS 9.8, exploitation expected soon); PoC published for Cisco Secure Firewall Management Center auth bypass (CVE-2026-20079, CVSS 10); exploit tooling posted referencing Ivanti Sentry CVEs (CVE-2026-10520/10523).\n- Why it matters operationally: Edge compromise is the fastest path to domain-wide impact (credential theft, MFA bypass, ransomware staging) and historically high in financial-sector intrusions.\n- Recommended immediate actions for the SOC today: Identify any exposed Check Point VPN / Cisco FMC / Ivanti Sentry instances and confirm patch/mitigation status; tighten management-plane access (allowlist admin IPs, require MFA where possible); increase alerting on VPN/FMC/Sentry admin logins and configuration changes.\n\n**3) Malware delivery via Tencent Sogou Input Method flaw (CVE-2026-51990) → GrayRabbit backdoor**\n- What happened: Threat actors exploit a critical Tencent Sogou Input Method for Windows vulnerability to deploy GrayRabbit malware (China-aligned espionage reporting).\n- Why it matters operationally: Endpoint footholds via widely deployed desktop software can bypass perimeter controls; espionage tradecraft overlaps with credential and data access relevant to financial institutions.\n- Recommended immediate actions for the SOC today: Inventory and block/patch vulnerable Sogou IM where present (assumption: may exist on multilingual user endpoints); hunt for unusual process execution spawned by input-method processes and new persistence on impacted hosts; isolate and triage any endpoint showing GrayRabbit-like post-exploitation behaviors.\n\n**4) Supply-chain / developer ecosystem risk: RubyGems RCE campaign activity reported as leveraged for server access**\n- What happened: Reporting indicates RubyGems-related RCE activity (from a prior campaign) is being actively leveraged to gain server access; details are limited in the provided sources.\n- Why it matters operationally: Dev tooling compromise can lead to CI/CD secret theft, poisoned artifacts, and rapid propagation into production.\n- Recommended immediate actions for the SOC today: Monitor build runners and app servers for anomalous gem installs/updates and unexpected outbound connections; enforce “known-good” dependency sources and lockfiles; if RubyGems infrastructure is used internally, validate recent dependency changes and rotate exposed tokens if suspicious activity is found.\n\n---\n\n### Monitoring & detection recommendations\n- **GitLab exploitation monitoring (T1190 External Remote Services / T1210 Exploitation of Remote Services):** GitLab application logs, reverse proxy/WAF logs—alert on unusual requests to repository commits API, path traversal indicators, bursts of 4xx/5xx around API endpoints, and abnormal PAT/OAuth token usage.\n- **VPN / firewall management plane abuse (T1078 Valid Accounts, T1562 Impair Defenses):** VPN logs (Check Point), Cisco FMC audit/admin logs—watch for new admin accounts, policy pushes, sudden rule changes, and logins from new geos/ASNs or outside maintenance windows.\n- **Ivanti Sentry and similar edge appliance probing (T1595 Active Scanning):** IDS/IPS + perimeter web logs—track scanning patterns, repeated auth attempts, and access to uncommon endpoints; correlate with spikes in 401/403/404 on management URLs.\n- **GrayRabbit-style endpoint behaviors (T1055 Process Injection, T1547 Boot/Logon Autostart Execution):** EDR telemetry—alert on input method processes spawning shells/PowerShell, new scheduled tasks/services, unusual DLL loads, and suspicious outbound C2 from user workstations.\n- **Developer supply-chain anomalies (T1552 Unsecured Credentials, T1204 User Execution):** CI/CD logs (GitLab runners), artifact repository logs, EDR on build agents—detect unexpected dependency additions, unsigned binaries, and secrets access outside normal pipeline stages.\n- **Critical web app PoCs (Metabase SQLi CVE-2026-72898, Tomcat CVE-2026-59084) where applicable:** WAF/app logs—look for SQLi patterns, unusual query payload sizes, and suspicious requests to admin/reporting endpoints; prioritize any internet-facing analytics platforms.\n- **Credential abuse after perimeter compromise (T1110 Brute Force, T1556 Modify Authentication Process):** IdP logs (SSO), AD sign-in logs—monitor MFA resets, token anomalies, impossible travel, and privilege escalations following edge-device alerts.\n\n---\n\n### Medium-term follow-ups\n- Patch backlog prioritization: Add GitLab CVE-2026-85706, Cisco FMC CVE-2026-20079, Check Point VPN critical CVEs, and any Ivanti Sentry referenced CVEs to “48–72 hour” remediation SLAs for exposed systems.\n- Hardening: Reduce/disable direct internet exposure for management interfaces (FMC, VPN admin portals); enforce admin access via PAM/jump hosts and IP allowlisting.\n- CI/CD controls: Require dependency pinning and artifact signing where feasible; tighten runner permissions and rotate long-lived tokens; review who can modify pipeline definitions.\n- Endpoint hygiene: Validate software allowlists for input-method/IME tools; ensure EDR coverage and tamper protection on multilingual user populations (assumption based on Tencent Sogou vector).\n- Data breach awareness (Revolut KYC impersonation theme): Brief fraud/CSIRT on “authority impersonation” social engineering patterns; validate internal workflows for government-request verification and least-data-sharing.\n- Detection engineering: Create/refresh correlation rules that chain “edge appliance alert → new privileged identity activity → lateral movement,” tuned for your environment and change windows.",
   "highlights": [
     {
-      "title": "Exploit for CVE-2026-85706",
-      "link": "https://vulners.com/githubexploit/F55B205B-F671-55B3-B8C3-5FDE3B715170?utm_source=rss&utm_medium=rss&utm_campaign=rss",
-      "source": "Vulners.com RSS Feed",
-      "published": "2026-09-12T20:40:56+00:00",
+      "title": "Check Point VPN & Tencent flaws in active exploitation; RubyGems RCE confirmed",
+      "link": "https://defend.network/briefings/check-point-vpn-tencent-rubygems-exploits-critical-2026-09-14.html",
+      "source": "defend.network",
+      "published": "2026-09-14T06:30:00+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
+        "Supply Chain / Software",
+        "Cloud / SaaS",
         "Exploit / PoC",
         "Malware / Payloads",
-        "Web / API Security"
+        "General Security"
       ],
       "curated": true,
       "signal_tier": "critical",
       "signal_score": 100.0,
-      "priority_score": 83.99
+      "priority_score": 86.59
     },
     {
-      "title": "CISA Adds 5 Actively Exploited Artifactory, ScreenConnect, and RouterOS Flaws to KEV",
-      "link": "https://vulners.com/thn/THN:9249A1B00B15709951979B93BD64B6AF?utm_source=rss&utm_medium=rss&utm_campaign=rss",
-      "source": "Vulners.com RSS Feed",
-      "published": "2026-09-12T15:54:00+00:00",
+      "title": "Weekly Cybersecurity Newsletter Bulletin – Microsoft 0-day, FortiOS, PAN-OS Flaw, Revolut Data Breach, and 20+ Stories",
+      "link": "https://cybersecuritynews.com/cybersecurity-weekly-newsletter-bulletin-september/",
+      "source": "Cyber Security News",
+      "published": "2026-09-14T03:10:36+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Cloud / SaaS",
+        "Data Breaches / Leaks",
         "Exploit / PoC",
-        "Linux / Unix"
+        "General Security"
       ],
       "curated": false,
       "signal_tier": "critical",
-      "signal_score": 84.52,
-      "priority_score": 72.95
+      "signal_score": 92.04,
+      "priority_score": 77.14
     },
     {
-      "title": "CVE-2022-1388",
-      "link": "https://vulners.com/kitploit/KITPLOIT:TOOLS-GITHUB-OMNIGODZ-CVE-2022-1388?utm_source=rss&utm_medium=rss&utm_campaign=rss",
-      "source": "Vulners.com RSS Feed",
-      "published": "2026-09-12T15:06:39+00:00",
+      "title": "CVE-2026-85706: Critical GitLab Path Traversal Exploited in the Wild",
+      "link": "https://www.rapid7.com/blog/post/etr-cve-2026-85706-critical-gitlab-path-traversal-exploited-in-the-wild",
+      "source": "Rapid7 Blog",
+      "published": "2026-09-14T10:02:57+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Exploit / PoC"
+        "Exploit / PoC",
+        "Identity / Access",
+        "Web / API Security",
+        "Vendors / Product Security"
       ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 70.52,
-      "priority_score": 72.06
-    },
-    {
-      "title": "Exploit-CVE-2023-38646-Metabase",
-      "link": "https://vulners.com/kitploit/KITPLOIT:TOOLS-GITHUB-USERCONNECTING-EXPLOIT-CVE-2023-38646-METABASE?utm_source=rss&utm_medium=rss&utm_campaign=rss",
-      "source": "Vulners.com RSS Feed",
-      "published": "2026-09-13T06:32:45+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 68.52,
-      "priority_score": 76.84
-    },
-    {
-      "title": "Vulnerability-and-Exploit-Analysis",
-      "link": "https://sploitus.com/exploit?id=94FC8355-2B11-5685-8540-91CA4BEC5E74&utm_source=rss&utm_medium=rss",
-      "source": "Sploitus – Exploits",
-      "published": "2026-09-13T07:53:38+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 68.38,
-      "priority_score": 75.87
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 87.07,
+      "priority_score": 89.71
     },
     {
       "title": "Exploit for CVE-2026-85706",
-      "link": "https://sploitus.com/exploit?id=F55B205B-F671-55B3-B8C3-5FDE3B715170&utm_source=rss&utm_medium=rss",
+      "link": "https://sploitus.com/exploit?id=FDE2E47C-D236-5CCF-8BDD-C05F179A3A2D&utm_source=rss&utm_medium=rss",
       "source": "Sploitus – Exploits",
-      "published": "2026-09-12T20:40:56+00:00",
+      "published": "2026-09-14T09:08:42+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 68.38,
-      "priority_score": 71.78
+      "signal_score": 68.39,
+      "priority_score": 74.37
     },
     {
-      "title": "Exploit for Deserialization of Untrusted Data in Openidentityplatform Openam",
-      "link": "https://sploitus.com/exploit?id=B2C95D2F-FF4C-5818-8899-798371B683D2&utm_source=rss&utm_medium=rss",
+      "title": "Exploit for CVE-2026-85706",
+      "link": "https://sploitus.com/exploit?id=28D57F6F-140B-5789-A329-363AF4019105&utm_source=rss&utm_medium=rss",
       "source": "Sploitus – Exploits",
-      "published": "2026-09-12T22:10:46+00:00",
+      "published": "2026-09-13T16:58:00+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 66.38,
-      "priority_score": 72.18
+      "signal_score": 68.39,
+      "priority_score": 70.04
     },
     {
-      "title": "Exploit for Deserialization of Untrusted Data in Apache Tomcat",
-      "link": "https://sploitus.com/exploit?id=7CE950B5-57B1-5C28-AD1F-491E2A9EFA9C&utm_source=rss&utm_medium=rss",
+      "title": "Exploit for CVE-2026-85706",
+      "link": "https://sploitus.com/exploit?id=FFD34E90-AE83-59C4-B6C0-064912C87BF9&utm_source=rss&utm_medium=rss",
       "source": "Sploitus – Exploits",
-      "published": "2026-09-12T14:52:00+00:00",
+      "published": "2026-09-13T14:28:53+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 66.38,
-      "priority_score": 70.23
+      "signal_score": 68.39,
+      "priority_score": 69.37
     },
     {
-      "title": "CVE-2026-43345 | Linux Kernel up to 6.6.135/6.12.82/6.18.23/6.19.13 net gsi_channel_trans_quiesce privilege escalation (Nessus ID 313453 / WID-SEC-2026-1454)",
-      "link": "https://vuldb.com/vuln/362112",
-      "source": "VulDB Updates",
-      "published": "2026-09-13T06:42:43+00:00",
+      "title": "Exploit for Authentication Bypass Using an Alternate Path or Channel in Cisco Secure_Firewall_Management_Center",
+      "link": "https://sploitus.com/exploit?id=EA2ECD75-AD35-54E6-9081-7E8EC3145347&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-09-13T22:09:39+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Linux / Unix",
         "Exploit / PoC"
       ],
-      "curated": false,
+      "curated": true,
       "signal_tier": "high",
-      "signal_score": 63.35,
-      "priority_score": 80.85
+      "signal_score": 66.39,
+      "priority_score": 82.61
     },
     {
-      "title": "CVE-2026-43307 | Linux Kernel up to 6.12.74/6.18.15/6.19.5 iio privilege escalation (WID-SEC-2026-1454)",
-      "link": "https://vuldb.com/vuln/362137",
-      "source": "VulDB Updates",
-      "published": "2026-09-12T16:56:02+00:00",
+      "title": "Exploit for Code Injection in Craftcms Craft_Cms",
+      "link": "https://sploitus.com/exploit?id=F7CB26A1-7367-5CFC-82B1-823E0C187C95&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-09-14T10:19:44+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Linux / Unix",
         "Exploit / PoC"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 63.35,
-      "priority_score": 77.16
+      "signal_score": 66.39,
+      "priority_score": 74.69
+    },
+    {
+      "title": "Exploit for SQL Injection in Metabase",
+      "link": "https://sploitus.com/exploit?id=964A499B-D76C-50B1-BAAE-8C2BA85AD8B0&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-09-14T09:54:14+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Web / API Security"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 66.39,
+      "priority_score": 74.57
+    },
+    {
+      "title": "cra-watch exploit",
+      "link": "https://sploitus.com/exploit?id=75541816-EC73-576C-AB55-FC4E97C1D136&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-09-14T08:41:42+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 66.39,
+      "priority_score": 74.25
     }
   ]
 }
