@@ -1,180 +1,184 @@
 {
-  "generated_at": "2026-09-15T11:43:53.297340+00:00",
-  "analysis_date": "2026-09-15",
+  "generated_at": "2026-09-16T11:31:10.359806+00:00",
+  "analysis_date": "2026-09-16",
   "provider": "openai",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-09-15T07:26:43.656097+00:00",
+  "source_generated_at": "2026-09-16T09:55:35.416960+00:00",
   "source_days_back": 30,
-  "source_total_items": 59505,
-  "total_items_in_window_all": 2755,
-  "total_items_in_window_curated": 11,
-  "total_items_in_window_selected": 40,
+  "source_total_items": 58035,
+  "total_items_in_window_all": 4269,
+  "total_items_in_window_curated": 19,
+  "total_items_in_window_selected": 46,
   "context_selection_policy": "curated-plus-operational-signal-v1",
-  "morning_call_markdown": "### Executive Summary\n- Multiple **internet-facing edge systems under active exploitation**: Cisco Secure Email Gateway (root RCE zero-day), SonicWall SMA1000 pre-auth exploit chain, and GitLab path traversal (KEV).\n- **China-linked intrusion activity**: spear-phishing leveraging a **Chrome + Windows exploit chain** to deploy a JS backdoor (“GRIMWEDGE”); plus **Red Heron** exploiting Gitea to establish persistent access on Linux.\n- Expect **credential/secrets theft → lateral movement/ransomware-style impact**; prioritize rapid exposure checks, patching, and targeted hunting on email/VPN/DevOps infrastructure.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Cisco Secure Email Gateway (AsyncOS) root RCE zero-day (CVE-2026-76461) – actively exploited**\n- What happened: Unauthenticated remote attackers can execute OS commands as **root** on Cisco Secure Email Gateway.\n- Why it matters operationally: Email gateways are high-trust and exposed; compromise enables mail manipulation, credential theft, internal pivoting, and wide blast radius.\n- Recommended immediate actions for the SOC today: **Identify all ESA/SEWM assets + exposure**, apply Cisco fix/mitigation ASAP; **pull and review ESA audit/admin/API logs** for new admin users, config changes, suspicious process/command execution.\n\n**2) Remote access/VPN edge exploitation: SonicWall SMA1000 zero-day chain (CVE-2026-83548/83549) – actively exploited**\n- What happened: Pre-auth SSRF + command injection chain enables unauthenticated compromise of SonicWall SMA1000 remote access/SSL-VPN appliances.\n- Why it matters operationally: VPN/RAG compromise is a common initial access vector into financial environments; likely follow-on is credential harvesting and lateral movement.\n- Recommended immediate actions for the SOC today: **Confirm internet exposure + patch/mitigate immediately** (limit management interfaces, tighten ACLs); **hunt VPN logs** for anomalous requests, new sessions from unusual geo/ASNs, and post-auth admin changes.\n\n**3) GitLab self-managed critical path traversal (CVE-2026-85706) – exploited in the wild / KEV**\n- What happened: Unauthenticated attackers can read arbitrary files via GitLab commits API (single-request style abuse reported) and it’s under active exploitation.\n- Why it matters operationally: File read often yields **secrets** (tokens, SSH keys, cloud creds) leading to CI/CD takeover, repo tampering, and downstream supply-chain risk.\n- Recommended immediate actions for the SOC today: **Inventory self-managed GitLab + patch emergency releases now**; **search GitLab access logs** for suspicious commits API patterns and check for subsequent token use (GitLab PATs, CI runners, cloud API calls).\n\n**4) DevOps platform compromise campaign: Red Heron exploiting Gitea n-day (CVE-2026-60004) + Linux rootkit**\n- What happened: China-speaking actor “Red Heron” rapidly weaponized a Gitea RCE to steal code and establish persistence, including a newly reported Linux rootkit.\n- Why it matters operationally: Dev tooling compromise enables credential discovery and code/release manipulation; rootkit suggests stealth persistence and long dwell time.\n- Recommended immediate actions for the SOC today: **Locate all internet-facing Gitea and patch/upgrade**; **EDR/hunt on Linux hosts** for unexpected kernel modules, persistence (systemd services/cron), and outbound C2-like traffic from DevOps subnets.\n\n---\n\n### Monitoring & detection recommendations\n- **Email gateway exploitation (Cisco ESA)**: Monitor ESA/AsyncOS logs + underlying OS telemetry (if available) for **new/modified admin accounts, config exports, unexpected command execution** (ATT&CK: T1190, T1059).\n- **VPN/RAG exploitation (SonicWall SMA1000)**: On VPN logs, alert on **pre-auth abnormal URL patterns**, spikes in 4xx/5xx, and **new sessions immediately followed by admin/config changes** (T1190, T1562.001).\n- **GitLab file-read → secret theft**: From GitLab NGINX/app logs, hunt for **high-rate requests to repository/commits API** and unusual user agents; correlate with **subsequent token use** in GitLab audit events and CI runner activity (T1552.001, T1078).\n- **Chrome/Windows exploit chain via spear-phishing (GRIMWEDGE)**: Email security + proxy/SWG + EDR: look for **phishing → browser child processes** and unusual script execution; prioritize endpoints missing latest Chrome/Windows patches (T1566.001, T1204, T1059.007).\n- **Linux persistence/rootkit behaviors (Gitea/Red Heron)**: Linux EDR/auditd: detect **new systemd units, cron drops, LD_PRELOAD changes, kernel module loads**, and suspicious privileged binaries in atypical paths (T1543.002, T1053.003, T1068).\n- **Credential replay/auth bypass themes (capture-replay noted in multiple CVE notes)**: IdP/app auth logs: flag **token reuse across IPs/ASNs**, impossible travel, and repeated refresh/token validation failures (T1110, T1078).\n- **KEV-driven exploitation scanning** (GitLab + other KEV mentions): Perimeter WAF/firewall: alert on **internet scans/probing bursts** against /users/sign_in, /api/*, /commits endpoints, and VPN appliance paths; feed into block/ratelimit playbooks (T1595).\n\n---\n\n### Medium-term follow-ups\n- **Patch governance (KEV/zero-days)**: Enforce 24–72h SLA for **internet-facing email/VPN/DevOps**; require documented compensating controls when patching is delayed.\n- **Secrets hygiene after GitLab/Gitea exposure**: Plan rotations for **GitLab PATs, deploy keys, CI variables, cloud access keys**, and review runner isolation/egress controls.\n- **Cisco ESA hardening release**: Review Cisco’s hardening advisory and schedule updates beyond the zero-day fix; validate secure management access (MFA, IP allowlists).\n- **Endpoint/browser baselines**: Confirm fleet-wide compliance for **Chrome and Windows security updates** to reduce exploit-chain success; prioritize high-risk user groups (execs, treasury, IT admins).\n- **DevOps segmentation**: Re-validate network segmentation and monitoring for **CI/CD, SCM, artifact repos**; ensure logs are centrally collected (GitLab/Gitea, runners, reverse proxies).\n- **Mobile threat awareness (Android spyware/ransomware trend)**: Reinforce MDM controls (unknown sources, accessibility abuse), and update user guidance for SMS/overlay credential theft (assumption: relevance mainly for BYOD/exec travel users).",
+  "morning_call_markdown": "### Executive Summary\n- **Patch/mitigate Cisco Secure Email Gateway (SEG) zero-day (CVE-2026-76461) today**: unauth root RCE via crafted emails, confirmed in-the-wild exploitation and **KEV-listed**.\n- **Ransomware operators now exploiting a critical VMware vCenter RCE**: treat exposed/Internet-reachable management planes as high-risk and validate compromise quickly.\n- **Active exploitation also reported for WSO2 API Manager JWT/admin token bypass (CVE-2026-5430)**: prioritize if any internet-facing API management/SSO token infrastructure is in scope.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Cisco Secure Email Gateway (AsyncOS) zero-day – CVE-2026-76461 (KEV, active exploitation)**\n- **What happened:** Cisco shipped emergency fixes for **CVE-2026-76461**, an unauth **SQLi → root command execution** on Secure Email Gateway, exploited in the wild.\n- **Why it matters operationally:** SEG is an email perimeter control; compromise enables **mail flow manipulation, credential interception, internal pivoting**, and potential stealthy persistence.\n- **Recommended immediate actions for the SOC today:** **Confirm presence + version**, apply Cisco fix/mitigation ASAP; **hunt for SEG admin/config changes and suspicious outbound from SEG** (treat SEG as potentially compromised until validated).\n\n**2) VMware vCenter critical RCE now leveraged by ransomware**\n- **What happened:** CISA reports ransomware groups joined exploitation of a **critical vCenter RCE** (patched earlier; now broadly weaponized).\n- **Why it matters operationally:** vCenter compromise is a common fast path to **hypervisor control, mass VM encryption, credential dumping**, and rapid enterprise-wide impact.\n- **Recommended immediate actions for the SOC today:** **Identify any unpatched/exposed vCenter** and prioritize emergency patching/segmentation; **review last 7 days of vCenter auth + admin actions** for anomalous logins, new accounts, and sudden VM operations.\n\n**3) WSO2 API Manager JWT signature verification bypass – CVE-2026-5430 (active exploitation attempts)**\n- **What happened:** Reports of active exploitation attempts of **CVE-2026-5430** enabling **forged admin tokens / account takeover** in WSO2 API Manager.\n- **Why it matters operationally:** API gateways sit in front of critical services; token forgery can lead to **privileged API access**, data exposure, and downstream service compromise.\n- **Recommended immediate actions for the SOC today:** **Inventory WSO2 exposure (internet-facing vs internal)** and patch/mitigate immediately; **monitor for abnormal JWT/admin activity** (new admin sessions, token anomalies, privilege changes, unexpected API policy edits).\n\n**4) Acronis cPanel/WHM/Plesk backup plugin LPE – CVE-2026-87886 (limited in-the-wild exploitation)**\n- **What happened:** Acronis disclosed **CVE-2026-87886**, a Linux local privilege escalation in backup components, with targeted exploitation observed.\n- **Why it matters operationally:** If any shared hosting/admin servers exist, LPE can turn a foothold into **root**, enabling credential theft and lateral movement.\n- **Recommended immediate actions for the SOC today:** **Find servers running the Acronis plugin/extension** and patch; **review sudo/root escalation telemetry** and unusual file permission changes around Acronis directories.\n\n---\n\n### Monitoring & detection recommendations\n- **Email security/gateway (Cisco SEG):** monitor SEG **admin login**, **config export/import**, policy changes, and service restarts; correlate with unusual outbound connections from SEG to internal hosts (**T1190 Exploit Public-Facing App**, **T1078 Valid Accounts**).\n- **Network egress from perimeter appliances:** firewall/proxy logs for **new outbound destinations** from SEG/vCenter/WSO2 hosts, especially to uncommon ports and new ASN/geo for those systems (**T1071 App Layer Protocol**).\n- **vCenter / virtualization control-plane:** vCenter logs for **new local users**, role changes, sudden spikes in **VM snapshot/delete/power operations**, and remote console access (**T1098 Account Manipulation**, **T1486 Data Encrypted for Impact**).\n- **IdP / token infrastructure (WSO2 theme):** IdP/SSO and WSO2 audit logs for **unexpected admin token issuance**, unusually long-lived sessions, or admin actions from new IPs/agents (**T1550 Use Alternate Authentication Material**).\n- **Linux privilege escalation (Acronis theme):** EDR on Linux for **setuid bit changes**, suspicious chmod/chown in backup paths, and processes spawning shells as root from non-root parents (**T1068 Exploitation for Privilege Escalation**).\n- **Web app exposure scanning (Vite dev servers campaign):** IDS/WAF for requests to dev-server patterns and sudden hits to non-prod endpoints; cloud logs for **credential access attempts** shortly after suspicious web hits (**T1526 Cloud Service Discovery**, **T1552 Unsecured Credentials**).\n- **WordPress/WooCommerce plugin exploitation (if applicable):** WAF/web logs for **file upload to plugin paths**, creation of new PHP files in wp-content, and webshell-like POST patterns (**T1505.003 Web Shell**).\n\n---\n\n### Medium-term follow-ups\n- **CVE-driven asset coverage:** confirm CMDB/asset inventory flags for **Cisco SEG, vCenter, WSO2**, and hosting/admin tooling (Acronis) so KEV items auto-escalate in patch queues.\n- **Segmentation/hardening:** ensure **management planes** (vCenter, API managers, email appliances) are **not internet-exposed**, enforce admin access via jump hosts/VPN + MFA, and restrict egress.\n- **Incident readiness:** pre-stage playbooks for **appliance compromise** (SEG/vCenter/WSO2): evidence capture, credential rotation, config diffing, and golden-image restore steps.\n- **Mobile risk note (Pixel modem 0-day):** if corporate fleets include Pixel devices, validate MDM compliance for the September update; otherwise treat as **targeted** unless telemetry indicates mobile exploitation.\n- **Patch hygiene for “PoC published” items:** track PoC releases noted (e.g., Tomcat deserialization CVE-2025-24813; other PoCs) and validate whether any affected services exist internally before they become mass-exploited.",
   "highlights": [
     {
+      "title": "Critical Cisco Secure Email Gateway zero-day gives attackers root access",
+      "link": "https://www.csoonline.com/article/4222391/critical-cisco-secure-email-gateway-zero-day-gives-attackers-root-access.html",
+      "source": "CSO Online",
+      "published": "2026-09-15T19:56:58+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Web / API Security",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 100.0,
+      "priority_score": 87.83
+    },
+    {
+      "title": "CVE-2026-76461: Critical Cisco Secure Email Gateway Zero-Day Enables Root RCE",
+      "link": "https://socprime.com/blog/cve-2026-76461-critical-cisco-secure-email-gateway-zero-day-enables-root-rce/",
+      "source": "SOC Prime Blog",
+      "published": "2026-09-15T14:40:31+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Vendors / Product Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 100.0,
+      "priority_score": 87.29
+    },
+    {
       "title": "Root RCE Zero-Day in Cisco Secure Email Gateway Under Active Exploitation",
-      "link": "https://www.securityweek.com/root-rce-zero-day-in-cisco-secure-email-gateway-under-active-exploitation/",
-      "source": "SecurityWeek",
-      "published": "2026-09-15T05:18:51+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 100.0,
-      "priority_score": 89.57
-    },
-    {
-      "title": "SonicWall SMA1000 Pre-Authentication SSRF and Command Injection Chain: Analysis of CVE-2026-83548 and CVE-2026-83549",
-      "link": "https://blog.criminalip.io/2026/09/15/sonicwall-sma1000/",
-      "source": "CIP Blog",
-      "published": "2026-09-15T00:22:05+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "Web / API Security"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 100.0,
-      "priority_score": 87.97
-    },
-    {
-      "title": "Hackers Exploit Critical Cisco Secure Email Gateway Vulnerability in the Wild to Run Malicious Code",
-      "link": "https://cybersecuritynews.com/cisco-secure-email-gateway-flaw-exploited/",
-      "source": "Cyber Security News (FeedBurner)",
-      "published": "2026-09-15T04:14:12+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "General Security"
-      ],
-      "curated": false,
-      "signal_tier": "critical",
-      "signal_score": 100.0,
-      "priority_score": 79.78
-    },
-    {
-      "title": "Red Heron exploits Gitea n-day flaw in multinational campaign, exposing new Linux rootkit",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1wgh4hr/red_heron_exploits_gitea_nday_flaw_in/",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1wgybus/root_rce_zeroday_in_cisco_secure_email_gateway/",
       "source": "/r/cybersecurity",
-      "published": "2026-09-14T21:43:38+00:00",
+      "published": "2026-09-15T11:57:59+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC",
-        "Malware / Payloads",
-        "Threat Actors / APT",
-        "Linux / Unix",
         "OSINT / Community"
       ],
       "curated": true,
       "signal_tier": "critical",
-      "signal_score": 94.92,
-      "priority_score": 86.92
+      "signal_score": 100.0,
+      "priority_score": 83.42
     },
     {
-      "title": "CVE-2026-85706: Critical GitLab Path Traversal Flaw Exploited in the Wild",
-      "link": "https://socprime.com/blog/cve-2026-85706-critical-gitlab-path-traversal-flaw/",
-      "source": "SOC Prime Blog",
-      "published": "2026-09-14T14:08:18+00:00",
+      "title": "CVE-2026-76461: Critical Cisco Secure Email Gateway Vulnerability Exploited in the Wild",
+      "link": "https://www.rapid7.com/blog/post/etr-cve-2026-76461-critical-cisco-secure-email-gateway-vulnerability-exploited-in-the-wild",
+      "source": "Rapid7 Cybersecurity Blog",
+      "published": "2026-09-15T12:22:50+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC",
-        "Vendors / Product Security"
+        "Phishing / Social Engineering",
+        "Email Security / BEC",
+        "Threat Actors / APT",
+        "Web / API Security",
+        "Malware / Payloads",
+        "Data Breaches / Leaks"
       ],
       "curated": true,
       "signal_tier": "critical",
-      "signal_score": 87.44,
-      "priority_score": 86.88
+      "signal_score": 100.0,
+      "priority_score": 81.53
     },
     {
-      "title": "Breaking: GitLab Critical Path Traversal Flaw Exploited in the Wild — Patch Immediately",
-      "link": "https://orca.security/resources/blog/gitlab-critical-path-traversal-cve-2026-85706-exploited/",
-      "source": "Orca Security Blog",
-      "published": "2026-09-14T14:45:14+00:00",
+      "title": "Android 0-day Vulnerability on Google Pixel Devices Actively Exploited in Attacks",
+      "link": "https://cybersecuritynews.com/android-pixel-zero-day/",
+      "source": "Cyber Security News",
+      "published": "2026-09-16T09:40:35+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC",
-        "Vendors / Product Security"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 84.7,
-      "priority_score": 83.33
-    },
-    {
-      "title": "Cisco Secure Email Gateway Flaw Exploited in the Wild, Enables Root Command Execution",
-      "link": "https://thehackernews.com/2026/09/cisco-secure-email-gateway-flaw.html",
-      "source": "The Hacker News",
-      "published": "2026-09-15T06:11:11+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
+        "Mobile Security",
         "General Security"
       ],
       "curated": true,
       "signal_tier": "critical",
-      "signal_score": 82.83,
-      "priority_score": 88.13
+      "signal_score": 99.29,
+      "priority_score": 91.36
     },
     {
-      "title": "Cisco Secure Email Gateway Flaw Exploited in the Wild, Enables Root Command Execution",
-      "link": "https://vulners.com/thn/THN:32308742CC6A3494AF330AB2F5281018?utm_source=rss&utm_medium=rss&utm_campaign=rss",
-      "source": "Vulners.com RSS Feed",
-      "published": "2026-09-15T06:11:00+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": false,
-      "signal_tier": "critical",
-      "signal_score": 82.5,
-      "priority_score": 76.46
-    },
-    {
-      "title": "China-Linked Hackers Exploit Chrome-Windows Zero-Day Chain to Deploy GRIMWEDGE",
-      "link": "https://vulners.com/thn/THN:F888BCA2117EC41E32A363711AE60AAD?utm_source=rss&utm_medium=rss&utm_campaign=rss",
-      "source": "Vulners.com RSS Feed",
-      "published": "2026-09-15T05:31:00+00:00",
+      "title": "CISA Warns of Cisco Secure Email Gateway 0-Day Vulnerability Actively Exploited in Attacks",
+      "link": "https://cybersecuritynews.com/cisco-secure-email-gateway-0-day-vulnerability-exploited/",
+      "source": "Cyber Security News",
+      "published": "2026-09-15T14:46:21+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Web / API Security",
-        "Phishing / Social Engineering",
-        "Threat Actors / APT",
-        "Cloud / SaaS",
         "Exploit / PoC",
-        "Malware / Payloads",
-        "Windows / Microsoft"
-      ],
-      "curated": false,
-      "signal_tier": "critical",
-      "signal_score": 79.5,
-      "priority_score": 76.91
-    },
-    {
-      "title": "China-Linked Hackers Exploit Chrome-Windows Zero-Day Chain to Deploy GRIMWEDGE",
-      "link": "https://thehackernews.com/2026/09/china-linked-hackers-exploit-chrome.html",
-      "source": "The Hacker News",
-      "published": "2026-09-15T05:31:05+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Phishing / Social Engineering",
-        "Threat Actors / APT",
-        "Cloud / SaaS",
-        "Exploit / PoC",
-        "Malware / Payloads",
-        "Windows / Microsoft",
         "General Security"
       ],
       "curated": true,
-      "signal_tier": "high",
-      "signal_score": 73.83,
-      "priority_score": 86.87
+      "signal_tier": "critical",
+      "signal_score": 95.29,
+      "priority_score": 86.1
+    },
+    {
+      "title": "U.S. CISA adds Cisco Secure Email Gateway flaw to its Known Exploited Vulnerabilities catalog",
+      "link": "https://securityaffairs.com/199156/security/u-s-cisa-adds-cisco-secure-email-gateway-flaw-to-its-known-exploited-vulnerabilities-catalog.html",
+      "source": "Security Affairs",
+      "published": "2026-09-15T20:46:41+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 95.12,
+      "priority_score": 87.05
+    },
+    {
+      "title": "Cisco Patches Actively Exploited Zero-Day in Email Gateway",
+      "link": "https://www.news4hackers.com/cisco-patches-actively-exploited-zero-day-in-email-gateway/",
+      "source": "News4Hackers",
+      "published": "2026-09-15T16:03:56+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Web / API Security",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 93.22,
+      "priority_score": 86.19
+    },
+    {
+      "title": "Cisco Warns of Ongoing Exploitation of Critical Email Gateway Zero-Day",
+      "link": "https://securityaffairs.com/199137/hacking/cisco-warns-of-ongoing-exploitation-of-critical-email-gateway-zero-day.html",
+      "source": "Security Affairs",
+      "published": "2026-09-15T13:00:32+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 93.12,
+      "priority_score": 84.85
+    },
+    {
+      "title": "Cisco users urged to patch email gateway flaw",
+      "link": "https://www.computerweekly.com/news/366649998/Cisco-users-urged-to-patch-email-gateway-flaw",
+      "source": "ComputerWeekly – IT Security",
+      "published": "2026-09-15T16:09:00+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Threat Actors / APT",
+        "Data Protection / Privacy",
+        "Cloud / SaaS",
+        "Exploit / PoC",
+        "Malware / Payloads",
+        "Network / OT / ICS",
+        "Ransomware",
+        "Windows / Microsoft",
+        "General Security"
+      ],
+      "curated": false,
+      "signal_tier": "critical",
+      "signal_score": 91.34,
+      "priority_score": 76.69
     }
   ]
 }
