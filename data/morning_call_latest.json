@@ -1,122 +1,24 @@
 {
-  "generated_at": "2026-09-16T11:31:10.359806+00:00",
-  "analysis_date": "2026-09-16",
+  "generated_at": "2026-09-17T11:39:46.434276+00:00",
+  "analysis_date": "2026-09-17",
   "provider": "openai",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-09-16T09:55:35.416960+00:00",
+  "source_generated_at": "2026-09-17T11:17:37.377154+00:00",
   "source_days_back": 30,
-  "source_total_items": 58035,
-  "total_items_in_window_all": 4269,
-  "total_items_in_window_curated": 19,
-  "total_items_in_window_selected": 46,
+  "source_total_items": 60866,
+  "total_items_in_window_all": 3520,
+  "total_items_in_window_curated": 14,
+  "total_items_in_window_selected": 40,
   "context_selection_policy": "curated-plus-operational-signal-v1",
-  "morning_call_markdown": "### Executive Summary\n- **Patch/mitigate Cisco Secure Email Gateway (SEG) zero-day (CVE-2026-76461) today**: unauth root RCE via crafted emails, confirmed in-the-wild exploitation and **KEV-listed**.\n- **Ransomware operators now exploiting a critical VMware vCenter RCE**: treat exposed/Internet-reachable management planes as high-risk and validate compromise quickly.\n- **Active exploitation also reported for WSO2 API Manager JWT/admin token bypass (CVE-2026-5430)**: prioritize if any internet-facing API management/SSO token infrastructure is in scope.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Cisco Secure Email Gateway (AsyncOS) zero-day – CVE-2026-76461 (KEV, active exploitation)**\n- **What happened:** Cisco shipped emergency fixes for **CVE-2026-76461**, an unauth **SQLi → root command execution** on Secure Email Gateway, exploited in the wild.\n- **Why it matters operationally:** SEG is an email perimeter control; compromise enables **mail flow manipulation, credential interception, internal pivoting**, and potential stealthy persistence.\n- **Recommended immediate actions for the SOC today:** **Confirm presence + version**, apply Cisco fix/mitigation ASAP; **hunt for SEG admin/config changes and suspicious outbound from SEG** (treat SEG as potentially compromised until validated).\n\n**2) VMware vCenter critical RCE now leveraged by ransomware**\n- **What happened:** CISA reports ransomware groups joined exploitation of a **critical vCenter RCE** (patched earlier; now broadly weaponized).\n- **Why it matters operationally:** vCenter compromise is a common fast path to **hypervisor control, mass VM encryption, credential dumping**, and rapid enterprise-wide impact.\n- **Recommended immediate actions for the SOC today:** **Identify any unpatched/exposed vCenter** and prioritize emergency patching/segmentation; **review last 7 days of vCenter auth + admin actions** for anomalous logins, new accounts, and sudden VM operations.\n\n**3) WSO2 API Manager JWT signature verification bypass – CVE-2026-5430 (active exploitation attempts)**\n- **What happened:** Reports of active exploitation attempts of **CVE-2026-5430** enabling **forged admin tokens / account takeover** in WSO2 API Manager.\n- **Why it matters operationally:** API gateways sit in front of critical services; token forgery can lead to **privileged API access**, data exposure, and downstream service compromise.\n- **Recommended immediate actions for the SOC today:** **Inventory WSO2 exposure (internet-facing vs internal)** and patch/mitigate immediately; **monitor for abnormal JWT/admin activity** (new admin sessions, token anomalies, privilege changes, unexpected API policy edits).\n\n**4) Acronis cPanel/WHM/Plesk backup plugin LPE – CVE-2026-87886 (limited in-the-wild exploitation)**\n- **What happened:** Acronis disclosed **CVE-2026-87886**, a Linux local privilege escalation in backup components, with targeted exploitation observed.\n- **Why it matters operationally:** If any shared hosting/admin servers exist, LPE can turn a foothold into **root**, enabling credential theft and lateral movement.\n- **Recommended immediate actions for the SOC today:** **Find servers running the Acronis plugin/extension** and patch; **review sudo/root escalation telemetry** and unusual file permission changes around Acronis directories.\n\n---\n\n### Monitoring & detection recommendations\n- **Email security/gateway (Cisco SEG):** monitor SEG **admin login**, **config export/import**, policy changes, and service restarts; correlate with unusual outbound connections from SEG to internal hosts (**T1190 Exploit Public-Facing App**, **T1078 Valid Accounts**).\n- **Network egress from perimeter appliances:** firewall/proxy logs for **new outbound destinations** from SEG/vCenter/WSO2 hosts, especially to uncommon ports and new ASN/geo for those systems (**T1071 App Layer Protocol**).\n- **vCenter / virtualization control-plane:** vCenter logs for **new local users**, role changes, sudden spikes in **VM snapshot/delete/power operations**, and remote console access (**T1098 Account Manipulation**, **T1486 Data Encrypted for Impact**).\n- **IdP / token infrastructure (WSO2 theme):** IdP/SSO and WSO2 audit logs for **unexpected admin token issuance**, unusually long-lived sessions, or admin actions from new IPs/agents (**T1550 Use Alternate Authentication Material**).\n- **Linux privilege escalation (Acronis theme):** EDR on Linux for **setuid bit changes**, suspicious chmod/chown in backup paths, and processes spawning shells as root from non-root parents (**T1068 Exploitation for Privilege Escalation**).\n- **Web app exposure scanning (Vite dev servers campaign):** IDS/WAF for requests to dev-server patterns and sudden hits to non-prod endpoints; cloud logs for **credential access attempts** shortly after suspicious web hits (**T1526 Cloud Service Discovery**, **T1552 Unsecured Credentials**).\n- **WordPress/WooCommerce plugin exploitation (if applicable):** WAF/web logs for **file upload to plugin paths**, creation of new PHP files in wp-content, and webshell-like POST patterns (**T1505.003 Web Shell**).\n\n---\n\n### Medium-term follow-ups\n- **CVE-driven asset coverage:** confirm CMDB/asset inventory flags for **Cisco SEG, vCenter, WSO2**, and hosting/admin tooling (Acronis) so KEV items auto-escalate in patch queues.\n- **Segmentation/hardening:** ensure **management planes** (vCenter, API managers, email appliances) are **not internet-exposed**, enforce admin access via jump hosts/VPN + MFA, and restrict egress.\n- **Incident readiness:** pre-stage playbooks for **appliance compromise** (SEG/vCenter/WSO2): evidence capture, credential rotation, config diffing, and golden-image restore steps.\n- **Mobile risk note (Pixel modem 0-day):** if corporate fleets include Pixel devices, validate MDM compliance for the September update; otherwise treat as **targeted** unless telemetry indicates mobile exploitation.\n- **Patch hygiene for “PoC published” items:** track PoC releases noted (e.g., Tomcat deserialization CVE-2025-24813; other PoCs) and validate whether any affected services exist internally before they become mass-exploited.",
+  "morning_call_markdown": "### Executive Summary\n- **Actively exploited Cisco ISE auth bypass (CVE-2026-76460) is KEV-listed**: treat any internet-exposed or poorly segmented ISE as an immediate compromise risk.\n- **Multiple KEV/“exploited-in-the-wild” edge-system flaws** (Issabel PBX RCE, ScreenConnect RCE; plus Cisco email gateway SQLi referenced): prioritize exposure validation + emergency patching/mitigations today.\n- **Patch/detection pressure remains high** (large Microsoft Patch Tuesday + new APT tooling writeups): expect opportunistic scanning and post-exploitation activity; increase monitoring on edge-to-internal pivots.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Cisco ISE authentication bypass (CVE-2026-76460) — active exploitation / KEV**\n- **What happened:** Cisco confirmed **active exploitation** of an **unauthenticated auth bypass** in Cisco ISE API (CVE-2026-76460) with emergency guidance/patching.\n- **Why it matters operationally:** ISE is a **network access control/identity policy** control point; compromise can enable **credential/role abuse, policy tampering, lateral movement** in enterprise networks.\n- **Recommended immediate actions for the SOC today:** **Identify all ISE/ISE-PIC instances + exposure (internet/VPN/admin segments)**; **apply emergency patches/mitigations or isolate management interfaces immediately**.\n\n**2) Remote management/edge RCE being exploited: ScreenConnect (CVE-2026-84869)**\n- **What happened:** CISA reports **ConnectWise ScreenConnect** vulnerability (CVE-2026-84869) is **actively exploited** and added to **KEV**.\n- **Why it matters operationally:** Remote management tooling is a common **ransomware initial access** path; compromise often leads to **rapid hands-on-keyboard takeover**.\n- **Recommended immediate actions for the SOC today:** **Inventory ScreenConnect presence (prod + vendor access) and patch/disable external access**; **review recent ScreenConnect admin logins/session creation for anomalies**.\n\n**3) Issabel PBX unauth RCE (CVE-2026-89026) — exploited + public PoC**\n- **What happened:** Issabel Framework PBX API flaw (CVE-2026-89026) is **actively exploited**, with **public PoC** describing **forged JWT/token** leading to OS command execution.\n- **Why it matters operationally:** PBX servers are often **internet-reachable** and under-monitored; exploitation can become a **beachhead** for internal discovery and ransomware staging.\n- **Recommended immediate actions for the SOC today:** **Find any Issabel/VoIP PBX assets and confirm patch level / remove from internet**; **hunt for suspicious web requests to PBX API endpoints and unusual “asterisk” user process activity**.\n\n**4) “Edge exploit market” & adjacent Cisco email gateway exploited flaw (assumption: deployed in some environments)**\n- **What happened:** Reporting indicates a **FortiGate SSL VPN “1-day”** is allegedly being sold (unverified), and separate coverage references **active exploitation of a Cisco secure email gateway SQLi** (CVE-2026-76461).\n- **Why it matters operationally:** Even when unverified, **exploit sales + concurrent edge zero-days** typically correlate with **scanning spikes** and fast weaponization; email/VPN edges are high-value for financial-sector intrusion.\n- **Recommended immediate actions for the SOC today:** **Increase edge scanning/exploit detection posture** (WAF/IDS/Firewall/VPN logs) and **validate exposure/versions** for FortiGate SSL VPN and Cisco email gateway where present; **escalate any anomalous auth bypass patterns immediately**.\n\n---\n\n### Monitoring & detection recommendations\n- **Cisco ISE (CVE-2026-76460):** Monitor **ISE admin/audit logs + API access logs + reverse proxy/WAF** for abnormal unauthenticated requests, new admin creation, policy changes (**ATT&CK: T1190** Exploit Public-Facing Application; **T1078** Valid Accounts).\n- **ScreenConnect:** Review **ScreenConnect server logs**, Windows Security logs on the host, and **EDR** for new service installs, suspicious child processes from ScreenConnect, and unexpected outbound connections (**T1219** Remote Access Tools; **T1569.002** Service Execution).\n- **Issabel PBX:** Pull **web server access logs** for PBX API endpoints (look for bursts/odd params) and **EDR/Linux audit** for command execution under telephony users (e.g., `asterisk`) and new cron/systemd persistence (**T1059** Command and Scripting; **T1543** Create/Modify System Process).\n- **Edge exploitation trend (FortiGate/Cisco email gateway/BIND):** In **firewall/VPN/email gateway/DNS logs**, alert on **spikes in 4xx/5xx**, repeated auth failures, unusual HTTP verbs/paths, and DNS process crashes/restarts (possible DoS attempts) (**T1190**, **T1499** Endpoint DoS where applicable).\n- **Ransomware early indicators (given KEV edge footholds):** In **EDR + SIEM**, hunt for rapid discovery + credential access patterns: `nltest`, `net group`, `whoami /all`, LSASS access attempts, mass SMB connections (**T1087** Account Discovery; **T1003** OS Credential Dumping; **T1047** WMI).\n- **Microsoft Patch Tuesday fallout:** Prioritize detection of exploitation attempts against newly patched criticals by watching **IDS/IPS signatures**, **Windows event logs**, and **EDR exploit telemetry** for Office/Browser/SMB/RPC-related anomalies (map to **T1203** Exploitation for Client Execution when relevant).\n- **APT tooling writeups (APT36/FamousSparrow):** In **email gateway + endpoint + proxy/DNS**, look for new unsigned binaries, unusual scheduled tasks/services, and rare outbound to new ASN/geo; focus on persistence + C2 behaviors (**T1053** Scheduled Task; **T1071** Application Layer Protocol).\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** Align vulnerability prioritization to **KEV-first** (not severity-only), especially for **ISE, ScreenConnect, PBX/voice infra, email gateways, VPNs**; ensure maintenance windows are pre-approved for emergency fixes.\n- **Exposure reduction:** Validate that **management interfaces (ISE, remote admin tools, PBX, firewall managers)** are not internet-exposed; enforce **admin access via bastion + MFA + IP allowlists**.\n- **BIND 9 advisories:** If BIND is internally operated, schedule upgrades and resilience testing (crash/DoS scenarios) and ensure **DNS logging/telemetry** is sufficient for anomaly detection.\n- **Browser extension / AI assistant hijack theme:** Reassess **browser extension allowlisting** and monitoring (especially for privileged users); consider tightening policies for “AI assistant” extensions in enterprise browsers.\n- **CMS/plugin risk (WooCommerce/Craft/Concrete):** For any marketing/ancillary web properties, ensure **WAF coverage + plugin inventory + rapid patch SLAs**; these are common footholds into corporate environments when networks are flat.\n- **Playbook readiness:** Update IR runbooks for **edge-device compromise leading to ransomware** (credential reset scopes, containment steps, log preservation for ISE/ScreenConnect/VPN/email gateways).",
   "highlights": [
     {
-      "title": "Critical Cisco Secure Email Gateway zero-day gives attackers root access",
-      "link": "https://www.csoonline.com/article/4222391/critical-cisco-secure-email-gateway-zero-day-gives-attackers-root-access.html",
-      "source": "CSO Online",
-      "published": "2026-09-15T19:56:58+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Web / API Security",
-        "Exploit / PoC",
-        "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 100.0,
-      "priority_score": 87.83
-    },
-    {
-      "title": "CVE-2026-76461: Critical Cisco Secure Email Gateway Zero-Day Enables Root RCE",
-      "link": "https://socprime.com/blog/cve-2026-76461-critical-cisco-secure-email-gateway-zero-day-enables-root-rce/",
-      "source": "SOC Prime Blog",
-      "published": "2026-09-15T14:40:31+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "Vendors / Product Security"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 100.0,
-      "priority_score": 87.29
-    },
-    {
-      "title": "Root RCE Zero-Day in Cisco Secure Email Gateway Under Active Exploitation",
-      "link": "https://www.reddit.com/r/cybersecurity/comments/1wgybus/root_rce_zeroday_in_cisco_secure_email_gateway/",
-      "source": "/r/cybersecurity",
-      "published": "2026-09-15T11:57:59+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "OSINT / Community"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 100.0,
-      "priority_score": 83.42
-    },
-    {
-      "title": "CVE-2026-76461: Critical Cisco Secure Email Gateway Vulnerability Exploited in the Wild",
-      "link": "https://www.rapid7.com/blog/post/etr-cve-2026-76461-critical-cisco-secure-email-gateway-vulnerability-exploited-in-the-wild",
-      "source": "Rapid7 Cybersecurity Blog",
-      "published": "2026-09-15T12:22:50+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "Phishing / Social Engineering",
-        "Email Security / BEC",
-        "Threat Actors / APT",
-        "Web / API Security",
-        "Malware / Payloads",
-        "Data Breaches / Leaks"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 100.0,
-      "priority_score": 81.53
-    },
-    {
-      "title": "Android 0-day Vulnerability on Google Pixel Devices Actively Exploited in Attacks",
-      "link": "https://cybersecuritynews.com/android-pixel-zero-day/",
-      "source": "Cyber Security News",
-      "published": "2026-09-16T09:40:35+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "Mobile Security",
-        "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 99.29,
-      "priority_score": 91.36
-    },
-    {
-      "title": "CISA Warns of Cisco Secure Email Gateway 0-Day Vulnerability Actively Exploited in Attacks",
-      "link": "https://cybersecuritynews.com/cisco-secure-email-gateway-0-day-vulnerability-exploited/",
-      "source": "Cyber Security News",
-      "published": "2026-09-15T14:46:21+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Web / API Security",
-        "Exploit / PoC",
-        "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 95.29,
-      "priority_score": 86.1
-    },
-    {
-      "title": "U.S. CISA adds Cisco Secure Email Gateway flaw to its Known Exploited Vulnerabilities catalog",
-      "link": "https://securityaffairs.com/199156/security/u-s-cisa-adds-cisco-secure-email-gateway-flaw-to-its-known-exploited-vulnerabilities-catalog.html",
-      "source": "Security Affairs",
-      "published": "2026-09-15T20:46:41+00:00",
+      "title": "Unauthenticated attackers are bypassing Cisco ISE’s management interface (CVE-2026-76460)",
+      "link": "https://www.helpnetsecurity.com/2026/09/17/cisco-ise-vulnerability-exploited-cve-2026-76460/",
+      "source": "Help Net Security",
+      "published": "2026-09-17T10:24:08+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC",
@@ -124,61 +26,145 @@
       ],
       "curated": true,
       "signal_tier": "critical",
-      "signal_score": 95.12,
-      "priority_score": 87.05
+      "signal_score": 100.0,
+      "priority_score": 90.85
     },
     {
-      "title": "Cisco Patches Actively Exploited Zero-Day in Email Gateway",
-      "link": "https://www.news4hackers.com/cisco-patches-actively-exploited-zero-day-in-email-gateway/",
+      "title": "Cisco ISE Zero-Day Vulnerability Prompting Emergency Patch",
+      "link": "https://www.news4hackers.com/cisco-ise-zero-day-vulnerability-prompting-emergency-patch/",
       "source": "News4Hackers",
-      "published": "2026-09-15T16:03:56+00:00",
+      "published": "2026-09-17T08:07:23+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Web / API Security",
         "Exploit / PoC",
         "General Security"
       ],
       "curated": true,
       "signal_tier": "critical",
-      "signal_score": 93.22,
-      "priority_score": 86.19
+      "signal_score": 100.0,
+      "priority_score": 89.95
     },
     {
-      "title": "Cisco Warns of Ongoing Exploitation of Critical Email Gateway Zero-Day",
-      "link": "https://securityaffairs.com/199137/hacking/cisco-warns-of-ongoing-exploitation-of-critical-email-gateway-zero-day.html",
+      "title": "Active Exploitation Triggers Emergency Patch for Cisco ISE Zero-Day",
+      "link": "https://www.securityweek.com/active-exploitation-triggers-emergency-patch-for-cisco-ise-zero-day/",
+      "source": "SecurityWeek",
+      "published": "2026-09-17T06:19:52+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 100.0,
+      "priority_score": 88.87
+    },
+    {
+      "title": "Critical Issabel PBX Command Execution Vulnerability Exploited in the Wild",
+      "link": "https://cybersecuritynews.com/issabel-pbx-command-execution-vulnerability/",
+      "source": "Cyber Security News",
+      "published": "2026-09-16T13:12:32+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 83.4,
+      "priority_score": 85.39
+    },
+    {
+      "title": "U.S. CISA adds Acronis Backup, Cisco ISE, and Google Pixel flaws to its Known Exploited Vulnerabilities catalog",
+      "link": "https://securityaffairs.com/199239/security/u-s-cisa-adds-acronis-backup-cisco-ise-and-google-pixel-flaws-to-its-known-exploited-vulnerabilities-catalog.html",
       "source": "Security Affairs",
-      "published": "2026-09-15T13:00:32+00:00",
+      "published": "2026-09-17T09:26:14+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 93.12,
-      "priority_score": 84.85
-    },
-    {
-      "title": "Cisco users urged to patch email gateway flaw",
-      "link": "https://www.computerweekly.com/news/366649998/Cisco-users-urged-to-patch-email-gateway-flaw",
-      "source": "ComputerWeekly – IT Security",
-      "published": "2026-09-15T16:09:00+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Threat Actors / APT",
-        "Data Protection / Privacy",
         "Cloud / SaaS",
         "Exploit / PoC",
-        "Malware / Payloads",
-        "Network / OT / ICS",
-        "Ransomware",
-        "Windows / Microsoft",
         "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 83.11,
+      "priority_score": 89.99
+    },
+    {
+      "title": "Issabel RCE under active exploitation; Microsoft patches 974 CVEs; browser AI assistants hijacked",
+      "link": "https://defend.network/briefings/issabel-framework-rce-microsoft-patch-tuesday-ai-hijack-2026-09-17.html",
+      "source": "defend.network",
+      "published": "2026-09-17T06:30:00+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Cloud / SaaS",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 83.07,
+      "priority_score": 88.84
+    },
+    {
+      "title": "Attackers Exploit Issabel Framework Flaw Enabling Unauthenticated OS Command Execution",
+      "link": "https://thehackernews.com/2026/09/attackers-exploit-issabel-framework.html",
+      "source": "The Hacker News",
+      "published": "2026-09-16T15:50:59+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 82.89,
+      "priority_score": 84.03
+    },
+    {
+      "title": "ConnectWise ScreenConnect bug exploited in the wild, CISA says",
+      "link": "https://www.scworld.com/news/connectwise-screenconnect-bug-exploited-in-the-wild-cisa-says",
+      "source": "SCM feed for Latest",
+      "published": "2026-09-16T19:58:09+00:00",
+      "smart_groups": [
+        "Exploit / PoC",
+        "Ransomware",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 79.94,
+      "priority_score": 79.64
+    },
+    {
+      "title": "SANS Stormcast Thursday, September 17th, 2026: Hospitality Scans; Cisco, Acronis, and Pixel 0-Day; Dynamic Incident Response",
+      "link": "https://isc.sans.edu/podcastdetail/10098",
+      "source": "SANS Internet Stormcenter Daily Cyber Security Podcast (Stormcast)",
+      "published": "2026-09-17T02:00:03+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Mobile Security",
+        "Community / Briefing"
       ],
       "curated": false,
       "signal_tier": "critical",
-      "signal_score": 91.34,
-      "priority_score": 76.69
+      "signal_score": 78.99,
+      "priority_score": 77.47
+    },
+    {
+      "title": "Pixel Modem Zero-Day Exploited in Targeted Attacks",
+      "link": "https://www.securityweek.com/pixel-modem-zero-day-exploited-in-targeted-attacks/",
+      "source": "SecurityWeek",
+      "published": "2026-09-16T13:10:54+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 77.17,
+      "priority_score": 84.96
     }
   ]
 }
