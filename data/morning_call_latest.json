@@ -1,162 +1,164 @@
 {
-  "generated_at": "2026-09-19T10:57:56.817943+00:00",
-  "analysis_date": "2026-09-19",
+  "generated_at": "2026-09-20T11:20:28.255986+00:00",
+  "analysis_date": "2026-09-20",
   "provider": "openai",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-09-19T08:47:16.943280+00:00",
+  "source_generated_at": "2026-09-20T10:56:46.003985+00:00",
   "source_days_back": 30,
-  "source_total_items": 59700,
-  "total_items_in_window_all": 2993,
-  "total_items_in_window_curated": 5,
+  "source_total_items": 60923,
+  "total_items_in_window_all": 1951,
+  "total_items_in_window_curated": 6,
   "total_items_in_window_selected": 40,
   "context_selection_policy": "curated-plus-operational-signal-v1",
-  "morning_call_markdown": "### Executive Summary\n- Active exploitation: Cisco ISE/ISE-PIC auth bypass zero-day (CVSS 10) and multiple KEV additions (Linux kernel + Acronis Backup on Linux) raise immediate compromise risk for identity, core infra, and server fleets.\n- Cloud/AI & web stack are in the blast radius: Azure AI Foundry priv-esc patched; WordPress core/plugin issues + a large marketing/SaaS supply-chain compromise broaden web injection and credential-theft risk.\n- Ransomware tradecraft watch: emerging groups using RMM tooling (MeshAgent) and exploitation of exposed enterprise apps; prioritize early-stage detections over ransom-note response.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Cisco ISE / ISE-PIC auth bypass zero-day (CVE-2026-76460) — in-the-wild exploitation / KEV**\n- What happened: Cisco disclosed a CVSS 10.0 authentication bypass on ISE web management via a crafted request to an insufficiently protected API endpoint; reported actively exploited.\n- Why it matters operationally: ISE is a high-value identity/control-plane component; compromise can enable credential theft, network access policy tampering, and broad lateral movement.\n- Recommended immediate actions for the SOC today: Identify all ISE/ISE-PIC instances + exposure; expedite patch/mitigation and isolate management interfaces; hunt for suspicious ISE admin/API access and config changes since last known-good.\n\n**2) KEV: Linux kernel exploited in the wild + Acronis Backup on Linux exploited (CVE-2026-87886)**\n- What happened: CISA added three Linux kernel vulns to KEV (active exploitation); separate CISA warning for exploited Acronis Backup flaw on Linux servers.\n- Why it matters operationally: Our Linux estate (including cloud workloads) is a common post-compromise pivot; Acronis compromise directly threatens backups (encryption/destruction) and increases ransomware blast radius.\n- Recommended immediate actions for the SOC today: Prioritize patching/mitigation for KEV-listed kernel versions and Acronis agents/servers; review Acronis admin access + unusual backup job changes; increase alerting on new root activity and privilege escalation indicators on Linux servers.\n\n**3) Microsoft Azure AI Foundry priv-esc patch (CVSS 10) + broader “AI gateway” exposure trend**\n- What happened: Microsoft patched a critical privilege escalation in Azure AI Foundry; reporting notes AI infra components (gateways/orchestrators) increasingly appearing in KEV and attacker focus.\n- Why it matters operationally: Priv-esc in AI service planes can lead to data exposure (prompts, models, connectors), service principal abuse, and tenant-wide impact if tied to automation identities.\n- Recommended immediate actions for the SOC today: Validate patch/mitigation status in affected Azure subscriptions; audit high-priv role assignments and recent changes around AI/ML workspaces; hunt for anomalous service principal sign-ins and token abuse tied to AI resources.\n\n**4) Web platform risk: WordPress core/theme-install issue + high-risk plugins; supply-chain web injection via Brevo**\n- What happened: Under active exploitation: WordPress core flaw enabling forced theme installs; additional plugin auth/authorization bypasses surfaced; Brevo supply-chain compromise injected malware into a large number of client websites.\n- Why it matters operationally: Any public-facing marketing or ancillary web properties can become malware delivery, credential phishing, or brand-abuse vectors; third-party injected JS can also impact customer journeys and fraud monitoring.\n- Recommended immediate actions for the SOC today: Confirm patch levels for any WordPress instances (incl. vendor-managed sites) and temporarily restrict admin endpoints; review recent theme/plugin installs and admin account creation; scan web properties for unexpected third-party scripts/changes and engage digital risk/marketing owners on Brevo exposure.\n\n**5) Ransomware tradecraft: RMM abuse (MeshAgent) + exploitation of exposed enterprise apps**\n- What happened: Reporting on Settra and Feral Wolf highlights intrusions leveraging remote management tooling and exposed business applications/misconfigurations to reach domain assets and deploy ransomware.\n- Why it matters operationally: RMM-based access blends into legitimate admin traffic; once domain foothold exists, speed-to-encryption is often hours—early detection is key.\n- Recommended immediate actions for the SOC today: Inventory/confirm approved RMM tooling and block/alert on unauthorized MeshAgent-like binaries/services; review recent remote admin sessions, mass deployment activity, and backup tampering; ensure ransomware containment playbooks are ready (isolation, credential reset, backup protection).\n\n---\n\n### Monitoring & detection recommendations\n- **Cisco ISE**: Monitor ISE admin/UI/API logs + web server logs for unusual auth bypass patterns (e.g., requests to management API endpoints without preceding auth) and unexpected policy/config changes (ATT&CK: T1562, T1556).\n- **Linux KEV / LPE follow-on**: From EDR/auditd/systemd-journald, hunt for new root shells, sudden capability changes, kernel module loads, and privilege escalation sequences after initial access (ATT&CK: T1068, T1548).\n- **Acronis on Linux**: Alert on Acronis service restarts, new admin creation, backup plan modifications, deletion of backups/archives, and outbound connections from Acronis hosts to unfamiliar destinations (ATT&CK: T1490).\n- **Azure AI / cloud identity**: In Entra ID sign-in logs, audit logs, and Azure Activity Logs, watch for new role assignments, service principal credential additions, and unusual token usage around AI resources (ATT&CK: T1098, T1528).\n- **Web injection / supply-chain (Brevo)**: From WAF/CDN logs + web integrity monitoring, detect new/changed third-party JS includes, anomalous POSTs to admin endpoints, and unexpected outbound calls from web apps to marketing/analytics domains.\n- **WordPress**: Monitor file integrity (wp-content/themes/plugins), admin logins, new users, and plugin/theme installation events; alert on executions of PHP from upload directories (ATT&CK: T1505.003).\n- **RMM/ransomware precursor**: From EDR + Windows Security logs, detect new services, scheduled tasks, PsExec/remote execution, and mass file encryption indicators; prioritize alerts on backup catalog deletion and VSS tampering (ATT&CK: T1053, T1569, T1490).\n\n---\n\n### Medium-term follow-ups\n- **Patch governance**: Add Cisco ISE CVE-2026-76460, Linux kernel KEVs, and Acronis CVE-2026-87886 to “expedite/24–72h” patch lanes; ensure exception handling includes compensating controls (segmentation, mgmt-plane isolation).\n- **AI service hardening**: Review AI/ML workspace RBAC, connector permissions, secret management, and logging baselines; ensure AI gateways/orchestrators are treated as Tier-0 adjacent.\n- **Third-party/SaaS risk**: Confirm whether Brevo is used anywhere (marketing/comms); require vendor attestation on scope, indicators, and remediation; consider adding script integrity controls (SRI) where feasible.\n- **RMM policy**: Revalidate approved remote admin tooling list, enforce signed binaries, restrict to PAWs/jump hosts, and tighten conditional access for admin operations.\n- **WordPress exposure reduction**: For any remaining WP footprint, enforce MFA, IP allowlisting for /wp-admin, automatic updates, least-privilege plugins, and regular integrity scans.\n- **Threat hunting backlog**: Schedule a focused hunt for “identity/control-plane compromise” patterns (ISE + cloud role assignment changes) and “backup sabotage” behaviors aligned to ransomware pre-encryption stages.",
+  "morning_call_markdown": "### Executive Summary\n- Active exploitation reported for **Orkes Conductor pre-auth RCE (CVE-2026-58138)** and **Linux kernel vulns added to CISA KEV** → prioritize exposure checks + patch/mitigation validation today.\n- Multiple items point to **email/identity-driven compromise risk** (reported **Cisco Email Gateway 0-day**, plus SSO/OAuth plugin issues) → tighten monitoring on mail gateway/admin changes and IdP anomalies.\n- **Criminal ecosystem churn** (ShinyHunters allegedly compromising **Clop** leak site; breach reporting incl. Revolut/Gyazo) → expect opportunistic targeting, credential stuffing, and extortion follow-on.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Orkes Conductor pre-auth RCE (CVE-2026-58138) reportedly exploited in the wild**\n- What happened: Reports of **active exploitation** of a **pre-auth remote code execution** flaw in Orkes Conductor (CVSS ~9.8/9.3).\n- Why it matters operationally: Internet-exposed workflow/orchestration platforms are high-value for **initial access → lateral movement → data theft/ransomware** in enterprise environments.\n- Recommended immediate actions for the SOC today: **Identify any Conductor instances** (cloud/on-prem), confirm version/patch state; **block external access** to admin/API surfaces where possible and escalate any suspicious Conductor process/network activity to IR.\n\n**2) Linux kernel vulnerabilities added to CISA KEV (active exploitation)**\n- What happened: CISA added **three Linux kernel CVEs** to KEV (CVE-2025-39682, CVE-2026-53266, CVE-2025-39964), with public reporting of exploitation.\n- Why it matters operationally: Kernel exploitation is commonly used for **privilege escalation (TA0004)** after an initial foothold; high impact for **Linux servers, container hosts, and security appliances** used in financial services.\n- Recommended immediate actions for the SOC today: **Inventory Linux fleets** (especially internet-facing, jump hosts, Kubernetes/container nodes) and validate emergency patch timelines; hunt for **post-exploitation signals** on Linux (new root users, unusual kernel/module activity, sudden capability changes) and open an incident ticket if found.\n\n**3) SolarWinds ARM hard-coded key flaw patched (CVE-2026-28326)**\n- What happened: SolarWinds released a fix for an **ARM hard-coded key** vulnerability (CVSS 8.8).\n- Why it matters operationally: SolarWinds products frequently sit in **high-trust monitoring/management paths**; key/credential weaknesses can enable device/service impersonation and stealthy persistence.\n- Recommended immediate actions for the SOC today: **Confirm whether we run affected SolarWinds ARM components** and patch/rotate impacted secrets if applicable; monitor for **unexpected SolarWinds authentication events/config changes** and escalate anomalies.\n\n**4) Email/brand-driven compromise: reported Cisco Email Gateway 0-day exploitation + breach-driven social engineering**\n- What happened: News reports cite a **Cisco Email Gateway “0-day” exploited** and ongoing breach reporting (e.g., Revolut context; Gyazo large user impact) likely to fuel phishing and account takeovers. (Details/IOCs not provided in the feed.)\n- Why it matters operationally: Email gateway compromise or bypass increases risk of **phishing (T1566)**, token theft, and BEC-style fraud—high consequence in financial operations.\n- Recommended immediate actions for the SOC today: **Validate our Cisco Email Gateway exposure and patch/advisory status** (assumption: we may run Cisco mail security); increase scrutiny on **mail policy changes, connector rules, and admin logins**, and fast-track any suspicious inbound campaigns to containment.\n\n---\n\n### Monitoring & detection recommendations\n- **Orkes Conductor / orchestration platforms**: monitor EDR + app logs for **new services/cron, unexpected child processes (T1059)**, and **outbound connections to rare ASNs** from Conductor hosts; correlate with firewall egress logs.\n- **Linux KEV kernel exploitation follow-on**: on Linux EDR/auditd, hunt for **sudden privilege changes** (new UID 0 users, `sudoers` edits), **suspicious module loads** (`insmod/modprobe`), and **unexpected container escape indicators** (ATT&CK: T1068, T1611).\n- **Mail gateway / email security appliances**: alert on **admin logins from new geos**, **configuration export/import**, **rule/connector changes**, and **TLS cert changes**; ingest device audit logs into SIEM if not already.\n- **Phishing & credential theft uptick (breach-driven)**: in email + web proxy, detect **newly registered domains** and **lookalike finance brands**, plus spikes in **URL rewrites/QR phishing**; map to ATT&CK **T1566**.\n- **Identity anomalies (SSO/OAuth plugin issues in the wild ecosystem)**: in IdP logs (Azure AD/Okta/etc.), monitor **impossible travel**, **new OAuth app consents (T1550/T1528-ish behaviors)**, and **token refresh anomalies**; focus on privileged users.\n- **SolarWinds monitoring stack**: review SolarWinds app/auth logs for **new API keys, unexpected credential use, service account logins outside baseline**, and **lateral movement from monitoring servers** (ATT&CK: T1021).\n- **Ransomware prep behaviors** (general, but relevant given current chatter): EDR detections for **mass file renames, shadow copy deletion, backup agent tampering** (ATT&CK: T1486, T1490); prioritize servers handling payments, SWIFT/treasury, and customer PII.\n\n---\n\n### Medium-term follow-ups\n- **Patch governance**: ensure KEV-listed Linux kernel CVEs are added to our **“must patch” SLA** and tracked across **appliances** (VPNs, WAFs, monitoring, container hosts), not only standard servers.\n- **External exposure reduction**: re-validate that **orchestration/automation tools** (e.g., Conductor-like services) are **not internet-exposed**, enforce VPN/allowlists, and require MFA on admin surfaces.\n- **Email hardening**: confirm mail gateways have **centralized audit logging**, least-privilege admin roles, and a tested rollback process for policy/rule changes.\n- **Breach-response readiness**: given ongoing breach reporting, run a **credential stuffing tabletop** for customer-facing portals and internal SSO; confirm rate-limiting, MFA coverage, and monitoring thresholds.\n- **Threat intel watch**: track for vendor advisories/validated details on the **Cisco Email Gateway “0-day”** claim (assumption: reporting may be incomplete) and be ready to deploy mitigations once confirmed.\n- **Ransomware resilience**: verify backup immutability and recovery for **Tier-0 services**; specifically include any **AI/ML model artifacts** if used in fraud/risk pipelines (per emerging ransomware targeting patterns).",
   "highlights": [
     {
-      "title": "InfoSec News Nuggets – 09/18/2026",
-      "link": "https://aboutdfir.com/infosec-news-nuggets-09-18-2026/",
-      "source": "AboutDFIR – The Definitive Compendium Project",
-      "published": "2026-09-18T12:57:28+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Crypto / Web3",
-        "Exploit / PoC",
-        "Detection Engineering"
-      ],
-      "curated": false,
-      "signal_tier": "critical",
-      "signal_score": 100.0,
-      "priority_score": 74.64
-    },
-    {
-      "title": "Azure AI, Cisco ISE, WordPress flaws under active exploitation; 23M Gyazo breach",
-      "link": "https://defend.network/briefings/azure-ai-cisco-ise-wordpress-critical-exploits-2026-09-19.html",
+      "title": "SolarWinds, Orkes RCE flaws under exploitation; Linux kernel vulnerabilities added to CISA KEV",
+      "link": "https://defend.network/briefings/solarwinds-orkes-conductor-linux-kernel-exploits-2026-09-20.html",
       "source": "defend.network",
-      "published": "2026-09-19T06:30:00+00:00",
+      "published": "2026-09-20T06:30:00+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
+        "Linux / Unix",
         "Cloud / SaaS",
         "Exploit / PoC",
         "General Security"
       ],
       "curated": true,
       "signal_tier": "critical",
-      "signal_score": 82.09,
-      "priority_score": 89.63
+      "signal_score": 85.09,
+      "priority_score": 89.03
     },
     {
-      "title": "Cisco Zero-Day Highlights API Endpoint Authentication Issues",
-      "link": "https://www.darkreading.com/vulnerabilities-threats/cisco-zero-day-api-endpoint-authentication-issues",
-      "source": "darkreading",
-      "published": "2026-09-18T19:26:47+00:00",
+      "title": "Exploit for CVE-2026-36213",
+      "link": "https://vulners.com/githubexploit/EDCEA1EA-8065-5D5C-8A50-D1DC3729487E?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-09-20T09:50:48+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "General Security"
+        "Exploit / PoC",
+        "Windows / Microsoft",
+        "Mobile Security"
       ],
-      "curated": true,
+      "curated": false,
       "signal_tier": "high",
-      "signal_score": 76.96,
-      "priority_score": 86.18
+      "signal_score": 70.57,
+      "priority_score": 77.49
     },
     {
-      "title": "Exploit for CVE-2026-45140",
-      "link": "https://sploitus.com/exploit?id=5BD031A7-1596-56B4-A7CD-0362166F2282&utm_source=rss&utm_medium=rss",
+      "title": "Exploit for CVE-2026-68121",
+      "link": "https://vulners.com/githubexploit/F0B4C7CC-787F-5AE1-B99A-0B2494022363?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-09-19T16:28:47+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Linux / Unix"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.57,
+      "priority_score": 72.7
+    },
+    {
+      "title": "Exploit for CVE-2026-77635",
+      "link": "https://sploitus.com/exploit?id=7B4261CB-3017-55B1-BF94-54E3BFAE5905&utm_source=rss&utm_medium=rss",
       "source": "Sploitus – Exploits",
-      "published": "2026-09-18T18:24:19+00:00",
+      "published": "2026-09-19T20:48:37+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 68.41,
-      "priority_score": 71.44
+      "signal_score": 68.39,
+      "priority_score": 71.42
     },
     {
-      "title": "Exploit for CVE-2026-75827",
-      "link": "https://sploitus.com/exploit?id=F80DE5B0-55B4-5CDF-8932-19DA19CE0B4B&utm_source=rss&utm_medium=rss",
+      "title": "Exploit for CVE-2026-79752",
+      "link": "https://sploitus.com/exploit?id=B2F947B8-06BC-54B0-88A5-23FA78AC1491&utm_source=rss&utm_medium=rss",
       "source": "Sploitus – Exploits",
-      "published": "2026-09-18T17:57:47+00:00",
+      "published": "2026-09-19T20:36:59+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 68.41,
+      "signal_score": 68.39,
+      "priority_score": 71.37
+    },
+    {
+      "title": "Exploit for CVE-2026-84434",
+      "link": "https://sploitus.com/exploit?id=D48A2A44-5438-5A55-BB24-83D12D1BEF4A&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-09-19T20:27:35+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.39,
       "priority_score": 71.32
     },
     {
-      "title": "Exploit for CVE-2026-82226",
-      "link": "https://sploitus.com/exploit?id=5EBE0E03-9805-5333-91D6-BDE9FF01AD30&utm_source=rss&utm_medium=rss",
+      "title": "Exploit for CVE-2026-89274",
+      "link": "https://sploitus.com/exploit?id=D6E93E8E-94F1-5A30-A541-24A9B186A2C1&utm_source=rss&utm_medium=rss",
       "source": "Sploitus – Exploits",
-      "published": "2026-09-18T17:37:42+00:00",
+      "published": "2026-09-19T20:25:18+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 68.41,
-      "priority_score": 71.23
+      "signal_score": 68.39,
+      "priority_score": 71.31
     },
     {
-      "title": "Exploit for CVE-2026-84753",
-      "link": "https://sploitus.com/exploit?id=BF073B5E-D788-5144-BED8-29A8F38E3826&utm_source=rss&utm_medium=rss",
+      "title": "Exploit for CVE-2026-92229",
+      "link": "https://sploitus.com/exploit?id=011DBBCC-8BF5-55B8-B490-87EE45256BCF&utm_source=rss&utm_medium=rss",
       "source": "Sploitus – Exploits",
-      "published": "2026-09-18T16:51:02+00:00",
+      "published": "2026-09-19T20:22:01+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 68.41,
-      "priority_score": 71.02
+      "signal_score": 68.39,
+      "priority_score": 71.3
     },
     {
-      "title": "Exploit for Interpretation Conflict in Wordpress",
-      "link": "https://sploitus.com/exploit?id=8FB1D426-C45B-542B-B4DA-CCF61A07AF13&utm_source=rss&utm_medium=rss",
+      "title": "Exploit for CVE-2026-81648",
+      "link": "https://sploitus.com/exploit?id=57919D49-CEE8-5763-BEAF-A8533ADFEAC9&utm_source=rss&utm_medium=rss",
       "source": "Sploitus – Exploits",
-      "published": "2026-09-18T16:35:32+00:00",
+      "published": "2026-09-19T20:21:48+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 68.41,
-      "priority_score": 70.95
+      "signal_score": 68.39,
+      "priority_score": 71.3
     },
     {
-      "title": "Exploit for CVE-2026-77991",
-      "link": "https://sploitus.com/exploit?id=24419C22-53B3-580E-B7D3-7BFDD9646E46&utm_source=rss&utm_medium=rss",
+      "title": "Exploit for CVE-2026-81294",
+      "link": "https://sploitus.com/exploit?id=48C4A700-0E03-52F7-875C-F9D87BAB6F3B&utm_source=rss&utm_medium=rss",
       "source": "Sploitus – Exploits",
-      "published": "2026-09-18T16:25:53+00:00",
+      "published": "2026-09-19T20:03:54+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 68.41,
-      "priority_score": 70.91
-    },
-    {
-      "title": "Exploit for Uncontrolled Resource Consumption in Siemens 6Bk1602-0Aa12-0Tp0_Firmware",
-      "link": "https://sploitus.com/exploit?id=56727EEE-10AC-5D50-895D-C52520C4493A&utm_source=rss&utm_medium=rss",
-      "source": "Sploitus – Exploits",
-      "published": "2026-09-18T18:28:53+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 66.41,
-      "priority_score": 72.54
+      "signal_score": 68.39,
+      "priority_score": 71.22
     }
   ]
 }
