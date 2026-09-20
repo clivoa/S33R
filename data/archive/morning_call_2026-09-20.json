@@ -1,0 +1,164 @@
+{
+  "generated_at": "2026-09-20T11:20:28.255986+00:00",
+  "analysis_date": "2026-09-20",
+  "provider": "openai",
+  "model": "gpt-5.2",
+  "window_hours": 24,
+  "source_file": "data/news_recent.json",
+  "source_generated_at": "2026-09-20T10:56:46.003985+00:00",
+  "source_days_back": 30,
+  "source_total_items": 60923,
+  "total_items_in_window_all": 1951,
+  "total_items_in_window_curated": 6,
+  "total_items_in_window_selected": 40,
+  "context_selection_policy": "curated-plus-operational-signal-v1",
+  "morning_call_markdown": "### Executive Summary\n- Active exploitation reported for **Orkes Conductor pre-auth RCE (CVE-2026-58138)** and **Linux kernel vulns added to CISA KEV** → prioritize exposure checks + patch/mitigation validation today.\n- Multiple items point to **email/identity-driven compromise risk** (reported **Cisco Email Gateway 0-day**, plus SSO/OAuth plugin issues) → tighten monitoring on mail gateway/admin changes and IdP anomalies.\n- **Criminal ecosystem churn** (ShinyHunters allegedly compromising **Clop** leak site; breach reporting incl. Revolut/Gyazo) → expect opportunistic targeting, credential stuffing, and extortion follow-on.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Orkes Conductor pre-auth RCE (CVE-2026-58138) reportedly exploited in the wild**\n- What happened: Reports of **active exploitation** of a **pre-auth remote code execution** flaw in Orkes Conductor (CVSS ~9.8/9.3).\n- Why it matters operationally: Internet-exposed workflow/orchestration platforms are high-value for **initial access → lateral movement → data theft/ransomware** in enterprise environments.\n- Recommended immediate actions for the SOC today: **Identify any Conductor instances** (cloud/on-prem), confirm version/patch state; **block external access** to admin/API surfaces where possible and escalate any suspicious Conductor process/network activity to IR.\n\n**2) Linux kernel vulnerabilities added to CISA KEV (active exploitation)**\n- What happened: CISA added **three Linux kernel CVEs** to KEV (CVE-2025-39682, CVE-2026-53266, CVE-2025-39964), with public reporting of exploitation.\n- Why it matters operationally: Kernel exploitation is commonly used for **privilege escalation (TA0004)** after an initial foothold; high impact for **Linux servers, container hosts, and security appliances** used in financial services.\n- Recommended immediate actions for the SOC today: **Inventory Linux fleets** (especially internet-facing, jump hosts, Kubernetes/container nodes) and validate emergency patch timelines; hunt for **post-exploitation signals** on Linux (new root users, unusual kernel/module activity, sudden capability changes) and open an incident ticket if found.\n\n**3) SolarWinds ARM hard-coded key flaw patched (CVE-2026-28326)**\n- What happened: SolarWinds released a fix for an **ARM hard-coded key** vulnerability (CVSS 8.8).\n- Why it matters operationally: SolarWinds products frequently sit in **high-trust monitoring/management paths**; key/credential weaknesses can enable device/service impersonation and stealthy persistence.\n- Recommended immediate actions for the SOC today: **Confirm whether we run affected SolarWinds ARM components** and patch/rotate impacted secrets if applicable; monitor for **unexpected SolarWinds authentication events/config changes** and escalate anomalies.\n\n**4) Email/brand-driven compromise: reported Cisco Email Gateway 0-day exploitation + breach-driven social engineering**\n- What happened: News reports cite a **Cisco Email Gateway “0-day” exploited** and ongoing breach reporting (e.g., Revolut context; Gyazo large user impact) likely to fuel phishing and account takeovers. (Details/IOCs not provided in the feed.)\n- Why it matters operationally: Email gateway compromise or bypass increases risk of **phishing (T1566)**, token theft, and BEC-style fraud—high consequence in financial operations.\n- Recommended immediate actions for the SOC today: **Validate our Cisco Email Gateway exposure and patch/advisory status** (assumption: we may run Cisco mail security); increase scrutiny on **mail policy changes, connector rules, and admin logins**, and fast-track any suspicious inbound campaigns to containment.\n\n---\n\n### Monitoring & detection recommendations\n- **Orkes Conductor / orchestration platforms**: monitor EDR + app logs for **new services/cron, unexpected child processes (T1059)**, and **outbound connections to rare ASNs** from Conductor hosts; correlate with firewall egress logs.\n- **Linux KEV kernel exploitation follow-on**: on Linux EDR/auditd, hunt for **sudden privilege changes** (new UID 0 users, `sudoers` edits), **suspicious module loads** (`insmod/modprobe`), and **unexpected container escape indicators** (ATT&CK: T1068, T1611).\n- **Mail gateway / email security appliances**: alert on **admin logins from new geos**, **configuration export/import**, **rule/connector changes**, and **TLS cert changes**; ingest device audit logs into SIEM if not already.\n- **Phishing & credential theft uptick (breach-driven)**: in email + web proxy, detect **newly registered domains** and **lookalike finance brands**, plus spikes in **URL rewrites/QR phishing**; map to ATT&CK **T1566**.\n- **Identity anomalies (SSO/OAuth plugin issues in the wild ecosystem)**: in IdP logs (Azure AD/Okta/etc.), monitor **impossible travel**, **new OAuth app consents (T1550/T1528-ish behaviors)**, and **token refresh anomalies**; focus on privileged users.\n- **SolarWinds monitoring stack**: review SolarWinds app/auth logs for **new API keys, unexpected credential use, service account logins outside baseline**, and **lateral movement from monitoring servers** (ATT&CK: T1021).\n- **Ransomware prep behaviors** (general, but relevant given current chatter): EDR detections for **mass file renames, shadow copy deletion, backup agent tampering** (ATT&CK: T1486, T1490); prioritize servers handling payments, SWIFT/treasury, and customer PII.\n\n---\n\n### Medium-term follow-ups\n- **Patch governance**: ensure KEV-listed Linux kernel CVEs are added to our **“must patch” SLA** and tracked across **appliances** (VPNs, WAFs, monitoring, container hosts), not only standard servers.\n- **External exposure reduction**: re-validate that **orchestration/automation tools** (e.g., Conductor-like services) are **not internet-exposed**, enforce VPN/allowlists, and require MFA on admin surfaces.\n- **Email hardening**: confirm mail gateways have **centralized audit logging**, least-privilege admin roles, and a tested rollback process for policy/rule changes.\n- **Breach-response readiness**: given ongoing breach reporting, run a **credential stuffing tabletop** for customer-facing portals and internal SSO; confirm rate-limiting, MFA coverage, and monitoring thresholds.\n- **Threat intel watch**: track for vendor advisories/validated details on the **Cisco Email Gateway “0-day”** claim (assumption: reporting may be incomplete) and be ready to deploy mitigations once confirmed.\n- **Ransomware resilience**: verify backup immutability and recovery for **Tier-0 services**; specifically include any **AI/ML model artifacts** if used in fraud/risk pipelines (per emerging ransomware targeting patterns).",
+  "highlights": [
+    {
+      "title": "SolarWinds, Orkes RCE flaws under exploitation; Linux kernel vulnerabilities added to CISA KEV",
+      "link": "https://defend.network/briefings/solarwinds-orkes-conductor-linux-kernel-exploits-2026-09-20.html",
+      "source": "defend.network",
+      "published": "2026-09-20T06:30:00+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Linux / Unix",
+        "Cloud / SaaS",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 85.09,
+      "priority_score": 89.03
+    },
+    {
+      "title": "Exploit for CVE-2026-36213",
+      "link": "https://vulners.com/githubexploit/EDCEA1EA-8065-5D5C-8A50-D1DC3729487E?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-09-20T09:50:48+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Windows / Microsoft",
+        "Mobile Security"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 70.57,
+      "priority_score": 77.49
+    },
+    {
+      "title": "Exploit for CVE-2026-68121",
+      "link": "https://vulners.com/githubexploit/F0B4C7CC-787F-5AE1-B99A-0B2494022363?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-09-19T16:28:47+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Linux / Unix"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.57,
+      "priority_score": 72.7
+    },
+    {
+      "title": "Exploit for CVE-2026-77635",
+      "link": "https://sploitus.com/exploit?id=7B4261CB-3017-55B1-BF94-54E3BFAE5905&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-09-19T20:48:37+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.39,
+      "priority_score": 71.42
+    },
+    {
+      "title": "Exploit for CVE-2026-79752",
+      "link": "https://sploitus.com/exploit?id=B2F947B8-06BC-54B0-88A5-23FA78AC1491&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-09-19T20:36:59+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.39,
+      "priority_score": 71.37
+    },
+    {
+      "title": "Exploit for CVE-2026-84434",
+      "link": "https://sploitus.com/exploit?id=D48A2A44-5438-5A55-BB24-83D12D1BEF4A&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-09-19T20:27:35+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.39,
+      "priority_score": 71.32
+    },
+    {
+      "title": "Exploit for CVE-2026-89274",
+      "link": "https://sploitus.com/exploit?id=D6E93E8E-94F1-5A30-A541-24A9B186A2C1&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-09-19T20:25:18+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.39,
+      "priority_score": 71.31
+    },
+    {
+      "title": "Exploit for CVE-2026-92229",
+      "link": "https://sploitus.com/exploit?id=011DBBCC-8BF5-55B8-B490-87EE45256BCF&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-09-19T20:22:01+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.39,
+      "priority_score": 71.3
+    },
+    {
+      "title": "Exploit for CVE-2026-81648",
+      "link": "https://sploitus.com/exploit?id=57919D49-CEE8-5763-BEAF-A8533ADFEAC9&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-09-19T20:21:48+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.39,
+      "priority_score": 71.3
+    },
+    {
+      "title": "Exploit for CVE-2026-81294",
+      "link": "https://sploitus.com/exploit?id=48C4A700-0E03-52F7-875C-F9D87BAB6F3B&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-09-19T20:03:54+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.39,
+      "priority_score": 71.22
+    }
+  ]
+}
