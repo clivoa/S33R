@@ -1,0 +1,168 @@
+{
+  "generated_at": "2026-09-21T12:46:31.666951+00:00",
+  "analysis_date": "2026-09-21",
+  "provider": "openai",
+  "model": "gpt-5.2",
+  "window_hours": 24,
+  "source_file": "data/news_recent.json",
+  "source_generated_at": "2026-09-21T09:52:13.069271+00:00",
+  "source_days_back": 30,
+  "source_total_items": 61021,
+  "total_items_in_window_all": 1772,
+  "total_items_in_window_curated": 2,
+  "total_items_in_window_selected": 40,
+  "context_selection_policy": "curated-plus-operational-signal-v1",
+  "morning_call_markdown": "### Executive Summary\n- Multiple **public PoCs for high/critical web auth-bypass/RCE/SQI issues** surfaced (notably **Kestra CVE-2026-49869** and **libcurl mTLS reuse CVE-2026-8932**)—prioritize exposure checks and compensating controls.\n- **Linux kernel vulnerabilities added to CISA KEV** (active exploitation): treat as **real-world privilege escalation risk** for Linux fleets, especially internet-facing and container hosts.\n- **Supply-chain risk spike in npm**: malicious packages evading install-script defenses at **runtime**—increase monitoring on build runners/dev endpoints and tighten dependency controls.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Kestra auth check bypass (CVE-2026-49869) — curated / KEV signal**\n- **What happened:** Disclosure highlights an authorization decision based on **suffix matching** (e.g., `endsWith(\"/configs\")`) enabling credential bypass paths.\n- **Why it matters operationally:** Workflow/orchestration platforms often have secrets and execution primitives; bypass can lead to **config access and potential downstream code execution** in environments that run jobs.\n- **Recommended immediate actions for the SOC today:** Identify any internet-accessible Kestra endpoints; add WAF/reverse-proxy rules for suspicious path patterns and alert on unauthenticated access to config/admin routes.\n\n**2) libcurl mTLS connection reuse auth-bypass PoC (CVE-2026-8932) — curated PoC**\n- **What happened:** PoC shows **incomplete mTLS configuration matching** can allow a connection to be reused even after mTLS settings change between requests.\n- **Why it matters operationally:** Impacts clients/services using libcurl where **mTLS is relied on for auth**; could enable **request smuggling across trust contexts** (multi-tenant proxies, service-to-service calls).\n- **Recommended immediate actions for the SOC today:** Inventory critical services using libcurl with mTLS (API gateways, internal service clients); monitor for unexpected successful requests where client cert should be required and fast-track patch/config mitigations.\n\n**3) Linux kernel flaws added to CISA KEV (active exploitation) + new kernel privesc reports**\n- **What happened:** CISA KEV update flags **actively exploited Linux kernel vulnerabilities**; additional fresh kernel privesc CVEs were published (e.g., macvlan/net paths).\n- **Why it matters operationally:** Kernel LPE is a common **post-compromise escalation** step on Linux servers/containers (especially if initial access comes via web apps or stolen creds).\n- **Recommended immediate actions for the SOC today:** Confirm patch status on high-value Linux tiers (jump hosts, Kubernetes nodes, EDR collectors, IAM/PKI); hunt for local exploit behavior (suspicious `unshare`, `ip link`, new namespaces, unusual module/netlink activity) on exposed hosts.\n\n**4) Broad surge of weaponized web/app PoCs (Joomla/WordPress/Webmin/ZoneMinder/OpenAM/REDCap + multiple high-CVSS PoCs)**\n- **What happened:** Multiple PoCs published for **unauth SQLi → RCE**, **file upload**, and **deserialization/RCE** across common web stacks (some older but still widely exposed, e.g., Webmin 2019, ZoneMinder 2016).\n- **Why it matters operationally:** These are frequently leveraged for **initial access** against externally reachable admin panels/CMS, then pivot to credential theft and ransomware staging.\n- **Recommended immediate actions for the SOC today:** Re-scan external attack surface for these products (and remove/deny-list if not business-required); tighten ingress (VPN allowlists, WAF, IP restrictions) and alert on exploitation patterns (new webshells, suspicious POSTs to admin endpoints, unexpected file writes).\n\n**5) Ongoing malicious npm packages with runtime evasion (e.g., “indexed-btree” campaign)**\n- **What happened:** Campaign hides malicious behavior in **normal runtime execution**, bypassing defenses focused on install scripts.\n- **Why it matters operationally:** Direct risk to **CI/CD runners, developer endpoints, and build pipelines**; can lead to credential theft (tokens), source tampering, and downstream supply-chain compromise.\n- **Recommended immediate actions for the SOC today:** Alert on new/rare npm dependencies and unexpected network egress from build jobs; review recent package additions in critical repos and quarantine suspicious builds until dependency integrity is validated.\n\n---\n\n### Monitoring & detection recommendations\n- **Internet-facing web exploitation surge (CMS/admin panels):** WAF/reverse-proxy + web server logs; alert on abnormal POST/GET to admin/install endpoints and file upload routes; watch for webshell writes (T1505.003).\n- **Kestra access anomalies:** API gateway/proxy logs + Kestra app logs; detect unauthenticated hits to config/admin-like routes and unusual workflow creation/execution (T1190).\n- **libcurl/mTLS trust boundary violations:** Service mesh/API gateway logs + TLS handshake logs; look for successful requests on endpoints requiring mTLS where cert details are missing/changed across requests (T1550).\n- **Linux KEV/LPE post-compromise hunting:** EDR for Linux + auditd; watch `unshare`, namespace creation, `setcap`, `chmod +s`, unexpected kernel/sysctl changes, suspicious `ip`/netlink activity (T1068).\n- **Supply-chain/npm runtime malware:** CI logs + EDR on runners; alert on Node processes spawning shells, reading SSH keys/token stores, or unexpected outbound connections during test/build phases (T1059.007, T1552).\n- **Email client exploit surface (Outlook PoC resurfacing):** Email security + EDR; monitor Outlook spawning unusual child processes, suspicious URL/moniker handling, and external SMB/WebDAV attempts (T1204, T1105).\n- **Identity/Auth module weaknesses (Keycloak/Mendix SAML/Concrete OAuth refresh):** IdP logs; alert on abnormal token refresh patterns, replay-like behavior, and new sessions from atypical IPs/ASNs (T1550.001).\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** Fold today’s PoC-heavy apps (Joomla/WordPress plugins, OpenAM, Webmin, ZoneMinder) into a **“must-not-be-internet-facing”** standard with periodic validation scans.\n- **mTLS hardening:** For services using libcurl, document/verify **connection reuse settings**, enforce strict per-request auth context, and add regression tests around mTLS transitions.\n- **Linux fleet resilience:** Ensure kernel-livepatch/rapid rollout capability for KEV-class issues; validate container host baselines and restrict local privilege escalation paths (seccomp/AppArmor, minimize CAP_NET_ADMIN).\n- **CI/CD supply-chain controls:** Enforce lockfiles, provenance where available, and dependency review gates; add egress controls for build runners (default-deny outbound except required registries).\n- **Mobile threat readiness (Android banking malware theme):** Update IR playbooks for account takeover signals (MFA interception, SMS phishing); coordinate with fraud teams on telemetry and customer comms triggers.\n- **Detection engineering:** Convert the “scanner says unaffected” lesson into a control: augment vuln mgmt with **behavioral compromise checks** (cryptominer indicators, persistence, outbound mining pools) on Linux virtualization clusters.",
+  "highlights": [
+    {
+      "title": "Exploit for SQL Injection in Zoneminder",
+      "link": "https://vulners.com/githubexploit/DAEFE22B-2B97-5CDF-84E0-1A9A76E85390?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-09-20T19:46:25+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Web / API Security",
+        "Exploit / PoC",
+        "Crypto / Web3"
+      ],
+      "curated": false,
+      "signal_tier": "critical",
+      "signal_score": 100.0,
+      "priority_score": 73.58
+    },
+    {
+      "title": "Suffix Matching Is Not Authorization: Lessons from CVE-2026-49869 in Kestra",
+      "link": "https://dev.to/jeffreyciend/suffix-matching-is-not-authorization-lessons-from-cve-2026-49869-in-kestra-29jp",
+      "source": "DEV Community",
+      "published": "2026-09-21T03:20:17+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Crypto / Web3",
+        "Exploit / PoC",
+        "Identity / Access",
+        "OSINT / Community"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 87.35,
+      "priority_score": 90.0
+    },
+    {
+      "title": "CVE-2021-1675---PrintNightmare-LPE-PowerShell-",
+      "link": "https://vulners.com/kitploit/KITPLOIT:TOOLS-GITHUB-WHOAMI-CHMOD777-CVE-2021-1675---PRINTNIGHTMARE-LPE-POWERSHELL-?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-09-21T06:40:50+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Windows / Microsoft"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 70.6,
+      "priority_score": 77.14
+    },
+    {
+      "title": "Exploit for Authentication Bypass by Primary Weakness in Haxx Curl",
+      "link": "https://vulners.com/githubexploit/98318AAB-ED34-57A3-A9EB-D292C9696839?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-09-21T01:35:10+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Identity / Access"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 70.6,
+      "priority_score": 75.61
+    },
+    {
+      "title": "Exploit for CVE-2026-88854",
+      "link": "https://vulners.com/githubexploit/865490E1-91F1-5326-800F-7DE77709590E?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-09-20T18:59:32+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Web / API Security",
+        "Crypto / Web3",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 70.6,
+      "priority_score": 72.29
+    },
+    {
+      "title": "CVE-2022-44457 | Siemens Mendix SAML Module authentication replay (ssa-638652 / EUVD-2022-47400)",
+      "link": "https://vuldb.com/vuln/213100",
+      "source": "VulDB Updates",
+      "published": "2026-09-20T13:00:09+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Identity / Access",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 69.34,
+      "priority_score": 75.92
+    },
+    {
+      "title": "Exploit for CVE-2026-94128",
+      "link": "https://sploitus.com/exploit?id=6A5D9F0D-C900-5CA1-B3C9-5782CF214D68&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-09-21T08:26:04+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.37,
+      "priority_score": 74.71
+    },
+    {
+      "title": "Exploit for CVE-2026-68771",
+      "link": "https://sploitus.com/exploit?id=E3EA906F-6404-5DA8-A270-D14E7A001E29&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-09-21T08:17:05+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.37,
+      "priority_score": 74.67
+    },
+    {
+      "title": "Exploit for CVE-2026-41452",
+      "link": "https://sploitus.com/exploit?id=1E9EDCF7-75FB-570E-BDA1-A52BB4C5808C&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-09-20T23:31:16+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.37,
+      "priority_score": 72.32
+    },
+    {
+      "title": "Exploit for CVE-2026-77812",
+      "link": "https://sploitus.com/exploit?id=ADA7B805-7392-55DE-BC75-A1E07504EEDC&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-09-20T20:33:14+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.37,
+      "priority_score": 71.52
+    }
+  ]
+}
