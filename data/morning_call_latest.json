@@ -1,41 +1,24 @@
 {
-  "generated_at": "2026-09-22T11:34:23.069714+00:00",
-  "analysis_date": "2026-09-22",
+  "generated_at": "2026-09-23T11:33:45.519558+00:00",
+  "analysis_date": "2026-09-23",
   "provider": "openai",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-09-22T09:17:39.937888+00:00",
+  "source_generated_at": "2026-09-23T11:06:28.408918+00:00",
   "source_days_back": 30,
-  "source_total_items": 59950,
-  "total_items_in_window_all": 2719,
-  "total_items_in_window_curated": 8,
-  "total_items_in_window_selected": 40,
+  "source_total_items": 59701,
+  "total_items_in_window_all": 3284,
+  "total_items_in_window_curated": 24,
+  "total_items_in_window_selected": 56,
   "context_selection_policy": "curated-plus-operational-signal-v1",
-  "morning_call_markdown": "### Executive Summary\n- CISA confirms **active exploitation** of a **critical Zyxel GS1900 switch flaw (CVE-2026-7273)**; treat internet-/edge-adjacent management planes as high-risk today.\n- Multiple reports of **active exploitation in Linux kernel** plus separate analysis of **MikroTik RouterOS attack chaining** suggest elevated risk to **edge/Linux fleets** (cloud, appliances, jump hosts).\n- **Software supply-chain pressure is spiking** (malicious npm packages/typosquatting; prior PyPI backdoor window highlighted) — validate build pipeline integrity and watch developer endpoints.\n\n### High-priority items (immediate attention)\n**1) Zyxel GS1900 switches – CVE-2026-7273 (KEV, actively exploited)**\n- **What happened:** CISA added **CVE-2026-7273** (stack buffer overflow in Zyxel GS1900 CGI) to KEV with **confirmed active exploitation**.\n- **Why it matters operationally:** Network device compromise can enable **traffic interception/pivoting** and persistence with limited endpoint visibility (high impact in financial networks).\n- **Recommended immediate actions for the SOC today:** Identify GS1900 inventory + firmware; prioritize patch/mitigation and **restrict/disable HTTP management** + segment mgmt VLAN; review last 7 days for unusual switch mgmt access.\n\n**2) Linux kernel vulnerabilities – CISA warning of active exploitation (plus SMB client privesc mention)**\n- **What happened:** CISA warns attackers are **actively exploiting three Linux kernel vulnerabilities** (one critical); separate item highlights **Linux kernel SMB client privesc (CVE-2026-31710)** as relevant exposure.\n- **Why it matters operationally:** Linux is core to **cloud workloads, containers, security tooling, and jump hosts**; exploitation can enable **privilege escalation and lateral movement**.\n- **Recommended immediate actions for the SOC today:** Pull list of **internet-facing / externally reachable Linux** and high-priv hosts; accelerate kernel patching for affected versions and **increase alerting on privilege-escalation behaviors** (new root processes, suspicious module loads).\n\n**3) MikroTik RouterOS “MikroTrick” attack chain – reported active exploitation**\n- **What happened:** An analysis describes an **actively exploited MikroTik RouterOS attack chain** combining two CVEs enabling **unauthenticated full compromise** of edge devices.\n- **Why it matters operationally:** Edge router compromise is a common precursor for **credential theft, traffic manipulation, and remote access staging** into regulated environments.\n- **Recommended immediate actions for the SOC today:** Confirm whether MikroTik exists in any branch/3rd-party connectivity; if present, **prioritize patch/upgrade**, block/limit mgmt services to trusted IPs only, and check for config changes/new admin users.\n\n**4) Software supply-chain: malicious npm packages + trusted publishing abuse**\n- **What happened:** Researchers report **malicious npm packages** (e.g., “indexed-btree” impersonating legit library; PhantomRaven via typosquat/slopsquat; GHAPPIER abusing npm trusted publishing/provenance).\n- **Why it matters operationally:** Compromised dependencies can lead to **developer workstation compromise**, CI/CD credential theft, and eventual production impact (especially for fintech codebases).\n- **Recommended immediate actions for the SOC today:** Coordinate with AppSec/DevOps to **block/flag new/unpinned npm deps**, scan repos/build logs for the named package(s), and monitor developer endpoints/CI runners for unusual outbound connections and new persistence.\n\n**5) macOS AI agent risk: Meta Muse “0-day” style hijack (requires existing local malware)**\n- **What happened:** Reports describe a Muse macOS assistant weakness where **malware already on the host** can hijack the agent via a hidden setting to intercept prompts/steal auth material.\n- **Why it matters operationally:** Even if not initial access, it can amplify impact on **executive/dev macOS devices** by harvesting tokens/credentials from privileged integrations.\n- **Recommended immediate actions for the SOC today:** Validate whether Muse is deployed/allowed; if present, **tighten EDR posture on macOS**, review for suspicious Muse configuration changes, and consider temporary restriction on agent permissions until vendor guidance is confirmed.\n\n### Monitoring & detection recommendations\n- **Network device management abuse (Zyxel/MikroTik):** Firewall/NAC/switch logs for **new mgmt sessions** from non-admin subnets, unusual HTTP(S) mgmt access, config write events (ATT&CK: T1078 Valid Accounts, T1021 Remote Services).\n- **Linux kernel exploitation / privesc:** EDR + auditd/syslog for **sudden root shells**, `sudo` abuse, suspicious `modprobe/insmod`, unexpected `setcap`, kernel oops/crash patterns around exploit attempts (ATT&CK: T1068 Exploitation for Privilege Escalation).\n- **Edge pivot indicators:** Proxy/NetFlow for **new outbound beacons** from network appliances or management networks to internet; correlate with unusual DNS spikes (ATT&CK: T1095 Non-Application Layer Protocol, T1071.004 DNS).\n- **CI/CD and developer endpoint supply-chain:** SIEM from GitHub/GitLab, CI runners, artifact repos for **new dependency introductions**, abnormal build steps, unusual secrets access; EDR on dev machines for Node/pnpm/npm spawning suspicious child processes (ATT&CK: T1552 Unsecured Credentials, T1195 Supply Chain Compromise).\n- **npm trusted publishing/provenance anomalies:** Repo/package pipeline logs for changes in **publisher identity, provenance attestation, or token usage**; alert on new maintainer additions and token creation events.\n- **macOS agent/data theft (Muse):** macOS EDR for unusual access to **Keychain**, browser credential stores, and Muse process/network anomalies; monitor for persistence creation (LaunchAgents) post initial infection (ATT&CK: T1555 Credentials from Password Stores, T1543.001 Launch Agent).\n- **Ransomware-like domain disruption via GPO (PAYLOAD tradecraft):** AD logs (4624/4672), GPO change auditing, Sysmon on DCs for **GPO modification and linked script deployment**, sudden security-control disablement (ATT&CK: T1484.001 Domain Policy Modification).\n\n### Medium-term follow-ups\n- **Patch governance:** Ensure KEV-tracked items are in the emergency lane (Zyxel GS1900; Linux kernel exploited set; MikroTik chain) with defined SLAs for network/infra teams.\n- **Network device hardening:** Standardize **management-plane isolation** (dedicated mgmt VRF/VLAN, IP allowlists, MFA/jump hosts) and continuous config integrity monitoring for switches/routers.\n- **Supply-chain controls:** Enforce **dependency pinning/lockfiles**, internal registry allowlists, automated typosquat detection, and build-time SBOM generation for critical services.\n- **Developer environment protections:** Review and tighten **secrets handling** (short-lived tokens, vaulting, reduced CI runner privileges) and add EDR coverage for CI runners where feasible.\n- **macOS privileged app policy:** Reassess policy for **AI assistants/agents** with broad permissions; require security review + least-privilege baselines before enterprise enablement.\n- **Ransomware readiness drill:** Validate DC/GPO auditing is enabled and tested; confirm IR playbooks cover **“no-encryption” extortion/disruption** scenarios and rapid GPO rollback.",
+  "morning_call_markdown": "### Executive Summary\n- Multiple **actively exploited zero-days on perimeter/security management platforms** (F5 BIG‑IP APM, Check Point Management Server, VeloCloud Orchestrator) — treat as **edge-compromise risk** and prioritize patch/mitigation + compromise checks.\n- **Endpoint escalation/defense-evasion enablers** surfaced (Veeam Agent LPE PoC; “BigDiskBuster” Defender-update DoS PoC) — increase vigilance for post-compromise activity and degraded AV posture.\n- **Phishing + supply-chain pressure** continues (M365 inbox compromise service disruption; malicious npm packages/loader) — reinforce email/IdP monitoring and developer dependency controls.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) F5 BIG‑IP APM unauthenticated RCE zero-day (OAuth/Apm-specific)**\n- What happened: F5 patched **CVE-2026-94127** in BIG‑IP APM; **active exploitation** reported (unauth RCE) in setups where APM acts as an **OAuth authorization server**.\n- Why it matters operationally: Internet-facing IAM/VPN access tier compromise can yield **credential theft/session token abuse**, traffic manipulation, and rapid lateral movement.\n- Recommended immediate actions for the SOC today: **Inventory/exposure check** (BIG‑IP with APM+OAuth profile); **urgently patch/apply vendor mitigations** and start **retro-hunt for new admin accounts/config changes and suspicious APM/OAuth traffic**.\n\n**2) Check Point Security Management Server pre-auth script execution zero-day**\n- What happened: Check Point released emergency fixes for **CVE-2026-93616**; **active exploitation** allows unauth attackers to upload/execute scripts via management web service exposure.\n- Why it matters operationally: Management plane compromise can lead to **policy tampering**, credential harvesting, and pivoting into protected segments (high blast radius in financial networks).\n- Recommended immediate actions for the SOC today: **Confirm hotfix applied** on all Management/Log servers; **restrict management exposure** (no Internet, tight ACLs) and **review management audit logs** for unexpected script execution / file writes.\n\n**3) Arista/VeloCloud Orchestrator (VCO) critical exploited flaw (on-prem)**\n- What happened: Arista reported **active exploitation** of **CVE-2026-93952** (CVSS 10) affecting **on‑prem VCO**, particularly certificate-based setups.\n- Why it matters operationally: SD‑WAN orchestration compromise enables **fleet-wide device control**, traffic interception/redirection, and credential/material theft.\n- Recommended immediate actions for the SOC today: **Identify any on‑prem VCO** and its auth mode; **patch immediately** and **monitor for anomalous admin/API actions** (new users, cert changes, edge re-provisioning).\n\n**4) Chrome→Windows zero-day chain used by China-nexus actor to drop malware**\n- What happened: Reports of a China-linked actor exploiting a **Chrome + Windows zero-day chain** (CVE-2026-85046, CVE-2026-87491, plus Windows component) via **fake sites** to deploy **CLEANGULP** malware.\n- Why it matters operationally: High-likelihood **initial access via web browsing** (drive-by/social engineering), leading to stealthy footholds on user endpoints (trader/ops workstations are prime targets).\n- Recommended immediate actions for the SOC today: **Verify Chrome/Windows patch levels** and push updates; **hunt for browser-spawned suspicious child processes** and unusual outbound from user endpoints shortly after web access events.\n\n**5) Actively exploited / PoC edge + infra weaknesses (Zyxel KEV, WordPress core RCE chain, Veeam Agent LPE PoC)**\n- What happened: **Zyxel GS1900 (CVE-2026-7273)** added to KEV; WordPress critical issues/weaponized PoCs circulating; **Veeam Agent for Windows LPE (CVE-2026-32996)** now has PoC and exploitation chatter.\n- Why it matters operationally: These enable **rapid opportunistic compromise** (edge devices/web stacks) and **privilege escalation** post-initial access; both are common ransomware playbook steps.\n- Recommended immediate actions for the SOC today: **Triage exposure** (Zyxel/WordPress/Veeam footprint); **patch/mitigate where present** and **raise alerting** for exploitation patterns (webshell indicators on WP; local admin escalation on Veeam-protected hosts).\n\n---\n\n### Monitoring & detection recommendations\n- **F5 / Check Point / VCO (edge management) compromise checks:** collect and review **appliance audit logs, config change logs, admin auth logs, and system command execution logs**; alert on **new admin accounts, policy exports, unexpected script/file writes** (MITRE: T1190, T1556, T1562).\n- **Network telemetry around exposed management interfaces:** on **firewalls/WAF/IPS**, alert on spikes to **management ports/URIs**, unusual **POST/PUT uploads**, and repeated 4xx/5xx bursts preceding success (T1190).\n- **Endpoint hunting for browser-to-payload behavior (Chrome/Windows chain):** in **EDR**, detect **chrome.exe/msedge.exe spawning cmd/powershell/wscript/rundll32/regsvr32** and new persistence shortly after browsing (T1204, T1059, T1547).\n- **Email/IdP monitoring tied to “phishing service” activity:** in **M365 audit logs + IdP sign-ins**, alert on **impossible travel, new OAuth consent grants, mailbox rule creation/forwarding**, and atypical token use (T1566, T1114, T1550).\n- **Veeam Agent LPE posture:** in **EDR + Windows Security logs**, watch for **service manipulation**, suspicious binaries executed with SYSTEM, and privilege escalation artifacts on endpoints with Veeam Agent installed (T1068).\n- **Defender-update DoS (disk fill) early warning:** monitor **EDR + Windows event logs + disk utilization** for rapid disk consumption on endpoints/servers paired with **Defender update failures** (T1562.001).\n- **Supply-chain npm threats:** from **CI/CD logs, proxy logs, EDR on build agents**, alert on **new/rare npm package installs**, postinstall scripts spawning shells, and unexpected outbound from runners (T1195, T1059).\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** ensure perimeter platforms (F5/Check Point/VCO) are on **emergency patch cadence** with documented **compensating controls** (mgmt plane isolation, MFA, allowlisting).\n- **Exposure reduction:** confirm **no Internet exposure** for security management interfaces; enforce **jump-host only** access + strict firewall rules and continuous external attack surface monitoring.\n- **Web platform hardening:** validate **WordPress core/plugins** patch SLAs, disable unused plugins, restrict admin access, and implement WAF rules for common WP exploitation chains.\n- **Backups/EDR resilience:** review controls against **post-compromise escalation** (Veeam LPE) and **security tooling disruption** (Defender update failures); ensure alternative AV update paths and disk quota monitoring.\n- **Developer supply-chain controls:** require **dependency pinning/lockfiles**, provenance verification where possible, and tighten **build agent egress**; consider internal allowlist for npm scopes/packages.\n- **Phishing readiness:** refresh playbooks for **token theft/OAuth abuse** in M365 (containment steps: revoke sessions/tokens, disable forwarding rules, app consent review) and run a quick SOC tabletop this week.",
   "highlights": [
     {
-      "title": "ShinyHunters defaces Clop ransomware data leak site, claims data theft",
-      "link": "https://www.scworld.com/brief/shinyhunters-defaces-clop-ransomware-data-leak-site-claims-data-theft",
-      "source": "SCM feed for Latest",
-      "published": "2026-09-21T22:54:10+00:00",
-      "smart_groups": [
-        "Ransomware",
-        "Data Breaches / Leaks",
-        "Exploit / PoC",
-        "Vulnerabilities / CVEs",
-        "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 92.03,
-      "priority_score": 85.04
-    },
-    {
-      "title": "CISA Warns of Zyxel GS1900 Switches Flaw Actively Exploited in Attacks",
-      "link": "https://cybersecuritynews.com/cisa-warns-of-zyxel-gs1900-switches-flaw-exploited/",
-      "source": "Cyber Security News",
-      "published": "2026-09-22T07:42:44+00:00",
+      "title": "F5 BIG-IP APM Zero-Day Vulnerability Patched After RCE Exploit",
+      "link": "https://www.news4hackers.com/f5-big-ip-apm-zero-day-vulnerability-patched-after-rce-exploit/",
+      "source": "News4Hackers",
+      "published": "2026-09-23T10:03:49+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC",
@@ -43,125 +26,150 @@
       ],
       "curated": true,
       "signal_tier": "critical",
-      "signal_score": 83.1,
-      "priority_score": 89.87
+      "signal_score": 100.0,
+      "priority_score": 90.07
     },
     {
-      "title": "New npm malware finds a way around install script defenses",
-      "link": "https://www.csoonline.com/article/4224400/new-npm-malware-finds-a-way-around-install-script-defenses-2.html",
-      "source": "CSO Online",
-      "published": "2026-09-21T14:27:49+00:00",
+      "title": "F5 BIG-IP Zero-Day Vulnerability Exploited – Critical Security Alert",
+      "link": "https://www.news4hackers.com/f5-big-ip-zero-day-vulnerability-exploited-critical-security-alert/",
+      "source": "News4Hackers",
+      "published": "2026-09-23T09:03:09+00:00",
       "smart_groups": [
-        "Supply Chain / Software",
-        "Crypto / Web3",
-        "Malware / Payloads",
-        "Identity / Access",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
         "General Security"
       ],
       "curated": true,
-      "signal_tier": "high",
-      "signal_score": 72.23,
-      "priority_score": 85.65
+      "signal_tier": "critical",
+      "signal_score": 100.0,
+      "priority_score": 89.37
     },
     {
-      "title": "Exploit for CVE-2026-14894",
-      "link": "https://sploitus.com/exploit?id=685F346E-E22C-53DB-B985-C7323DF7B37F&utm_source=rss&utm_medium=rss",
-      "source": "Sploitus – Exploits",
-      "published": "2026-09-21T12:53:33+00:00",
+      "title": "Check Point, WordPress, Zyxel actively exploited; EvilTokens phishing infrastructure seized",
+      "link": "https://defend.network/briefings/checkpoint-wordpress-eviltokens-zyxel-exploits-2026-09-23.html",
+      "source": "defend.network",
+      "published": "2026-09-23T06:30:00+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Exploit / PoC"
+        "Exploit / PoC",
+        "Phishing / Social Engineering",
+        "General Security"
       ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 70.39,
-      "priority_score": 69.75
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 100.0,
+      "priority_score": 89.19
     },
     {
-      "title": "Malicious npm Package With 2 Million Downloads Hides Malware in Runtime Code",
-      "link": "https://cybersecuritynews.com/malicious-npm-package/",
+      "title": "Check Point Management Server 0-Day Vulnerability Actively Exploited in Attacks",
+      "link": "https://cybersecuritynews.com/check-point-management-server-0-day-exploited/",
       "source": "Cyber Security News (FeedBurner)",
-      "published": "2026-09-21T13:55:52+00:00",
+      "published": "2026-09-22T17:17:03+00:00",
       "smart_groups": [
-        "Supply Chain / Software",
-        "Crypto / Web3",
-        "Malware / Payloads",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
         "General Security"
       ],
       "curated": true,
-      "signal_tier": "high",
-      "signal_score": 70.15,
-      "priority_score": 84.99
+      "signal_tier": "critical",
+      "signal_score": 100.0,
+      "priority_score": 85.78
     },
     {
-      "title": "⚡ Weekly Recap: Cisco 0-Day, AI Agent RCE, ClickFix Attacks, ClickFix Surge, and Browser Hijacks",
-      "link": "https://thehackernews.com/2026/09/weekly-recap-cisco-0-day-ai-agent-rce.html",
+      "title": "Veeam Agent Flaw Actively Exploited to Gain SYSTEM Privileges on Windows",
+      "link": "https://cybersecuritynews.com/veeam-agent-flaw-exploited/",
+      "source": "Cyber Security News",
+      "published": "2026-09-22T12:55:07+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Windows / Microsoft",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 100.0,
+      "priority_score": 84.85
+    },
+    {
+      "title": "Chinese Hackers Exploit Chrome-Windows Zero-Day Chain to Deploy CLEANGULP Malware",
+      "link": "https://thehackernews.com/2026/09/chinese-hackers-exploit-chrome-windows.html",
       "source": "The Hacker News",
-      "published": "2026-09-21T14:24:13+00:00",
+      "published": "2026-09-23T08:29:24+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
+        "Threat Actors / APT",
+        "Exploit / PoC",
+        "Malware / Payloads",
+        "Windows / Microsoft",
         "General Security"
       ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 69.9,
-      "priority_score": 68.47
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 85.05,
+      "priority_score": 89.51
     },
     {
-      "title": "Exploit for CVE-2026-19658",
-      "link": "https://sploitus.com/exploit?id=347BBDDF-C34D-5262-8777-CD51684F67B9&utm_source=rss&utm_medium=rss",
-      "source": "Sploitus – Exploits",
-      "published": "2026-09-22T06:37:07+00:00",
+      "title": "Hackers Exploiting F5 BIG-IP OAuth Server 0-day Flaw to Gain Remote Code Execution",
+      "link": "https://cybersecuritynews.com/f5-big-ip-oauth-server-0-day-flaw/",
+      "source": "Cyber Security News",
+      "published": "2026-09-23T03:24:27+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 68.39,
-      "priority_score": 74.5
-    },
-    {
-      "title": "Clop Hack: ShinyHunters Hijacks Data Leak Site",
-      "link": "https://socradar.io/blog/clop-hack-shinyhunters-hijacks-data-leak-site/",
-      "source": "SOCRadar® Cyber Intelligence Inc.",
-      "published": "2026-09-21T13:28:13+00:00",
-      "smart_groups": [
-        "Ransomware",
-        "Data Breaches / Leaks"
+        "Identity / Access",
+        "Exploit / PoC",
+        "General Security"
       ],
       "curated": true,
-      "signal_tier": "high",
-      "signal_score": 68.13,
-      "priority_score": 83.0
+      "signal_tier": "critical",
+      "signal_score": 83.2,
+      "priority_score": 88.94
     },
     {
-      "title": "Exploit for Stack-based Buffer Overflow in Microsoft",
-      "link": "https://sploitus.com/exploit?id=6A0192AC-6D21-5E9E-90B7-D8A79778618A&utm_source=rss&utm_medium=rss",
-      "source": "Sploitus – Exploits",
-      "published": "2026-09-21T23:18:09+00:00",
+      "title": "Check Point Fixes a New Actively Exploited Critical Security Flaw",
+      "link": "https://securityaffairs.com/199549/security/check-point-fixes-a-new-actively-exploited-critical-security-flaw.html",
+      "source": "Security Affairs",
+      "published": "2026-09-22T19:31:40+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Exploit / PoC"
+        "Exploit / PoC",
+        "General Security"
       ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 66.39,
-      "priority_score": 73.73
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 83.12,
+      "priority_score": 84.69
     },
     {
-      "title": "Exploit for Missing Authentication for Critical Function in Cpanel",
-      "link": "https://sploitus.com/exploit?id=6187248A-8EA8-5F6F-AE94-BE571A076840&utm_source=rss&utm_medium=rss",
-      "source": "Sploitus – Exploits",
-      "published": "2026-09-21T18:23:02+00:00",
+      "title": "CISA just added CVE-2026-7273 affecting Zyxel GS1900 switches to its KEV catalog.",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1wntbnz/cisa_just_added_cve20267273_affecting_zyxel/",
+      "source": "/r/cybersecurity",
+      "published": "2026-09-23T02:18:22+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Exploit / PoC"
+        "Exploit / PoC",
+        "OSINT / Community"
       ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 66.39,
-      "priority_score": 71.22
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 83.09,
+      "priority_score": 86.36
+    },
+    {
+      "title": "F5 Patches Critical BIG-IP APM Zero-Day Exploited for Unauthenticated RCE on OAuth Servers",
+      "link": "https://thehackernews.com/2026/09/f5-patches-critical-big-ip-apm-zero-day.html",
+      "source": "The Hacker News",
+      "published": "2026-09-23T08:29:48+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Identity / Access",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 83.05,
+      "priority_score": 89.52
     }
   ]
 }
