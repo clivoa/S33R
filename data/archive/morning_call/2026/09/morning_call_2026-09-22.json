@@ -1,0 +1,167 @@
+{
+  "generated_at": "2026-09-22T11:34:23.069714+00:00",
+  "analysis_date": "2026-09-22",
+  "provider": "openai",
+  "model": "gpt-5.2",
+  "window_hours": 24,
+  "source_file": "data/news_recent.json",
+  "source_generated_at": "2026-09-22T09:17:39.937888+00:00",
+  "source_days_back": 30,
+  "source_total_items": 59950,
+  "total_items_in_window_all": 2719,
+  "total_items_in_window_curated": 8,
+  "total_items_in_window_selected": 40,
+  "context_selection_policy": "curated-plus-operational-signal-v1",
+  "morning_call_markdown": "### Executive Summary\n- CISA confirms **active exploitation** of a **critical Zyxel GS1900 switch flaw (CVE-2026-7273)**; treat internet-/edge-adjacent management planes as high-risk today.\n- Multiple reports of **active exploitation in Linux kernel** plus separate analysis of **MikroTik RouterOS attack chaining** suggest elevated risk to **edge/Linux fleets** (cloud, appliances, jump hosts).\n- **Software supply-chain pressure is spiking** (malicious npm packages/typosquatting; prior PyPI backdoor window highlighted) — validate build pipeline integrity and watch developer endpoints.\n\n### High-priority items (immediate attention)\n**1) Zyxel GS1900 switches – CVE-2026-7273 (KEV, actively exploited)**\n- **What happened:** CISA added **CVE-2026-7273** (stack buffer overflow in Zyxel GS1900 CGI) to KEV with **confirmed active exploitation**.\n- **Why it matters operationally:** Network device compromise can enable **traffic interception/pivoting** and persistence with limited endpoint visibility (high impact in financial networks).\n- **Recommended immediate actions for the SOC today:** Identify GS1900 inventory + firmware; prioritize patch/mitigation and **restrict/disable HTTP management** + segment mgmt VLAN; review last 7 days for unusual switch mgmt access.\n\n**2) Linux kernel vulnerabilities – CISA warning of active exploitation (plus SMB client privesc mention)**\n- **What happened:** CISA warns attackers are **actively exploiting three Linux kernel vulnerabilities** (one critical); separate item highlights **Linux kernel SMB client privesc (CVE-2026-31710)** as relevant exposure.\n- **Why it matters operationally:** Linux is core to **cloud workloads, containers, security tooling, and jump hosts**; exploitation can enable **privilege escalation and lateral movement**.\n- **Recommended immediate actions for the SOC today:** Pull list of **internet-facing / externally reachable Linux** and high-priv hosts; accelerate kernel patching for affected versions and **increase alerting on privilege-escalation behaviors** (new root processes, suspicious module loads).\n\n**3) MikroTik RouterOS “MikroTrick” attack chain – reported active exploitation**\n- **What happened:** An analysis describes an **actively exploited MikroTik RouterOS attack chain** combining two CVEs enabling **unauthenticated full compromise** of edge devices.\n- **Why it matters operationally:** Edge router compromise is a common precursor for **credential theft, traffic manipulation, and remote access staging** into regulated environments.\n- **Recommended immediate actions for the SOC today:** Confirm whether MikroTik exists in any branch/3rd-party connectivity; if present, **prioritize patch/upgrade**, block/limit mgmt services to trusted IPs only, and check for config changes/new admin users.\n\n**4) Software supply-chain: malicious npm packages + trusted publishing abuse**\n- **What happened:** Researchers report **malicious npm packages** (e.g., “indexed-btree” impersonating legit library; PhantomRaven via typosquat/slopsquat; GHAPPIER abusing npm trusted publishing/provenance).\n- **Why it matters operationally:** Compromised dependencies can lead to **developer workstation compromise**, CI/CD credential theft, and eventual production impact (especially for fintech codebases).\n- **Recommended immediate actions for the SOC today:** Coordinate with AppSec/DevOps to **block/flag new/unpinned npm deps**, scan repos/build logs for the named package(s), and monitor developer endpoints/CI runners for unusual outbound connections and new persistence.\n\n**5) macOS AI agent risk: Meta Muse “0-day” style hijack (requires existing local malware)**\n- **What happened:** Reports describe a Muse macOS assistant weakness where **malware already on the host** can hijack the agent via a hidden setting to intercept prompts/steal auth material.\n- **Why it matters operationally:** Even if not initial access, it can amplify impact on **executive/dev macOS devices** by harvesting tokens/credentials from privileged integrations.\n- **Recommended immediate actions for the SOC today:** Validate whether Muse is deployed/allowed; if present, **tighten EDR posture on macOS**, review for suspicious Muse configuration changes, and consider temporary restriction on agent permissions until vendor guidance is confirmed.\n\n### Monitoring & detection recommendations\n- **Network device management abuse (Zyxel/MikroTik):** Firewall/NAC/switch logs for **new mgmt sessions** from non-admin subnets, unusual HTTP(S) mgmt access, config write events (ATT&CK: T1078 Valid Accounts, T1021 Remote Services).\n- **Linux kernel exploitation / privesc:** EDR + auditd/syslog for **sudden root shells**, `sudo` abuse, suspicious `modprobe/insmod`, unexpected `setcap`, kernel oops/crash patterns around exploit attempts (ATT&CK: T1068 Exploitation for Privilege Escalation).\n- **Edge pivot indicators:** Proxy/NetFlow for **new outbound beacons** from network appliances or management networks to internet; correlate with unusual DNS spikes (ATT&CK: T1095 Non-Application Layer Protocol, T1071.004 DNS).\n- **CI/CD and developer endpoint supply-chain:** SIEM from GitHub/GitLab, CI runners, artifact repos for **new dependency introductions**, abnormal build steps, unusual secrets access; EDR on dev machines for Node/pnpm/npm spawning suspicious child processes (ATT&CK: T1552 Unsecured Credentials, T1195 Supply Chain Compromise).\n- **npm trusted publishing/provenance anomalies:** Repo/package pipeline logs for changes in **publisher identity, provenance attestation, or token usage**; alert on new maintainer additions and token creation events.\n- **macOS agent/data theft (Muse):** macOS EDR for unusual access to **Keychain**, browser credential stores, and Muse process/network anomalies; monitor for persistence creation (LaunchAgents) post initial infection (ATT&CK: T1555 Credentials from Password Stores, T1543.001 Launch Agent).\n- **Ransomware-like domain disruption via GPO (PAYLOAD tradecraft):** AD logs (4624/4672), GPO change auditing, Sysmon on DCs for **GPO modification and linked script deployment**, sudden security-control disablement (ATT&CK: T1484.001 Domain Policy Modification).\n\n### Medium-term follow-ups\n- **Patch governance:** Ensure KEV-tracked items are in the emergency lane (Zyxel GS1900; Linux kernel exploited set; MikroTik chain) with defined SLAs for network/infra teams.\n- **Network device hardening:** Standardize **management-plane isolation** (dedicated mgmt VRF/VLAN, IP allowlists, MFA/jump hosts) and continuous config integrity monitoring for switches/routers.\n- **Supply-chain controls:** Enforce **dependency pinning/lockfiles**, internal registry allowlists, automated typosquat detection, and build-time SBOM generation for critical services.\n- **Developer environment protections:** Review and tighten **secrets handling** (short-lived tokens, vaulting, reduced CI runner privileges) and add EDR coverage for CI runners where feasible.\n- **macOS privileged app policy:** Reassess policy for **AI assistants/agents** with broad permissions; require security review + least-privilege baselines before enterprise enablement.\n- **Ransomware readiness drill:** Validate DC/GPO auditing is enabled and tested; confirm IR playbooks cover **“no-encryption” extortion/disruption** scenarios and rapid GPO rollback.",
+  "highlights": [
+    {
+      "title": "ShinyHunters defaces Clop ransomware data leak site, claims data theft",
+      "link": "https://www.scworld.com/brief/shinyhunters-defaces-clop-ransomware-data-leak-site-claims-data-theft",
+      "source": "SCM feed for Latest",
+      "published": "2026-09-21T22:54:10+00:00",
+      "smart_groups": [
+        "Ransomware",
+        "Data Breaches / Leaks",
+        "Exploit / PoC",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 92.03,
+      "priority_score": 85.04
+    },
+    {
+      "title": "CISA Warns of Zyxel GS1900 Switches Flaw Actively Exploited in Attacks",
+      "link": "https://cybersecuritynews.com/cisa-warns-of-zyxel-gs1900-switches-flaw-exploited/",
+      "source": "Cyber Security News",
+      "published": "2026-09-22T07:42:44+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 83.1,
+      "priority_score": 89.87
+    },
+    {
+      "title": "New npm malware finds a way around install script defenses",
+      "link": "https://www.csoonline.com/article/4224400/new-npm-malware-finds-a-way-around-install-script-defenses-2.html",
+      "source": "CSO Online",
+      "published": "2026-09-21T14:27:49+00:00",
+      "smart_groups": [
+        "Supply Chain / Software",
+        "Crypto / Web3",
+        "Malware / Payloads",
+        "Identity / Access",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 72.23,
+      "priority_score": 85.65
+    },
+    {
+      "title": "Exploit for CVE-2026-14894",
+      "link": "https://sploitus.com/exploit?id=685F346E-E22C-53DB-B985-C7323DF7B37F&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-09-21T12:53:33+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 70.39,
+      "priority_score": 69.75
+    },
+    {
+      "title": "Malicious npm Package With 2 Million Downloads Hides Malware in Runtime Code",
+      "link": "https://cybersecuritynews.com/malicious-npm-package/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-09-21T13:55:52+00:00",
+      "smart_groups": [
+        "Supply Chain / Software",
+        "Crypto / Web3",
+        "Malware / Payloads",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 70.15,
+      "priority_score": 84.99
+    },
+    {
+      "title": "⚡ Weekly Recap: Cisco 0-Day, AI Agent RCE, ClickFix Attacks, ClickFix Surge, and Browser Hijacks",
+      "link": "https://thehackernews.com/2026/09/weekly-recap-cisco-0-day-ai-agent-rce.html",
+      "source": "The Hacker News",
+      "published": "2026-09-21T14:24:13+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 69.9,
+      "priority_score": 68.47
+    },
+    {
+      "title": "Exploit for CVE-2026-19658",
+      "link": "https://sploitus.com/exploit?id=347BBDDF-C34D-5262-8777-CD51684F67B9&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-09-22T06:37:07+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.39,
+      "priority_score": 74.5
+    },
+    {
+      "title": "Clop Hack: ShinyHunters Hijacks Data Leak Site",
+      "link": "https://socradar.io/blog/clop-hack-shinyhunters-hijacks-data-leak-site/",
+      "source": "SOCRadar® Cyber Intelligence Inc.",
+      "published": "2026-09-21T13:28:13+00:00",
+      "smart_groups": [
+        "Ransomware",
+        "Data Breaches / Leaks"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 68.13,
+      "priority_score": 83.0
+    },
+    {
+      "title": "Exploit for Stack-based Buffer Overflow in Microsoft",
+      "link": "https://sploitus.com/exploit?id=6A0192AC-6D21-5E9E-90B7-D8A79778618A&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-09-21T23:18:09+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 66.39,
+      "priority_score": 73.73
+    },
+    {
+      "title": "Exploit for Missing Authentication for Critical Function in Cpanel",
+      "link": "https://sploitus.com/exploit?id=6187248A-8EA8-5F6F-AE94-BE571A076840&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-09-21T18:23:02+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 66.39,
+      "priority_score": 71.22
+    }
+  ]
+}
