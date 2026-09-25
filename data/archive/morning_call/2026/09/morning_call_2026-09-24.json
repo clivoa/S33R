@@ -1,0 +1,175 @@
+{
+  "generated_at": "2026-09-24T11:43:19.012777+00:00",
+  "analysis_date": "2026-09-24",
+  "provider": "openai",
+  "model": "gpt-5.2",
+  "window_hours": 24,
+  "source_file": "data/news_recent.json",
+  "source_generated_at": "2026-09-24T07:31:30.959907+00:00",
+  "source_days_back": 30,
+  "source_total_items": 59688,
+  "total_items_in_window_all": 2818,
+  "total_items_in_window_curated": 18,
+  "total_items_in_window_selected": 40,
+  "context_selection_policy": "curated-plus-operational-signal-v1",
+  "morning_call_markdown": "### Executive Summary\n- Multiple **internet-facing edge/access platforms** (F5 BIG-IP APM, Check Point Gateway/Management, Arista VeloCloud Orchestrator) have **KEV-listed, actively exploited** RCE/unauth issues—treat as **high likelihood of compromise** if exposed.\n- **Supply-chain compromise activity** is trending again (malicious/compromised **npm/PyPI/Terraform/Go modules**; GitLab “incoming email address” token risk) with potential for **developer-to-prod pivot**.\n- A critical **Next.js (next/og) ImageResponse SVG** RCE bug is circulating—relevant to any **web apps generating OG images**; prioritize patch/mitigation on public services.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Actively exploited edge RCEs across F5 BIG-IP APM / Check Point / Arista VeloCloud (KEV)**\n- **What happened:** CISA and vendors flagged **active exploitation** of critical flaws in **F5 BIG-IP APM (CVE-2026-94127)**, **Check Point Security Gateway VPN (CVE-2026-85102)**, and **Arista VCO on-prem zero-day** (plus **Check Point Mgmt Server CVE-2026-93616** in advisories).\n- **Why it matters operationally:** These are **perimeter control planes**; compromise often yields **credential theft, session/token abuse, lateral movement, and ransomware staging** (high blast radius in financial environments).\n- **Recommended immediate actions for the SOC today:** **Identify exposed instances + patch/mitigate ASAP**; if patching delays exist, **isolate management planes/VPN portals** and **enable heightened monitoring + IR triage** for any suspicious admin/VPN activity.\n\n**2) Check Point management plane exposure risk (CVE-2026-93616)**\n- **What happened:** Reports indicate **unauth arbitrary script execution** against **Check Point Management Servers** under targeted exploitation.\n- **Why it matters operationally:** Mgmt server compromise can enable **policy tampering, rule changes, and fleet-wide foothold** (defense evasion + persistence).\n- **Recommended immediate actions for the SOC today:** **Confirm mgmt servers are not internet-reachable** and restrict to admin subnets; **review recent policy/package install events and admin logins** for anomalies and open an IR ticket if suspicious.\n\n**3) Next.js `next/og` ImageResponse SVG-driven RCE (CVE-2026-94545)**\n- **What happened:** Critical Next.js flaw enables potential **RCE via weaponized SVG content** during OG image generation; fixed in **16.3.6** (per reporting).\n- **Why it matters operationally:** Impacts **public-facing app tiers**; exploitation could be an initial access vector into app servers/containers and CI/CD credentials.\n- **Recommended immediate actions for the SOC today:** **Inventory services using `next/og` / ImageResponse** and expedite upgrade; until patched, **block/validate SVG inputs** to OG/image generation endpoints and monitor for exploitation attempts (spikes, errors, unusual payload sizes).\n\n**4) Active supply-chain malware in npm/PyPI + Terraform/Go ecosystem**\n- **What happened:** Compromised/typosquatted packages (e.g., MemTensor compromise delivering **Go-based implant/credential stealer**) and reports of **malicious Terraform providers / Go modules** in circulation.\n- **Why it matters operationally:** Likely entry via **developer workstations/CI runners**, leading to **cloud/API key theft** and fast propagation into build artifacts.\n- **Recommended immediate actions for the SOC today:** **Hunt for recent installs/updates** of suspicious packages in CI logs and developer endpoints; **tighten egress/secret scanning** and rotate exposed tokens if any build anomalies are found.\n\n**5) GitLab “incoming email address” token exposure (supply-chain/credential risk)**\n- **What happened:** Research highlights GitLab user “incoming email addresses” may embed **privileged access tokens** that can be abused if leaked/harvested.\n- **Why it matters operationally:** Token theft enables **repo/CI compromise**, code tampering, and downstream supply-chain impact.\n- **Recommended immediate actions for the SOC today:** **Coordinate with GitLab admins** to assess feature usage and token exposure paths; **audit recent token usage** (new PAT activity, unusual API calls) and enforce least privilege/rotation.\n\n---\n\n### Monitoring & detection recommendations\n- **Edge device exploitation (F5/Check Point/Arista):** Monitor **WAF/ADC logs, VPN logs, device syslog**, and EDR on any management jump hosts for **new admin sessions, config changes, unusual POSTs/URIs** (ATT&CK: Exploit Public-Facing Application **T1190**, External Remote Services **T1133**).\n- **Check Point management tampering:** From **Check Point SmartEvent/management audit logs**, alert on **policy install outside change window**, **new administrators**, **API/script execution events**, and sudden rulebase changes (ATT&CK: Modify Authentication Process **T1556** / Account Manipulation **T1098** – use where applicable).\n- **Post-exploitation on Linux appliances:** Look for **new processes spawned by web/vpn daemons**, **unexpected cron/systemd changes**, and **outbound connections** from appliances to internet (ATT&CK: Command and Scripting Interpreter **T1059**, Scheduled Task/Job **T1053**).\n- **Next.js OG/image endpoints:** In **web access logs/APM**, hunt for requests hitting **/api/og** (or equivalent) with **SVG/XML markers**, unusually large payloads, high 5xx rates, or repeated probes (ATT&CK: T1190).\n- **Supply-chain on CI/CD:** In **CI runner logs + EDR on runners**, alert on **new npm/pip/go module downloads**, unexpected **postinstall scripts**, and **credential access** events; correlate with outbound to code-hosting/package registries (ATT&CK: Compromise Software Supply Chain **T1195**, Credentials from Password Stores **T1555**).\n- **GitLab token misuse:** In **GitLab audit logs / API logs**, detect **new PAT creation**, **token used from new geo/IP**, mass repo clones, pipeline definition edits, and secret variable reads (ATT&CK: Valid Accounts **T1078**).\n- **Ransomware early signals (general):** On EDR, alert on **mass file renames/extensions**, **shadow copy deletion**, and **remote exec tooling** (PsExec/WMI/SSH) that often follows edge compromise (ATT&CK: Inhibit System Recovery **T1490**, Remote Services **T1021**).\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** Validate SLAs for **KEV-listed** items (F5/Check Point/Arista + Linux kernel KEV items referenced) and ensure **asset owners + timelines** are tracked to closure.\n- **Edge hardening:** Reduce attack surface by **removing internet exposure** of management planes, enforcing **MFA on admin access**, and restricting by **IP allowlists/VPN-only** administration.\n- **CI/CD supply-chain controls:** Implement/expand **dependency pinning, lockfiles, allowlisted registries**, SCA policies, and **build isolation** (secrets not available to untrusted builds).\n- **GitLab configuration review:** Confirm whether “incoming email address” features are needed; document safe handling and enforce **token rotation** and **least-privileged tokens** for integrations.\n- **Web app security baselines:** For Next.js and WordPress/Laravel ecosystem items, ensure **routine framework patch cadence**, input validation, and **file upload hardening** (deny `.pht`/PHP execution paths where relevant).\n- **Tabletop/IR readiness:** Given edge exploitation trend, run a short playbook refresh for **“VPN/ADC compromise → lateral movement → ransomware”** including evidence collection from appliances (logs, configs, session data) and containment steps.",
+  "highlights": [
+    {
+      "title": "F5 fixes actively exploited zero-day flaw in BIG-IP APM",
+      "link": "https://www.csoonline.com/article/4225721/f5-fixes-actively-exploited-zero-day-flaw-in-big-ip-apm.html",
+      "source": "CSO Online",
+      "published": "2026-09-23T20:44:25+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Identity / Access",
+        "Exploit / PoC",
+        "Linux / Unix",
+        "Malware / Payloads",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 100.0,
+      "priority_score": 88.26
+    },
+    {
+      "title": "CVE-2026-94127: Critical F5 BIG-IP APM Zero-Day Exploited for Remote Code Execution",
+      "link": "https://socprime.com/blog/cve-2026-94127-analysis/",
+      "source": "SOC Prime Blog",
+      "published": "2026-09-23T15:32:13+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Identity / Access",
+        "Exploit / PoC",
+        "Vendors / Product Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 100.0,
+      "priority_score": 87.25
+    },
+    {
+      "title": "Someone's attacking a critical 0-day RCE in F5 BIG-IP APM",
+      "link": "https://www.theregister.com/security/2026/09/23/someones-attacking-a-critical-0-day-rce-in-f5-big-ip-apm/5298659",
+      "source": "The Register - Security",
+      "published": "2026-09-23T18:09:28+00:00",
+      "smart_groups": [
+        "Exploit / PoC",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": false,
+      "signal_tier": "critical",
+      "signal_score": 100.0,
+      "priority_score": 68.69
+    },
+    {
+      "title": "Check Point RCE, MikroTik SSH chain, malicious npm/Terraform packages in active exploitation",
+      "link": "https://defend.network/briefings/checkpoint-mikrotik-supply-chain-rce-active-2026-09-24.html",
+      "source": "defend.network",
+      "published": "2026-09-24T06:30:00+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Supply Chain / Software",
+        "Exploit / PoC",
+        "Malware / Payloads",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 97.09,
+      "priority_score": 89.53
+    },
+    {
+      "title": "Critical NEXT.JS Flaw Enables RCE Attacks Via Weaponized SVG File",
+      "link": "https://cybersecuritynews.com/critical-next-js-flaw-allows-remote-code-execution/",
+      "source": "Cyber Security News",
+      "published": "2026-09-23T13:43:37+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 89.23,
+      "priority_score": 86.39
+    },
+    {
+      "title": "Arista patches actively exploited VeloCloud Orchestrator zero-day",
+      "link": "https://www.bleepingcomputer.com/news/security/arista-patches-actively-exploited-velocloud-orchestrator-zero-day/",
+      "source": "BleepingComputer",
+      "published": "2026-09-23T12:29:53+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 86.1,
+      "priority_score": 83.67
+    },
+    {
+      "title": "Arista Fixes Critical Zero-Day in VeloCloud Orchestrator",
+      "link": "https://www.news4hackers.com/arista-fixes-critical-zero-day-in-velocloud-orchestrator/",
+      "source": "News4Hackers",
+      "published": "2026-09-23T15:10:34+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 86.07,
+      "priority_score": 85.3
+    },
+    {
+      "title": "U.S. CISA adds Check Point, Arista VeloCloud Orchestrator, and F5 BIG-IP APM flaws to its Known Exploited Vulnerabilities catalog",
+      "link": "https://securityaffairs.com/199631/hacking/u-s-cisa-adds-check-point-arista-velocloud-orchestrator-and-f5-big-ip-apm-flaws-to-its-known-exploited-vulnerabilities-catalog.html",
+      "source": "Security Affairs",
+      "published": "2026-09-23T20:37:18+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Cloud / SaaS",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 83.14,
+      "priority_score": 87.11
+    },
+    {
+      "title": "Check Point warns of hackers exploiting Security Gateway VPN RCE flaw",
+      "link": "https://www.bleepingcomputer.com/news/security/check-point-warns-of-hackers-exploiting-security-gateway-vpn-rce-flaw/",
+      "source": "BleepingComputer",
+      "published": "2026-09-23T19:53:54+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 83.1,
+      "priority_score": 87.38
+    },
+    {
+      "title": "Warning: Actively exploited CVE-2026-94127 (CVSS 9.8) enables unauthenticated remote code execution in F5 BIG-IP APM via a heap-based buffer overflow",
+      "link": "https://ccb.belgium.be/advisories/warning-actively-exploited-cve-2026-94127-cvss-98-enables-unauthenticated-remote-code",
+      "source": "Cert.be advisories",
+      "published": "2026-09-23T15:05:44+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Government / CERT"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 82.31,
+      "priority_score": 82.03
+    }
+  ]
+}
