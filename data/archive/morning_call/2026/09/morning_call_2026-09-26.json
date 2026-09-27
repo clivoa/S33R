@@ -1,0 +1,175 @@
+{
+  "generated_at": "2026-09-26T11:23:13.871170+00:00",
+  "analysis_date": "2026-09-26",
+  "provider": "openai",
+  "model": "gpt-5.2",
+  "window_hours": 24,
+  "source_file": "data/news_recent.json",
+  "source_generated_at": "2026-09-26T11:06:24.369145+00:00",
+  "source_days_back": 30,
+  "source_total_items": 59675,
+  "total_items_in_window_all": 3021,
+  "total_items_in_window_curated": 10,
+  "total_items_in_window_selected": 57,
+  "context_selection_policy": "curated-plus-operational-signal-v1",
+  "morning_call_markdown": "### Executive Summary\n- Multiple **CISA KEV additions with active exploitation**: **SharePoint RCE (CVE-2026-65660)**, **MikroTik RouterOS flaws**, and a **WordPress core flaw (CVE-2026-87902)** — prioritize exposure validation and patching.\n- **ShinyHunters/UNC6240** renewing **mass exploitation of Oracle PeopleSoft (CVE-2026-35273)** with expanded sector targeting; assume opportunistic scanning continues.\n- Elevated **supply-chain/automation risk**: a cluster of **OpenClaw (npm) auth-bypass/RCE CVEs** plus reports of **(re-)compromised GitHub Actions** → review CI/CD and agent-enabled tooling.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) CISA KEV: Microsoft SharePoint RCE (CVE-2026-65660) + MikroTik RouterOS flaws (actively exploited)**\n- **What happened:** CISA added SharePoint **CVE-2026-65660** and **MikroTik RouterOS** vulnerabilities to KEV citing **active exploitation**.  \n- **Why it matters operationally:** Direct foothold on collaboration infrastructure and edge/network devices enabling rapid lateral movement and data access in enterprise environments.  \n- **Recommended immediate actions for the SOC today:** Confirm internet exposure and versioning (SharePoint farms; MikroTik edge/branch), fast-track patch/mitigation; hunt for new web shells/service creation on SharePoint and suspicious admin/API activity on MikroTik.\n\n**2) CISA KEV: WordPress core critical flaw (CVE-2026-87902) + broader WP exploitation noise**\n- **What happened:** CISA added a **WordPress core** critical vuln (**CVE-2026-87902**) to KEV; additional WP/plugin issues surfaced (and “Comment2Shell” PoC mentioned separately).  \n- **Why it matters operationally:** Even if corporate WP presence is “marketing-only,” compromise is commonly used for credential theft, redirector infrastructure, and internal pivot via reused credentials or exposed admin panels.  \n- **Recommended immediate actions for the SOC today:** Inventory all WordPress assets (including third-party hosted and subsidiaries), verify patch levels; monitor for abnormal POSTs to wp-admin/admin-ajax.php, new admin users, theme/plugin file changes, and outbound connections from WP hosts.\n\n**3) Active campaign: ShinyHunters/UNC6240 mass exploitation of Oracle PeopleSoft (CVE-2026-35273)**\n- **What happened:** Google/Mandiant reports **renewed mass exploitation** of **PeopleSoft CVE-2026-35273** by **UNC6240 (ShinyHunters)** with broadened global targeting.  \n- **Why it matters operationally:** PeopleSoft often holds HR/finance data; exploitation can quickly turn into **data theft/extortion** and privileged access across the domain.  \n- **Recommended immediate actions for the SOC today:** Identify any PeopleSoft internet reachability and apply vendor mitigations/patches; hunt for unusual process execution from app servers, new scheduled tasks/cron, unexpected outbound traffic (esp. from app tier), and suspicious access to PeopleSoft admin interfaces.\n\n**4) Webmail/remote admin exposure: Roundcube exploitation at scale (CVE-2026-48842)**\n- **What happened:** Reporting indicates **active exploitation** of **Roundcube CVE-2026-48842** with a large number of exposed instances still online.  \n- **Why it matters operationally:** Webmail compromise is a high-likelihood path to mailbox data theft, invoice/payment fraud enablement, and credential harvesting in financial workflows.  \n- **Recommended immediate actions for the SOC today:** Verify whether any Roundcube instances exist (owned or acquired entities), ensure patch/mitigation; monitor IMAP/SMTP auth anomalies, suspicious mailbox rules/forwarding creation, and unusual web requests to Roundcube endpoints.\n\n**5) “Turn it off” vendor warning: Kiteworks MFT potential zero-day (details limited)**\n- **What happened:** Kiteworks reportedly advised customers to **shut down MFT servers** due to a **high-danger zero-day** (public details unclear).  \n- **Why it matters operationally:** MFT appliances are high-value targets for ransomware/extortion groups; “shutdown” guidance implies high confidence exploitation risk and potential pre-auth compromise paths.  \n- **Recommended immediate actions for the SOC today:** If we operate Kiteworks: confirm asset ownership, isolate from internet/VPN, follow vendor guidance (shutdown if required) and start targeted IR triage (admin logins, file access spikes, new service accounts); if not, watch for third-party notifications and inbound data-transfer disruptions.\n\n---\n\n### Monitoring & detection recommendations\n- **SharePoint farms (IIS/Windows/EDR):** Alert on suspicious child processes spawned by w3wp.exe (e.g., cmd/powershell) and new/modified files in web directories; map to **T1505.003 (Web Shell)**, **T1059 (Command/Scripting)**.\n- **Network edge (firewall/VPN/router logs):** For MikroTik, hunt for unusual management access (Winbox/API), config exports, and login bursts from new geos; map to **T1078 (Valid Accounts)** / **T1562 (Impair Defenses)** when config changes appear.\n- **PeopleSoft/app servers (EDR + web/app logs):** Monitor for new binaries/scripts in application directories, abnormal outbound connections from app tier, and spikes in admin console access; map to **T1190 (Exploit Public-Facing App)**, **T1105 (Ingress Tool Transfer)**.\n- **Webmail (Roundcube) + IdP:** Correlate webmail access anomalies with IdP sign-ins and mailbox rule creation/forwarding changes (O365/Exchange logs if applicable); map to **T1114 (Email Collection)**.\n- **WordPress (WAF/web logs + file integrity):** Hunt for admin-ajax.php abuse, unexpected plugin/theme edits, creation of new admin users, and outbound callbacks from WP hosts; map to **T1190** and **T1505.003**.\n- **CI/CD (GitHub audit logs + endpoint telemetry):** Review recent workflow/run activity for anomalous outbound network calls, secret access, or new/modified actions; map to **T1552 (Unsecured Credentials)** / **T1059**.\n- **Docker exposure (network telemetry):** Scan for any externally reachable **TCP/2375** and alert on unauthenticated Docker API calls; map to **T1190** and **T1610 (Deploy Container)**.\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** Add today’s KEV items (SharePoint, MikroTik, WordPress core, Roundcube where applicable) to an accelerated SLA and verify with post-patch validation scans.\n- **Asset discovery gaps:** Ensure continuous discovery covers “shadow IT” web stacks (WordPress/Roundcube) and acquired entities; require ownership tagging and patch attestation.\n- **MFT hardening:** For any managed file transfer products (Kiteworks or otherwise), enforce internet isolation where feasible, admin access via PAM, and enhanced logging/retention for transfer and admin events.\n- **Supply-chain controls for npm/agent tools:** Review use of **OpenClaw** (and similar tool-enabled coding agents) in dev environments; pin versions, restrict execution privileges, and blocklist/approve tool capabilities in production pipelines.\n- **CI/CD security baseline:** Reassess GitHub Actions permissions (least privilege, restricted runners, signed commits/actions where possible) and secret-scoping; implement anomaly alerts on secret reads and unusual workflow triggers.\n- **Ransomware/extortion readiness:** Given ShinyHunters activity and web-app exploitation trends, validate egress controls, backup immutability, and incident runbooks for data-theft/extortion scenarios (legal/comms escalation paths).",
+  "highlights": [
+    {
+      "title": "U.S. CISA adds WordPress flaw to its Known Exploited Vulnerabilities catalog",
+      "link": "https://securityaffairs.com/199790/security/u-s-cisa-adds-wordpress-flaw-to-its-known-exploited-vulnerabilities-catalog.html",
+      "source": "Security Affairs",
+      "published": "2026-09-26T07:42:26+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 85.07,
+      "priority_score": 88.78
+    },
+    {
+      "title": "SharePoint RCE and MikroTik RouterOS Flaws Actively Exploited in the Wild",
+      "link": "https://vulners.com/thn/THN:9715C431C60746BA216FC3E68104EEDB?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-09-26T08:49:00+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Cloud / SaaS",
+        "Exploit / PoC",
+        "Windows / Microsoft"
+      ],
+      "curated": false,
+      "signal_tier": "critical",
+      "signal_score": 84.58,
+      "priority_score": 77.28
+    },
+    {
+      "title": "REALITY_SMASHER",
+      "link": "https://vulners.com/kitploit/KITPLOIT:TOOLS-GITHUB-RABIDWH0RE-REALITY_SMASHER?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-09-26T08:30:10+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "critical",
+      "signal_score": 83.58,
+      "priority_score": 77.22
+    },
+    {
+      "title": "SharePoint RCE and MikroTik RouterOS Flaws Actively Exploited in the Wild",
+      "link": "https://thehackernews.com/2026/09/sharepoint-rce-and-mikrotik-routeros.html",
+      "source": "The Hacker News",
+      "published": "2026-09-26T08:49:53+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Cloud / SaaS",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 82.98,
+      "priority_score": 89.21
+    },
+    {
+      "title": "CVE-2023-28252",
+      "link": "https://vulners.com/kitploit/KITPLOIT:TOOLS-GITHUB-FORTRA-CVE-2023-28252?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-09-26T08:29:55+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Linux / Unix",
+        "Network / OT / ICS",
+        "Ransomware",
+        "Windows / Microsoft"
+      ],
+      "curated": false,
+      "signal_tier": "critical",
+      "signal_score": 82.58,
+      "priority_score": 77.14
+    },
+    {
+      "title": "ShinyHunters Renewed Mass Exploitation Campaign Targeting Oracle PeopleSoft",
+      "link": "https://cloud.google.com/blog/topics/threat-intelligence/shinyhunters-renewed-mass-exploitation-campaign-targeting-oracle-peoplesoft/",
+      "source": "Threat Intelligence",
+      "published": "2026-09-25T14:00:00+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Linux / Unix",
+        "Malware / Payloads",
+        "Ransomware",
+        "Data Breaches / Leaks",
+        "Threat Actors / APT",
+        "Cloud / SaaS",
+        "Exploit / PoC",
+        "Identity / Access",
+        "Windows / Microsoft"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 75.34,
+      "priority_score": 86.04
+    },
+    {
+      "title": "CVE-2026-100593 - OpenClaw before 2026.7.1 Authentication Bypass via activation",
+      "link": "https://cvefeed.io/vuln/detail/CVE-2026-100593",
+      "source": "CVEfeed.io - Latest Vulnerabilities",
+      "published": "2026-09-26T03:17:07+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Supply Chain / Software"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 69.09,
+      "priority_score": 88.17
+    },
+    {
+      "title": "CVE-2026-100588 - OpenClaw before 2026.7.1 Authentication Bypass via node.invoke",
+      "link": "https://cvefeed.io/vuln/detail/CVE-2026-100588",
+      "source": "CVEfeed.io - Latest Vulnerabilities",
+      "published": "2026-09-26T03:17:06+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Supply Chain / Software"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 69.09,
+      "priority_score": 88.17
+    },
+    {
+      "title": "CVE-2026-100585 - OpenClaw before 2026.7.1 Authentication Bypass via MCP Channel",
+      "link": "https://cvefeed.io/vuln/detail/CVE-2026-100585",
+      "source": "CVEfeed.io - Latest Vulnerabilities",
+      "published": "2026-09-26T03:17:06+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Supply Chain / Software"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 69.09,
+      "priority_score": 88.17
+    },
+    {
+      "title": "CVE-2026-100580 - OpenClaw before 2026.7.1 Remote Code Execution via cron tool",
+      "link": "https://cvefeed.io/vuln/detail/CVE-2026-100580",
+      "source": "CVEfeed.io - Latest Vulnerabilities",
+      "published": "2026-09-26T03:17:05+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Supply Chain / Software"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 69.09,
+      "priority_score": 87.9
+    }
+  ]
+}
