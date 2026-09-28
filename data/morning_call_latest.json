@@ -1,163 +1,181 @@
 {
-  "generated_at": "2026-09-27T12:02:24.091233+00:00",
-  "analysis_date": "2026-09-27",
+  "generated_at": "2026-09-28T13:51:16.933987+00:00",
+  "analysis_date": "2026-09-28",
   "provider": "openai",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-09-27T06:32:55.650331+00:00",
+  "source_generated_at": "2026-09-28T11:40:14.949472+00:00",
   "source_days_back": 30,
-  "source_total_items": 59441,
-  "total_items_in_window_all": 1924,
-  "total_items_in_window_curated": 4,
-  "total_items_in_window_selected": 40,
+  "source_total_items": 59259,
+  "total_items_in_window_all": 1857,
+  "total_items_in_window_curated": 15,
+  "total_items_in_window_selected": 43,
   "context_selection_policy": "curated-plus-operational-signal-v1",
-  "morning_call_markdown": "### Executive Summary\n- Public disclosures and PoCs dropped for multiple **unauthenticated / pre-auth web RCE paths** in common internet-facing stacks (ERP REST gateway, cPanel/WHM, Joomla/WordPress plugins) → higher opportunistic scanning risk today.\n- A new PoC targets **Windows Server 2025 Netlogon/LSASS pre-auth crash** over UDP/389 (DC DoS) → monitor for CLDAP abuse and DC instability.\n- Several **auth-bypass / SSRF / replay** issues in app platforms and API frameworks (Budibase/Flowise/http4k) → review exposure, especially where tied to SSO/IdP flows.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Netsis NetOpenX REST (ERP gateway) unauthenticated SQLi → OS command execution**\n- What happened: Public “0day” disclosure reports **unauthenticated SQL injection in OAuth token endpoint** leading to **xp_cmdshell / SYSTEM-level command execution** (CVSS cited 9.8).\n- Why it matters operationally: If this REST gateway is internet-facing, it’s a direct path to **server takeover** and likely rapid ransomware staging (financial ops/ERP impact).\n- Recommended immediate actions for the SOC today: **Identify any NetOpenX/Netsis REST exposure** (external scan + CMDB) and **block/WAF restrict token endpoint** until patched; hunt web logs for **SQLi patterns and unusual token requests**.\n\n**2) Internet-facing admin panels/plugins with fresh PoCs (cPanel/WHM, Joomla “UP” plugin, WordPress upload/RCE chains)**\n- What happened: Multiple PoCs published for **critical auth bypass / file upload / RCE** in widely deployed web ecosystems (notably **cPanel/WHM CVE-2026-41940**, **Joomla UP plugin CVE-2026-97161/97163**, **WP plugin/file upload CVE-2026-82901**, and a **WP RCE chain tool referencing CVE-2026-63030**).\n- Why it matters operationally: These are classic **mass-exploitation targets**; if any of our marketing/legacy portals, hosting, or vendor-managed sites are exposed, compromise could pivot into internal networks.\n- Recommended immediate actions for the SOC today: **Confirm if we run any affected components** (ASM/EASM + internal inventory) and **apply virtual mitigations** (disable vulnerable plugins/endpoints, restrict admin interfaces to VPN, tighten file upload paths); increase alerting on **new webshell-like writes under web roots**.\n\n**3) Windows Server 2025 Domain Controller Netlogon pre-auth LSASS crash PoC (DoS)**\n- What happened: A PoC (“LongLogon crasher”) claims a **single CLDAP packet to UDP/389** can crash **lsass.exe** and reboot a Windows Server 2025 DC (CVE-2026-41089; CVSS cited 9.8).\n- Why it matters operationally: Even without RCE, **DC reboot/LSASS crash** is a high-impact availability event; could be used for **disruption** or to mask other activity.\n- Recommended immediate actions for the SOC today: **Monitor DCs for LSASS crashes/reboots** and spikes in **UDP/389** traffic; if feasible, **restrict/segment UDP/389 exposure** to known clients/subnets and review any edge ACLs.\n\n**4) Lightstreamer Server unauthenticated JMX console → native code execution**\n- What happened: Public “0day” disclosure reports **unauthenticated access to JMX inspection console** enabling invocation of sensitive MBeans (reaching `jvmtiAgentLoad`) for code execution.\n- Why it matters operationally: If used in market-data/streaming or internal real-time services, compromise enables **arbitrary code execution inside JVM** and lateral movement.\n- Recommended immediate actions for the SOC today: **Locate any Lightstreamer instances** and validate if **JMX/console is exposed**; immediately **restrict management ports** to admin networks and hunt for **unexpected JMX invocations / management URL hits** in app logs.\n\n---\n\n### Monitoring & detection recommendations\n- **Internet-facing web exploitation (Joomla/WP/cPanel/ERP REST):** Monitor **WAF/reverse proxy + web server logs** for spikes in 4xx/5xx, traversal strings (`../`), suspicious multipart uploads, and unusual admin/API endpoints (ATT&CK **T1190** Exploit Public-Facing Application).\n- **Webshell / malicious file writes:** From **EDR + file integrity monitoring** on web servers, alert on new/modified scripts in web roots (e.g., `/wp-content/uploads/`, Joomla plugin dirs, cPanel-managed paths) and suspicious process chains (web server → shell) (ATT&CK **T1505.003** Web Shell).\n- **DC DoS / CLDAP anomalies:** On **domain controllers + network IDS/firewall**, baseline and alert on **UDP/389** bursts and new sources; on Windows logs, watch **System event reboots** and **Application crashes for lsass.exe** (ATT&CK **T1499** Endpoint DoS).\n- **JMX/Java management abuse (Lightstreamer):** Collect **app access logs + JVM logs**; alert on requests to management/JMX endpoints from non-admin segments and any unusual `com.sun.management` operation patterns (ATT&CK **T1569.002** Service Execution / management interface abuse—best-fit).\n- **SSO/Auth bypass attempts (Budibase/Flowise themes):** On **IdP logs (Azure AD/Okta/etc.) + app auth logs**, watch for abnormal login flows: repeated callbacks, logins for **INVITED/pending users**, or mismatched `email/email_verified` patterns (ATT&CK **T1556** Modify Authentication Process—behavioral alignment).\n- **SSRF / webhook abuse (Budibase Teams webhook theme):** On **egress proxy/DNS logs**, detect server-to-internet calls from app servers to unusual destinations shortly after inbound webhook requests (ATT&CK **T1190/T1071.001** depending on outcome).\n- **Linux privilege escalation updates (kernel CVEs):** On **Linux EDR/auditd**, alert on local exploit indicators: new privileged binaries, unusual `unshare`/namespace use, and unexpected kernel module/syscall activity (ATT&CK **T1068** Exploitation for Privilege Escalation).\n\n---\n\n### Medium-term follow-ups\n- **Exposure review/patch planning:** Build a targeted patch/mitigation list for: cPanel/WHM, Joomla “UP” plugin, WP add-ons mentioned, Lightstreamer, and any ERP REST gateways; verify maintenance ownership (internal vs vendor-managed).\n- **Hardening internet-facing admin surfaces:** Enforce **VPN-only/allowlisted access** to admin panels, disable unused upload features, and require MFA where supported (reduce blast radius for future plugin/app CVEs).\n- **DC network hygiene:** Revalidate whether **UDP/389 (CLDAP)** is required across all segments; document allowed sources and implement segmentation/ACLs where business permits.\n- **SSO integration guardrails:** For internal platforms using SSO (Budibase/Flowise-like patterns), validate **invite flows** require codes and **email_verified** checks; add test cases in CI where possible.\n- **IoT/edge device posture (MultiTech Conduit / PRO3X PDU disclosures):** If present in facilities, ensure **management interfaces are isolated**, firmware is tracked, and admin access is tightly controlled (assumption: these may exist in branches/DCs).\n- **Runbook updates:** Add/refresh SOC playbooks for **web exploitation triage** (webshell checks, rapid containment steps) and **DC availability incidents** (LSASS crash response, traffic containment).",
+  "morning_call_markdown": "### Executive Summary\n- **Citrix NetScaler ADC/Gateway zero-day RCEs (CVE-2026-88771/88772) are actively exploited globally** with reports of **webshell planting**; patches are out and CISA KEV-listed—treat as potential pre-patch compromise.\n- **Roundcube Webmail SQLi (CVE-2026-48842) is now exploited in the wild**—internet-facing webmail instances are high-risk for credential/database theft and foothold creation.\n- **Azure identity abuse + destructive cloud actions trend**: Storm-3168/“JADEPUFFER”-linked activity abused **stolen Azure service principals** to delete storage rapidly—prioritize cloud identity/keys monitoring.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Citrix NetScaler ADC / NetScaler Gateway zero-day RCE (CVE-2026-88771, CVE-2026-88772)**\n- **What happened:** Two unauthenticated NetScaler RCE zero-days were patched and confirmed **actively exploited for weeks**, with **webshell deployment** reported.\n- **Why it matters operationally:** NetScaler is commonly perimeter-facing in financial orgs; exploitation can yield **edge RCE → credential theft → internal pivot**; KEV-level urgency.\n- **Recommended immediate actions for the SOC today:** **Identify all NetScaler instances + versions and emergency patch/mitigate**; **assume breach** on any internet-exposed unpatched device and initiate **targeted compromise checks** (new/modified files, suspicious processes, config changes) and IR containment plan.\n\n**2) Roundcube Webmail SQL Injection now exploited (CVE-2026-48842)**\n- **What happened:** A Roundcube SQLi patched months ago is **now being exploited in the wild** against unpatched servers.\n- **Why it matters operationally:** Webmail compromise often enables **mailbox access, credential harvesting, data theft, and lateral movement** (common initial access path for BEC/ransomware staging).\n- **Recommended immediate actions for the SOC today:** **Confirm whether any Roundcube is internet-facing and patch immediately**; **review recent web/app logs for SQLi patterns and anomalous admin/session behavior**; be ready to **reset credentials/tokens** if compromise indicators appear.\n\n**3) Microsoft-reported Storm-3168 / “JADEPUFFER”-linked Azure identity abuse (service principals)**\n- **What happened:** Actor activity described abusing **stolen Azure identities/service principals** to **harvest keys** and **delete Azure storage quickly**.\n- **Why it matters operationally:** Financial services have high cloud dependency; this is **identity-first** compromise with **rapid destructive impact** (availability + data loss) and potential extortion leverage.\n- **Recommended immediate actions for the SOC today:** **Hunt for abnormal service principal sign-ins, key/secret additions, and rapid-delete patterns in Azure**; **verify break-glass accounts + soft-delete/immutability protections** and escalate any suspicious activity to cloud IR immediately.\n\n**4) SharePoint exploitation attempts with two-stage webshell deployment (CVE-2026-65660)**\n- **What happened:** Reporting highlights **two-stage SharePoint exploitation attempts** leading to **webshell deployment**, particularly where **anonymous access** is enabled.\n- **Why it matters operationally:** SharePoint remains a high-value target for **initial access and internal staging**; webshells enable persistent remote control and data access.\n- **Recommended immediate actions for the SOC today:** **Inventory exposed SharePoint and confirm patch level / mitigations**; **check IIS/SharePoint logs for suspicious POSTs, unexpected file drops, and anomalous requests to uncommon paths**; disable/limit **anonymous access** where present.\n\n**5) Kiteworks “potential zero-day” precautionary shutdown notice (vendor advisory; details limited)**\n- **What happened:** Kiteworks warned customers to **temporarily shut down servers** due to credible threat intel of potential targeting; later lifted broad shutdown guidance (exact CVE/IOC not provided in the items).\n- **Why it matters operationally:** Managed file transfer/content collaboration platforms are high-value for data exfiltration; uncertainty suggests **watch status but fast escalation if asset exists**.\n- **Recommended immediate actions for the SOC today:** **Confirm whether we run Kiteworks and whether it’s internet-facing**; if present, **review vendor advisories and increase monitoring** (auth anomalies, admin changes, new integrations) until vendor provides definitive patch/mitigation guidance.\n\n---\n\n### Monitoring & detection recommendations\n- **NetScaler edge compromise hunting (T1190 Exploit Public-Facing App):** Monitor **WAF/ADC logs, appliance syslog, reverse-proxy logs** for unusual requests to management/VPX paths, spikes in 200s/500s, and **new files or processes on the appliance**; correlate with **new outbound connections** from the NetScaler subnet.\n- **Webshell behaviors (T1505.003 Web Shell):** On **IIS/SharePoint and any web tiers**, alert on **newly created executable web content** (aspx/php/jsp), unusual child processes (w3wp spawning cmd/powershell), and **odd URL patterns** in web logs.\n- **Roundcube SQLi + mailbox abuse (T1190/T1114 Email Collection):** Review **web server access logs, WAF, database logs** for SQLi strings/abnormal query errors; in **mail logs**, look for anomalous IMAP/SMTP logins, mass forwarding rules, or sudden outbound volume.\n- **Azure service principal abuse (T1078 Valid Accounts, T1552 Unsecured Credentials):** In **Azure AD sign-in logs, AuditLogs, Microsoft Defender for Cloud/Cloud Apps**, hunt for **service principal credential additions**, consent grants, new federated credentials, and sign-ins from new geos/ASNs.\n- **Cloud destructive actions (T1485 Data Destruction):** In **Azure Activity Logs**, alert on bursts of **Delete Storage Account / Delete Blob Container / KeyVault secret read** operations, especially outside change windows; validate **soft delete/immutability** events.\n- **Exploit/PoC-driven scanning:** In **firewall/IDS/WAF** telemetry, watch for internet scanning against **Citrix/SharePoint/Roundcube** fingerprints and elevated blocked requests; prioritize triage for any successful (allowed) matches.\n- **Priv-esc PoCs on Linux/CUPS (local risk):** If Linux print services exist, monitor **sudoers file modifications, unexpected CUPS config/queue changes**, and local user-to-root escalations in **EDR + syslog** (assumption: limited exposure unless CUPS is misconfigured).\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** Add **CVE-2026-88771/88772 (NetScaler)** and **CVE-2026-48842 (Roundcube)** to top-tier patch KPIs; ensure **internet-facing assets patch within 24–72h** and track exceptions with compensating controls.\n- **Edge device assurance:** Implement/confirm **immutable logging + centralized syslog** for ADC/VPN/WAF appliances; validate ability to perform **forensic collection** (configs, file integrity baselines).\n- **SharePoint hardening:** Review and reduce **anonymous access**, enforce **MFA/conditional access for admins**, and validate **IIS advanced logging** retention for rapid webshell investigations.\n- **Azure identity hygiene:** Rotate/limit **service principal secrets**, move to **managed identities** where possible, enforce **least privilege**, and require **PIM/JIT** for high-impact roles; validate **break-glass** procedures.\n- **Third-party file transfer platforms (e.g., Kiteworks):** Ensure ownership for **vendor advisory monitoring**, defined **isolation playbook**, and periodic **exposure review** (internet-facing 여부, auth methods, logging).\n- **SOC playbooks:** Refresh rapid-response runbooks for **edge RCE → webshell**, **webmail compromise**, and **cloud destructive events**, including escalation paths and containment steps (network isolation, token revocation, storage recovery).",
   "highlights": [
     {
-      "title": "Exploit for CVE-2026-97161",
-      "link": "https://vulners.com/githubexploit/31208304-3BCD-537F-8D21-73C9E6FD6415?utm_source=rss&utm_medium=rss&utm_campaign=rss",
-      "source": "Vulners.com RSS Feed",
-      "published": "2026-09-26T20:50:27+00:00",
+      "title": "Citrix NetScaler RCE zero-days exploited globally for weeks (CVE-2026-88771, CVE-2026-88772)",
+      "link": "https://www.helpnetsecurity.com/2026/09/28/citrix-netscaler-rce-zero-days-exploited-for-weeks-cve-2026-88771-cve-2026-88772/",
+      "source": "Help Net Security",
+      "published": "2026-09-28T09:51:32+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Crypto / Web3",
         "Exploit / PoC",
-        "Malware / Payloads"
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 100.0,
+      "priority_score": 89.81
+    },
+    {
+      "title": "Zero-Day Exploitation of Citrix NetScaler ADC and Gateway: CVE-2026-88771 and CVE-2026-88772",
+      "link": "https://www.rapid7.com/blog/post/etr-zero-day-exploitation-of-citrix-netscaler-adc-and-gateway-cve-2026-88771-and-cve-2026-88772",
+      "source": "Rapid7 Cybersecurity Blog",
+      "published": "2026-09-28T10:05:00+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Data Breaches / Leaks"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 100.0,
+      "priority_score": 89.67
+    },
+    {
+      "title": "CISA Warns of Citrix NetScaler 0-Day RCE Vulnerabilities Exploited in Attacks",
+      "link": "https://cybersecuritynews.com/citrix-netscaler-0-day-rce-vulnerabilities-exploited/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-09-28T09:28:38+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Cloud / SaaS",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 100.0,
+      "priority_score": 87.34
+    },
+    {
+      "title": "Citrix Patches Critical Zero Days Under Active Exploitation",
+      "link": "https://www.infosecurity-magazine.com/news/citrix-patches-critical-zero-days/",
+      "source": "Infosecurity Magazine – News",
+      "published": "2026-09-28T08:30:00+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 100.0,
+      "priority_score": 86.91
+    },
+    {
+      "title": "Citrix Confirms NetScaler 0-Day RCE Vulnerabilities Actively Exploited in Attack",
+      "link": "https://cybersecuritynews.com/citrix-confirms-netscaler-0-day/",
+      "source": "Cyber Security News",
+      "published": "2026-09-27T16:41:48+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Cloud / SaaS",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 100.0,
+      "priority_score": 84.84
+    },
+    {
+      "title": "Citrix NetScaler, Oracle, Cloudflare RCEs under active exploitation; WAF bypasses escalate risks",
+      "link": "https://defend.network/briefings/citrix-netscaler-cloudflare-oracle-rce-exploited-2026-09-28.html",
+      "source": "defend.network",
+      "published": "2026-09-28T06:30:00+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Cloud / SaaS",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 87.16,
+      "priority_score": 89.38
+    },
+    {
+      "title": "SANS Stormcast Monday, September 28th, 2026: Macfinger Details; NetScaler 0-Day; KiteWorks 0-Day; ShinyHunters and PeopleSoft",
+      "link": "https://isc.sans.edu/podcastdetail/10112",
+      "source": "SANS Internet Stormcenter Daily Cyber Security Podcast (Stormcast)",
+      "published": "2026-09-28T02:00:02+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Malware / Payloads",
+        "Network / OT / ICS",
+        "Community / Briefing"
       ],
       "curated": false,
       "signal_tier": "critical",
-      "signal_score": 80.57,
-      "priority_score": 73.53
+      "signal_score": 86.99,
+      "priority_score": 77.21
     },
     {
-      "title": "[0day-rubbish] Netsis NetOpenX REST 2.0.6.9 Unauthenticated SQL injection to xp_cmdshell SYSTEM command execution (9.8)",
-      "link": "https://seclists.org/fulldisclosure/2026/Sep/78",
-      "source": "Full Disclosure",
-      "published": "2026-09-27T04:12:46+00:00",
+      "title": "SharePoint CVE-2026-65660: Two-Stage Web Shell Deployment Attempts on Sites Allowing Anonymous Access",
+      "link": "https://dev.to/anoymask/sharepoint-cve-2026-65660-two-stage-web-shell-deployment-attempts-on-sites-allowing-anonymous-3fbd",
+      "source": "DEV Community",
+      "published": "2026-09-28T11:22:18+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
+        "Detection Engineering",
+        "Malware / Payloads",
+        "Threat Actors / APT",
+        "Cloud / SaaS",
+        "Exploit / PoC",
         "Identity / Access",
-        "Web / API Security",
-        "OSINT / Community"
-      ],
-      "curated": true,
-      "signal_tier": "high",
-      "signal_score": 76.49,
-      "priority_score": 91.16
-    },
-    {
-      "title": "[0day-rubbish] MultiTech Conduit AEP 6.3.6 Authenticated import_config filename command injection to root RCE (7.2)",
-      "link": "https://seclists.org/fulldisclosure/2026/Sep/77",
-      "source": "Full Disclosure",
-      "published": "2026-09-27T04:12:44+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
         "Linux / Unix",
         "OSINT / Community"
       ],
       "curated": true,
-      "signal_tier": "high",
-      "signal_score": 70.49,
-      "priority_score": 91.6
+      "signal_tier": "critical",
+      "signal_score": 86.08,
+      "priority_score": 90.27
     },
     {
-      "title": "[0day-rubbish] Lightstreamer Server 7.4.8 Unauthenticated JMX jvmtiAgentLoad native code execution (8.1)",
-      "link": "https://seclists.org/fulldisclosure/2026/Sep/76",
-      "source": "Full Disclosure",
-      "published": "2026-09-27T04:12:43+00:00",
+      "title": "InfoSec News Nuggets – 09/28/2026",
+      "link": "https://aboutdfir.com/infosec-news-nuggets-09-28-2026/",
+      "source": "AboutDFIR – The Definitive Compendium Project",
+      "published": "2026-09-28T10:31:11+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "OSINT / Community"
+        "Cloud / SaaS",
+        "Crypto / Web3",
+        "Exploit / PoC",
+        "Detection Engineering"
+      ],
+      "curated": false,
+      "signal_tier": "critical",
+      "signal_score": 84.95,
+      "priority_score": 79.46
+    },
+    {
+      "title": "CC-4858 - Exploitation of Zero-Day Vulnerabilities affecting Citrix NetScaler",
+      "link": "https://digital.nhs.uk/cyber-alerts/2026/cc-4858",
+      "source": "NHS Digital - Cyber Alert Feed",
+      "published": "2026-09-28T09:40:00+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Government / CERT"
       ],
       "curated": true,
-      "signal_tier": "high",
-      "signal_score": 70.49,
-      "priority_score": 91.16
-    },
-    {
-      "title": "Exploit for CVE-2026-97163",
-      "link": "https://sploitus.com/exploit?id=199B4DF0-DBCA-55D9-9107-272F288C4AD9&utm_source=rss&utm_medium=rss",
-      "source": "Sploitus – Exploits",
-      "published": "2026-09-26T20:54:50+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 70.38,
-      "priority_score": 72.57
-    },
-    {
-      "title": "Exploit for CVE-2026-97160",
-      "link": "https://sploitus.com/exploit?id=AB01E665-A936-5B44-8977-341587A74234&utm_source=rss&utm_medium=rss",
-      "source": "Sploitus – Exploits",
-      "published": "2026-09-26T20:45:34+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 70.38,
-      "priority_score": 72.53
-    },
-    {
-      "title": "Exploit for CVE-2026-100740",
-      "link": "https://sploitus.com/exploit?id=0BF14342-6D2A-54D8-BFAA-39D212F2E8C2&utm_source=rss&utm_medium=rss",
-      "source": "Sploitus – Exploits",
-      "published": "2026-09-27T05:40:35+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 68.38,
-      "priority_score": 74.92
-    },
-    {
-      "title": "Exploit for CVE-2026-82901",
-      "link": "https://sploitus.com/exploit?id=B633A47E-C330-5581-8E2E-E227A9199E85&utm_source=rss&utm_medium=rss",
-      "source": "Sploitus – Exploits",
-      "published": "2026-09-26T21:11:27+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 68.38,
-      "priority_score": 72.64
-    },
-    {
-      "title": "Exploit for CVE-2026-97161",
-      "link": "https://sploitus.com/exploit?id=31208304-3BCD-537F-8D21-73C9E6FD6415&utm_source=rss&utm_medium=rss",
-      "source": "Sploitus – Exploits",
-      "published": "2026-09-26T20:50:27+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 68.38,
-      "priority_score": 72.55
-    },
-    {
-      "title": "Exploit for CVE-2026-61500",
-      "link": "https://sploitus.com/exploit?id=E3488374-2215-56B2-9C50-E9A2967FFD46&utm_source=rss&utm_medium=rss",
-      "source": "Sploitus – Exploits",
-      "published": "2026-09-26T15:23:41+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 68.38,
-      "priority_score": 71.09
+      "signal_tier": "critical",
+      "signal_score": 83.12,
+      "priority_score": 90.07
     }
   ]
 }
