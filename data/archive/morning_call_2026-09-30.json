@@ -1,0 +1,174 @@
+{
+  "generated_at": "2026-09-30T12:33:19.530279+00:00",
+  "analysis_date": "2026-09-30",
+  "provider": "openai",
+  "model": "gpt-5.2",
+  "window_hours": 24,
+  "source_file": "data/news_recent.json",
+  "source_generated_at": "2026-09-30T11:07:31.344205+00:00",
+  "source_days_back": 30,
+  "source_total_items": 58321,
+  "total_items_in_window_all": 3271,
+  "total_items_in_window_curated": 12,
+  "total_items_in_window_selected": 40,
+  "context_selection_policy": "curated-plus-operational-signal-v1",
+  "morning_call_markdown": "### Executive Summary\n- Active, in-the-wild exploitation of **Citrix NetScaler ADC/Gateway zero-days (CVE-2026-88771 / CVE-2026-88772)** is escalating from targeted intrusions to broad mass-scanning; web shells **WHIPSHOT/SLAPSHOT** observed.\n- **Apple CoreGraphics zero-day (CVE-2026-86950)** is confirmed exploited and now in **CISA KEV**; prioritize patching for high-risk users and internet-facing Mac fleets.\n- Multiple new **public PoCs for critical CVEs** surfaced (various products, incl. CMS/web apps); assume opportunistic exploitation where exposed, but prioritize by **asset exposure and business criticality**.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Citrix NetScaler ADC/Gateway: active 0-days + mass exploitation (CVE-2026-88771 / CVE-2026-88772)**\n- **What happened:** Confirmed in-the-wild exploitation of NetScaler zero-days with tooling for **pre-auth code execution** and deployment of **custom web shells** (WHIPSHOT/SLAPSHOT); exploitation has shifted to “spray and pray.”\n- **Why it matters operationally:** NetScaler often fronts **SSO/VPN/app access**; compromise can yield **credential theft, internal pivoting, and long-lived perimeter persistence** (high ransomware/espionage risk).\n- **Recommended immediate actions for the SOC today:** Validate **patch level/mitigations** on all NetScaler (internet-facing first) + **hunt for web shell indicators and unusual admin/auth events** on appliances and downstream IdP/VPN logs.\n\n**2) Citrix NetScaler post-exploitation activity: web shells, tunneling, credential access**\n- **What happened:** Reporting highlights post-exploitation chains: **root access**, **custom web shells**, and potential **tunneling** from NetScaler into internal networks.\n- **Why it matters operationally:** Even after patching, **persistence may remain**; attackers can use the appliance as a **stealthy jump point** into sensitive segments (payments, SWIFT, core banking).\n- **Recommended immediate actions for the SOC today:** For any NetScaler with suspicious telemetry, treat as **possible perimeter breach**: isolate from management plane as feasible, **collect configs/logs**, and initiate **IR scoping** (lateral movement + credential exposure).\n\n**3) Apple CoreGraphics zero-day weaponized (CVE-2026-86950) now in KEV**\n- **What happened:** Apple released emergency fixes for **CVE-2026-86950** (CoreGraphics out-of-bounds write) with confirmed exploitation in targeted attacks; CISA added it to **Known Exploited Vulnerabilities**.\n- **Why it matters operationally:** Enables code execution via **maliciously crafted content/files**; risk concentrates on **executives, traders, and users exposed to targeted phishing/attachment workflows**.\n- **Recommended immediate actions for the SOC today:** Push/verify **iOS/iPadOS/macOS updates** (or compensating controls for delayed endpoints) and **increase alerting on suspicious file handling / browser renderer crashes** on Apple endpoints.\n\n**4) Public PoCs for multiple high-severity CVEs (assume opportunistic scanning where exposed)**\n- **What happened:** PoCs published for several critical issues (incl. **Craft CMS RCE CVE-2026-31857**, WordPress SQLi CVEs, and other high-CVSS CVEs listed in exploit feeds); product exposure/impact varies (details incomplete in feed items).\n- **Why it matters operationally:** PoCs typically drive **rapid commoditization**; even “non-core” web apps can become initial access into enterprise networks.\n- **Recommended immediate actions for the SOC today:** Identify any **internet-facing instances** of affected CMS/web stacks in our estate; **WAF/IDS virtual patching** + heightened monitoring for exploit patterns until patch status is confirmed.\n\n---\n\n### Monitoring & detection recommendations\n- **NetScaler perimeter monitoring (T1190 Exploit Public-Facing Application):** Firewall/WAF + NetScaler logs for spikes in **DTLS/SSL VPN** requests, unusual HTTP endpoints, and **new/modified files** on appliance web directories (assumption: appliance logging is enabled and retained).\n- **Web shell behavior (T1505.003 Web Shell):** On NetScaler and adjacent reverse-proxy tiers, watch for **unexpected outbound connections** (proxy/tunnel), unusual process execution (where telemetry exists), and repeated access to non-standard web resources.\n- **Credential access follow-on (T1552 / T1003 / T1550):** IdP (AAD/Entra/ADFS), VPN, and AD logs for **new service accounts, abnormal token issuance, MFA changes**, or unusual auth from NetScaler management subnets.\n- **Lateral movement from perimeter (T1021 Remote Services):** EDR + Windows Security logs for **RDP/SMB/WMI/WinRM bursts** originating from DMZ/perimeter segments or atypical admin workstations after suspected NetScaler compromise.\n- **Apple exploitation signals (T1204 User Execution / delivery via crafted file):** EDR on macOS for **app crashes tied to graphics/content rendering**, unusual child processes from browsers/mail clients, and rapid post-crash network beacons.\n- **Exploit-driven web app attacks (T1190):** WAF/web server logs for **SQLi/RCE patterns** against CMS/admin endpoints; prioritize any apps with **authenticated control-panel exposure** (e.g., Craft CP) and unexpected POSTs to admin routes.\n- **Cloud/IdP takeover paths (T1078 Valid Accounts):** Entra ID/Azure AD + Azure DevOps audit logs for **SSPR anomalies, unusual password reset flows**, and **new OAuth app consents/service connections** (based on recent reporting of SSPR → DevOps → k8s credential theft chain).\n\n---\n\n### Medium-term follow-ups\n- **NetScaler hardening baseline:** Ensure appliances are on supported versions, **management interfaces are restricted**, admin auth is MFA-backed where possible, and configs/log forwarding to SIEM is standardized.\n- **Post-patch assurance for NetScaler:** After emergency patching, run a **compromise assessment** playbook (log review, config diffs, credential rotation for accounts used via/behind NetScaler, validate no unauthorized auth policies).\n- **Apple fleet risk reduction:** Tighten macOS/iOS update SLAs for **high-risk groups** (exec/VIP, trading floor), and validate MDM compliance reporting for “must patch” KEV items.\n- **External web app exposure inventory:** Reconcile ASM findings with CMDB to quickly answer “do we run Craft CMS / WordPress plugins / Moodle externally?” and define owners/patch SLAs.\n- **WAF/IDS virtual patch process:** Pre-approve emergency rules for **active 0-days/PoC drops** to reduce time-to-mitigation when patch windows are constrained.\n- **Cloud identity controls:** Review SSPR policies and DevOps service-connection governance; enforce **conditional access**, restrict token lifetimes where feasible, and alert on **new service principals / privilege grants**.",
+  "highlights": [
+    {
+      "title": "WHIPSHOT and SLAPSHOT: the tools behind an active Citrix NetScaler campaign",
+      "link": "https://securityaffairs.com/200046/security/whipshot-and-slapshot-the-tools-behind-an-active-citrix-netscaler-campaign.html",
+      "source": "Security Affairs",
+      "published": "2026-09-30T07:25:36+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 100.0,
+      "priority_score": 89.27
+    },
+    {
+      "title": "NetScaler zero-day exploitation escalates into mass attacks (CVE-2026-88771)",
+      "link": "https://www.helpnetsecurity.com/2026/09/29/netscaler-zero-day-exploitation-escalates-into-mass-attacks-cve-2026-88771/",
+      "source": "Help Net Security",
+      "published": "2026-09-29T14:59:06+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 100.0,
+      "priority_score": 85.65
+    },
+    {
+      "title": "Defending Against Active Exploitation of Citrix NetScaler ADC and Gateway Appliances",
+      "link": "https://cloud.google.com/blog/topics/threat-intelligence/defending-against-active-exploitation-of-citrix-netscaler-adc-and-gateway-appliances/",
+      "source": "Threat Intelligence",
+      "published": "2026-09-29T14:00:00+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Detection Engineering",
+        "Malware / Payloads",
+        "Exploit / PoC",
+        "Linux / Unix",
+        "Ransomware",
+        "Data Breaches / Leaks",
+        "Phishing / Social Engineering",
+        "Threat Actors / APT",
+        "Identity / Access",
+        "Windows / Microsoft"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 100.0,
+      "priority_score": 83.33
+    },
+    {
+      "title": "Apple Zero-Day Vulnerability Weaponized in Targeted Attacks",
+      "link": "https://www.darkreading.com/cyberattacks-data-breaches/apple-zero-day-vulnerability-weaponized-targeted-attacks",
+      "source": "darkreading",
+      "published": "2026-09-29T21:31:29+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 99.05,
+      "priority_score": 86.55
+    },
+    {
+      "title": "Citrix NetScaler CVE-2026-88772 Exploit Details Show Pre-Auth Path to Shellcode Execution",
+      "link": "https://thehackernews.com/2026/09/citrix-netscaler-cve-2026-88772-exploit.html",
+      "source": "The Hacker News",
+      "published": "2026-09-30T05:30:30+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 84.97,
+      "priority_score": 87.7
+    },
+    {
+      "title": "Critical Citrix NetScaler Zero-Days Under Active Exploitation",
+      "link": "https://orca.security/resources/research/critical-citrix-netscaler-zero-days-under-active-exploitation/",
+      "source": "Orca Security Blog",
+      "published": "2026-09-29T15:42:55+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Cloud / SaaS",
+        "Exploit / PoC",
+        "Vendors / Product Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 84.83,
+      "priority_score": 83.97
+    },
+    {
+      "title": "Exploit for CVE-2026-102425",
+      "link": "https://sploitus.com/exploit?id=B8FA3491-B2C3-5342-9524-B38D5D09D84F&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-09-30T08:00:21+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.31,
+      "priority_score": 73.95
+    },
+    {
+      "title": "Exploit for CVE-2026-18143",
+      "link": "https://sploitus.com/exploit?id=B8CC1664-7EE6-5E79-A06C-27CF675143E8&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-09-30T04:35:37+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.31,
+      "priority_score": 73.04
+    },
+    {
+      "title": "Exploit for CVE-2026-84383",
+      "link": "https://sploitus.com/exploit?id=6E724E10-E67C-58E0-BF40-C40EFAC4F6FA&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-09-29T17:40:08+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.31,
+      "priority_score": 70.11
+    },
+    {
+      "title": "Exploit for SQL Injection in Wordpress",
+      "link": "https://sploitus.com/exploit?id=578403F5-E57E-50A5-AED7-B99622B08C75&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-09-29T16:26:47+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Web / API Security"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.31,
+      "priority_score": 69.78
+    }
+  ]
+}
