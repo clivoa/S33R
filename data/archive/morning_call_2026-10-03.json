@@ -1,0 +1,171 @@
+{
+  "generated_at": "2026-10-03T11:38:11.523850+00:00",
+  "analysis_date": "2026-10-03",
+  "provider": "openai",
+  "model": "gpt-5.2",
+  "window_hours": 24,
+  "source_file": "data/news_recent.json",
+  "source_generated_at": "2026-10-03T10:27:49.469355+00:00",
+  "source_days_back": 30,
+  "source_total_items": 60998,
+  "total_items_in_window_all": 2412,
+  "total_items_in_window_curated": 4,
+  "total_items_in_window_selected": 40,
+  "context_selection_policy": "curated-plus-operational-signal-v1",
+  "morning_call_markdown": "### Executive Summary\n- Active exploitation of a **Fortinet FortiMail zero-day (CVE-2026-104286, KEV-listed)**: treat any exposed FortiMail as potentially compromised until verified clean.\n- **Zammad zero-days (CVE-2026-102489 / CVE-2026-102490) are being exploited** for session hijack → RCE/root paths; assume internet-exposed helpdesk/ticketing instances are at risk.\n- **Ransomware operators (Warlock) expanding SharePoint exploitation** and multiple **new/public PoCs** for high-severity CVEs increase opportunistic scanning/initial access risk.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Fortinet FortiMail zero-day exploited in the wild (CVE-2026-104286; path traversal/NULL byte → unauth arbitrary file write; KEV)**\n- What happened: FortiMail critical zero-day is confirmed **actively exploited** and **added to CISA KEV**.\n- Why it matters operationally: FortiMail sits on the perimeter; compromise can become **persistent foothold**, mailflow manipulation, credential theft, and lateral movement into core networks.\n- Recommended immediate actions for the SOC today: **Inventory + confirm patch/mitigation on all FortiMail today;** for any internet-exposed or uncertain devices, **pull logs/forensics immediately and escalate for IR containment** (assume compromise until ruled out).\n\n**2) Zammad helpdesk platform zero-days exploited (CVE-2026-102489 / CVE-2026-102490; session hijack → RCE/root)**\n- What happened: Two Zammad “0-days” reported exploited (incl. against a security org) and now **KEV-listed**.\n- Why it matters operationally: Ticketing systems often integrate with email/SSO and may store sensitive customer/incident data; exploitation enables **account takeover + code execution**, likely leading to data theft and pivoting.\n- Recommended immediate actions for the SOC today: **Identify any Zammad (self-hosted/SaaS-managed connectors) internet exposure and apply vendor fixes/workarounds ASAP;** **hunt for anomalous admin sessions and unexpected process execution under the Zammad service account**.\n\n**3) SharePoint exploitation surge tied to Warlock ransomware activity (campaign trend)**\n- What happened: Reporting indicates Warlock ransomware is **expanding SharePoint exploitation** across multiple sectors/countries.\n- Why it matters operationally: SharePoint commonly holds high-value docs and is often federated with IdP; exploitation frequently leads to **rapid privilege escalation + ransomware staging**.\n- Recommended immediate actions for the SOC today: **Prioritize monitoring of SharePoint/IIS auth anomalies and webshell-like behavior;** **escalate any SharePoint-facing alerts to L2/L3 immediately** (assume time-sensitive pre-ransom activity).\n\n**4) Critical platform/app RCE exposure: GitLab AI Gateway + Dell Container Storage Modules (Kubernetes)**\n- What happened: Advisories/briefing highlight **critical RCE in GitLab AI Gateway** and **Dell CSM flaws** enabling unauth admin/root on Kubernetes nodes (CVE-2026-63688 noted).\n- Why it matters operationally: DevOps and storage/K8s compromise can enable **supply-chain injection**, secrets theft, and broad environment takeover (impacting CI/CD and production workloads).\n- Recommended immediate actions for the SOC today: **Confirm whether GitLab AI Gateway and Dell CSM are deployed; if yes, enforce emergency patch window + restrict external access;** **hunt for new service accounts/tokens and unexpected pods/containers** on impacted clusters.\n\n**5) Citrix NetScaler “0-day patch” instability (SAML-crafted traffic causing nsaaad crashes/reboots)**\n- What happened: After emergency builds for two under-attack NetScaler zero-days, customers report **reboots/crashes linked to crafted SAML traffic** (potential DoS/instability and detection opportunity).\n- Why it matters operationally: NetScaler is critical auth/edge infrastructure; instability can cause **availability incidents** and may mask exploitation attempts.\n- Recommended immediate actions for the SOC today: **Coordinate with network/IAM teams on patch status and rollback/mitigation plan;** **monitor for bursts of SAML auth requests and nsaaad crashes/restarts** and treat as potential hostile probing.\n\n---\n\n### Monitoring & detection recommendations\n- **FortiMail (CVE-2026-104286 theme):** monitor FortiMail appliance logs + firewall/WAF for unusual HTTP requests to admin/web endpoints, unexpected file write events/config changes; map to **T1190 (Exploit Public-Facing Application)**.\n- **Zammad exploitation:** collect Zammad app logs, reverse proxy logs, and IdP/SSO logs; hunt for **new/rare session tokens, session reuse from new IP/ASN, privilege changes**, and commands spawned by the Zammad service user (**T1550.004 token abuse**, **T1059 command execution**).\n- **SharePoint ransomware initial access:** on SharePoint/IIS/Windows logs (IIS, Sysmon, EDR), hunt for **w3wp.exe spawning cmd/powershell**, suspicious ASPX drops, and new scheduled tasks/services post web access (**T1505.003 Web Shell**, **T1053 Scheduled Task**).\n- **Kubernetes/Dell CSM:** ingest K8s audit logs + container runtime/EDR; alert on **clusterrolebinding changes, creation of privileged pods, exec into system namespaces**, and new secrets reads (**T1068 privilege escalation**, **T1610 Deploy Container**).\n- **GitLab/CI secrets:** monitor GitLab audit logs for **token creation, runner registration changes, pipeline edits**, and outbound connections from runners to unusual destinations (**T1552 Unsecured Credentials**, **T1071 app-layer C2**).\n- **Citrix NetScaler SAML crash/reboot:** from ADC logs + SIEM, alert on **spikes in SAML assertions/auth failures** paired with service restarts; treat as probing even if “only” availability impact.\n- **PoC-driven scanning surge (generic):** at perimeter IDS/WAF/firewall, baseline and alert on **new high-rate scans** to app management ports and web paths; escalate if followed by auth success or process execution (**T1046 Network Service Scanning → T1190**).\n\n---\n\n### Medium-term follow-ups\n- **KEV governance:** ensure FortiMail and Zammad KEV entries are tracked with defined SLA (patch/mitigate + validate) and evidence captured for audit.\n- **External exposure review:** re-run attack surface inventory for **email gateways, ticketing platforms, SharePoint, ADC/VPN, GitLab/CI endpoints**; reduce direct internet exposure where feasible.\n- **CI/CD hardening (supply-chain theme):** enforce **signed releases, protected branches, token rotation**, and least-privilege for package publishing/build actions; validate dependency controls.\n- **K8s posture:** implement/verify **Pod Security standards, admission controls, network policies**, and alerting for privileged workloads; ensure storage modules are in patch cadence.\n- **WordPress/plugin CVEs (watch-level, likely opportunistic):** if any marketing microsites exist, prioritize plugin inventory and WAF rules; keep separate from core banking zones.\n- **Playbook updates:** update SOC runbooks for **public-facing app exploitation → rapid containment** (web tier isolation, credential reset scope, log retention requirements), aligned to ransomware pre-encryption indicators.",
+  "highlights": [
+    {
+      "title": "Critical FortiMail Zero-Day CVE-2026-104286 Exploited in the Wild",
+      "link": "https://www.news4hackers.com/critical-fortimail-zero-day-cve-2026-104286-exploited-in-the-wild/",
+      "source": "News4Hackers",
+      "published": "2026-10-02T13:04:37+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 100.0,
+      "priority_score": 84.66
+    },
+    {
+      "title": "InfoSec News Nuggets – 10/02/2026",
+      "link": "https://aboutdfir.com/infosec-news-nuggets-10-02-2026/",
+      "source": "AboutDFIR – The Definitive Compendium Project",
+      "published": "2026-10-02T14:19:17+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Crypto / Web3",
+        "Exploit / PoC",
+        "Detection Engineering"
+      ],
+      "curated": false,
+      "signal_tier": "critical",
+      "signal_score": 100.0,
+      "priority_score": 75.06
+    },
+    {
+      "title": "U.S. CISA adds Zammad GmbH Zammad flaws to its Known Exploited Vulnerabilities catalog",
+      "link": "https://securityaffairs.com/200248/security/u-s-cisa-adds-zammad-gmbh-zammad-flaws-to-its-known-exploited-vulnerabilities-catalog.html",
+      "source": "Security Affairs",
+      "published": "2026-10-02T22:46:18+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Identity / Access",
+        "Cloud / SaaS",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 89.03,
+      "priority_score": 87.03
+    },
+    {
+      "title": "Zammad 0-Day Vulnerabilities Exploited to Gain Remote Code Execution and Root Access",
+      "link": "https://cybersecuritynews.com/zammad-0-day-vulnerabilities-exploited/",
+      "source": "Cyber Security News",
+      "published": "2026-10-02T12:17:07+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Identity / Access",
+        "Cloud / SaaS",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 85.05,
+      "priority_score": 84.36
+    },
+    {
+      "title": "Critical RCEs in GitLab, Dell CSM, SharePoint; Warlock ransomware escalates",
+      "link": "https://defend.network/briefings/gitlab-dell-sharepoint-warlock-critical-rce-2026-10-03.html",
+      "source": "defend.network",
+      "published": "2026-10-03T06:30:00+00:00",
+      "smart_groups": [
+        "Cloud / SaaS",
+        "Network / OT / ICS",
+        "Exploit / PoC",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 70.14,
+      "priority_score": 87.3
+    },
+    {
+      "title": "Exploit for CVE-2026-15989",
+      "link": "https://sploitus.com/exploit?id=D991DE8F-28F5-578A-8F8A-F8BCA12CA8A0&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-10-03T00:55:33+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.4,
+      "priority_score": 72.7
+    },
+    {
+      "title": "Exploit for CVE-2026-15989",
+      "link": "https://sploitus.com/exploit?id=9F5189C5-CE21-56B0-BC4D-0E6C71AE4BEA&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-10-02T23:27:32+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.4,
+      "priority_score": 72.31
+    },
+    {
+      "title": "Exploit for CVE-2026-55559",
+      "link": "https://sploitus.com/exploit?id=DB9097F8-13AE-5F20-A827-547A76255217&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-10-02T14:30:25+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.4,
+      "priority_score": 69.91
+    },
+    {
+      "title": "Exploit for Argument Injection in Thecodingmachine Gotenberg",
+      "link": "https://sploitus.com/exploit?id=A93A82B2-1A9B-5433-8F0D-58FBA764E8EA&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-10-02T14:03:41+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.4,
+      "priority_score": 69.79
+    },
+    {
+      "title": "Exploit for CVE-2026-102268",
+      "link": "https://sploitus.com/exploit?id=770B37B8-91B6-5C23-9033-36A6CCC26048&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-10-02T13:12:13+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.4,
+      "priority_score": 69.56
+    }
+  ]
+}
