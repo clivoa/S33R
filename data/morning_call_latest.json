@@ -1,167 +1,167 @@
 {
-  "generated_at": "2026-10-06T13:19:48.014118+00:00",
-  "analysis_date": "2026-10-06",
+  "generated_at": "2026-10-07T13:24:06.669332+00:00",
+  "analysis_date": "2026-10-07",
   "provider": "openai",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-10-06T06:21:07.289820+00:00",
+  "source_generated_at": "2026-10-07T11:44:37.912847+00:00",
   "source_days_back": 30,
-  "source_total_items": 61652,
-  "total_items_in_window_all": 1690,
+  "source_total_items": 61909,
+  "total_items_in_window_all": 3025,
   "total_items_in_window_curated": 8,
   "total_items_in_window_selected": 40,
   "context_selection_policy": "curated-plus-operational-signal-v1",
-  "morning_call_markdown": "### Executive Summary\n- **Perimeter/identity appliances are under active pressure:** a **third Citrix NetScaler zero-day (CVE-2026-88779)** is **actively exploited** (KEV) and impacts **SAML/VPN/SSO availability**.\n- **Email security stack risk increased:** **FortiMail 0-day (CVE-2026-104286)** reported as **exploited in the wild** enabling **unauthenticated arbitrary file write** (high takeover potential).\n- **Broad opportunistic exploitation continues:** **Rejetto HFS critical RCE (CVE-2026-61500)** now **exploited**, plus PoCs circulating for several high-impact apps/plugins (likely rapid scanning activity).\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Citrix NetScaler ADC/Gateway zero-day (CVE-2026-88779) – active exploitation (KEV)**\n- **What happened:** Citrix disclosed another **actively exploited** NetScaler flaw targeting **SAML authentication components**, primarily causing **service crashes/DoS** under certain configurations.\n- **Why it matters operationally:** Even “just DoS” can **take down VPN/SSO** and trigger **auth storms**, lockouts, and degraded incident response access during an attack window.\n- **Recommended immediate actions for the SOC today:** Confirm **all NetScaler versions/mitigations** applied per Citrix guidance; **monitor for repeated SAML auth service crashes/restarts** and sudden VPN/SSO error spikes; treat any crash pattern as **potential active exploitation** and engage IR.\n\n**2) Fortinet FortiMail zero-day (CVE-2026-104286) – exploited, unauth file write**\n- **What happened:** A **critical FortiMail 0-day** is being exploited to perform **unauthenticated arbitrary file writes** via crafted HTTP/HTTPS requests.\n- **Why it matters operationally:** Email gateways are high-value; file write often chains to **RCE/persistence** and can enable **mailbox access, credential theft, and lateral movement** from a trusted edge system.\n- **Recommended immediate actions for the SOC today:** Identify any **internet-exposed FortiMail** and prioritize **emergency patch/mitigation**; review **WAF/reverse-proxy logs** for unusual POST/PUT patterns to FortiMail admin/app paths; increase alerting on **new/modified files, webshell-like artifacts, and unusual outbound connections** from FortiMail.\n\n**3) Rejetto HFS (HTTP File Server) critical vuln (CVE-2026-61500) – exploited in the wild**\n- **What happened:** A critical **auth bypass + RCE** issue in **Rejetto HFS** is reported as **actively exploited**.\n- **Why it matters operationally:** HFS is commonly found in **shadow IT / legacy file-transfer** use; compromise typically leads to **initial access → payload drop → ransomware**.\n- **Recommended immediate actions for the SOC today:** Hunt asset inventory for **hfs.exe / Rejetto HFS services** (including DMZ hosts) and **isolate if unowned**; monitor for **new child processes spawned by HFS** and suspicious script/interpreter execution; block external access if not strictly required.\n\n**4) Opportunistic exploit/PoC churn (Struts/FreePBX/CraftCMS/WordPress plugins)**\n- **What happened:** Multiple PoCs surfaced (some older-but-still-exploited classes like **Apache Struts CVE-2017-5638/CVE-2018-11776**, **FreePBX auth bypass CVE-2025-57819**, **Craft CMS CVE-2026-31857**, and several **WordPress plugin** auth/BAC issues).\n- **Why it matters operationally:** Expect **spray-and-pray scanning** against any exposed web apps; financial orgs often have **third-party/marketing sites** that become footholds into internal networks.\n- **Recommended immediate actions for the SOC today:** Ensure external attack surface monitoring covers **Struts/FreePBX/CMS endpoints**; tune web alerts for **sudden spikes in 4xx/5xx, OGNL/RCE strings, unusual uploads**; fast-track patching or isolate any internet-facing instances discovered.\n\n---\n\n### Monitoring & detection recommendations\n- **Citrix NetScaler / SAML DoS patterns:** Monitor **NetScaler syslog/audit**, load balancer metrics, and IdP telemetry for **SAML auth service restarts, repeated failures, and sudden VPN login error spikes** (ATT&CK: **T1499 Endpoint DoS**).\n- **FortiMail exploitation indicators:** Collect **FortiMail application/admin logs + reverse proxy/WAF logs**; alert on **unexpected HTTP methods, abnormal request sizes, repeated write-like actions**, and subsequent **new outbound connections** from the appliance (ATT&CK: **T1190 Exploit Public-Facing Application**).\n- **Edge appliance egress hunting:** From **firewall/NDR**, baseline and alert on **new outbound destinations** from NetScaler/FortiMail management interfaces and DMZ segments (ATT&CK: **T1071 Application Layer Protocol**, **T1571 Non-Standard Port**).\n- **Rejetto HFS post-exploitation:** On **EDR** for servers, alert when **HFS spawns cmd/powershell/cscript/mshta/rundll32** or drops executables into temp/web directories (ATT&CK: **T1059 Command and Scripting Interpreter**).\n- **Web app scanning spikes:** In **WAF/web server logs**, detect **high-rate requests**, traversal attempts, suspicious parameters, and error-rate surges across public apps; correlate to external IP “bursts” (ATT&CK: **T1595 Active Scanning**).\n- **Credential/access impact from auth outages:** In **IdP (Azure AD/Okta/etc.)** and **VPN concentrator logs**, watch for **login storming**, lockouts, and anomalous MFA resets during NetScaler incidents (ATT&CK: **T1110 Brute Force** / operational risk even if not malicious).\n- **IoT/botnet noise (Realtek SDK / “Cling” botnet theme):** In **NDR/DNS logs**, flag unexpected **STUN traffic patterns** and unusual UDP flows from non-voice endpoints; validate against sanctioned apps (ATT&CK: **T1095 Non-Application Layer Protocol**).\n\n---\n\n### Medium-term follow-ups\n- **Patch governance for edge appliances:** Re-validate SLAs for **internet-facing VPN/SSO/email security** systems; require “**KEV/actively exploited**” to trigger **same-day change path**.\n- **Reduce SAML single points of failure:** Add resilience/runbooks for **SAML auth service crash scenarios** (failover, comms, break-glass access, and monitoring thresholds).\n- **Attack surface inventory sweep:** Confirm ownership and patching of **legacy file servers (HFS), CMS, PBX, Struts-based apps** in DMZ and third-party hosting.\n- **Hardening & segmentation:** Ensure **management interfaces** of NetScaler/FortiMail are not internet-exposed; enforce **egress controls** from DMZ appliances to limit post-exploit C2.\n- **Detections engineering backlog:** Create/refresh detection content for **Exploit Public-Facing App → webshell/process spawn → outbound C2** chains; map to ATT&CK for consistent triage.\n- **Third-party risk check:** If any business units outsource **web/CMS/email security operations**, request confirmation of **patch/mitigation status** for the cited CVEs (assumption: some services may be vendor-managed).",
+  "morning_call_markdown": "### Executive Summary\n- Critical perimeter exposure: SonicWall SMA 1000 pre-auth SSRF (CVE-2026-102255) patched; Fortinet “FortiBleed” campaign remains active and is being linked to ransomware outcomes.\n- Widespread enterprise app risk: Atlassian Data Center arbitrary file access (CVE-2026-21589) now has public PoC—assume rapid scanning/exploitation attempts.\n- OT/edge “drive-by” risk: Public 0-day disclosures for Advantech WebAccess Node and Circutor LineEds (unauth RCE paths) increase likelihood of opportunistic exploitation against exposed industrial/edge systems.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Perimeter remote-access appliances: SonicWall SMA 1000 + ongoing Fortinet “FortiBleed” activity**\n- What happened: SonicWall released fixes for SMA 1000 bugs including pre-auth SSRF (CVE-2026-102255); FBI/USSS warn FortiBleed activity is continuing and can lead to ransomware.\n- Why it matters operationally: Internet-facing VPN/remote access appliances are prime initial access for ransomware (ATT&CK T1190) and lateral movement; exploitation may precede credential theft and lockouts.\n- Recommended immediate actions for the SOC today: Confirm asset inventory + exposure (SMA/Fortinet); prioritize patch/mitigation and restrict management access; review last 7–14 days for unusual VPN auth patterns/admin changes and initiate IR if suspected.\n\n**2) Atlassian Data Center critical file access with PoC (CVE-2026-21589)**\n- What happened: A critical Atlassian Data Center arbitrary file access issue (CVE-2026-21589, 9.3) affects multiple products; PoC/exploit material is circulating.\n- Why it matters operationally: File read commonly becomes secret/key disclosure → app takeover → internal pivot (T1552 Unsecured Credentials, T1190 Exploit Public-Facing App); Atlassian often hosts sensitive configs/tokens.\n- Recommended immediate actions for the SOC today: Identify exposed Atlassian DC nodes (Jira/Confluence/etc.) and confirm patch level; add WAF/edge rules to reduce unauth file access attempts; hunt web logs for suspicious path traversal/file fetch patterns and spikes in 4xx/5xx around Atlassian endpoints.\n\n**3) Citrix NetScaler “was exploited as zero-day” (CVE-2026-88779)**\n- What happened: Reporting indicates Citrix patched a NetScaler memory overflow (CVE-2026-88779) that saw zero-day exploitation prior to fixes.\n- Why it matters operationally: NetScaler compromise is a recurring foothold for credential access and session hijack leading to broad enterprise impact in financial environments (T1190, T1550).\n- Recommended immediate actions for the SOC today: Validate NetScaler patch/firmware status and external exposure; pull ADC/auth/proxy logs for anomalous requests, new/unknown admin sessions, and config changes; escalate immediately if you see unexpected template/policy edits or new responders/services.\n\n**4) OT/edge unauth RCE disclosures (Advantech WebAccess Node + Circutor LineEds)**\n- What happened: Public disclosures describe unauth file upload/path traversal to code execution in Advantech WebAccess Node 9.2.3 and unauth command injection in Circutor LineEds 24.11.14-r0.\n- Why it matters operationally: Even if not “core banking,” compromise of OT/edge/energy gateways can become a pivot point into corporate networks (T1190 → T1021 Remote Services) and create safety/availability events.\n- Recommended immediate actions for the SOC today: Confirm none are internet-exposed; block inbound at perimeter and segment tightly; monitor for new inbound scanning to these devices and for unusual outbound connections (device → internet) from OT/edge VLANs.\n\n---\n\n### Monitoring & detection recommendations\n- **VPN/remote access appliances (SonicWall/Fortinet/Citrix):** Monitor VPN/auth logs + firewall for exploit-style request bursts and failed-auth storms (T1190, T1110); alert on new admin logins, config exports, or changes outside change windows.\n- **Atlassian DC web telemetry:** Use WAF/reverse proxy + application access logs to flag unusual file path access, traversal-like patterns, and unauthenticated requests to nonstandard resources; correlate with sudden service account/token usage (T1552).\n- **Credential abuse post-perimeter access:** From IdP (AAD/Okta/etc.) and PAM logs, hunt for new MFA device enrollments, impossible travel, mass session revocations, and atypical token grants (T1556, T1550).\n- **EDR on Atlassian/Citrix/SMA adjacent hosts:** Watch for web service spawning shells or unexpected child processes (e.g., java/tomcat/w3wp spawning cmd/powershell/bash) and new scheduled tasks/services (T1059, T1543, T1053).\n- **Network egress from “shouldn’t talk out” segments:** NetFlow/proxy logs for new outbound to rare ASNs/countries from appliance subnets/management VLANs; alert on DNS beacons and long-lived TLS sessions (T1071).\n- **RMM tool abuse trend:** In EDR + proxy, flag first-seen RMM binaries and unattended remote-control sessions; validate business justification (T1219 Remote Access Tools).\n- **OT/edge segments:** IDS/IPS + firewall logs for inbound HTTP requests to OT web interfaces and new east-west connections into corp subnets (T1021); prioritize any OT device initiating SMB/LDAP/RDP outbound.\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** Ensure SLA-driven patching for internet-facing platforms (SMA, NetScaler, Atlassian DC, Fortinet) with explicit “exposure-first” prioritization and rollback plans.\n- **Reduce blast radius:** Enforce management-plane isolation (jump hosts, MFA, IP allowlists) for VPN/ADC/admin portals; verify no direct admin access from user networks.\n- **Secrets hygiene for enterprise apps:** Review where Atlassian stores tokens/keys; rotate credentials if any evidence of file reads or unauthorized access (assume potential secret exposure when exploit attempts are confirmed).\n- **OT/edge asset assurance:** Refresh inventory for SCADA/HMI/energy gateways; validate segmentation, logging coverage, and vendor supportability for disclosed 0-days.\n- **WAF/edge standard detections:** Add/validate generic controls for traversal/arbitrary file read, SSRF patterns, and suspicious header manipulation attempts (useful across multiple CVEs even when specifics are unclear).\n- **Tabletop/IR readiness for ransomware paths:** Rehearse “perimeter device compromise → credential theft → ransomware” playbook actions (containment steps, token resets, appliance forensics retention, and comms triggers).",
   "highlights": [
     {
-      "title": "CVE-2026-88779: Citrix NetScaler Zero-Day Exploited Against SAML Deployments",
-      "link": "https://socprime.com/blog/cve-2026-88779-citrix-netscaler-zero-day-exploited-against-saml-deployments/",
-      "source": "SOC Prime Blog",
-      "published": "2026-10-05T17:27:46+00:00",
+      "title": "SonicWall fixes pre-auth SSRF flaw in SMA 1000 appliances (CVE-2026-102255)",
+      "link": "https://www.helpnetsecurity.com/2026/10/07/sonicwall-fixes-pre-auth-ssrf-flaw-in-sma-1000-appliances-cve-2026-102255/",
+      "source": "Help Net Security",
+      "published": "2026-10-07T10:37:53+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Web / API Security",
+        "Mobile Security",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 85.13,
+      "priority_score": 89.66
+    },
+    {
+      "title": "Rockstar Games has now been compromised several different ways since 2018, and none of them were a zero-day",
+      "link": "https://www.reddit.com/r/netsec/comments/1wzchsp/rockstar_games_has_now_been_compromised_several/",
+      "source": "/r/netsec",
+      "published": "2026-10-06T19:55:08+00:00",
+      "smart_groups": [
         "Identity / Access",
+        "Vulnerabilities / CVEs",
         "Cloud / SaaS",
-        "Exploit / PoC",
-        "Vendors / Product Security"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 100.0,
-      "priority_score": 86.45
-    },
-    {
-      "title": "Citrix NetScaler Zero-Day Exploited in the Wild Crashes SAML Authentication Services",
-      "link": "https://orca.security/resources/research/citrix-netscaler-zero-day-exploited-in-the-wild-crashes-saml-authentication-services/",
-      "source": "Orca Security Blog",
-      "published": "2026-10-05T18:25:16+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Identity / Access",
-        "Exploit / PoC",
-        "Vendors / Product Security"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 100.0,
-      "priority_score": 86.19
-    },
-    {
-      "title": "Citrix discloses third actively exploited NetScaler zero-day in less than a week",
-      "link": "https://cyberscoop.com/citrix-netscaler-third-exploited-zero-day-vulnerability/",
-      "source": "CyberScoop",
-      "published": "2026-10-05T23:07:17+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 85.88,
-      "priority_score": 85.7
-    },
-    {
-      "title": "Anthropic Mythos Found A Bug in Rejetto HFS. Attackers Are Now Exploiting It.",
-      "link": "https://securityaffairs.com/200444/ai/anthropic-mythos-found-a-bug-in-rejetto-hfs-attackers-are-now-exploiting-it.html",
-      "source": "Security Affairs",
-      "published": "2026-10-05T18:15:12+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "General Security"
-      ],
-      "curated": false,
-      "signal_tier": "critical",
-      "signal_score": 83.03,
-      "priority_score": 76.89
-    },
-    {
-      "title": "CVE-2026-104286: Critical FortiMail Zero-Day Exploited for Unauthenticated File Writes",
-      "link": "https://socprime.com/blog/cve-2026-104286-critical-fortimail-zero-day-exploited-for-unauthenticated-file-writes/",
-      "source": "SOC Prime Blog",
-      "published": "2026-10-05T17:20:02+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "Vendors / Product Security"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 80.99,
-      "priority_score": 86.41
-    },
-    {
-      "title": "⚡ Weekly Recap: NetScaler and FortiMail 0-Days, AI Coding Leaks, Spectre v2 and Ransomware Arrests",
-      "link": "https://thehackernews.com/2026/10/weekly-recap-netscaler-and-fortimail-0.html",
-      "source": "The Hacker News",
-      "published": "2026-10-05T14:20:43+00:00",
-      "smart_groups": [
-        "Exploit / PoC",
-        "Ransomware",
-        "General Security"
-      ],
-      "curated": false,
-      "signal_tier": "critical",
-      "signal_score": 79.83,
-      "priority_score": 68.94
-    },
-    {
-      "title": "Apache-Struts-0Day-Exploit",
-      "link": "https://sploitus.com/exploit?id=KITPLOIT:TOOLS-GITHUB-ARLYONE-APACHE-STRUTS-0DAY-EXPLOIT&utm_source=rss&utm_medium=rss",
-      "source": "Sploitus – Exploits",
-      "published": "2026-10-05T14:14:27+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
+        "Linux / Unix",
+        "Network / OT / ICS",
+        "OSINT / Community"
       ],
       "curated": true,
       "signal_tier": "high",
-      "signal_score": 76.42,
-      "priority_score": 82.62
+      "signal_score": 75.33,
+      "priority_score": 82.39
     },
     {
-      "title": "Exploit for CVE-2026-105221",
-      "link": "https://sploitus.com/exploit?id=8FE987D7-C869-53DB-B864-10A08F662B52&utm_source=rss&utm_medium=rss",
+      "title": "[0day-rubbish] Advantech WebAccess Node 9.2.3 unauthenticated CrystalRpt.aspx file upload and path traversal to code execution in w3wp.exe (9.8)",
+      "link": "https://seclists.org/fulldisclosure/2026/Oct/2",
+      "source": "Full Disclosure",
+      "published": "2026-10-06T17:44:44+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Network / OT / ICS",
+        "OSINT / Community"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 70.19,
+      "priority_score": 85.87
+    },
+    {
+      "title": "[0day-rubbish] Circutor LineEds 24.11.14-r0 unauthenticated pwrstudio events.xml shellExecute command injection (9.8)",
+      "link": "https://seclists.org/fulldisclosure/2026/Oct/4",
+      "source": "Full Disclosure",
+      "published": "2026-10-06T17:44:46+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Network / OT / ICS",
+        "OSINT / Community"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 70.19,
+      "priority_score": 85.44
+    },
+    {
+      "title": "Exploit for CVE-2026-21589",
+      "link": "https://sploitus.com/exploit?id=2E97E127-926B-5833-B791-4D572B151FAB&utm_source=rss&utm_medium=rss",
       "source": "Sploitus – Exploits",
-      "published": "2026-10-06T01:44:21+00:00",
+      "published": "2026-10-07T09:03:00+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 68.42,
-      "priority_score": 74.11
+      "signal_score": 68.41,
+      "priority_score": 74.6
     },
     {
-      "title": "Exploit for Authentication Bypass Using an Alternate Path or Channel in Sangoma Freepbx",
-      "link": "https://sploitus.com/exploit?id=09A11285-DE3E-529F-94FC-E66196A49539&utm_source=rss&utm_medium=rss",
+      "title": "Exploit for Improper Certificate Validation in Checkpoint Gaia_Embedded",
+      "link": "https://sploitus.com/exploit?id=EC5F025A-8C6F-5BA3-81B1-E274C5FAC876&utm_source=rss&utm_medium=rss",
       "source": "Sploitus – Exploits",
-      "published": "2026-10-05T15:22:26+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": true,
-      "signal_tier": "high",
-      "signal_score": 66.42,
-      "priority_score": 82.51
-    },
-    {
-      "title": "Exploit for Improper Handling of Exceptional Conditions in Apache Struts",
-      "link": "https://sploitus.com/exploit?id=E32D884C-1123-59A5-ACC0-8677E9F05223&utm_source=rss&utm_medium=rss",
-      "source": "Sploitus – Exploits",
-      "published": "2026-10-06T04:12:34+00:00",
+      "published": "2026-10-07T07:51:04+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 66.42,
-      "priority_score": 74.77
+      "signal_score": 68.41,
+      "priority_score": 74.28
+    },
+    {
+      "title": "Exploit for CVE-2026-102422",
+      "link": "https://sploitus.com/exploit?id=49C71850-E61C-5DAF-B827-E32CC32C219A&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-10-07T05:53:12+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.41,
+      "priority_score": 73.75
+    },
+    {
+      "title": "Exploit for CVE-2026-82531",
+      "link": "https://sploitus.com/exploit?id=0D71BB83-F55B-5D6D-B9DD-846D59C52489&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-10-07T05:37:26+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.41,
+      "priority_score": 73.68
+    },
+    {
+      "title": "Exploit for CVE-2026-21589",
+      "link": "https://sploitus.com/exploit?id=BA57A53E-4324-56E4-B89E-4FA516E10711&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-10-06T18:21:50+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.41,
+      "priority_score": 70.67
+    },
+    {
+      "title": "Exploit for CVE-2026-21589",
+      "link": "https://sploitus.com/exploit?id=A5A5EF7F-2014-514D-9BA6-3AC1A17733F4&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-10-06T15:43:34+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.41,
+      "priority_score": 69.96
     }
   ]
 }
