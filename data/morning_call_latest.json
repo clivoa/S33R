@@ -1,167 +1,165 @@
 {
-  "generated_at": "2026-10-07T13:24:06.669332+00:00",
-  "analysis_date": "2026-10-07",
+  "generated_at": "2026-10-08T13:25:49.026764+00:00",
+  "analysis_date": "2026-10-08",
   "provider": "openai",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-10-07T11:44:37.912847+00:00",
+  "source_generated_at": "2026-10-08T11:59:05.485471+00:00",
   "source_days_back": 30,
-  "source_total_items": 61909,
-  "total_items_in_window_all": 3025,
-  "total_items_in_window_curated": 8,
+  "source_total_items": 61755,
+  "total_items_in_window_all": 2566,
+  "total_items_in_window_curated": 5,
   "total_items_in_window_selected": 40,
   "context_selection_policy": "curated-plus-operational-signal-v1",
-  "morning_call_markdown": "### Executive Summary\n- Critical perimeter exposure: SonicWall SMA 1000 pre-auth SSRF (CVE-2026-102255) patched; Fortinet “FortiBleed” campaign remains active and is being linked to ransomware outcomes.\n- Widespread enterprise app risk: Atlassian Data Center arbitrary file access (CVE-2026-21589) now has public PoC—assume rapid scanning/exploitation attempts.\n- OT/edge “drive-by” risk: Public 0-day disclosures for Advantech WebAccess Node and Circutor LineEds (unauth RCE paths) increase likelihood of opportunistic exploitation against exposed industrial/edge systems.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Perimeter remote-access appliances: SonicWall SMA 1000 + ongoing Fortinet “FortiBleed” activity**\n- What happened: SonicWall released fixes for SMA 1000 bugs including pre-auth SSRF (CVE-2026-102255); FBI/USSS warn FortiBleed activity is continuing and can lead to ransomware.\n- Why it matters operationally: Internet-facing VPN/remote access appliances are prime initial access for ransomware (ATT&CK T1190) and lateral movement; exploitation may precede credential theft and lockouts.\n- Recommended immediate actions for the SOC today: Confirm asset inventory + exposure (SMA/Fortinet); prioritize patch/mitigation and restrict management access; review last 7–14 days for unusual VPN auth patterns/admin changes and initiate IR if suspected.\n\n**2) Atlassian Data Center critical file access with PoC (CVE-2026-21589)**\n- What happened: A critical Atlassian Data Center arbitrary file access issue (CVE-2026-21589, 9.3) affects multiple products; PoC/exploit material is circulating.\n- Why it matters operationally: File read commonly becomes secret/key disclosure → app takeover → internal pivot (T1552 Unsecured Credentials, T1190 Exploit Public-Facing App); Atlassian often hosts sensitive configs/tokens.\n- Recommended immediate actions for the SOC today: Identify exposed Atlassian DC nodes (Jira/Confluence/etc.) and confirm patch level; add WAF/edge rules to reduce unauth file access attempts; hunt web logs for suspicious path traversal/file fetch patterns and spikes in 4xx/5xx around Atlassian endpoints.\n\n**3) Citrix NetScaler “was exploited as zero-day” (CVE-2026-88779)**\n- What happened: Reporting indicates Citrix patched a NetScaler memory overflow (CVE-2026-88779) that saw zero-day exploitation prior to fixes.\n- Why it matters operationally: NetScaler compromise is a recurring foothold for credential access and session hijack leading to broad enterprise impact in financial environments (T1190, T1550).\n- Recommended immediate actions for the SOC today: Validate NetScaler patch/firmware status and external exposure; pull ADC/auth/proxy logs for anomalous requests, new/unknown admin sessions, and config changes; escalate immediately if you see unexpected template/policy edits or new responders/services.\n\n**4) OT/edge unauth RCE disclosures (Advantech WebAccess Node + Circutor LineEds)**\n- What happened: Public disclosures describe unauth file upload/path traversal to code execution in Advantech WebAccess Node 9.2.3 and unauth command injection in Circutor LineEds 24.11.14-r0.\n- Why it matters operationally: Even if not “core banking,” compromise of OT/edge/energy gateways can become a pivot point into corporate networks (T1190 → T1021 Remote Services) and create safety/availability events.\n- Recommended immediate actions for the SOC today: Confirm none are internet-exposed; block inbound at perimeter and segment tightly; monitor for new inbound scanning to these devices and for unusual outbound connections (device → internet) from OT/edge VLANs.\n\n---\n\n### Monitoring & detection recommendations\n- **VPN/remote access appliances (SonicWall/Fortinet/Citrix):** Monitor VPN/auth logs + firewall for exploit-style request bursts and failed-auth storms (T1190, T1110); alert on new admin logins, config exports, or changes outside change windows.\n- **Atlassian DC web telemetry:** Use WAF/reverse proxy + application access logs to flag unusual file path access, traversal-like patterns, and unauthenticated requests to nonstandard resources; correlate with sudden service account/token usage (T1552).\n- **Credential abuse post-perimeter access:** From IdP (AAD/Okta/etc.) and PAM logs, hunt for new MFA device enrollments, impossible travel, mass session revocations, and atypical token grants (T1556, T1550).\n- **EDR on Atlassian/Citrix/SMA adjacent hosts:** Watch for web service spawning shells or unexpected child processes (e.g., java/tomcat/w3wp spawning cmd/powershell/bash) and new scheduled tasks/services (T1059, T1543, T1053).\n- **Network egress from “shouldn’t talk out” segments:** NetFlow/proxy logs for new outbound to rare ASNs/countries from appliance subnets/management VLANs; alert on DNS beacons and long-lived TLS sessions (T1071).\n- **RMM tool abuse trend:** In EDR + proxy, flag first-seen RMM binaries and unattended remote-control sessions; validate business justification (T1219 Remote Access Tools).\n- **OT/edge segments:** IDS/IPS + firewall logs for inbound HTTP requests to OT web interfaces and new east-west connections into corp subnets (T1021); prioritize any OT device initiating SMB/LDAP/RDP outbound.\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** Ensure SLA-driven patching for internet-facing platforms (SMA, NetScaler, Atlassian DC, Fortinet) with explicit “exposure-first” prioritization and rollback plans.\n- **Reduce blast radius:** Enforce management-plane isolation (jump hosts, MFA, IP allowlists) for VPN/ADC/admin portals; verify no direct admin access from user networks.\n- **Secrets hygiene for enterprise apps:** Review where Atlassian stores tokens/keys; rotate credentials if any evidence of file reads or unauthorized access (assume potential secret exposure when exploit attempts are confirmed).\n- **OT/edge asset assurance:** Refresh inventory for SCADA/HMI/energy gateways; validate segmentation, logging coverage, and vendor supportability for disclosed 0-days.\n- **WAF/edge standard detections:** Add/validate generic controls for traversal/arbitrary file read, SSRF patterns, and suspicious header manipulation attempts (useful across multiple CVEs even when specifics are unclear).\n- **Tabletop/IR readiness for ransomware paths:** Rehearse “perimeter device compromise → credential theft → ransomware” playbook actions (containment steps, token resets, appliance forensics retention, and comms triggers).",
+  "morning_call_markdown": "### Executive Summary\n- **Atlassian Data Center products (Jira/Confluence, etc.) are under active exploitation** via a critical arbitrary file read/access flaw (CVE-2026-21589) with public PoC—treat as an active intrusion path.\n- **Ransomware initial access activity is spiking against edge/network devices** (Fortinet “FortiBleed” credential harvesting leading to lockouts/ransomware); validate perimeter hygiene and monitor for post-access behavior.\n- **Software supply chain risk (npm) remains high-impact for dev endpoints/build systems**: multiple malicious packages (MALFEX / Overlord RAT + stealers) and a compromised “tensorlake” package pushing credential-stealing worm behavior.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Atlassian Data Center active exploitation (CVE-2026-21589)**\n- **What happened:** Threat actors are exploiting a critical Atlassian Data Center flaw (CVE-2026-21589) enabling unauthenticated arbitrary file read; PoC is public and exploitation is reported in-the-wild.\n- **Why it matters operationally:** Jira/Confluence often hold credentials, tokens, configs, and can become a pivot into AD/cloud; exploitation can quickly become full environment compromise.\n- **Recommended immediate actions for the SOC today:** Verify exposure (internet-facing/reachable) + patch/mitigate ASAP; hunt for suspicious HTTP requests to Atlassian/Tomcat paths and abnormal reads of config/secret files; isolate/contain any impacted Atlassian host pending IR triage.\n\n**2) Edge device credential harvesting → ransomware (Fortinet “FortiBleed” campaign)**\n- **What happened:** Reporting indicates credential-harvesting attacks against Fortinet devices with user lockouts and linkage to ransomware via an initial access broker ecosystem.\n- **Why it matters operationally:** Firewall/VPN compromise is a high-probability path to domain takeover and ransomware; lockouts can mask persistence and credential replay.\n- **Recommended immediate actions for the SOC today:** Review Fortinet auth logs for anomalous admin/user logins and lockouts; enforce/validate MFA where applicable and rotate credentials/tokens if compromise suspected; confirm device firmware/mitigations and restrict management interfaces to trusted networks only.\n\n**3) npm supply-chain malware (MALFEX packages; “tensorlake” compromise / Shai-Hulud)**\n- **What happened:** Multiple malicious npm packages (40k+ downloads) deliver RAT/stealer payloads (MALFEX), and the “tensorlake” npm package was compromised to deliver credential-stealing malware with persistence/worm-like behavior.\n- **Why it matters operationally:** Developer workstations and CI/CD runners can leak secrets (API keys, cloud creds, signing keys) and become a high-impact path into production and financial apps.\n- **Recommended immediate actions for the SOC today:** Alert DevOps to freeze/verify dependencies (identify presence of the named packages/versions in repos and build logs); monitor EDR for suspicious Node/npm install scripts spawning PowerShell/curl/wget and for unexpected credential store access; isolate any build runner showing outbound exfiltration patterns or newly created persistence.\n\n**4) High-severity auth/account takeover exposure: Keycloak reset flow bypass PoC (CVE-2026-18963)**\n- **What happened:** A PoC surfaced for a Keycloak “forgot password/reset credentials” flow bypass leading to unauthenticated account takeover (CVE-2026-18963).\n- **Why it matters operationally:** Keycloak often brokers SSO to internal apps; account takeover of privileged users can enable rapid privilege escalation and lateral movement.\n- **Recommended immediate actions for the SOC today:** Identify any Keycloak instances (especially internet-facing) and validate patch status; review Keycloak logs for anomalous password reset activity and sudden credential changes; add temporary controls (rate-limiting, WAF rules, restrict reset endpoints) if patching will lag.\n\n---\n\n### Monitoring & detection recommendations\n- **Atlassian (CVE-2026-21589):** Monitor WAF/reverse-proxy + Atlassian/Tomcat access logs for unusual requests to plugin/webresource paths and traversal-like patterns; correlate with file access on host (EDR) for reads of app configs/secret files. *(ATT&CK: T1190 Exploit Public-Facing Application)*\n- **Post-exploitation after Atlassian/edge compromise:** From EDR + Windows Security logs, hunt for new services/scheduled tasks, webshell-like child processes from Java/Tomcat, and credential dumping indicators. *(T1059 Command and Scripting Interpreter, T1003 OS Credential Dumping)*\n- **Fortinet “FortiBleed” / perimeter devices:** On firewall/VPN logs, alert on admin logins from new geos/ASNs, repeated failed auth/lockouts, configuration exports, and management interface access outside allowlists. *(T1078 Valid Accounts)*\n- **Ransomware staging signals:** Monitor for mass SMB authentication failures/success spikes, rapid share enumeration, and abnormal file rename/encryption patterns on file servers; tie to VPN/firewall session establishment. *(T1021.002 SMB/Windows Admin Shares, T1486 Data Encrypted for Impact)*\n- **npm supply-chain activity:** On dev endpoints and CI runners, alert on `npm install`/`node` processes spawning shell, PowerShell, curl/wget, or writing executables into user profile/temp; monitor outbound connections to newly seen domains post-build. *(T1204 User Execution, T1105 Ingress Tool Transfer)*\n- **Secrets exposure monitoring:** Use CASB/DLP + cloud audit logs to detect unusual access to secret managers, CI variables, or mass reads of repos; prioritize from dev/build identities. *(T1552 Unsecured Credentials)*\n- **Keycloak (CVE-2026-18963):** Monitor IdP logs for password reset events without corresponding email verification flow (if visible), repeated reset attempts against multiple usernames, and privilege-bearing account resets. *(T1110 Brute Force / T1078 Valid Accounts — depending on observed pattern)*\n\n---\n\n### Medium-term follow-ups\n- **Atlassian estate hardening:** Inventory all Atlassian Data Center instances, enforce admin interface access controls, and ensure backups/log retention are adequate for IR (web + app + OS logs).\n- **Perimeter management plane lockdown:** Ensure firewall/VPN management interfaces are not internet-exposed; require MFA for admin; implement break-glass accounts with monitoring and just-in-time access.\n- **Dev supply-chain controls:** Enforce package allowlisting/lockfiles, private registries/proxying, dependency scanning in CI, and signed artifacts where feasible; add guardrails for build runner egress.\n- **Keycloak resilience:** Review password reset policies (rate limits, CAPTCHA, email verification enforcement), and ensure privileged accounts have stronger recovery controls (MFA-required reset).\n- **Critical PoC-driven CVE intake process:** Multiple new PoCs surfaced (various platforms); confirm vuln management is auto-ingesting PoC/exploit signals and prioritizing internet-facing services first.\n- **Cisco hardening releases (Meraki/NX-OS/APIC/SSM):** Plan upgrade windows and validate configs against new hardening guidance; treat as risk-reduction even if “not known exploited” per advisory.",
   "highlights": [
     {
-      "title": "SonicWall fixes pre-auth SSRF flaw in SMA 1000 appliances (CVE-2026-102255)",
-      "link": "https://www.helpnetsecurity.com/2026/10/07/sonicwall-fixes-pre-auth-ssrf-flaw-in-sma-1000-appliances-cve-2026-102255/",
-      "source": "Help Net Security",
-      "published": "2026-10-07T10:37:53+00:00",
+      "title": "Critical Flaw in Multiple Atlassian Products Exploited in the Wild",
+      "link": "https://www.infosecurity-magazine.com/news/critical-vulnerability-atlassian/",
+      "source": "Infosecurity Magazine – News",
+      "published": "2026-10-08T10:05:00+00:00",
       "smart_groups": [
-        "Vulnerabilities / CVEs",
         "Exploit / PoC",
-        "Web / API Security",
-        "Mobile Security",
+        "Vulnerabilities / CVEs",
         "General Security"
       ],
       "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 85.13,
-      "priority_score": 89.66
+      "signal_tier": "high",
+      "signal_score": 75.86,
+      "priority_score": 82.84
     },
     {
-      "title": "Rockstar Games has now been compromised several different ways since 2018, and none of them were a zero-day",
-      "link": "https://www.reddit.com/r/netsec/comments/1wzchsp/rockstar_games_has_now_been_compromised_several/",
-      "source": "/r/netsec",
-      "published": "2026-10-06T19:55:08+00:00",
+      "title": "Eight Malicious npm Packages Downloaded 40,767 Times Deliver Overlord RAT and Stealer",
+      "link": "https://thehackernews.com/2026/10/eight-malicious-npm-packages-downloaded.html",
+      "source": "The Hacker News",
+      "published": "2026-10-07T17:43:20+00:00",
       "smart_groups": [
-        "Identity / Access",
-        "Vulnerabilities / CVEs",
-        "Cloud / SaaS",
-        "Linux / Unix",
-        "Network / OT / ICS",
-        "OSINT / Community"
+        "Malware / Payloads",
+        "Supply Chain / Software",
+        "Threat Actors / APT",
+        "General Security"
       ],
       "curated": true,
       "signal_tier": "high",
-      "signal_score": 75.33,
-      "priority_score": 82.39
+      "signal_score": 71.87,
+      "priority_score": 84.23
     },
     {
-      "title": "[0day-rubbish] Advantech WebAccess Node 9.2.3 unauthenticated CrystalRpt.aspx file upload and path traversal to code execution in w3wp.exe (9.8)",
-      "link": "https://seclists.org/fulldisclosure/2026/Oct/2",
-      "source": "Full Disclosure",
-      "published": "2026-10-06T17:44:44+00:00",
+      "title": "Eight Malicious npm Packages Downloaded 40,767 Times Deliver Overlord RAT and Stealer",
+      "link": "https://vulners.com/thn/THN:EA9DC6811CE80A95FE19CA16FB5323EB?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-10-07T17:43:00+00:00",
       "smart_groups": [
+        "Malware / Payloads",
+        "Supply Chain / Software",
+        "Threat Actors / APT",
+        "Crypto / Web3",
         "Vulnerabilities / CVEs",
-        "Network / OT / ICS",
-        "OSINT / Community"
+        "Windows / Microsoft"
       ],
-      "curated": true,
+      "curated": false,
       "signal_tier": "high",
-      "signal_score": 70.19,
-      "priority_score": 85.87
+      "signal_score": 71.41,
+      "priority_score": 72.12
     },
     {
-      "title": "[0day-rubbish] Circutor LineEds 24.11.14-r0 unauthenticated pwrstudio events.xml shellExecute command injection (9.8)",
-      "link": "https://seclists.org/fulldisclosure/2026/Oct/4",
-      "source": "Full Disclosure",
-      "published": "2026-10-06T17:44:46+00:00",
+      "title": "Exploit for CVE-2026-18963",
+      "link": "https://sploitus.com/exploit?id=2DD499C2-4AEB-5022-9259-E84A9EBEF02F&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-10-08T08:50:26+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Network / OT / ICS",
-        "OSINT / Community"
+        "Exploit / PoC"
       ],
-      "curated": true,
+      "curated": false,
       "signal_tier": "high",
-      "signal_score": 70.19,
-      "priority_score": 85.44
+      "signal_score": 68.39,
+      "priority_score": 74.38
     },
     {
       "title": "Exploit for CVE-2026-21589",
-      "link": "https://sploitus.com/exploit?id=2E97E127-926B-5833-B791-4D572B151FAB&utm_source=rss&utm_medium=rss",
+      "link": "https://sploitus.com/exploit?id=19F202D4-5051-5031-9B1D-1AFCF723BA49&utm_source=rss&utm_medium=rss",
       "source": "Sploitus – Exploits",
-      "published": "2026-10-07T09:03:00+00:00",
+      "published": "2026-10-08T08:31:03+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 68.41,
-      "priority_score": 74.6
+      "signal_score": 68.39,
+      "priority_score": 74.29
     },
     {
-      "title": "Exploit for Improper Certificate Validation in Checkpoint Gaia_Embedded",
-      "link": "https://sploitus.com/exploit?id=EC5F025A-8C6F-5BA3-81B1-E274C5FAC876&utm_source=rss&utm_medium=rss",
+      "title": "Exploit for CVE-2026-61424",
+      "link": "https://sploitus.com/exploit?id=44E54CE3-CE75-55DC-895F-9D5D29FEA225&utm_source=rss&utm_medium=rss",
       "source": "Sploitus – Exploits",
-      "published": "2026-10-07T07:51:04+00:00",
+      "published": "2026-10-08T03:49:51+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 68.41,
-      "priority_score": 74.28
+      "signal_score": 68.39,
+      "priority_score": 73.03
     },
     {
-      "title": "Exploit for CVE-2026-102422",
-      "link": "https://sploitus.com/exploit?id=49C71850-E61C-5DAF-B827-E32CC32C219A&utm_source=rss&utm_medium=rss",
+      "title": "Exploit for CVE-2026-105844",
+      "link": "https://sploitus.com/exploit?id=73BE1B4F-C08C-5F0A-9943-93A0A290FB8E&utm_source=rss&utm_medium=rss",
       "source": "Sploitus – Exploits",
-      "published": "2026-10-07T05:53:12+00:00",
+      "published": "2026-10-07T19:55:44+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 68.41,
-      "priority_score": 73.75
+      "signal_score": 68.39,
+      "priority_score": 70.92
     },
     {
-      "title": "Exploit for CVE-2026-82531",
-      "link": "https://sploitus.com/exploit?id=0D71BB83-F55B-5D6D-B9DD-846D59C52489&utm_source=rss&utm_medium=rss",
+      "title": "Exploit for CVE-2026-102782",
+      "link": "https://sploitus.com/exploit?id=91794F26-1CCA-57E4-A1FE-A44C3F866800&utm_source=rss&utm_medium=rss",
       "source": "Sploitus – Exploits",
-      "published": "2026-10-07T05:37:26+00:00",
+      "published": "2026-10-07T19:42:43+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 68.41,
-      "priority_score": 73.68
+      "signal_score": 68.39,
+      "priority_score": 70.86
+    },
+    {
+      "title": "Exploit for Interpretation Conflict in Wordpress",
+      "link": "https://sploitus.com/exploit?id=7AEBB253-6EBE-5599-97D0-6546EA5201C4&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-10-07T16:45:25+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.39,
+      "priority_score": 70.07
     },
     {
       "title": "Exploit for CVE-2026-21589",
-      "link": "https://sploitus.com/exploit?id=BA57A53E-4324-56E4-B89E-4FA516E10711&utm_source=rss&utm_medium=rss",
-      "source": "Sploitus – Exploits",
-      "published": "2026-10-06T18:21:50+00:00",
+      "link": "https://vulners.com/githubexploit/19F202D4-5051-5031-9B1D-1AFCF723BA49?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-10-08T08:31:03+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 68.41,
-      "priority_score": 70.67
-    },
-    {
-      "title": "Exploit for CVE-2026-21589",
-      "link": "https://sploitus.com/exploit?id=A5A5EF7F-2014-514D-9BA6-3AC1A17733F4&utm_source=rss&utm_medium=rss",
-      "source": "Sploitus – Exploits",
-      "published": "2026-10-06T15:43:34+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 68.41,
-      "priority_score": 69.96
+      "signal_score": 66.41,
+      "priority_score": 75.47
     }
   ]
 }
