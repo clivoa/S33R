@@ -1,0 +1,167 @@
+{
+  "generated_at": "2026-10-09T13:15:03.933347+00:00",
+  "analysis_date": "2026-10-09",
+  "provider": "openai",
+  "model": "gpt-5.2",
+  "window_hours": 24,
+  "source_file": "data/news_recent.json",
+  "source_generated_at": "2026-10-09T11:51:50.232776+00:00",
+  "source_days_back": 30,
+  "source_total_items": 62757,
+  "total_items_in_window_all": 2788,
+  "total_items_in_window_curated": 8,
+  "total_items_in_window_selected": 50,
+  "context_selection_policy": "curated-plus-operational-signal-v1",
+  "morning_call_markdown": "### Executive Summary\n- Active exploitation of **Citrix NetScaler ADC/Gateway RCE zero-days (CVE-2026-88771/88772)**; treat any Internet-facing NetScaler as at-risk until verified patched/mitigated.  \n- Multiple **“hours-to-exploit”** situations: **Atlassian Data Center critical vuln (CVE-2026-21589)** being targeted + **Zammad critical session leak/RCE (CVE-2026-102489)** with public PoC.  \n- Supply-chain risk is elevated: **malicious npm packages (MALFEX)** and a **trojanized Terraform provider attributed to TraderTraitor/UNC4899**—watch dev/build environments and CI/CD runners.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Citrix NetScaler ADC/Gateway — actively exploited RCE zero-days (CVE-2026-88771, CVE-2026-88772)**\n- **What happened:** Citrix-confirmed NetScaler RCE zero-days are being exploited in the wild; added to KEV per reporting.  \n- **Why it matters operationally:** NetScaler is a high-value edge/IAM choke point; exploitation typically leads to credential theft, session hijack, lateral movement, and ransomware staging.  \n- **Recommended immediate actions for the SOC today:** Confirm patch/mitigation status for all NetScaler; hunt for unusual new admin sessions/config changes and new binaries/scripts on appliances; increase alerting on inbound exploitation patterns/WAF blocks and suspicious outbound from NetScaler subnets.\n\n**2) Externally exposed enterprise apps — “PoC → targeting within hours” (Atlassian DC CVE-2026-21589; Zammad CVE-2026-102489)**\n- **What happened:** Public PoCs are driving rapid attacker scanning/targeting of **Atlassian Data Center** and **Zammad** (session cookie leak leading to takeover/RCE).  \n- **Why it matters operationally:** These platforms often store secrets/tokens (tickets, integrations, code links) and are commonly Internet-accessible; compromise can become an identity pivot into SaaS and internal tooling.  \n- **Recommended immediate actions for the SOC today:** Inventory Internet-facing instances (including “forgotten” dev/stage); apply vendor mitigations/patches or restrict access (VPN/allowlist); monitor for new admin users, plugin/app installs, and anomalous auth/session activity.\n\n**3) AhsayCBS — exploited in the wild (CVE-2026-105133, CVE-2026-105134)**\n- **What happened:** Backup platform **AhsayCBS** vulnerabilities are reportedly exploited in the wild (auth bypass + OS command injection).  \n- **Why it matters operationally:** Backup systems are prime ransomware targets; compromise enables destructive actions (backup deletion), credential harvesting, and direct code execution in sensitive management networks.  \n- **Recommended immediate actions for the SOC today:** Validate whether AhsayCBS exists anywhere (including subsidiaries/managed providers); if present, isolate from Internet, enforce MFA/admin IP allowlisting, and review for suspicious admin logins/job config changes and unexpected process executions.\n\n**4) Software supply-chain targeting dev/build — malicious npm “MALFEX” + trojanized Terraform provider (TraderTraitor/UNC4899)**\n- **What happened:** Campaigns distributing **malicious npm packages** (RAT/stealer) and a **trojanized Terraform provider** linked to a sophisticated actor set.  \n- **Why it matters operationally:** Dev endpoints and CI/CD runners hold cloud keys, signing certs, and deployment tokens; a single poisoned dependency can yield broad cloud and production impact.  \n- **Recommended immediate actions for the SOC today:** Trigger targeted threat hunt on dev/CI assets for new/unsigned binaries and suspicious Node/Terraform executions; review recent dependency changes and lockfile diffs; tighten egress monitoring from build networks to detect anomalous exfil.\n\n---\n\n### Monitoring & detection recommendations\n- **NetScaler exploitation/abuse:** Monitor ADC/Gateway logs + perimeter firewall/WAF for spikes in requests to management/auth endpoints and unusual response codes; correlate with IdP/SSO anomalies (ATT&CK: T1190, T1078).  \n- **Post-exploitation from edge appliances:** From NetScaler/Ahsay management VLANs, alert on new outbound connections (proxying, SSH/RDP, unusual DNS) and traffic to unfamiliar ASNs; use NDR + firewall egress logs (T1090, T1041).  \n- **Atlassian/Zammad compromise indicators:** App audit logs for new admin users, token creation, plugin installs, configuration/export actions; web server access logs for new endpoints/odd User-Agents and bursty scanning (T1190, T1552).  \n- **Backup stack integrity:** For any backup management servers, alert on process creation of shells/powershell, scheduled task creation, and unexpected service installs; monitor backup job deletion/retention policy changes (T1059, T1569).  \n- **Dev/CI supply-chain hunting:** EDR on dev workstations and runners—flag `npm`/`node` spawning suspicious child processes, credential access from browsers, and new persistence; watch artifact repositories for newly published packages (T1059.007, T1555).  \n- **Terraform provider abuse:** On CI runners, log and alert on `terraform init` pulling new providers, unexpected provider source changes, and execution of non-standard binaries during plan/apply; correlate with cloud API calls from new user-agents (T1195, T1072).  \n- **Infostealer risk (CastleStealer trend):** Proxy/DNS + EDR for unusual browser data access, large POSTs to newly seen domains, and archive creation in user profiles; prioritize high-privilege users (T1555.003, T1567).  \n\n---\n\n### Medium-term follow-ups\n- **Edge asset governance:** Re-validate ownership/patch SLAs for all Internet-facing edge/IAM appliances and “shadow” app instances (Atlassian/Zammad) across business units.  \n- **Hardening for NetScaler/SSO paths:** Enforce least-privileged admin, MFA where supported, dedicated management network access, and strict egress controls from appliance subnets.  \n- **Backup environment resilience:** Ensure immutable backups / WORM where possible; validate restore procedures; segregate backup admin credentials and monitor for deletion events as high-severity.  \n- **Supply-chain controls:** Expand allowlisted registries, enforce lockfiles + verified provenance where possible, and require code review for dependency/provider source changes in build pipelines.  \n- **Vuln intake hygiene (noise control):** Numerous older PoCs surfaced (e.g., common legacy CVEs); ensure scanners prioritize *Internet-exposed + known exploited* over generic PoC feeds to reduce patch thrash.  \n- **Community-sourced “critical claims” (e.g., iCloud post):** Treat as unconfirmed until vendor/advisory corroboration; track for escalation only if technical details/impact become credible.",
+  "highlights": [
+    {
+      "title": "Citrix NetScaler RCE zero-day Vulnerabilities",
+      "link": "https://fortiguard.fortinet.com/threat-signal-report/6533",
+      "source": "FortiGuard Labs | FortiGuard Center - Threat Signal Report",
+      "published": "2026-10-09T02:00:03+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Threat Actors / APT",
+        "Exploit / PoC",
+        "Identity / Access",
+        "Ransomware"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 100.0,
+      "priority_score": 86.68
+    },
+    {
+      "title": "PoC Released for Zammad Session Leak Flaw Enabling Remote Code Execution",
+      "link": "https://cybersecuritynews.com/poc-released-for-zammad-session-leak-flaw/",
+      "source": "Cyber Security News",
+      "published": "2026-10-08T14:27:11+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Cloud / SaaS",
+        "Identity / Access",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 100.0,
+      "priority_score": 84.25
+    },
+    {
+      "title": "Best Data Breach and Data Leak Detection Tools in 2026 | UpGuard",
+      "link": "https://www.upguard.com/blog/best-data-breach-and-data-leak-detection-tools-in-2026",
+      "source": "UpGuard Blog",
+      "published": "2026-10-09T04:47:09+00:00",
+      "smart_groups": [
+        "Data Breaches / Leaks",
+        "Exploit / PoC",
+        "Vendors / Product Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 79.76,
+      "priority_score": 85.2
+    },
+    {
+      "title": "Malicious npm Campaign “MALFEX” Delivers RAT and Stealer via Eight Packages with 40,000+ Downloads",
+      "link": "https://orca.security/resources/research/malicious-npm-campaign-malfex-delivers-rat-and-stealer-via-eight-packages-with-40000-downloads/",
+      "source": "Orca Security Blog",
+      "published": "2026-10-08T16:52:07+00:00",
+      "smart_groups": [
+        "Supply Chain / Software",
+        "Malware / Payloads",
+        "Windows / Microsoft",
+        "Vendors / Product Security"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 71.97,
+      "priority_score": 84.3
+    },
+    {
+      "title": "Exploit for CVE-2020-14882",
+      "link": "https://sploitus.com/exploit?id=0EE6698F-7DD3-50B3-8046-DDE8553CE307&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-10-08T20:45:19+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 70.39,
+      "priority_score": 71.16
+    },
+    {
+      "title": "Exploit for CVE-2020-11651",
+      "link": "https://sploitus.com/exploit?id=1C0330D9-D81B-5908-8FD3-16605DCBBA84&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-10-08T20:53:05+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.39,
+      "priority_score": 71.19
+    },
+    {
+      "title": "Exploit for CVE-2015-1427",
+      "link": "https://sploitus.com/exploit?id=1DA81A1E-4D10-5AA5-9156-6C0F5A896479&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-10-08T19:58:44+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.39,
+      "priority_score": 70.95
+    },
+    {
+      "title": "Exploit for CVE-2026-92555",
+      "link": "https://sploitus.com/exploit?id=850771F0-0236-5ADC-9D9D-4539F7390F8A&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-10-08T17:55:10+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.39,
+      "priority_score": 70.4
+    },
+    {
+      "title": "ninjakit exploit",
+      "link": "https://sploitus.com/exploit?id=56A87F7B-F460-5444-8B07-558A7A097996&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-10-08T16:11:09+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.39,
+      "priority_score": 69.93
+    },
+    {
+      "title": "Exploit for CVE-2026-21589",
+      "link": "https://sploitus.com/exploit?id=2EA01C3B-AF36-5F18-BAA7-B3242579035E&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-10-08T15:30:30+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.39,
+      "priority_score": 69.75
+    }
+  ]
+}
