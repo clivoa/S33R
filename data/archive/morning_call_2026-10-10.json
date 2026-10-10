@@ -1,0 +1,163 @@
+{
+  "generated_at": "2026-10-10T12:30:00.997917+00:00",
+  "analysis_date": "2026-10-10",
+  "provider": "openai",
+  "model": "gpt-5.2",
+  "window_hours": 24,
+  "source_file": "data/news_recent.json",
+  "source_generated_at": "2026-10-10T11:10:59.168688+00:00",
+  "source_days_back": 30,
+  "source_total_items": 63636,
+  "total_items_in_window_all": 2454,
+  "total_items_in_window_curated": 4,
+  "total_items_in_window_selected": 40,
+  "context_selection_policy": "curated-plus-operational-signal-v1",
+  "morning_call_markdown": "### Executive Summary\n- Active exploitation reported against **AhsayCBS backup software**; treat any internet-exposed instance as high risk for ransomware-style follow-on activity.\n- Multiple **critical/exploitable edge and identity components** in play (Citrix NetScaler SAML RCE; Keycloak authorization/priv-issues); prioritize exposure review + patch/mitigation validation.\n- **Software supply-chain activity targeting developers/CI** (trojanized Terraform provider + FakeGit repos pushing loaders/stealers); increase controls/monitoring around DevOps endpoints and build pipelines.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) AhsayCBS (backup platform) vulns exploited in the wild**\n- What happened: Reports indicate **unpatched AhsayCBS vulnerabilities are being actively exploited** for remote code execution and payload deployment.\n- Why it matters operationally: Backup platforms are a **high-value target for ransomware** (data destruction/exfiltration, lateral movement, credential theft).\n- Recommended immediate actions for the SOC today: **Identify any AhsayCBS instances + internet exposure;** fast-track patch/mitigations and **hunt for new admin accounts, new services/tasks, unusual outbound connections** from the server(s).\n\n**2) Citrix NetScaler ADC/Gateway critical RCE when configured for SAML roles (CVE-2026-107406)**\n- What happened: Citrix disclosed a **critical memory overflow** in NetScaler ADC/Gateway in certain **SAML authentication configurations** (unauth RCE/DoS risk).\n- Why it matters operationally: NetScaler is often an **internet-facing access tier**; compromise can enable credential theft, session hijack, and rapid foothold into internal networks.\n- Recommended immediate actions for the SOC today: **Inventory NetScaler appliances + confirm SAML role exposure;** apply vendor fixes/mitigations ASAP and **enable heightened alerting on NetScaler logs for abnormal auth flow/errors, config changes, and new processes.**\n\n**3) DevOps/software supply-chain: trojanized Terraform provider + FakeGit malware distribution**\n- What happened: Campaigns are abusing **Terraform provider workflows** (trojanized provider posing as AWS-related) and **thousands of fake GitHub repos** to distribute loaders/stealers (SmartLoader/stealer activity referenced).\n- Why it matters operationally: Compromise of developer endpoints/CI can lead to **cloud credential theft, poisoned infrastructure-as-code, and downstream production impact**.\n- Recommended immediate actions for the SOC today: **Monitor developer/CI hosts for unexpected Terraform provider installs/executions and new binaries spawned by terraform;** restrict/verify provider sources (allowlist/internal registry) and **block/alert on downloads from newly created/low-reputation GitHub repos** where feasible.\n\n**4) “Edge exploit noise” with PoCs for multiple critical CVEs (treat as scanning pressure)**\n- What happened: New/reshared **public PoCs** appeared for several high-severity CVEs (incl. NetScaler-related items above, Kerio Control auth issues, macOS overflow, others with CVSS 9+).\n- Why it matters operationally: Public PoCs tend to drive **opportunistic mass scanning**; even if not all are in your stack, perimeter telemetry spikes and false positives will increase.\n- Recommended immediate actions for the SOC today: **Confirm perimeter asset inventory vs these product families;** tune SIEM to **prioritize exploit-like requests to internet-facing services** and rapidly route confirmed hits to IR for triage.\n\n---\n\n### Monitoring & detection recommendations\n- **AhsayCBS servers (EDR + Windows/Linux logs):** hunt for **new services/scheduled tasks, webshell-like child processes from web/app services** and unusual outbound to internet (MITRE **T1059, T1105, T1505**).\n- **NetScaler telemetry (appliance logs + WAF + firewall):** alert on **SAML/auth role-related anomalies, spikes in 5xx errors, unexpected config writes, and unusual management/API access** (MITRE **T1190**).\n- **Dev endpoints/CI runners (EDR + process telemetry):** detect **terraform spawning shell/interpreters**, unexpected binaries in plugin/provider paths, and sudden credential access (MITRE **T1552, T1059**).\n- **Network egress (proxy/DNS/firewall):** flag **developer/CI hosts** reaching newly seen domains, GitHub raw content, paste sites, or unusual cloud endpoints shortly after terraform runs (MITRE **T1105**).\n- **IdP/IAM (Keycloak/SSO logs where applicable):** monitor for **unexpected privilege grants, client registrations, and theme/rendering access anomalies** tied to Keycloak CVEs noted (MITRE **T1098, T1556**).\n- **Email + web security gateways:** increase scrutiny for **links to GitHub repos/tools** and “dev utility” lures; correlate clicks with endpoint downloads/execution.\n- **Threat hunting sweep (EDR across enterprise):** query for **loader/stealer behaviors** (new persistence, browser credential store access, suspicious PowerShell/curl/wget) on dev machines first (MITRE **T1547, T1555**).\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** ensure a formal **internet-facing edge** SLA that includes NetScaler/VPN/WAF appliances and backup platforms; validate patch completeness with authenticated scans.\n- **DevSecOps hardening:** enforce **Terraform provider pinning**, checksum verification, and use an **internal provider registry/allowlist**; review least-privilege for CI cloud credentials.\n- **Supply-chain controls:** implement/expand **repo reputation controls** (code-signing, dependency scanning, commit signing) and restrict execution of untrusted developer tools.\n- **Backup resilience:** validate **immutable backups**, separate admin credentials, and monitoring for backup job deletion/retention changes (ransomware playbook).\n- **Incident readiness:** refresh playbooks for **edge appliance compromise** (NetScaler/VPN) and **developer/CI compromise**, including rapid credential rotation and session invalidation.\n- **Awareness note (targeted):** brief dev teams on **FakeGit/trojanized providers** and safe acquisition practices; keep it practical (verify source, pin versions, report unusual terraform output).",
+  "highlights": [
+    {
+      "title": "Critical AhsayCBS Vulnerabilities Exploited in the Wild: Immediate Actions Needed",
+      "link": "https://www.news4hackers.com/critical-ahsaycbs-vulnerabilities-exploited-in-the-wild-immediate-actions-needed/",
+      "source": "News4Hackers",
+      "published": "2026-10-09T15:16:06+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 75.96,
+      "priority_score": 82.83
+    },
+    {
+      "title": "Exploit for CVE-2026-102428",
+      "link": "https://sploitus.com/exploit?id=FC8865D0-7E5A-52C7-B964-CD204031EC3C&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-10-10T08:37:51+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 70.37,
+      "priority_score": 74.42
+    },
+    {
+      "title": "Hackers Abuse Trusted Terraform Workflows to Infect Developer Systems With Cross-Platform Malware",
+      "link": "https://cybersecuritynews.com/hackers-abuse-trusted-terraform-workflows/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-10-09T13:20:21+00:00",
+      "smart_groups": [
+        "Malware / Payloads",
+        "Cloud / SaaS",
+        "Linux / Unix",
+        "Supply Chain / Software",
+        "Windows / Microsoft",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 70.14,
+      "priority_score": 82.5
+    },
+    {
+      "title": "Exploit for CVE-2026-106445",
+      "link": "https://sploitus.com/exploit?id=30A77426-D6AC-5C2B-932F-9AE28F883FD3&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-10-10T08:24:22+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.37,
+      "priority_score": 74.36
+    },
+    {
+      "title": "Exploit for CVE-2026-107806",
+      "link": "https://sploitus.com/exploit?id=F4DD9CD0-A85B-5B88-AA48-873DDEAA98D4&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-10-10T08:17:07+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.37,
+      "priority_score": 74.33
+    },
+    {
+      "title": "Exploit for CVE-2026-21589",
+      "link": "https://sploitus.com/exploit?id=FBA3BACC-C6E2-5B4A-A895-1C6DA0DC7B50&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-10-09T19:15:01+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.37,
+      "priority_score": 70.84
+    },
+    {
+      "title": "Exploit for Missing Authentication for Critical Function in Gfi Kerio_Control",
+      "link": "https://sploitus.com/exploit?id=519CBC12-EEE8-5BE7-84CF-A1796166F3EA&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-10-09T14:00:31+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.37,
+      "priority_score": 69.44
+    },
+    {
+      "title": "Exploit for Classic Buffer Overflow in Apple Macos",
+      "link": "https://sploitus.com/exploit?id=33BCB0FD-7DC5-5833-B675-D22DF8FE64BE&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-10-10T00:40:47+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 66.37,
+      "priority_score": 73.48
+    },
+    {
+      "title": "CVE-2026-104759 | WPO365 Plugin up to 44.1 on WordPress Deprecated Parser process_openidconnect_token id_token authentication replay (EUVD-2026-96286)",
+      "link": "https://vuldb.com/vuln/416160",
+      "source": "VulDB Updates",
+      "published": "2026-10-10T09:58:32+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 63.32,
+      "priority_score": 81.11
+    },
+    {
+      "title": "POC-CVE-2021-42013-EXPLOIT",
+      "link": "https://sploitus.com/exploit?id=KITPLOIT:TOOLS-GITHUB-MAKAVELLIK-POC-CVE-2021-42013-EXPLOIT&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-10-09T13:03:01+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 62.37,
+      "priority_score": 79.18
+    }
+  ]
+}
