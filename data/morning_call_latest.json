@@ -1,171 +1,169 @@
 {
-  "generated_at": "2026-10-12T15:19:44.208694+00:00",
-  "analysis_date": "2026-10-12",
+  "generated_at": "2026-10-13T14:11:33.294210+00:00",
+  "analysis_date": "2026-10-13",
   "provider": "openai",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-10-12T10:33:16.001001+00:00",
+  "source_generated_at": "2026-10-13T10:32:44.972835+00:00",
   "source_days_back": 30,
-  "source_total_items": 63765,
-  "total_items_in_window_all": 1665,
+  "source_total_items": 61910,
+  "total_items_in_window_all": 2364,
   "total_items_in_window_curated": 3,
   "total_items_in_window_selected": 40,
   "context_selection_policy": "curated-plus-operational-signal-v1",
-  "morning_call_markdown": "### Executive Summary\n- Multiple **actively exploited, unauthenticated RCE/auth-bypass** issues are trending today (Cisco SD-WAN Manager, WordPress plugins, Langflow) — prioritize **internet-facing exposure checks + patch/mitigation**.\n- **Ransomware operators are exploiting VPN edge weaknesses** (Palo Alto GlobalProtect auth bypass referenced) — treat suspicious VPN/admin access as **high-severity** and tighten controls.\n- Web app/plugin exploitation remains high-volume: expect **file upload webshells and mass scanning** against WordPress and other legacy CMS components.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Cisco Catalyst SD-WAN Manager auth bypass (CVE-2026-76504, KEV / active exploit)**\n- **What happened:** Public analysis highlights a **single-request URI percent-encoding** trick enabling **unauthenticated admin API access**.\n- **Why it matters operationally:** Direct compromise of SD-WAN control plane can enable **network pivoting**, traffic manipulation, and rapid ransomware staging.\n- **Recommended immediate actions for the SOC today:** Validate **any exposed SD-WAN Manager** is patched/mitigated; hunt for **unexpected admin/API calls, new users/tokens, config changes** since Sep 30; isolate/restrict management access to allowlisted IPs.\n\n**2) Internet-facing web stack mass exploitation: WordPress plugin unauth RCE (Bricksforge CVE-2026-85097) + Forminator/Divi Plus PoCs**\n- **What happened:** Bricksforge plugin flaw (CVSS 10) is **actively exploited** for **unauth PHP upload/execute**; additional WP plugin PoCs surfaced (e.g., **Forminator Forms CVE-2026-15748**, **Divi Plus CVE-2026-91136** file read).\n- **Why it matters operationally:** Likely **opportunistic scanning** leading to webshells, credential theft, and footholds into internal networks via compromised web servers.\n- **Recommended immediate actions for the SOC today:** Identify WordPress instances and plugin inventory; **disable/patch vulnerable plugins immediately** and block wp-admin/wp-json exposure where possible; hunt for **new/modified PHP files**, suspicious uploads, and anomalous POSTs to plugin endpoints.\n\n**3) Langflow unauthenticated RCE (CVE-2026-9198, KEV / active exploit)**\n- **What happened:** Verified exploitability for **unauth code injection → RCE** on default Langflow deployments (affected 1.0.0–1.10.0; fixed 1.10.1).\n- **Why it matters operationally:** Langflow often runs with access to **LLM connectors, secrets, internal APIs**; compromise can turn into cloud credential theft and lateral movement.\n- **Recommended immediate actions for the SOC today:** Search for **externally reachable Langflow** services; patch to **1.10.1+** or take offline; hunt for suspicious process execution from the service account and unexpected outbound connections.\n\n**4) VPN edge exploitation / ransomware tradecraft (Palo Alto GlobalProtect auth bypass mentioned, CVE-2026-0257)**\n- **What happened:** Reporting indicates ransomware groups are **exploiting a GlobalProtect authentication bypass** (details limited in this feed; assume edge exploitation + credential/session abuse).\n- **Why it matters operationally:** VPN compromise is a common **initial access** path to domain takeover and ransomware in financial environments.\n- **Recommended immediate actions for the SOC today:** Confirm GlobalProtect/PAN-OS exposure and patch status (or apply compensating controls); hunt for **abnormal VPN logins** (new geos, impossible travel, atypical device posture) and **post-VPN privilege escalation** activity.\n\n---\n\n### Monitoring & detection recommendations\n- **Edge management/API abuse (Cisco SD-WAN Manager):** Monitor SD-WAN Manager **HTTP/API logs + admin audit logs** for unusual endpoints, percent-encoded URIs, new tokens/users, config exports (ATT&CK: **T1190**, **T1078**).\n- **WordPress exploitation/webshells:** On web servers collect **WAF/Apache/Nginx logs + FIM/EDR telemetry**; alert on **PHP execution in upload dirs**, sudden file writes under `wp-content/`, and suspicious calls to `wp-json` plugin namespaces (ATT&CK: **T1505.003**, **T1105**).\n- **Langflow service compromise:** Use **EDR + container/K8s audit logs** to flag `bash/sh/python` spawned by Langflow, secret-store access, and new outbound connections to unknown hosts (ATT&CK: **T1059**, **T1552**).\n- **VPN-to-internal pivot (GlobalProtect):** Correlate **VPN auth logs + IdP + firewall** for (1) fresh VPN session then (2) SMB/RDP/WinRM spikes; prioritize privileged accounts (ATT&CK: **T1021**, **T1046**).\n- **Legacy Struts exploitation (CVE-2016-3081 added to KEV):** Review **Java app server logs (Tomcat/Struts)** for DMI-related patterns and unexpected command execution; treat any Struts internet-facing system as high risk (ATT&CK: **T1190**, **T1203**).\n- **Email-driven social engineering (calendar phishing theme):** Watch **email gateway + SaaS audit logs (M365/Google)** for invite-based lures, external organizer spikes, and user clicks leading to new OAuth grants (ATT&CK: **T1566.002**, **T1528**).\n- **Post-exploitation indicators (generic, tied to web/VPN footholds):** In EDR, prioritize detections for **credential dumping, LSASS access, local admin creation, scheduled tasks** within 0–6h of a web/VPN alert (ATT&CK: **T1003**, **T1053.005**, **T1136.001**).\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** Ensure formal tracking for today’s criticals: **CVE-2026-76504 (Cisco SD-WAN Manager)**, **CVE-2026-85097 (Bricksforge)**, **CVE-2026-9198 (Langflow)**, and the referenced **GlobalProtect CVE-2026-0257** (validate applicability).\n- **Reduce internet-facing CMS/plugin risk:** Move WordPress behind **WAF + bot/scanner protections**, enforce **least-privilege file permissions**, and implement **plugin allowlists** and routine vulnerability scans.\n- **Java/legacy tech debt:** Re-assess exposure to **Apache Struts** and other historically exploited components; prioritize modernization or isolation where patching is slow.\n- **Supply-chain readiness:** Recent supply-chain breach reporting (non-financial example) reinforces need to validate **vendor access paths**, third-party integrations, and enforce **least privilege + strong logging** for suppliers.\n- **Cloud/AI agent hardening (SSRF/IMDS theme referenced):** Review internal AI/agent deployments for **IMDS protections (IMDSv2, hop limit), egress controls, and secret scoping** to reduce credential exfil risk.\n- **Ransomware playbook refresh:** Given ongoing arrests/pressure on actors but continued activity, validate **rapid containment steps** for VPN/web footholds (account disable, session revoke, network isolation) are scripted and exercised.",
+  "morning_call_markdown": "### Executive Summary\n- Active exploitation is underway against **SonicWall SMA1000** (critical SSRF, **CVE-2026-102255**, CVSS 10); treat any internet-exposed SMA as potentially targeted today.\n- **GitLab self-managed** has a **critical unauthenticated RCE** in CI/CD regex compiler (**CVE-2026-97229**, CVSS 10); prioritize patching/mitigation and hunt for suspicious CI/CD-triggered activity.\n- Multiple **“drop-in” exploitation paths** emerged (WordPress Bricksforge RCE; Metabase SQLi PoC; Citrix NetScaler RCE patch); tighten external exposure monitoring and fast-track edge patching.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) SonicWall SMA1000 critical SSRF under active attack (CVE-2026-102255)**\n- **What happened:** Reports indicate **in-the-wild exploitation** of a max-severity SSRF in **SMA1000** soon after fixes were released.\n- **Why it matters operationally:** SMA devices are perimeter access points; SSRF-style bugs are commonly chained to credential theft, internal pivoting, and appliance compromise in financial-sector intrusions.\n- **Recommended immediate actions for the SOC today:** Confirm inventory/exposure of SMA1000; push emergency patch/mitigation or restrict management/access paths; review last 7 days SMA logs for anomalous requests and new admin/session artifacts.\n\n**2) GitLab self-managed unauthenticated RCE (CVE-2026-97229)**\n- **What happened:** GitLab disclosed an **integer overflow** in the CI/CD regular expression compiler enabling **unauthenticated code execution** on vulnerable self-managed instances.\n- **Why it matters operationally:** Compromised GitLab can yield source code, CI secrets/tokens, runner abuse, and downstream supply-chain impact; attackers can quickly operationalize CVSS 10 RCEs.\n- **Recommended immediate actions for the SOC today:** Identify all self-managed GitLab and verify patched versions; monitor for unexpected GitLab service restarts/crashes and suspicious CI pipeline activity (new runners, abnormal jobs); consider temporary access restrictions to GitLab admin/CI endpoints until patched (assumption: feasible without business outage).\n\n**3) WordPress Bricksforge plugin unauthenticated RCE exploited (CVE-2026-85097)**\n- **What happened:** Bricksforge WordPress plugin has a **CVSS 10 unauthenticated PHP upload/exec RCE** with exploitation reported.\n- **Why it matters operationally:** Common initial-access vector for web server takeover leading to credential harvesting, internal recon, and ransomware staging—especially if any marketing/vendor sites share identity or network trust.\n- **Recommended immediate actions for the SOC today:** Locate WordPress instances (including third-party hosted) using Bricksforge and patch/disable plugin immediately; increase monitoring for webshell patterns and new PHP files in upload/plugin dirs; block suspicious outbound from web servers (new beaconing) at proxy/firewall.\n\n**4) “Edge / identity infrastructure” patch window: Citrix NetScaler critical RCE + Progress MarkLogic SAML auth issue**\n- **What happened:** Citrix patched a **critical NetScaler RCE** (**CVE-2026-107406**, 9.5); Progress MarkLogic published a **SAML processing auth flaw** (**CVE-2026-85962**) (plus broader MarkLogic patching referenced).\n- **Why it matters operationally:** NetScaler and SAML-enabled platforms are frequent beachheads; even without confirmed exploitation, these are high-leverage targets in financial environments.\n- **Recommended immediate actions for the SOC today:** Validate whether we run affected NetScaler/MarkLogic and prioritize patching if internet-facing; review IdP/SAML auth logs for anomalous assertion acceptance, unusual ACS/redirect patterns, and new privileged sessions.\n\n---\n\n### Monitoring & detection recommendations\n- **SonicWall SMA1000 (CVE-2026-102255):** Monitor **VPN/appliance HTTP request logs + firewall/WAF** for unusual URL paths/parameters and spikes from single sources; correlate with **new sessions/admin actions** (ATT&CK: **T1190 Exploit Public-Facing Application**).\n- **GitLab RCE / CI abuse:** From **GitLab audit logs, runner logs, and EDR on GitLab hosts**, hunt for abnormal pipeline creation, runner registration, unexpected child processes spawned by GitLab services (ATT&CK: **T1059 Command and Scripting Interpreter**, **T1106 Native API**).\n- **WordPress RCE/webshell follow-on:** On **web server EDR + file integrity monitoring + web logs**, alert on new/modified `.php` in uploads/plugins/themes, suspicious POSTs to admin-ajax or upload endpoints, and outbound connections from web tiers (ATT&CK: **T1505.003 Web Shell**).\n- **NetScaler/edge appliance exploitation attempts:** From **ADC logs + perimeter firewall**, look for exploitation-like request bursts, unusual user agents, and configuration changes; ensure syslog forwarding is intact (ATT&CK: **T1190**).\n- **SAML/IdP abuse (MarkLogic/SAP/ZITADEL-related themes):** From **IdP logs (Azure AD/ADFS/other) + app auth logs**, hunt for abnormal SAML assertions, mismatched issuers/audiences, repeated failures followed by success, and new admin role grants (ATT&CK: **T1556 Modify Authentication Process**).\n- **Metabase SQLi PoC (CVE-2026-72898):** If Metabase exists internally, review **reverse proxy/WAF + application logs** for suspicious query parameters and error patterns; watch for DB connection anomalies (ATT&CK: **T1190**, **T1505 Server Software Component**).\n- **Ransomware ecosystem note (“pre-compromised edge devices”):** Use **VPN/firewall + EDR** to flag logins from unusual geos/ASNs and post-auth tooling (PsExec/WMI/remote services), and validate MFA on all remote access (ATT&CK: **T1021 Remote Services**, **T1078 Valid Accounts**).\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** Add SMA1000/GitLab/NetScaler/MarkLogic to “24–72 hour SLA” patch class; verify compensating controls for any exceptions (segmentation, allowlists, admin VPN).\n- **External attack surface review:** Reconfirm which **admin panels (GitLab, WP, Metabase)** are internet-exposed; reduce exposure with IP allowlisting, SSO/MFA, and separate management planes.\n- **WAF/library hygiene:** If using **OWASP Coraza WAF (CVE-2026-104774)**, plan upgrade and validate rules relying on `t:jsDecode` to reduce bypass risk.\n- **Supply-chain/dev tooling:** Track newly reported **Hex/Rebar3/Gleam** supply-chain CVEs; ensure dev build agents run with least privilege and isolated workspaces to limit path traversal impact.\n- **Certificate lifecycle planning:** Start planning for **Let’s Encrypt 64-day certificates** (not urgent today) to avoid future renewal outages; confirm automation and monitoring for issuance/renewal failures.\n- **Mobile/device risk awareness:** Remind teams to avoid untrusted Android devices (report of pre-installed malware on low-cost phones); validate mobile access policies for corporate apps/MDM.",
   "highlights": [
     {
-      "title": "Exploit for Code Injection in Langflow",
-      "link": "https://vulners.com/githubexploit/2D996ADD-F425-5620-AD07-F6317AD75977?utm_source=rss&utm_medium=rss&utm_campaign=rss",
-      "source": "Vulners.com RSS Feed",
-      "published": "2026-10-12T01:38:04+00:00",
+      "title": "SANS Stormcast Tuesday, October 13th, 2026: GitLab CI/CD RCE (CVE-2026-97229); Let’s Encrypt 64-Day Certificates; Midnight Mimosa Pre-Installed Android Malware; Progress MarkLogic Patches",
+      "link": "https://isc.sans.edu/podcastdetail/10134",
+      "source": "SANS Internet Stormcenter Daily Cyber Security Podcast (Stormcast)",
+      "published": "2026-10-13T02:00:02+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Crypto / Web3",
-        "Exploit / PoC"
+        "Mobile Security",
+        "Malware / Payloads",
+        "Exploit / PoC",
+        "Community / Briefing"
       ],
       "curated": false,
       "signal_tier": "critical",
-      "signal_score": 86.41,
-      "priority_score": 74.5
+      "signal_score": 83.26,
+      "priority_score": 78.83
     },
     {
-      "title": "CVE-2026-76504: Cisco Catalyst SD-WAN Manager Authentication Bypass — Analysis & Mitigation",
-      "link": "https://dev.to/iamfaizanakhtar/cve-2026-76504-cisco-catalyst-sd-wan-manager-authentication-bypass-analysis-mitigation-3b1m",
-      "source": "DEV Community",
-      "published": "2026-10-12T01:58:26+00:00",
+      "title": "Critical SonicWall Vulnerability Exploited in Attacks Following Disclosure",
+      "link": "https://cybersecuritynews.com/critical-sonicwall-vulnerability-exploited/",
+      "source": "Cyber Security News",
+      "published": "2026-10-13T07:22:20+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Mobile Security",
+        "General Security"
+      ],
+      "curated": false,
+      "signal_tier": "critical",
+      "signal_score": 83.21,
+      "priority_score": 79.56
+    },
+    {
+      "title": "Maximum-Severity SSRF Flaw in SonicWall SMA Devices Under Attack",
+      "link": "https://www.darkreading.com/vulnerabilities-threats/max-severity-ssrf-flaw-sonicwall-sma-devices-under-attack",
+      "source": "darkreading",
+      "published": "2026-10-12T21:42:42+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Web / API Security",
-        "Crypto / Web3",
-        "Exploit / PoC",
-        "Network / OT / ICS",
-        "OSINT / Community"
+        "General Security"
       ],
       "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 84.99,
-      "priority_score": 87.69
+      "signal_tier": "high",
+      "signal_score": 75.85,
+      "priority_score": 79.91
     },
     {
-      "title": "Attackers Exploit CVSS 10.0 Bricksforge WordPress Flaw Enabling Unauthenticated RCE",
-      "link": "https://thehackernews.com/2026/10/attackers-exploit-cvss-100-bricksforge.html",
-      "source": "The Hacker News",
-      "published": "2026-10-12T09:02:14+00:00",
+      "title": "CVE-2026-92120 | Apache Allura up to 1.21.0 OAuth1 authentication replay (EUVD-2026-97832)",
+      "link": "https://vuldb.com/vuln/417215",
+      "source": "VulDB Updates",
+      "published": "2026-10-12T22:30:49+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
+        "Identity / Access",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 69.32,
+      "priority_score": 78.21
+    },
+    {
+      "title": "Patched Is Not Evicted: Inside CCB's Threat Actor Profile of The Gentlemen",
+      "link": "https://www.youtube.com/watch?v=5usx7DUQa2Y",
+      "source": "SANS DFIR (YouTube)",
+      "published": "2026-10-12T14:33:47+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Threat Actors / APT",
+        "Detection Engineering",
+        "Malware / Payloads",
+        "Ransomware"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 67.62,
+      "priority_score": 81.03
+    },
+    {
+      "title": "WordPress Bricksforge & SonicWall SMA CVSS 10.0 exploits; Ledger spy chips drain wallets",
+      "link": "https://defend.network/briefings/wordpress-bricksforge-sonicwall-sma-ledger-rce-exploit-2026-10-13.html",
+      "source": "defend.network",
+      "published": "2026-10-13T06:30:00+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Data Breaches / Leaks",
         "Exploit / PoC",
         "General Security"
       ],
       "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 82.81,
-      "priority_score": 88.61
-    },
-    {
-      "title": "Attackers Exploit CVSS 10.0 Bricksforge WordPress Flaw Enabling Unauthenticated RCE",
-      "link": "https://vulners.com/thn/THN:E4D35C967F07E44A86060D18EF4BF060?utm_source=rss&utm_medium=rss&utm_campaign=rss",
-      "source": "Vulners.com RSS Feed",
-      "published": "2026-10-12T09:02:00+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": false,
-      "signal_tier": "critical",
-      "signal_score": 82.41,
-      "priority_score": 76.61
-    },
-    {
-      "title": "CVE-2025-49113-exploit",
-      "link": "https://vulners.com/kitploit/KITPLOIT:TOOLS-GITHUB-HAKAIOFFSEC-CVE-2025-49113-EXPLOIT?utm_source=rss&utm_medium=rss&utm_campaign=rss",
-      "source": "Vulners.com RSS Feed",
-      "published": "2026-10-12T09:00:32+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": false,
       "signal_tier": "high",
-      "signal_score": 72.41,
-      "priority_score": 76.48
+      "signal_score": 67.08,
+      "priority_score": 88.69
     },
     {
-      "title": "SANS Stormcast Monday, October 12th, 2026: TLP Overuse; AgentCorruption SSRF in Amazon Bedrock Agents; Palo Alto GlobalProtect VPN Exploited by Ransomware (CVE-2026-0257)",
-      "link": "https://isc.sans.edu/podcastdetail/10132",
-      "source": "SANS Internet Stormcenter Daily Cyber Security Podcast (Stormcast)",
-      "published": "2026-10-12T02:00:02+00:00",
+      "title": "Exploit for SQL Injection in Metabase",
+      "link": "https://sploitus.com/exploit?id=D5C45203-F522-594C-9D88-E0765A8DB593&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-10-13T09:10:37+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Crypto / Web3",
-        "Exploit / PoC",
-        "Ransomware",
-        "Web / API Security",
-        "Community / Briefing"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 71.16,
-      "priority_score": 78.32
-    },
-    {
-      "title": "Exploit for CVE-2026-91136",
-      "link": "https://vulners.com/githubexploit/F3152BE1-D453-5C09-9932-BB44CA1FCB4E?utm_source=rss&utm_medium=rss&utm_campaign=rss",
-      "source": "Vulners.com RSS Feed",
-      "published": "2026-10-12T01:46:17+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Cloud / SaaS",
-        "Crypto / Web3",
         "Exploit / PoC",
         "Web / API Security"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 70.41,
-      "priority_score": 74.02
+      "signal_score": 66.35,
+      "priority_score": 74.66
     },
     {
-      "title": "Exploit for CVE-2026-15748",
-      "link": "https://sploitus.com/exploit?id=2FD34FAB-A898-5345-93FD-925B68DB0746&utm_source=rss&utm_medium=rss",
-      "source": "Sploitus – Exploits",
-      "published": "2026-10-11T19:54:47+00:00",
+      "title": "CVE-2026-89309 | tbc up to 0.x privilege escalation",
+      "link": "https://vuldb.com/vuln/417507",
+      "source": "VulDB Recent Entries",
+      "published": "2026-10-13T09:25:53+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 68.38,
-      "priority_score": 71.24
+      "signal_score": 63.35,
+      "priority_score": 81.29
     },
     {
-      "title": "Exploit for Code Injection in Langflow",
-      "link": "https://sploitus.com/exploit?id=2D996ADD-F425-5620-AD07-F6317AD75977&utm_source=rss&utm_medium=rss",
-      "source": "Sploitus – Exploits",
-      "published": "2026-10-12T01:38:04+00:00",
+      "title": "⚡ Weekly Recap: Helpdesk 0-Days, Rogue Certs, ShinyHunters Arrest, AI-Fooling Malware and More",
+      "link": "https://thehackernews.com/2026/10/weekly-recap-helpdesk-0-days-rogue.html",
+      "source": "The Hacker News",
+      "published": "2026-10-12T15:16:26+00:00",
       "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
+        "Malware / Payloads",
+        "Ransomware",
+        "General Security"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 66.38,
-      "priority_score": 72.77
+      "signal_score": 53.84,
+      "priority_score": 68.14
     },
     {
-      "title": "Exploit for Path Traversal in Fortinet Fortimail",
-      "link": "https://sploitus.com/exploit?id=BEBF1FFF-3C3E-5FE8-B359-32BD8C7F5C6E&utm_source=rss&utm_medium=rss",
-      "source": "Sploitus – Exploits",
-      "published": "2026-10-11T18:26:02+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
+      "title": "ogmios-queryledgerstate-dump-poc",
+      "link": "https://vulners.com/githubexploit/0D7878C0-24F9-5DC1-910F-D2E9707BC3BF?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-10-13T09:48:06+00:00",
+      "smart_groups": [],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 66.38,
-      "priority_score": 70.84
+      "signal_score": 53.38,
+      "priority_score": 61.8
     }
   ]
 }
