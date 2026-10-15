@@ -1,184 +1,176 @@
 {
-  "generated_at": "2026-10-14T11:50:55.182744+00:00",
-  "analysis_date": "2026-10-14",
+  "generated_at": "2026-10-15T11:26:10.868937+00:00",
+  "analysis_date": "2026-10-15",
   "provider": "openai",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-10-14T07:23:41.730847+00:00",
+  "source_generated_at": "2026-10-15T07:13:10.057197+00:00",
   "source_days_back": 30,
-  "source_total_items": 62357,
-  "total_items_in_window_all": 4879,
-  "total_items_in_window_curated": 11,
-  "total_items_in_window_selected": 40,
+  "source_total_items": 62261,
+  "total_items_in_window_all": 2939,
+  "total_items_in_window_curated": 23,
+  "total_items_in_window_selected": 44,
   "context_selection_policy": "curated-plus-operational-signal-v1",
-  "morning_call_markdown": "### Executive Summary\n- **Internet-facing remote access is under active zero-day pressure:** Ivanti Connect Secure auth-bypass → unauth RCE (KEV) and reports of exploit chaining to root on “fully patched” appliances.\n- **Microsoft Patch Tuesday is unusually large with an exploited zero-day:** Windows Shell Mark-of-the-Web (MotW) bypass is being exploited; treat as a phishing-to-execution enabler.\n- **“Silent” enterprise app RCE/auth bypass risk:** Active exploitation reported for **Nextcloud/Collabora CODE Server** RCE; additional high-severity app/server flaws (e.g., GitLab critical RCE, WebSphere Liberty SAML bypass) may be rapidly weaponized.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Ivanti Connect Secure (ICS) zero-day (CVE-2026-104935) — exploited / KEV**\n- **What happened:** Ivanti disclosed **CVE-2026-104935** (auth bypass by spoofing) with **in-the-wild exploitation**; CISA added it to **KEV**.\n- **Why it matters operationally:** ICS is a high-value edge target for credential theft, lateral movement, and ransomware staging; reports indicate a **chain to root even on fully patched devices** (assumption: additional post-exploitation steps exist beyond the CVE).\n- **Recommended immediate actions for the SOC today:** **Confirm exposure + patch/mitigate immediately**; **hunt for anomalous ICS admin/session behavior and new processes/commands** on the appliance and downstream auth logs.\n\n**2) Microsoft October Patch Tuesday — exploited Windows Shell MotW bypass (CVE-2026-96951)**\n- **What happened:** Microsoft patched **~1,4xx vulnerabilities** including an **actively exploited Windows Shell 0-day** (CVE-2026-96951) enabling **Mark-of-the-Web bypass**.\n- **Why it matters operationally:** MotW bypass increases success of **phishing/drive-by delivery** and can reduce warning prompts, accelerating initial access and payload execution across endpoints.\n- **Recommended immediate actions for the SOC today:** **Prioritize patching for user workstations/jump hosts**; **increase monitoring for suspicious file executions originating from email/web downloads** (ISO/LNK/ZIP/Office-related chains).\n\n**3) Citrix NetScaler ADC/Gateway — reported active zero-day exploitation (CVE-2026-88771 / CVE-2026-88772)**\n- **What happened:** Reporting indicates **two NetScaler zero-days** are being actively exploited for **remote code execution** and were added to KEV (per secondary reporting).\n- **Why it matters operationally:** NetScaler is frequently targeted for perimeter footholds; compromise can enable session hijack, credential access, and persistence at the edge.\n- **Recommended immediate actions for the SOC today:** **Validate whether we run NetScaler and if any instances are internet-facing**; **review NetScaler logs for unusual admin logins/config changes/spawned processes** and escalate any anomalies.\n\n**4) Nextcloud “richdocumentscode” / Collabora Online Built-in CODE Server — exploited RCE (CVE-2026-110447)**\n- **What happened:** **CVE-2026-110447** (OS command injection leading to RCE) in Nextcloud’s Collabora CODE integration is reported **exploited in the wild** (Sept–Oct).\n- **Why it matters operationally:** Nextcloud instances often store sensitive client data and provide collaboration paths; RCE enables rapid data access/exfil and pivoting.\n- **Recommended immediate actions for the SOC today:** **Identify any Nextcloud + Collabora CODE deployments and patch to fixed versions**; **hunt webserver/app logs for abnormal requests to the referenced endpoint (proxy.php) and suspicious child processes**.\n\n**5) High-risk “weaponization watch” (public PoCs / critical app flaws): Apache Struts EL injection (CVE-2026-104711) + “other critical PoC” (CVE-2026-84411)**\n- **What happened:** Public exploit/PoC content surfaced for **CVE-2026-104711 (Struts EL injection)** and **CVE-2026-84411** (critical, PoC available; details unclear from source snippet).\n- **Why it matters operationally:** Public PoCs typically drive opportunistic scanning within hours; Struts-style bugs historically lead to fast mass exploitation of exposed web apps.\n- **Recommended immediate actions for the SOC today:** **Confirm whether affected components exist in our environment (externally exposed first)**; **add short-term WAF/IDS focus on suspicious Struts expression patterns and anomalous POSTs** while patch validation is performed.\n\n---\n\n### Monitoring & detection recommendations\n- **Edge VPN/appliance monitoring (Ivanti/Citrix):** VPN logs + firewall + reverse proxy for **new admin sessions, config exports, unusual URL patterns, and post-auth traffic spikes**; map to **T1190 (Exploit Public-Facing Application)** and **T1078 (Valid Accounts)** if credentials appear abused.\n- **Windows MotW bypass follow-on activity:** EDR + Windows Security + Sysmon for **new processes spawned from user download locations** (Downloads/Temp/Outlook cache) and unusual **LOLBins**; map to **T1204 (User Execution)** / **T1566 (Phishing)**.\n- **Email/web ingress correlation:** Secure Email Gateway + web proxy for **bursts of attachment/link clicks** followed by endpoint executions; prioritize **LNK/ISO/ZIP/HTML** delivery patterns (assumption: typical MotW-bypass delivery chains).\n- **Nextcloud/Collabora exploitation traces:** Web server/app logs for **requests to Collabora/Nextcloud integration endpoints (e.g., proxy.php)** plus host EDR for **unexpected shell/process launches** by the web service; map to **T1059 (Command and Scripting Interpreter)**.\n- **Privileged identity auditing post-edge compromise:** IdP (Azure AD/Entra, AD, PAM) for **new MFA disablement, new OAuth consents, new service principals, suspicious SSO/SAML changes** after VPN anomalies; map to **T1556 (Modify Authentication Process)**.\n- **Server-side “supply chain / dev platform” exposure:** GitLab (if present) audit logs + network telemetry for **new tokens, runner registration changes, unusual project exports**; map to **T1552 (Unsecured Credentials)** and **T1190** where applicable.\n- **Scanning/Recon spikes:** Perimeter IDS/WAF/firewall for **increased hits on /vpns/, /cgi/, /struts/, /sharepoint/**-like paths and unusual UA strings; treat as early warning and feed to threat hunting.\n\n---\n\n### Medium-term follow-ups\n- **Patch governance for record Patch Tuesday:** Implement a **tiered rollout** (internet-facing/jump hosts/VPN-admin workstations first) and track exceptions; ensure coverage of the exploited zero-day and any critical RCEs relevant to our stack.\n- **Edge hardening baseline:** Re-validate **management interface isolation**, admin MFA enforcement, and **egress restrictions** from VPN subnets; ensure **centralized log forwarding** from appliances is complete.\n- **Nextcloud/Collabora review:** Confirm whether these platforms are approved/used anywhere (business units sometimes deploy them “quietly”); add them to **asset inventory + vulnerability scanning scope**.\n- **Validate exposure to older “resurfacing” PoCs:** Several older high-impact exploits/PoCs circulated (e.g., Confluence-era, SAP NetWeaver-era style tooling); re-check **external attack surface** for forgotten services.\n- **WAF/IDS content update cadence:** Ensure signatures/rules for **Struts EL injection patterns** and common edge-appliance exploit traffic are current; consider temporary tightening with monitored false-positive handling.\n- **Incident readiness drill:** Given multiple edge zero-days, run a short tabletop for **“VPN appliance compromise”**: containment steps, credential reset scope, and downstream log review checklist.",
+  "morning_call_markdown": "### Executive Summary\n- Multiple **actively exploited edge/infra flaws** surfaced at once: **Ivanti Connect Secure**, **Cisco Secure Email Gateway**, and **Palo Alto PAN‑OS** (management interface) — treat as **internet-facing compromise risk** today.\n- Microsoft patched an **exploited Windows Shell zero-day bypassing Mark-of-the-Web (MOTW)** (CVE-2026-96951) amid a **record Patch Tuesday**; expect **phish-to-endpoint** activity and higher exploit volume.\n- A **critical unauthenticated GitLab RCE (CVSS 10)** was disclosed; high risk for **CI/CD and source code compromise** and subsequent lateral movement.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Internet-facing VPN compromise risk: Ivanti Connect Secure (CVE-2026-104935) – active exploitation + PoC**\n- **What happened:** Ivanti Connect Secure auth bypass + unauth RCE is **actively exploited**, with **public PoC** now available.\n- **Why it matters operationally:** VPN appliance compromise = **credential theft, persistence, and direct internal foothold** (highly relevant to financial sector).\n- **Recommended immediate actions for the SOC today:** Confirm patch/hotfix status on all ICS; if exposed, **restrict admin interfaces**, hunt for **new admin accounts/config changes**, and escalate any anomaly as potential appliance compromise.\n\n**2) Email security stack under attack: Cisco Secure Email Gateway zero-day (CVE-2026-76519) – active exploitation**\n- **What happened:** Cisco patched an **actively exploited SEG zero-day** enabling unauth root-level command execution / arbitrary file write via crafted attachments (per advisories/news).\n- **Why it matters operationally:** Email gateway compromise can enable **silent mail tampering, payload staging, credential phishing bypass**, and downstream endpoint compromise.\n- **Recommended immediate actions for the SOC today:** Identify all SEG instances and validate fixed versions/workarounds; **review SEG admin/auth logs and config audit trails** for suspicious changes; tighten attachment handling policies temporarily if feasible.\n\n**3) Firewall management plane risk: Palo Alto PAN‑OS RCE (CVE-2026-0322) – exploited in the wild**\n- **What happened:** PAN‑OS management interface RCE is reported **under active exploitation** (vendor notes “limited exploitation” and provides IoCs).\n- **Why it matters operationally:** Firewall management compromise can lead to **network-wide visibility loss, policy tampering, and lateral movement**.\n- **Recommended immediate actions for the SOC today:** Verify management interfaces are **not internet-exposed**; apply patches/hotfixes; monitor for **new admin logins, config exports/changes, unexpected commits** and treat as priority incidents.\n\n**4) Endpoint initial access booster: Windows Shell MOTW bypass zero-day (CVE-2026-96951) – KEV**\n- **What happened:** Microsoft fixed an **exploited Windows Shell feature bypass** allowing attackers to evade MOTW protections via crafted files.\n- **Why it matters operationally:** Increases success rate of **phish-delivered payloads** (archives/shortcuts/containers) and reduces user warning friction.\n- **Recommended immediate actions for the SOC today:** Prioritize patch deployment to user endpoints and VDI jump hosts; increase monitoring for **suspicious file executions from Downloads/Temp/Email clients** and rapid child-process chains from Office/browser processes.\n\n**5) DevOps / supply-chain exposure: GitLab CE/EE critical unauth RCE (CVE-2026-97229)**\n- **What happened:** A maximum-severity GitLab vulnerability allows **unauth remote code execution** via crafted regex in CI/CD pipeline configurations.\n- **Why it matters operationally:** GitLab compromise enables **source theft, CI runner takeover, secrets exfiltration**, and can seed production access.\n- **Recommended immediate actions for the SOC today:** Inventory GitLab internet exposure and versioning; apply vendor fixes ASAP; review for **unexpected pipeline changes, runner registrations, new deploy keys/tokens** and suspicious outbound from GitLab hosts.\n\n---\n\n### Monitoring & detection recommendations\n- **Ivanti ICS exploitation (T1190 Exploit Public-Facing Application):** VPN logs + web access logs + firewall/WAF for **unauth requests to admin/auth endpoints**, spikes in 4xx/5xx, and **new sessions from unusual geos**; alert on post-exploit **shell/process execution** if available from appliance telemetry.\n- **Cisco SEG compromise (T1190 / T1566 Phishing):** SEG audit/admin logs for **config changes**, new connectors/policies, disabled AV/AMP features; email telemetry for **attachment-type anomalies** and sudden allowlisting; monitor outbound connections from SEG to rare destinations.\n- **PAN‑OS management plane attacks (T1078 Valid Accounts, T1190):** PAN‑OS system/auth logs for **new admin users, role changes, API key creation, config commits**, and admin logins outside normal windows; network telemetry for management interface access from non-admin subnets.\n- **MOTW bypass → payload execution (T1204 User Execution, T1566):** EDR for executions of **script/LOLBin chains** (wscript/cscript/mshta/rundll32/powershell) originating from **Downloads/Email cache/Temp**; correlate with email/web download events.\n- **GitLab RCE / CI abuse (T1552 Unsecured Credentials, T1059 Command and Scripting Interpreter):** GitLab audit events for **pipeline definition edits**, new runners, token creation, and unusual API calls; host EDR on GitLab/runner nodes for **new processes spawned by gitlab-runner** plus unexpected outbound.\n- **AI-assisted recon/exploit tooling (Zscaler ARTEX report) (T1595 Active Scanning):** Perimeter IDS/NetFlow for **high-rate web enumeration patterns**, unusual user agents, and rapid “scan → exploit” sequences against financial apps/APIs; prioritize internet-exposed portals.\n- **Phishing platform disruption fallout:** Email gateway + user-reported phish queue for **template reuse / lookalike domains**; watch for **surge in newly registered sender domains** and MFA fatigue attempts in IdP logs (T1621).\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** Given Microsoft’s unusually large Patch Tuesday volume, run a **risk-based patch sprint** (internet-facing servers, end-user fleets, VDI, admin workstations first) and track exceptions explicitly.\n- **Edge hardening:** Enforce policy that **VPN/firewall/email-gateway management interfaces are never internet-exposed**, with periodic external attack-surface validation.\n- **GitLab/CI secrets hygiene:** Rotate **CI/CD tokens, deploy keys, runner registration tokens**, and audit secret storage if GitLab is internet-accessible or was recently probed.\n- **Email gateway resilience:** Validate SEG **config backup/restore**, least-privileged admin access, and change-control alerts; consider temporary compensating controls for risky attachment types.\n- **Third-party/SaaS auth controls:** Review IdP conditional access for **impossible travel, unusual device, and high-risk sign-ins**, aligned to increased phishing and auth-bypass news themes.\n- **Vuln intel triage:** Public PoCs appearing for older/high-impact CVEs (e.g., Apache RCE, Linux vhost PoC) — ensure **external-facing and virtualization stacks** are continuously scanned and prioritized by exploitability, not just CVSS.",
   "highlights": [
     {
-      "title": "Ivanti Connect Secure zero-day exploited in the wild (CVE-2026-104935)",
-      "link": "https://www.rapid7.com/blog/post/etr-ivanti-connect-secure-zero-day-exploited-in-the-wild-cve-2026-104935",
-      "source": "Rapid7 Cybersecurity Blog",
-      "published": "2026-10-13T17:06:05+00:00",
+      "title": "Cisco Email Gateway RCE exploited; Nextcloud backdoors; 3 phishing platforms disrupted",
+      "link": "https://defend.network/briefings/cisco-nextcloud-phishing-platforms-north-korea-fraud-2026-10-15.html",
+      "source": "defend.network",
+      "published": "2026-10-15T06:30:00+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Threat Actors / APT",
-        "Exploit / PoC",
-        "Network / OT / ICS",
-        "Data Breaches / Leaks"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 100.0,
-      "priority_score": 87.44
-    },
-    {
-      "title": "October Patch Tuesday roundup: Over 1,400 Microsoft holes to be plugged, including three zero days",
-      "link": "https://www.csoonline.com/article/4234759/october-patch-tuesday-roundup-over-1400-microsoft-holes-to-be-plugged-including-three-zero-days.html",
-      "source": "CSO Online",
-      "published": "2026-10-14T02:29:20+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Identity / Access",
-        "Threat Actors / APT",
-        "Windows / Microsoft",
-        "Supply Chain / Software",
-        "Network / OT / ICS",
-        "Cloud / SaaS",
-        "Crypto / Web3",
-        "Exploit / PoC",
-        "General Security"
-      ],
-      "curated": false,
-      "signal_tier": "critical",
-      "signal_score": 100.0,
-      "priority_score": 79.93
-    },
-    {
-      "title": "Microsoft Windows Shell 0-Day Vulnerability Actively Exploited in Attacks",
-      "link": "https://cybersecuritynews.com/windows-shell-0-day-exploited/",
-      "source": "Cyber Security News (FeedBurner)",
-      "published": "2026-10-14T03:28:11+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "Windows / Microsoft",
-        "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 93.04,
-      "priority_score": 89.12
-    },
-    {
-      "title": "Ivanti Connect Secure 0-Day Vulnerability Actively Exploited in the Wild",
-      "link": "https://cybersecuritynews.com/ivanti-connect-secure-zero-day/",
-      "source": "Cyber Security News (FeedBurner)",
-      "published": "2026-10-13T15:55:26+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "Network / OT / ICS",
-        "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 93.04,
-      "priority_score": 86.03
-    },
-    {
-      "title": "Ivanti warns of Connect Secure zero-day exploited in attacks",
-      "link": "https://www.bleepingcomputer.com/news/security/ivanti-warns-of-connect-secure-zero-day-exploited-in-attacks/",
-      "source": "BleepingComputer",
-      "published": "2026-10-13T15:45:50+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "Network / OT / ICS",
-        "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 85.99,
-      "priority_score": 85.11
-    },
-    {
-      "title": "CVE-2026-110447",
-      "link": "https://vuldb.com/cve/CVE-2026-110447",
-      "source": "VulDB CVE",
-      "published": "2026-10-14T02:48:13+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 85.22,
-      "priority_score": 89.71
-    },
-    {
-      "title": "Ivanti VPN bypass, actively exploited",
-      "link": "https://dev.to/randomchaos/ivanti-vpn-bypass-actively-exploited-4b6",
-      "source": "DEV Community",
-      "published": "2026-10-13T22:25:30+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Threat Actors / APT",
-        "Cloud / SaaS",
         "Exploit / PoC",
         "Malware / Payloads",
-        "Network / OT / ICS",
-        "Ransomware",
-        "OSINT / Community"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 82.95,
-      "priority_score": 87.4
-    },
-    {
-      "title": "U.S. CISA adds Ivanti Connect Secure flaw to its Known Exploited Vulnerabilities catalog",
-      "link": "https://securityaffairs.com/200887/security/u-s-cisa-adds-ivanti-connect-secure-flaw-to-its-known-exploited-vulnerabilities-catalog.html",
-      "source": "Security Affairs",
-      "published": "2026-10-13T18:14:23+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
+        "Phishing / Social Engineering",
         "General Security"
       ],
       "curated": true,
       "signal_tier": "critical",
-      "signal_score": 82.95,
-      "priority_score": 86.2
+      "signal_score": 100.0,
+      "priority_score": 90.07
     },
     {
-      "title": "Best Data Breach and Data Leak Detection Tools in 2026 | UpGuard",
-      "link": "https://www.upguard.com/blog/best-data-breach-and-data-leak-detection-tools-in-2026",
-      "source": "UpGuard Blog",
-      "published": "2026-10-14T00:03:54+00:00",
+      "title": "CVE-2026-104935: Ivanti Connect Secure Zero-Day Exploited for Unauthenticated Code Execution",
+      "link": "https://socprime.com/blog/cve-2026-104935-analysis/",
+      "source": "SOC Prime Blog",
+      "published": "2026-10-14T20:00:38+00:00",
       "smart_groups": [
-        "Data Breaches / Leaks",
+        "Vulnerabilities / CVEs",
         "Exploit / PoC",
+        "Network / OT / ICS",
         "Vendors / Product Security"
       ],
       "curated": true,
       "signal_tier": "critical",
-      "signal_score": 80.41,
-      "priority_score": 88.38
+      "signal_score": 100.0,
+      "priority_score": 87.62
     },
     {
-      "title": "Microsoft 1,411-flaw Patch Tuesday; Ivanti zero-day root access; OpenAI spy device arrest",
-      "link": "https://defend.network/briefings/microsoft-ivanti-openai-insider-threat-patch-tuesday-2026-10-14.html",
-      "source": "defend.network",
-      "published": "2026-10-14T06:30:00+00:00",
+      "title": "CVE-2026-96951: Actively Exploited Windows Shell Zero-Day Bypasses Mark of the Web",
+      "link": "https://socprime.com/blog/cve-2026-96951-analysis/",
+      "source": "SOC Prime Blog",
+      "published": "2026-10-14T19:54:14+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Cloud / SaaS",
+        "Exploit / PoC",
+        "Windows / Microsoft",
+        "Vendors / Product Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 100.0,
+      "priority_score": 87.59
+    },
+    {
+      "title": "Cisco patches new Secure Email Gateway zero-day exploited in attacks",
+      "link": "https://www.bleepingcomputer.com/news/security/cisco-patches-actively-exploited-secure-email-gateway-zero-day/",
+      "source": "BleepingComputer",
+      "published": "2026-10-14T17:29:14+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
         "General Security"
       ],
       "curated": true,
-      "signal_tier": "high",
-      "signal_score": 77.08,
-      "priority_score": 90.01
+      "signal_tier": "critical",
+      "signal_score": 100.0,
+      "priority_score": 84.5
+    },
+    {
+      "title": "Warning: Actively Exploited Zero-Day Vulnerability in Ivanti Connect Secure Allows Remote Code Execution, Patch Immediately!",
+      "link": "https://ccb.belgium.be/advisories/warning-actively-exploited-zero-day-vulnerability-ivanti-connect-secure-allows-remote",
+      "source": "Cert.be advisories",
+      "published": "2026-10-14T11:30:17+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Government / CERT"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 100.0,
+      "priority_score": 81.46
+    },
+    {
+      "title": "Cisco Secure Email Gateway 0-Day Vulnerability Actively Exploited in Attacks",
+      "link": "https://cybersecuritynews.com/cisco-secure-email-gateway-0-day-vulnerability/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-10-15T03:06:04+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 93.05,
+      "priority_score": 89.09
+    },
+    {
+      "title": "Microsoft drops an actively exploited zero-day among record high of 1,413 vulnerabilities",
+      "link": "https://cyberscoop.com/microsoft-patch-tuesday-october-2026/",
+      "source": "CyberScoop",
+      "published": "2026-10-14T17:42:11+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Windows / Microsoft",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 86.0,
+      "priority_score": 85.72
+    },
+    {
+      "title": "Microsoft Patch Tuesday Fixes 1,413 Flaws: Windows Zero-Day Already Under Attack",
+      "link": "https://www.techrepublic.com/article/news-microsoft-october-2026-patch-tuesday/",
+      "source": "Security on TechRepublic",
+      "published": "2026-10-14T15:45:40+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Cloud / SaaS",
+        "Exploit / PoC",
+        "Windows / Microsoft",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 85.93,
+      "priority_score": 84.85
+    },
+    {
+      "title": "Palo Alto Networks Patches PAN-OS Authenticated RCE Flaw Amid Active Exploitation",
+      "link": "https://thehackernews.com/2026/10/palo-alto-networks-patches-pan-os.html",
+      "source": "The Hacker News",
+      "published": "2026-10-15T06:17:58+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 82.95,
+      "priority_score": 89.47
+    },
+    {
+      "title": "CISA Urges Immediate Ivanti Connect Secure Updates as Honeypots Log 105 Exploit Attempts",
+      "link": "https://thehackernews.com/2026/10/cisa-urges-immediate-ivanti-connect.html",
+      "source": "The Hacker News",
+      "published": "2026-10-14T12:30:42+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Network / OT / ICS",
+        "General Security"
+      ],
+      "curated": false,
+      "signal_tier": "critical",
+      "signal_score": 82.95,
+      "priority_score": 74.54
     }
   ]
 }
