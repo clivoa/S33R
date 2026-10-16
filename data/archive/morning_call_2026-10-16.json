@@ -1,0 +1,168 @@
+{
+  "generated_at": "2026-10-16T11:21:05.908976+00:00",
+  "analysis_date": "2026-10-16",
+  "provider": "openai",
+  "model": "gpt-5.2",
+  "window_hours": 24,
+  "source_file": "data/news_recent.json",
+  "source_generated_at": "2026-10-16T11:04:28.753527+00:00",
+  "source_days_back": 30,
+  "source_total_items": 62475,
+  "total_items_in_window_all": 3741,
+  "total_items_in_window_curated": 21,
+  "total_items_in_window_selected": 46,
+  "context_selection_policy": "curated-plus-operational-signal-v1",
+  "morning_call_markdown": "### Executive Summary\n- Multiple **actively exploited perimeter/management-plane vulnerabilities** reported (Cisco Secure Email Gateway, Palo Alto PAN-OS mgmt, Ivanti Connect Secure) — assume **internet-facing instances are being scanned/targeted now**.\n- **BeyondTrust Remote Support zero-day** (China-linked exploitation) — treat exposed/self-hosted RS appliances as **potentially compromised** and validate for credential access/lateral movement.\n- Public **GitLab critical RCE PoC** released — increases opportunistic exploitation risk against externally reachable GitLab/CI runners.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Actively exploited Cisco Secure Email Gateway (SEG) zero-day (CVE-2026-76519)**\n- What happened (1 short line)  \n  - Cisco disclosed and patched an **actively exploited** SEG flaw enabling **unauth RCE/root** via arbitrary file write.\n- Why it matters operationally (1 short line)  \n  - SEG sits on the **email perimeter**; compromise enables **malware delivery tampering, credential capture, and foothold** into internal networks.\n- Recommended immediate actions for the SOC today (1–2 short actions, same bullet)  \n  - **Confirm asset inventory + exposure**, prioritize patch/mitigation today; **hunt on SEG for new/modified files, suspicious processes, unexpected outbound connections** and escalate any signs of root activity.\n\n**2) Actively exploited firewall/remote-access appliances (PAN-OS CVE-2026-0322 + Ivanti Connect Secure CVE-2026-111357)**\n- What happened (1 short line)  \n  - CISA KEV signals **active exploitation**: PAN-OS authenticated RCE in management interface and Ivanti Connect Secure privilege escalation to root.\n- Why it matters operationally (1 short line)  \n  - These are common **edge/control-plane** assets; exploitation supports **persistent access, credential theft, and ransomware staging**.\n- Recommended immediate actions for the SOC today (1–2 short actions, same bullet)  \n  - **Restrict/verify mgmt-plane access** (allowlist/admin VPN only), patch ASAP; **review recent admin logins, config changes, new local users/API keys**, and isolate any device showing anomalies.\n\n**3) BeyondTrust Remote Support zero-day exploited by China-linked espionage (CVE-2026-102764)**\n- What happened (1 short line)  \n  - BeyondTrust issued fixes for a critical RS flaw used as a **zero-day since late Aug**, with reports of **root control and backdoors**.\n- Why it matters operationally (1 short line)  \n  - RS tooling has **high privilege and broad reach**; compromise can expose **credential vaults/support sessions** and enable rapid lateral movement.\n- Recommended immediate actions for the SOC today (1–2 short actions, same bullet)  \n  - **Identify any self-hosted RS** and patch immediately; **assume exposure = possible compromise** and perform targeted IR checks (new admins/service accounts, unusual session replays, unexpected remote tools, outbound beacons).\n\n**4) GitLab critical RCE with public PoC (CVE-2026-97229)**\n- What happened (1 short line)  \n  - Public PoC released for a GitLab CI/CD regex compiler issue rated **critical (CVSS 10)** enabling server command execution.\n- Why it matters operationally (1 short line)  \n  - GitLab is a **code + CI/CD control plane**; compromise enables **source theft, pipeline poisoning, secrets exfiltration** (high financial/regulatory impact).\n- Recommended immediate actions for the SOC today (1–2 short actions, same bullet)  \n  - **Confirm GitLab versions/exposure**, patch/mitigate urgently; **monitor for anomalous runner jobs, unexpected admin actions, and new deploy keys/tokens** created in the last 72 hours.\n\n---\n\n### Monitoring & detection recommendations\n- **Perimeter exploitation watch (SEG/PAN-OS/Ivanti/BeyondTrust):** firewall/WAF + appliance logs for **spikes in inbound mgmt/web requests, 4xx/5xx bursts, URL/path anomalies, and new admin sessions** (ATT&CK: Exploit Public-Facing Application **T1190**).\n- **Management-plane access abuse:** PAN-OS/Ivanti/BeyondTrust admin audit logs for **new accounts, role changes, API key creation, config exports, firmware/patch actions at odd hours** (ATT&CK: Valid Accounts **T1078**).\n- **Post-exploitation on appliances:** NetFlow/proxy/DNS for **new outbound from appliances** (especially to unfamiliar ASNs, rare domains, or direct-to-IP); correlate with EDR alerts on jump hosts used to manage them.\n- **Email perimeter integrity checks (Cisco SEG):** SEG message tracking + mail flow logs for **rule/policy changes, quarantines released in bulk, sudden allowlisting**, and **unexpected connector changes**.\n- **Remote support abuse:** BeyondTrust RS logs for **unusual technician logins, session initiation outside normal hours, mass endpoint access**, and any **new integrations** with IdP/LDAP (ATT&CK: Remote Services **T1021**).\n- **GitLab compromise signals:** GitLab audit/events + CI logs for **new personal/project access tokens, deploy keys, runner registration**, and **pipelines executing shell/network tooling** (ATT&CK: Command and Scripting Interpreter **T1059**, Exfiltration Over Web Service **T1567**).\n- **Ransomware pre-staging tradecraft (ClickFix/Python tunneling theme):** EDR + Windows event logs for **user-launched cmd/powershell spawned by Office/Browser**, plus **python.exe creating tunnels/proxy-like connections** (ATT&CK: User Execution **T1204**, Ingress Tool Transfer **T1105**).\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** ensure KEV-driven SLAs for **edge appliances and management interfaces**; validate compensating controls when patch windows slip (mgmt allowlisting, MFA, IP restrictions).\n- **Appliance forensics readiness:** confirm ability to **centralize logs** from SEG/PAN-OS/Ivanti/BeyondTrust and retain >30 days; document **IR playbooks** for each platform (collection + containment steps).\n- **GitLab hardening:** restrict GitLab administration to **privileged access workstations**, enforce **token hygiene** (short-lived, scoped), and review runner isolation/network egress.\n- **Remote support exposure reduction:** require **MFA/conditional access**, limit technician groups, and review whether RS servers are **internet-reachable**; consider segmentation and egress control.\n- **Ransomware/extortion preparedness:** brief HR/Security on **“personalized” extortion pressure** trends; ensure reporting paths for employee harassment and tighten doxxing response procedures (assumption: trend item; no org-specific intel provided).\n- **Cisco Meraki hardening release:** schedule review/testing for the **hardening updates** and confirm no business impact; track for any follow-on advisories indicating exploitation (currently described as internally found/not known exploited).",
+  "highlights": [
+    {
+      "title": "SANS Stormcast Friday, October 16th, 2026: Panchan Crypto Mining Worm; Exploited 0-Days in Cisco Secure Email Gateway (CVE-2026-76519), Palo Alto PAN-OS (CVE-2026-0322) and Ivanti Connect Secure",
+      "link": "https://isc.sans.edu/podcastdetail/10140",
+      "source": "SANS Internet Stormcenter Daily Cyber Security Podcast (Stormcast)",
+      "published": "2026-10-16T02:00:02+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Malware / Payloads",
+        "Exploit / PoC",
+        "Community / Briefing"
+      ],
+      "curated": false,
+      "signal_tier": "critical",
+      "signal_score": 100.0,
+      "priority_score": 78.92
+    },
+    {
+      "title": "Cisco Email Gateway Zero-Day Under Attack, Root Access at Risk",
+      "link": "https://www.esecurityplanet.com/news/news-cisco-email-gateway-zero-day-exploited/",
+      "source": "eSecurityPlanet",
+      "published": "2026-10-15T16:00:00+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 93.46,
+      "priority_score": 87.05
+    },
+    {
+      "title": "Cisco warns of actively exploited Secure Email Gateway flaw",
+      "link": "https://www.csoonline.com/article/4235801/cisco-warns-of-actively-exploited-secure-email-gateway-flaw.html",
+      "source": "CSO Online",
+      "published": "2026-10-15T12:32:50+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Malware / Payloads",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 90.25,
+      "priority_score": 84.57
+    },
+    {
+      "title": "2026-017: Critical Vulnerability in Cisco Secure Email Gateway",
+      "link": "https://cert.europa.eu/publications/security-advisories/2026-017/",
+      "source": "CERT-EU Security Advisories",
+      "published": "2026-10-15T11:38:20+00:00",
+      "smart_groups": [
+        "Exploit / PoC",
+        "Malware / Payloads",
+        "Vulnerabilities / CVEs",
+        "Government / CERT"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 89.5,
+      "priority_score": 75.27
+    },
+    {
+      "title": "CVE-2026-111357 - Ivanti Connect Secure Privilege Escalation Vulnerability",
+      "link": "https://cvefeed.io/vuln/detail/CVE-2026-111357",
+      "source": "CVEfeed.io - Latest Vulnerabilities",
+      "published": "2026-10-15T21:17:13+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 85.08,
+      "priority_score": 86.52
+    },
+    {
+      "title": "CVE-2026-111357",
+      "link": "https://vuldb.com/cve/CVE-2026-111357",
+      "source": "VulDB CVE",
+      "published": "2026-10-15T21:28:09+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "critical",
+      "signal_score": 83.19,
+      "priority_score": 76.75
+    },
+    {
+      "title": "Palo Alto Networks Patches PAN-OS Authenticated RCE Flaw Amid Active Exploitation",
+      "link": "https://thehackernews.com/2026/10/palo-alto-networks-patches-pan-os.html",
+      "source": "The Hacker News",
+      "published": "2026-10-15T11:46:49+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 82.96,
+      "priority_score": 83.56
+    },
+    {
+      "title": "Palo Alto Networks Patches PAN-OS Authenticated RCE Flaw Amid Active Exploitation",
+      "link": "https://vulners.com/thn/THN:6443ED26B6B41A48D481EA374BC7653D?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-10-15T11:46:00+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "critical",
+      "signal_score": 82.45,
+      "priority_score": 70.97
+    },
+    {
+      "title": "CVE-2026-76519: Critical Cisco Secure Email Gateway Zero-Day Exploited for Root Access",
+      "link": "https://socprime.com/blog/cve-2026-76519-analysis/",
+      "source": "SOC Prime Blog",
+      "published": "2026-10-15T11:23:43+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Vendors / Product Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 81.18,
+      "priority_score": 84.52
+    },
+    {
+      "title": "U.S. CISA adds Palo Alto Networks PAN-OS, Ahsay AhsayCBS, and Cisco Secure Email Gateway flaws to its Known Exploited Vulnerabilities catalog",
+      "link": "https://securityaffairs.com/201041/security/u-s-cisa-adds-palo-alto-networks-pan-os-ahsay-ahsaycbs-and-cisco-secure-email-gateway-flaws-to-its-known-exploited-vulnerabilities-catalog.html",
+      "source": "Security Affairs",
+      "published": "2026-10-15T19:21:30+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Threat Actors / APT",
+        "Cloud / SaaS",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 76.01,
+      "priority_score": 83.5
+    }
+  ]
+}
