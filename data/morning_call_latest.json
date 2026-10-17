@@ -1,142 +1,58 @@
 {
-  "generated_at": "2026-10-16T11:21:05.908976+00:00",
-  "analysis_date": "2026-10-16",
+  "generated_at": "2026-10-17T10:40:39.353589+00:00",
+  "analysis_date": "2026-10-17",
   "provider": "openai",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-10-16T11:04:28.753527+00:00",
+  "source_generated_at": "2026-10-17T06:48:48.085392+00:00",
   "source_days_back": 30,
-  "source_total_items": 62475,
-  "total_items_in_window_all": 3741,
-  "total_items_in_window_curated": 21,
-  "total_items_in_window_selected": 46,
+  "source_total_items": 64162,
+  "total_items_in_window_all": 2619,
+  "total_items_in_window_curated": 17,
+  "total_items_in_window_selected": 40,
   "context_selection_policy": "curated-plus-operational-signal-v1",
-  "morning_call_markdown": "### Executive Summary\n- Multiple **actively exploited perimeter/management-plane vulnerabilities** reported (Cisco Secure Email Gateway, Palo Alto PAN-OS mgmt, Ivanti Connect Secure) — assume **internet-facing instances are being scanned/targeted now**.\n- **BeyondTrust Remote Support zero-day** (China-linked exploitation) — treat exposed/self-hosted RS appliances as **potentially compromised** and validate for credential access/lateral movement.\n- Public **GitLab critical RCE PoC** released — increases opportunistic exploitation risk against externally reachable GitLab/CI runners.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Actively exploited Cisco Secure Email Gateway (SEG) zero-day (CVE-2026-76519)**\n- What happened (1 short line)  \n  - Cisco disclosed and patched an **actively exploited** SEG flaw enabling **unauth RCE/root** via arbitrary file write.\n- Why it matters operationally (1 short line)  \n  - SEG sits on the **email perimeter**; compromise enables **malware delivery tampering, credential capture, and foothold** into internal networks.\n- Recommended immediate actions for the SOC today (1–2 short actions, same bullet)  \n  - **Confirm asset inventory + exposure**, prioritize patch/mitigation today; **hunt on SEG for new/modified files, suspicious processes, unexpected outbound connections** and escalate any signs of root activity.\n\n**2) Actively exploited firewall/remote-access appliances (PAN-OS CVE-2026-0322 + Ivanti Connect Secure CVE-2026-111357)**\n- What happened (1 short line)  \n  - CISA KEV signals **active exploitation**: PAN-OS authenticated RCE in management interface and Ivanti Connect Secure privilege escalation to root.\n- Why it matters operationally (1 short line)  \n  - These are common **edge/control-plane** assets; exploitation supports **persistent access, credential theft, and ransomware staging**.\n- Recommended immediate actions for the SOC today (1–2 short actions, same bullet)  \n  - **Restrict/verify mgmt-plane access** (allowlist/admin VPN only), patch ASAP; **review recent admin logins, config changes, new local users/API keys**, and isolate any device showing anomalies.\n\n**3) BeyondTrust Remote Support zero-day exploited by China-linked espionage (CVE-2026-102764)**\n- What happened (1 short line)  \n  - BeyondTrust issued fixes for a critical RS flaw used as a **zero-day since late Aug**, with reports of **root control and backdoors**.\n- Why it matters operationally (1 short line)  \n  - RS tooling has **high privilege and broad reach**; compromise can expose **credential vaults/support sessions** and enable rapid lateral movement.\n- Recommended immediate actions for the SOC today (1–2 short actions, same bullet)  \n  - **Identify any self-hosted RS** and patch immediately; **assume exposure = possible compromise** and perform targeted IR checks (new admins/service accounts, unusual session replays, unexpected remote tools, outbound beacons).\n\n**4) GitLab critical RCE with public PoC (CVE-2026-97229)**\n- What happened (1 short line)  \n  - Public PoC released for a GitLab CI/CD regex compiler issue rated **critical (CVSS 10)** enabling server command execution.\n- Why it matters operationally (1 short line)  \n  - GitLab is a **code + CI/CD control plane**; compromise enables **source theft, pipeline poisoning, secrets exfiltration** (high financial/regulatory impact).\n- Recommended immediate actions for the SOC today (1–2 short actions, same bullet)  \n  - **Confirm GitLab versions/exposure**, patch/mitigate urgently; **monitor for anomalous runner jobs, unexpected admin actions, and new deploy keys/tokens** created in the last 72 hours.\n\n---\n\n### Monitoring & detection recommendations\n- **Perimeter exploitation watch (SEG/PAN-OS/Ivanti/BeyondTrust):** firewall/WAF + appliance logs for **spikes in inbound mgmt/web requests, 4xx/5xx bursts, URL/path anomalies, and new admin sessions** (ATT&CK: Exploit Public-Facing Application **T1190**).\n- **Management-plane access abuse:** PAN-OS/Ivanti/BeyondTrust admin audit logs for **new accounts, role changes, API key creation, config exports, firmware/patch actions at odd hours** (ATT&CK: Valid Accounts **T1078**).\n- **Post-exploitation on appliances:** NetFlow/proxy/DNS for **new outbound from appliances** (especially to unfamiliar ASNs, rare domains, or direct-to-IP); correlate with EDR alerts on jump hosts used to manage them.\n- **Email perimeter integrity checks (Cisco SEG):** SEG message tracking + mail flow logs for **rule/policy changes, quarantines released in bulk, sudden allowlisting**, and **unexpected connector changes**.\n- **Remote support abuse:** BeyondTrust RS logs for **unusual technician logins, session initiation outside normal hours, mass endpoint access**, and any **new integrations** with IdP/LDAP (ATT&CK: Remote Services **T1021**).\n- **GitLab compromise signals:** GitLab audit/events + CI logs for **new personal/project access tokens, deploy keys, runner registration**, and **pipelines executing shell/network tooling** (ATT&CK: Command and Scripting Interpreter **T1059**, Exfiltration Over Web Service **T1567**).\n- **Ransomware pre-staging tradecraft (ClickFix/Python tunneling theme):** EDR + Windows event logs for **user-launched cmd/powershell spawned by Office/Browser**, plus **python.exe creating tunnels/proxy-like connections** (ATT&CK: User Execution **T1204**, Ingress Tool Transfer **T1105**).\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** ensure KEV-driven SLAs for **edge appliances and management interfaces**; validate compensating controls when patch windows slip (mgmt allowlisting, MFA, IP restrictions).\n- **Appliance forensics readiness:** confirm ability to **centralize logs** from SEG/PAN-OS/Ivanti/BeyondTrust and retain >30 days; document **IR playbooks** for each platform (collection + containment steps).\n- **GitLab hardening:** restrict GitLab administration to **privileged access workstations**, enforce **token hygiene** (short-lived, scoped), and review runner isolation/network egress.\n- **Remote support exposure reduction:** require **MFA/conditional access**, limit technician groups, and review whether RS servers are **internet-reachable**; consider segmentation and egress control.\n- **Ransomware/extortion preparedness:** brief HR/Security on **“personalized” extortion pressure** trends; ensure reporting paths for employee harassment and tighten doxxing response procedures (assumption: trend item; no org-specific intel provided).\n- **Cisco Meraki hardening release:** schedule review/testing for the **hardening updates** and confirm no business impact; track for any follow-on advisories indicating exploitation (currently described as internally found/not known exploited).",
+  "morning_call_markdown": "### Executive Summary\n- Active zero-day exploitation against BeyondTrust Remote Support appliances (CVE-2026-102764) attributed to a China-nexus espionage actor; treat as “internet-facing initial access” priority.\n- Multiple “known exploited / high-impact” enterprise bugs with real attacker tradecraft behind them: Atlassian (CVE-2026-21589 KEV), ScreenConnect client bypass (CVE-2026-84869 KEV signal), and NetScaler ADC/Gateway RCE exploitation details (CVE-2026-88771).\n- Exploit/PoC noise is spiking (GitLab CI/CD CVSS 10, Cisco ISE PoC, legacy Apache httpd CVE-2021-41773 PoC, Linux priv-esc CVEs); prioritize by exposure (internet-facing + auth bypass/RCE) and asset presence in our environment.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) BeyondTrust Remote Support zero-day exploitation (CVE-2026-102764)**\n- What happened: Active exploitation of BeyondTrust Remote Support vulnerability enabling unauthenticated arbitrary file upload/operations on affected appliances.\n- Why it matters operationally: Direct initial-access path into remote support infrastructure (high-value pivot point) with reported log deletion and credential theft behaviors by China-nexus actor.\n- Recommended immediate actions for the SOC today: Confirm RS asset inventory + exposure; enforce patch/mitigation immediately; pull appliance logs/config and hunt for new/unknown files, unexpected admin users, and evidence of log tampering.\n\n**2) “Known exploited” enterprise apps: Atlassian + ScreenConnect**\n- What happened: CISA KEV added an Atlassian critical flaw (CVE-2026-21589); reporting indicates ScreenConnect client bypass (CVE-2026-84869) had worm-like spread and is also KEV-listed.\n- Why it matters operationally: These products commonly sit on the edge or are broadly trusted internally; exploitation frequently leads to rapid privilege escalation/persistence and lateral movement.\n- Recommended immediate actions for the SOC today: Validate patch levels and isolate any unpatched internet-facing instances; review auth logs for anomalous successful logins and new tokens/sessions; block/monitor abnormal installer/update executions on endpoints tied to remote support tooling.\n\n**3) Citrix NetScaler ADC/Gateway critical RCE exploitation (CVE-2026-88771)**\n- What happened: Detailed research published on exploitation of a critical NetScaler RCE, indicating attacker know-how and repeatable tradecraft.\n- Why it matters operationally: NetScaler is a common gateway into enterprise networks; exploitation can yield appliance-level control and credential/session theft with limited endpoint visibility.\n- Recommended immediate actions for the SOC today: Confirm whether any NetScaler ADC/Gateway exists and patch status; review NetScaler/security logs for unusual requests and new/modified configs; monitor for downstream suspicious auth activity (new VPN sessions, unusual IdP logins) originating from gateway IPs.\n\n**4) GitLab CI/CD unauth RCE-risk bug (CVE-2026-97229, CVSS 10)**\n- What happened: GitLab patched a CI/CD regex integer overflow with stated potential for unauthenticated code execution; technical analysis released.\n- Why it matters operationally: CI/CD compromise is a fast path to source/code signing secrets, pipeline runners, and supply-chain risk—high impact for financial services.\n- Recommended immediate actions for the SOC today: Identify GitLab instances (self-managed) and confirm patched versions; hunt for suspicious pipeline/job activity and unusual runner registrations; monitor for access to CI variables/secrets and sudden permission changes.\n\n**5) Supply-chain risk signal: AOMEI Backupper update channel reportedly compromised**\n- What happened: Reporting claims AOMEI Backupper update infrastructure was compromised for months (supply-chain style).\n- Why it matters operationally: Backup tooling is privileged and ubiquitous; malicious updates can produce quiet persistence and data access (including backups) before ransomware/espionage actions.\n- Recommended immediate actions for the SOC today: Confirm whether AOMEI is present in estate (endpoints/servers) and freeze updates pending vendor confirmation; hunt for recent AOMEI updater executions and newly dropped binaries/services; escalate any anomalies to IR for scoping.\n\n---\n\n### Monitoring & detection recommendations\n- **BeyondTrust RS edge exploitation**: WAF/reverse-proxy + appliance logs + firewall; alert on unusual POST/file upload patterns to RS, new files in web/app directories, and admin console access from new geos (ATT&CK T1190).\n- **Remote support / admin tool abuse**: EDR + Windows Security logs; hunt for new services/scheduled tasks spawned by remote support processes, and unexpected credential dumping indicators post-initial access (T1053, T1543, T1003).\n- **Atlassian exploitation follow-on**: Atlassian app logs + IdP/SSO logs; monitor for anomalous session creation, new API tokens, permission changes, and bursts of 4xx/5xx followed by successful admin actions (T1078).\n- **ScreenConnect propagation signal**: EDR + software inventory + proxy/DNS; detect new ScreenConnect client installs, unusual child processes from ScreenConnect, and lateral tool transfer patterns (T1105).\n- **NetScaler exploitation + credential/session theft**: NetScaler logs (AAA/auth, config changes) + VPN + IdP; alert on new/modified auth policies, unexpected config saves, and sudden spikes in successful logins from gateway IPs (T1098).\n- **GitLab CI/CD compromise**: GitLab audit logs + runner logs + cloud logs; watch for new runner registration, unusual pipeline triggers from unknown IPs, and access to CI/CD variables/secrets (T1552).\n- **Internet-facing hygiene sweep (PoC spike)**: External attack surface monitoring + vulnerability scanner; prioritize checks for Apache httpd (CVE-2021-41773 PoC), Cisco ISE PoC mention, and any exposed admin interfaces—treat “PoC published” as higher scanning pressure today.\n\n---\n\n### Medium-term follow-ups\n- **Patch governance / exposure-based prioritization**: Re-rank patch queue by “internet-facing + KEV/active exploitation,” specifically BeyondTrust RS, Atlassian, ScreenConnect, NetScaler, and GitLab.\n- **Backup software supply-chain controls**: If AOMEI (or other third-party backup tools) exist, enforce allow-listed update sources, validate code signing, and centralize update deployment via controlled channels.\n- **Linux privilege escalation hardening**: Review kernel patch cadence and endpoint/servers exposure to local-network attack paths noted in recent Linux kernel priv-esc CVEs; tighten least privilege and EDR coverage on Linux.\n- **Network device patching reminder**: Validate data center switch (e.g., Nexus/NX-OS) patch posture if applicable; ensure management plane access controls (ACLs, MFA/AAA) are enforced.\n- **Ransomware “machine-speed” readiness**: Revalidate containment playbooks (EDR isolate, identity lock-down, segmentation) and ensure rapid triage paths for post-initial-access behaviors (credential theft → lateral movement → encryption).\n- **Threat hunting enablement**: Ensure telemetry coverage for appliance/gateway products (BeyondTrust/NetScaler) where EDR is blind; forward syslog to SIEM and baseline “normal” admin actions/config changes.",
   "highlights": [
     {
-      "title": "SANS Stormcast Friday, October 16th, 2026: Panchan Crypto Mining Worm; Exploited 0-Days in Cisco Secure Email Gateway (CVE-2026-76519), Palo Alto PAN-OS (CVE-2026-0322) and Ivanti Connect Secure",
-      "link": "https://isc.sans.edu/podcastdetail/10140",
-      "source": "SANS Internet Stormcenter Daily Cyber Security Podcast (Stormcast)",
-      "published": "2026-10-16T02:00:02+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Malware / Payloads",
-        "Exploit / PoC",
-        "Community / Briefing"
-      ],
-      "curated": false,
-      "signal_tier": "critical",
-      "signal_score": 100.0,
-      "priority_score": 78.92
-    },
-    {
-      "title": "Cisco Email Gateway Zero-Day Under Attack, Root Access at Risk",
-      "link": "https://www.esecurityplanet.com/news/news-cisco-email-gateway-zero-day-exploited/",
-      "source": "eSecurityPlanet",
-      "published": "2026-10-15T16:00:00+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 93.46,
-      "priority_score": 87.05
-    },
-    {
-      "title": "Cisco warns of actively exploited Secure Email Gateway flaw",
-      "link": "https://www.csoonline.com/article/4235801/cisco-warns-of-actively-exploited-secure-email-gateway-flaw.html",
-      "source": "CSO Online",
-      "published": "2026-10-15T12:32:50+00:00",
+      "title": "CC-4870 - Active Exploitation of BeyondTrust Remote Support Vulnerability (CVE-2026-102764)",
+      "link": "https://digital.nhs.uk/cyber-alerts/2026/cc-4870",
+      "source": "NHS Digital - Cyber Alert Feed",
+      "published": "2026-10-16T11:07:00+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC",
-        "Malware / Payloads",
-        "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 90.25,
-      "priority_score": 84.57
-    },
-    {
-      "title": "2026-017: Critical Vulnerability in Cisco Secure Email Gateway",
-      "link": "https://cert.europa.eu/publications/security-advisories/2026-017/",
-      "source": "CERT-EU Security Advisories",
-      "published": "2026-10-15T11:38:20+00:00",
-      "smart_groups": [
-        "Exploit / PoC",
-        "Malware / Payloads",
-        "Vulnerabilities / CVEs",
         "Government / CERT"
       ],
       "curated": true,
       "signal_tier": "critical",
-      "signal_score": 89.5,
-      "priority_score": 75.27
+      "signal_score": 87.45,
+      "priority_score": 86.31
     },
     {
-      "title": "CVE-2026-111357 - Ivanti Connect Secure Privilege Escalation Vulnerability",
-      "link": "https://cvefeed.io/vuln/detail/CVE-2026-111357",
-      "source": "CVEfeed.io - Latest Vulnerabilities",
-      "published": "2026-10-15T21:17:13+00:00",
+      "title": "BeyondTrust zero-day exploited by Chinese APT; Microsoft patches 1,400 flaws; AOMEI supply-chain compromised",
+      "link": "https://defend.network/briefings/beyondtrust-zero-day-microsoft-aomei-supply-chain-2026-10-17.html",
+      "source": "defend.network",
+      "published": "2026-10-17T06:30:00+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 85.08,
-      "priority_score": 86.52
-    },
-    {
-      "title": "CVE-2026-111357",
-      "link": "https://vuldb.com/cve/CVE-2026-111357",
-      "source": "VulDB CVE",
-      "published": "2026-10-15T21:28:09+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": false,
-      "signal_tier": "critical",
-      "signal_score": 83.19,
-      "priority_score": 76.75
-    },
-    {
-      "title": "Palo Alto Networks Patches PAN-OS Authenticated RCE Flaw Amid Active Exploitation",
-      "link": "https://thehackernews.com/2026/10/palo-alto-networks-patches-pan-os.html",
-      "source": "The Hacker News",
-      "published": "2026-10-15T11:46:49+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
+        "Threat Actors / APT",
+        "Cloud / SaaS",
         "Exploit / PoC",
+        "Supply Chain / Software",
+        "Windows / Microsoft",
         "General Security"
       ],
       "curated": true,
       "signal_tier": "critical",
-      "signal_score": 82.96,
-      "priority_score": 83.56
+      "signal_score": 83.12,
+      "priority_score": 90.35
     },
     {
-      "title": "Palo Alto Networks Patches PAN-OS Authenticated RCE Flaw Amid Active Exploitation",
-      "link": "https://vulners.com/thn/THN:6443ED26B6B41A48D481EA374BC7653D?utm_source=rss&utm_medium=rss&utm_campaign=rss",
-      "source": "Vulners.com RSS Feed",
-      "published": "2026-10-15T11:46:00+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": false,
-      "signal_tier": "critical",
-      "signal_score": 82.45,
-      "priority_score": 70.97
-    },
-    {
-      "title": "CVE-2026-76519: Critical Cisco Secure Email Gateway Zero-Day Exploited for Root Access",
-      "link": "https://socprime.com/blog/cve-2026-76519-analysis/",
+      "title": "CVE-2026-102764: Critical BeyondTrust Remote Support Zero-Day Exploited by China-Linked Hackers",
+      "link": "https://socprime.com/blog/cve-2026-102764-beyondtrust-zero-day-exploited/",
       "source": "SOC Prime Blog",
-      "published": "2026-10-15T11:23:43+00:00",
+      "published": "2026-10-16T12:33:43+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC",
@@ -144,25 +60,110 @@
       ],
       "curated": true,
       "signal_tier": "critical",
-      "signal_score": 81.18,
-      "priority_score": 84.52
+      "signal_score": 81.17,
+      "priority_score": 85.93
     },
     {
-      "title": "U.S. CISA adds Palo Alto Networks PAN-OS, Ahsay AhsayCBS, and Cisco Secure Email Gateway flaws to its Known Exploited Vulnerabilities catalog",
-      "link": "https://securityaffairs.com/201041/security/u-s-cisa-adds-palo-alto-networks-pan-os-ahsay-ahsaycbs-and-cisco-secure-email-gateway-flaws-to-its-known-exploited-vulnerabilities-catalog.html",
-      "source": "Security Affairs",
-      "published": "2026-10-15T19:21:30+00:00",
+      "title": "abdal-anydesk-remote-ip-detector",
+      "link": "https://vulners.com/kitploit/KITPLOIT:TOOLS-GITHUB-EBRASHA-ABDAL-ANYDESK-REMOTE-IP-DETECTOR?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-10-16T22:59:36+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Threat Actors / APT",
-        "Cloud / SaaS",
         "Exploit / PoC",
-        "General Security"
+        "Data Protection / Privacy"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 76.45,
+      "priority_score": 75.09
+    },
+    {
+      "title": "CVE-2025-20281-2-Cisco-ISE-RCE",
+      "link": "https://vulners.com/kitploit/KITPLOIT:TOOLS-GITHUB-ABREWER251-CVE-2025-20281-2-CISCO-ISE-RCE?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-10-16T22:59:39+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Crypto / Web3",
+        "Linux / Unix"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 73.45,
+      "priority_score": 74.46
+    },
+    {
+      "title": "TCM-Security-Practical-Network-Penetration-Tester exploit",
+      "link": "https://sploitus.com/exploit?id=A3C18DF3-F6FF-51EC-BF5A-9C96ED70880B&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-10-16T17:52:07+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.48,
+      "priority_score": 72.17
+    },
+    {
+      "title": "Exploit for CVE-2026-90817",
+      "link": "https://sploitus.com/exploit?id=2250BC98-AA1C-5173-8472-2F10F39C93CA&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-10-16T13:23:10+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.48,
+      "priority_score": 70.97
+    },
+    {
+      "title": "Exploit for CVE-2026-89079",
+      "link": "https://sploitus.com/exploit?id=FCC375D7-BBF1-5B82-A41D-FD69DC444245&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-10-16T11:44:49+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.48,
+      "priority_score": 70.53
+    },
+    {
+      "title": "Vulnerability-POC-Dev exploit",
+      "link": "https://sploitus.com/exploit?id=DAACF07C-0A50-5C10-AA66-8B8B6694E2E9&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-10-17T00:00:15+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
       ],
       "curated": true,
       "signal_tier": "high",
-      "signal_score": 76.01,
-      "priority_score": 83.5
+      "signal_score": 66.48,
+      "priority_score": 84.89
+    },
+    {
+      "title": "go-without-bounds-cve-2026-67822-stack-overflow-in-tenda-w6-s-wifissidset",
+      "link": "https://vulners.com/kitploit/KITPLOIT:TOOLS-GITHUB-HUNT-BENITO-GO-WITHOUT-BOUNDS-CVE-2026-67822-STACK-OVERFLOW-IN-TENDA-W6-S-WIFISSIDSET?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-10-16T22:59:58+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Crypto / Web3",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 66.45,
+      "priority_score": 75.11
     }
   ]
 }
