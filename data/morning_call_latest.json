@@ -1,169 +1,169 @@
 {
-  "generated_at": "2026-10-17T10:40:39.353589+00:00",
-  "analysis_date": "2026-10-17",
+  "generated_at": "2026-10-18T11:03:13.772669+00:00",
+  "analysis_date": "2026-10-18",
   "provider": "openai",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-10-17T06:48:48.085392+00:00",
+  "source_generated_at": "2026-10-18T08:46:19.536957+00:00",
   "source_days_back": 30,
-  "source_total_items": 64162,
-  "total_items_in_window_all": 2619,
-  "total_items_in_window_curated": 17,
+  "source_total_items": 63336,
+  "total_items_in_window_all": 1649,
+  "total_items_in_window_curated": 4,
   "total_items_in_window_selected": 40,
   "context_selection_policy": "curated-plus-operational-signal-v1",
-  "morning_call_markdown": "### Executive Summary\n- Active zero-day exploitation against BeyondTrust Remote Support appliances (CVE-2026-102764) attributed to a China-nexus espionage actor; treat as “internet-facing initial access” priority.\n- Multiple “known exploited / high-impact” enterprise bugs with real attacker tradecraft behind them: Atlassian (CVE-2026-21589 KEV), ScreenConnect client bypass (CVE-2026-84869 KEV signal), and NetScaler ADC/Gateway RCE exploitation details (CVE-2026-88771).\n- Exploit/PoC noise is spiking (GitLab CI/CD CVSS 10, Cisco ISE PoC, legacy Apache httpd CVE-2021-41773 PoC, Linux priv-esc CVEs); prioritize by exposure (internet-facing + auth bypass/RCE) and asset presence in our environment.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) BeyondTrust Remote Support zero-day exploitation (CVE-2026-102764)**\n- What happened: Active exploitation of BeyondTrust Remote Support vulnerability enabling unauthenticated arbitrary file upload/operations on affected appliances.\n- Why it matters operationally: Direct initial-access path into remote support infrastructure (high-value pivot point) with reported log deletion and credential theft behaviors by China-nexus actor.\n- Recommended immediate actions for the SOC today: Confirm RS asset inventory + exposure; enforce patch/mitigation immediately; pull appliance logs/config and hunt for new/unknown files, unexpected admin users, and evidence of log tampering.\n\n**2) “Known exploited” enterprise apps: Atlassian + ScreenConnect**\n- What happened: CISA KEV added an Atlassian critical flaw (CVE-2026-21589); reporting indicates ScreenConnect client bypass (CVE-2026-84869) had worm-like spread and is also KEV-listed.\n- Why it matters operationally: These products commonly sit on the edge or are broadly trusted internally; exploitation frequently leads to rapid privilege escalation/persistence and lateral movement.\n- Recommended immediate actions for the SOC today: Validate patch levels and isolate any unpatched internet-facing instances; review auth logs for anomalous successful logins and new tokens/sessions; block/monitor abnormal installer/update executions on endpoints tied to remote support tooling.\n\n**3) Citrix NetScaler ADC/Gateway critical RCE exploitation (CVE-2026-88771)**\n- What happened: Detailed research published on exploitation of a critical NetScaler RCE, indicating attacker know-how and repeatable tradecraft.\n- Why it matters operationally: NetScaler is a common gateway into enterprise networks; exploitation can yield appliance-level control and credential/session theft with limited endpoint visibility.\n- Recommended immediate actions for the SOC today: Confirm whether any NetScaler ADC/Gateway exists and patch status; review NetScaler/security logs for unusual requests and new/modified configs; monitor for downstream suspicious auth activity (new VPN sessions, unusual IdP logins) originating from gateway IPs.\n\n**4) GitLab CI/CD unauth RCE-risk bug (CVE-2026-97229, CVSS 10)**\n- What happened: GitLab patched a CI/CD regex integer overflow with stated potential for unauthenticated code execution; technical analysis released.\n- Why it matters operationally: CI/CD compromise is a fast path to source/code signing secrets, pipeline runners, and supply-chain risk—high impact for financial services.\n- Recommended immediate actions for the SOC today: Identify GitLab instances (self-managed) and confirm patched versions; hunt for suspicious pipeline/job activity and unusual runner registrations; monitor for access to CI variables/secrets and sudden permission changes.\n\n**5) Supply-chain risk signal: AOMEI Backupper update channel reportedly compromised**\n- What happened: Reporting claims AOMEI Backupper update infrastructure was compromised for months (supply-chain style).\n- Why it matters operationally: Backup tooling is privileged and ubiquitous; malicious updates can produce quiet persistence and data access (including backups) before ransomware/espionage actions.\n- Recommended immediate actions for the SOC today: Confirm whether AOMEI is present in estate (endpoints/servers) and freeze updates pending vendor confirmation; hunt for recent AOMEI updater executions and newly dropped binaries/services; escalate any anomalies to IR for scoping.\n\n---\n\n### Monitoring & detection recommendations\n- **BeyondTrust RS edge exploitation**: WAF/reverse-proxy + appliance logs + firewall; alert on unusual POST/file upload patterns to RS, new files in web/app directories, and admin console access from new geos (ATT&CK T1190).\n- **Remote support / admin tool abuse**: EDR + Windows Security logs; hunt for new services/scheduled tasks spawned by remote support processes, and unexpected credential dumping indicators post-initial access (T1053, T1543, T1003).\n- **Atlassian exploitation follow-on**: Atlassian app logs + IdP/SSO logs; monitor for anomalous session creation, new API tokens, permission changes, and bursts of 4xx/5xx followed by successful admin actions (T1078).\n- **ScreenConnect propagation signal**: EDR + software inventory + proxy/DNS; detect new ScreenConnect client installs, unusual child processes from ScreenConnect, and lateral tool transfer patterns (T1105).\n- **NetScaler exploitation + credential/session theft**: NetScaler logs (AAA/auth, config changes) + VPN + IdP; alert on new/modified auth policies, unexpected config saves, and sudden spikes in successful logins from gateway IPs (T1098).\n- **GitLab CI/CD compromise**: GitLab audit logs + runner logs + cloud logs; watch for new runner registration, unusual pipeline triggers from unknown IPs, and access to CI/CD variables/secrets (T1552).\n- **Internet-facing hygiene sweep (PoC spike)**: External attack surface monitoring + vulnerability scanner; prioritize checks for Apache httpd (CVE-2021-41773 PoC), Cisco ISE PoC mention, and any exposed admin interfaces—treat “PoC published” as higher scanning pressure today.\n\n---\n\n### Medium-term follow-ups\n- **Patch governance / exposure-based prioritization**: Re-rank patch queue by “internet-facing + KEV/active exploitation,” specifically BeyondTrust RS, Atlassian, ScreenConnect, NetScaler, and GitLab.\n- **Backup software supply-chain controls**: If AOMEI (or other third-party backup tools) exist, enforce allow-listed update sources, validate code signing, and centralize update deployment via controlled channels.\n- **Linux privilege escalation hardening**: Review kernel patch cadence and endpoint/servers exposure to local-network attack paths noted in recent Linux kernel priv-esc CVEs; tighten least privilege and EDR coverage on Linux.\n- **Network device patching reminder**: Validate data center switch (e.g., Nexus/NX-OS) patch posture if applicable; ensure management plane access controls (ACLs, MFA/AAA) are enforced.\n- **Ransomware “machine-speed” readiness**: Revalidate containment playbooks (EDR isolate, identity lock-down, segmentation) and ensure rapid triage paths for post-initial-access behaviors (credential theft → lateral movement → encryption).\n- **Threat hunting enablement**: Ensure telemetry coverage for appliance/gateway products (BeyondTrust/NetScaler) where EDR is blind; forward syslog to SIEM and baseline “normal” admin actions/config changes.",
+  "morning_call_markdown": "### Executive Summary\n- **Supply-chain risk spiking again:** a malicious **npm package (“imgdecode”)** tied to the MALFEX campaign is still live and includes a Windows native addon shellcode loader—treat dev endpoints/build agents as at-risk.\n- **Exploit tooling/PoCs circulating for multiple RCEs:** renewed scanning/exploitation interest around **Next.js (CVE-2025-66478)** and other common web-facing stacks (CloudPanel/Drupal/Struts/WordPress/Apache HTTPD-era PoCs resurfacing).\n- **Large Linux kernel priv-esc wave disclosed:** multiple “critical” **local/network-adjacent LPEs** across kernel branches—relevant to container hosts, jump boxes, CI runners, and any exposed multi-tenant Linux.\n\n### High-priority items (immediate attention)\n\n**1) MALFEX supply-chain: malicious npm package `imgdecode` (Windows native addon shellcode loader)**\n- **What happened:** Researchers found `imgdecode` on npm, linked to the **MALFEX** supply-chain campaign, containing a **Windows native addon** acting as a shellcode loader.\n- **Why it matters operationally:** Compromise can land via **developer workflows/CI**, leading to silent initial access and downstream deployment into production artifacts (financial sector CI/CD is a high-value path).\n- **Recommended immediate actions for the SOC today:** Block/alert on `imgdecode` install in build logs; hunt dev/CI hosts for abnormal `node/npm` activity spawning unsigned binaries; coordinate with AppSec to **quarantine/remove** the package from repos and lock dependency versions.\n\n**2) Next.js RSC RCE (CVE-2025-66478): scanner/PoC ecosystem expanding**\n- **What happened:** A public **scanner + PoC/collection** for **Next.js RSC RCE (CVE-2025-66478)** is circulating, enabling fast internet-scale identification of vulnerable apps.\n- **Why it matters operationally:** Web-facing Next.js services (customer portals, internal tools behind SSO, marketing sites) can become footholds for **remote code execution** and lateral movement.\n- **Recommended immediate actions for the SOC today:** Identify internet-exposed Next.js assets and validate versions; add WAF/edge rules to rate-limit and detect suspicious RSC-related requests; prioritize patching/mitigation on any app reachable from the internet or partner networks.\n\n**3) Web-control-panel & CMS RCE chatter (CloudPanel “0-day” PoC; Drupal/Struts/WordPress exploit tooling)**\n- **What happened:** PoC/exploit tools are being actively shared for **CloudPanel (CVE-2023-35885)** and renewed tooling references for **Drupal/Struts/WordPress** class RCEs.\n- **Why it matters operationally:** These stacks commonly sit on **internet edge** (admin panels, marketing CMS, microsites) and are frequently used for initial access leading to ransomware/extortion.\n- **Recommended immediate actions for the SOC today:** Confirm none of these admin panels/CMS endpoints are exposed without strong access controls; review WAF logs for exploit patterns and sudden spikes; isolate/patch any discovered exposed instances (especially CloudPanel <= v2.3.0).\n\n**4) Linux kernel “WID-SEC-2026-1700” cluster: multiple critical LPEs across versions**\n- **What happened:** Multiple Linux kernel privilege-escalation CVEs were published across **6.6/6.12/6.18/7.x** lines (e.g., zram, crypto, IPv4, RXRPC, RDS, SVM, eventfs, USB serial).\n- **Why it matters operationally:** Even if “local,” these are high impact for **container escapes, post-exploitation privilege gain**, and multi-tenant Linux—especially on Kubernetes nodes, CI runners, and bastions.\n- **Recommended immediate actions for the SOC today:** Inventory kernel versions on fleet (containers hosts/jump boxes first); increase alerting for unexpected `sudo`/setuid use and kernel exploit-like behavior; if compromise suspected, treat Linux hosts as able to be fully rooted quickly.\n\n**5) Identity/SSO-related weaknesses: phpMyFAQ OIDC callback bypass + Coder user enumeration**\n- **What happened:** **phpMyFAQ (CVE-2026-111882)** allows skipping **TOTP** via Keycloak/Entra ID SSO callbacks under certain conditions; **Coder (CVE-2026-111933)** exposes **user enumeration** behavior.\n- **Why it matters operationally:** In financial environments, any weakness around **SSO/MFA** can accelerate account takeover chains (phished IdP credentials + bypass paths; enumeration aiding targeted password spraying).\n- **Recommended immediate actions for the SOC today:** Verify whether phpMyFAQ/Coder are deployed internally/externally; monitor Entra ID/Keycloak auth flows for anomalous callback patterns and unusual successful logins; enforce conditional access and step-up MFA where possible.\n\n### Monitoring & detection recommendations\n- **Dev/CI supply-chain (MALFEX/npm):** Monitor **CI logs, endpoint EDR, build agent process telemetry** for `npm install` of unusual packages + `node` spawning native binaries/dll loads (ATT&CK **T1195 Supply Chain Compromise**, **T1059.007 JavaScript**).\n- **Web RCE attempts (Next.js / CloudPanel / CMS):** Use **WAF/Reverse proxy logs + IDS** to hunt request bursts, strange headers, and POSTs to admin/edge routes; correlate with **new process execution** on web servers (ATT&CK **T1190 Exploit Public-Facing Application**).\n- **Linux priv-esc post-compromise:** From **EDR/auditd/sysmon-for-linux**, alert on new setuid binaries, `chmod +s`, suspicious writes to `/tmp` + rapid privilege change sequences; watch kernel oops/panic signals as exploitation side-effects (ATT&CK **T1068 Exploitation for Privilege Escalation**).\n- **SSO/MFA bypass & enumeration:** From **Entra ID sign-in logs, Keycloak logs, IdP audit**, hunt for unusual success after multiple failures, abnormal callback endpoints, and logins lacking expected MFA claims (ATT&CK **T1110 Brute Force**, **T1556 Modify Authentication Process**).\n- **Legacy PoC resurfacing (Apache HTTPD CVE-2021-41773 etc.):** From **web server access logs**, flag path traversal patterns and unusual 400/500 spikes; cross-check with new shells/process trees on the host.\n- **Ransomware early indicators (Amadey loader + new ransomware variants):** On **EDR**, watch for keylogging/clipboard access behaviors, credential dumping precursors, and mass file rename bursts; ensure canary alerts for encryption-like I/O (ATT&CK **T1055 Process Injection** / **T1003 OS Credential Dumping** where applicable).\n- **East-west “local network required” Linux CVEs:** Use **NDR/internal firewall** to detect unusual lateral movement into Linux server subnets and management networks; prioritize alerts from jump hosts into container/node networks.\n\n### Medium-term follow-ups\n- **Dependency governance:** Enforce lockfiles, private registries/proxy allowlists, and automated malware scanning of npm dependencies; review who can publish/update internal packages.\n- **Patch & exposure management:** Add Next.js/CMS/admin panels to a “web-critical” patch SLA; ensure asset inventory includes marketing/third-party-hosted web properties.\n- **Kernel risk reduction:** Accelerate kernel updates on container/K8s nodes and CI runners; consider hardening (seccomp, least-privileged pods, disable unneeded kernel modules/features like zram where not required).\n- **SSO hardening:** Review OIDC callback configurations and MFA enforcement for edge apps; ensure conditional access policies cover “legacy/utility apps” (FAQs, dev platforms).\n- **Detection engineering:** Build/refresh correlation rules that tie **WAF exploit attempts → web host process execution → outbound C2** in one storyline to shorten time-to-triage.\n- **Third-party/supply-chain readiness:** Validate incident playbooks for compromised build pipelines (artifact revocation, key rotation, rebuild-from-clean) and run a quick tabletop with AppSec/Platform teams.",
   "highlights": [
     {
-      "title": "CC-4870 - Active Exploitation of BeyondTrust Remote Support Vulnerability (CVE-2026-102764)",
-      "link": "https://digital.nhs.uk/cyber-alerts/2026/cc-4870",
-      "source": "NHS Digital - Cyber Alert Feed",
-      "published": "2026-10-16T11:07:00+00:00",
+      "title": "MALFEX npm Package 'imgdecode' Hides Shellcode Loader in Windows Native Addon",
+      "link": "https://thehackernews.com/2026/10/malfex-npm-package-imgdecode-hides.html",
+      "source": "The Hacker News",
+      "published": "2026-10-17T11:11:56+00:00",
       "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "Government / CERT"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 87.45,
-      "priority_score": 86.31
-    },
-    {
-      "title": "BeyondTrust zero-day exploited by Chinese APT; Microsoft patches 1,400 flaws; AOMEI supply-chain compromised",
-      "link": "https://defend.network/briefings/beyondtrust-zero-day-microsoft-aomei-supply-chain-2026-10-17.html",
-      "source": "defend.network",
-      "published": "2026-10-17T06:30:00+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Threat Actors / APT",
-        "Cloud / SaaS",
-        "Exploit / PoC",
         "Supply Chain / Software",
+        "Malware / Payloads",
         "Windows / Microsoft",
         "General Security"
       ],
       "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 83.12,
-      "priority_score": 90.35
+      "signal_tier": "high",
+      "signal_score": 69.82,
+      "priority_score": 82.89
     },
     {
-      "title": "CVE-2026-102764: Critical BeyondTrust Remote Support Zero-Day Exploited by China-Linked Hackers",
-      "link": "https://socprime.com/blog/cve-2026-102764-beyondtrust-zero-day-exploited/",
-      "source": "SOC Prime Blog",
-      "published": "2026-10-16T12:33:43+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "Vendors / Product Security"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 81.17,
-      "priority_score": 85.93
-    },
-    {
-      "title": "abdal-anydesk-remote-ip-detector",
-      "link": "https://vulners.com/kitploit/KITPLOIT:TOOLS-GITHUB-EBRASHA-ABDAL-ANYDESK-REMOTE-IP-DETECTOR?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "title": "Next.js-RSC-RCE-Scanner-CVE-2025-66478",
+      "link": "https://vulners.com/kitploit/KITPLOIT:TOOLS-GITHUB-MALAYKE-NEXT.JS-RSC-RCE-SCANNER-CVE-2025-66478?utm_source=rss&utm_medium=rss&utm_campaign=rss",
       "source": "Vulners.com RSS Feed",
-      "published": "2026-10-16T22:59:36+00:00",
+      "published": "2026-10-17T15:00:39+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
+        "Linux / Unix",
         "Exploit / PoC",
-        "Data Protection / Privacy"
+        "Windows / Microsoft"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 76.45,
-      "priority_score": 75.09
+      "signal_score": 67.47,
+      "priority_score": 72.33
     },
     {
-      "title": "CVE-2025-20281-2-Cisco-ISE-RCE",
-      "link": "https://vulners.com/kitploit/KITPLOIT:TOOLS-GITHUB-ABREWER251-CVE-2025-20281-2-CISCO-ISE-RCE?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "title": "skill-exploit-research",
+      "link": "https://sploitus.com/exploit?id=7CBBC405-56DC-54BC-9F94-F34EF837F559&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-10-17T11:04:44+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 66.47,
+      "priority_score": 69.81
+    },
+    {
+      "title": "Vulnerability_PoC",
+      "link": "https://vulners.com/kitploit/KITPLOIT:TOOLS-GITHUB-NUMENCYBER-VULNERABILITY_POC?utm_source=rss&utm_medium=rss&utm_campaign=rss",
       "source": "Vulners.com RSS Feed",
-      "published": "2026-10-16T22:59:39+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "Crypto / Web3",
-        "Linux / Unix"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 73.45,
-      "priority_score": 74.46
-    },
-    {
-      "title": "TCM-Security-Practical-Network-Penetration-Tester exploit",
-      "link": "https://sploitus.com/exploit?id=A3C18DF3-F6FF-51EC-BF5A-9C96ED70880B&utm_source=rss&utm_medium=rss",
-      "source": "Sploitus – Exploits",
-      "published": "2026-10-16T17:52:07+00:00",
+      "published": "2026-10-17T15:00:37+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 68.48,
-      "priority_score": 72.17
+      "signal_score": 64.47,
+      "priority_score": 72.61
     },
     {
-      "title": "Exploit for CVE-2026-90817",
-      "link": "https://sploitus.com/exploit?id=2250BC98-AA1C-5173-8472-2F10F39C93CA&utm_source=rss&utm_medium=rss",
-      "source": "Sploitus – Exploits",
-      "published": "2026-10-16T13:23:10+00:00",
+      "title": "CVE-2026-46089 | Linux Kernel up to 6.6.139/6.12.85/6.18.26/7.0.3 zram /dev/zram0 submit_bio_wait privilege escalation (EUVD-2026-32472 / WID-SEC-2026-1700)",
+      "link": "https://vuldb.com/vuln/366290",
+      "source": "VulDB Updates",
+      "published": "2026-10-18T06:49:32+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
+        "Linux / Unix",
         "Exploit / PoC"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 68.48,
-      "priority_score": 70.97
+      "signal_score": 63.33,
+      "priority_score": 80.94
     },
     {
-      "title": "Exploit for CVE-2026-89079",
-      "link": "https://sploitus.com/exploit?id=FCC375D7-BBF1-5B82-A41D-FD69DC444245&utm_source=rss&utm_medium=rss",
-      "source": "Sploitus – Exploits",
-      "published": "2026-10-16T11:44:49+00:00",
+      "title": "CVE-2026-46077 | Linux Kernel up to 6.6.139/6.12.85/6.18.26/7.0.3 crypto dma_sync_single_for_cpu privilege escalation (WID-SEC-2026-1700)",
+      "link": "https://vuldb.com/vuln/366342",
+      "source": "VulDB Updates",
+      "published": "2026-10-18T05:24:57+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
+        "Linux / Unix",
         "Exploit / PoC"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 68.48,
-      "priority_score": 70.53
+      "signal_score": 63.33,
+      "priority_score": 80.56
     },
     {
-      "title": "Vulnerability-POC-Dev exploit",
-      "link": "https://sploitus.com/exploit?id=DAACF07C-0A50-5C10-AA66-8B8B6694E2E9&utm_source=rss&utm_medium=rss",
-      "source": "Sploitus – Exploits",
-      "published": "2026-10-17T00:00:15+00:00",
+      "title": "CVE-2026-46060 | Linux Kernel up to 6.18.26/7.0.3 IRQ adf_dev_up privilege escalation (WID-SEC-2026-1700)",
+      "link": "https://vuldb.com/vuln/366300",
+      "source": "VulDB Updates",
+      "published": "2026-10-17T19:47:44+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
+        "Linux / Unix",
         "Exploit / PoC"
       ],
-      "curated": true,
+      "curated": false,
       "signal_tier": "high",
-      "signal_score": 66.48,
-      "priority_score": 84.89
+      "signal_score": 63.33,
+      "priority_score": 77.99
     },
     {
-      "title": "go-without-bounds-cve-2026-67822-stack-overflow-in-tenda-w6-s-wifissidset",
-      "link": "https://vulners.com/kitploit/KITPLOIT:TOOLS-GITHUB-HUNT-BENITO-GO-WITHOUT-BOUNDS-CVE-2026-67822-STACK-OVERFLOW-IN-TENDA-W6-S-WIFISSIDSET?utm_source=rss&utm_medium=rss&utm_campaign=rss",
-      "source": "Vulners.com RSS Feed",
-      "published": "2026-10-16T22:59:58+00:00",
+      "title": "CVE-2026-46037 | Linux Kernel up to 6.6.139/6.12.85/6.18.26/7.0.3 ipv4 array_index_nospec icmp_pointers[] privilege escalation (Nessus ID 323249 / WID-SEC-2026-1700)",
+      "link": "https://vuldb.com/vuln/366312",
+      "source": "VulDB Updates",
+      "published": "2026-10-17T18:30:29+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
+        "Linux / Unix",
         "Crypto / Web3",
         "Exploit / PoC"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 66.45,
-      "priority_score": 75.11
+      "signal_score": 63.33,
+      "priority_score": 77.64
+    },
+    {
+      "title": "CVE-2026-46026 | Linux Kernel up to 6.6.139/6.12.85/6.18.26/7.0.3 privilege escalation (WID-SEC-2026-1700)",
+      "link": "https://vuldb.com/vuln/366272",
+      "source": "VulDB Updates",
+      "published": "2026-10-17T17:53:02+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Linux / Unix",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 63.33,
+      "priority_score": 77.47
+    },
+    {
+      "title": "CVE-2026-63900 | Linux Kernel up to 7.0.11 Usb Serial Keyspan Local Privilege Escalation (Nessus ID 366749)",
+      "link": "https://vuldb.com/vuln/380365",
+      "source": "VulDB Updates",
+      "published": "2026-10-17T17:43:46+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Linux / Unix",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 63.33,
+      "priority_score": 77.43
     }
   ]
 }
