@@ -1,0 +1,173 @@
+{
+  "generated_at": "2026-10-21T11:51:13.956308+00:00",
+  "analysis_date": "2026-10-21",
+  "provider": "openai",
+  "model": "gpt-5.2",
+  "window_hours": 24,
+  "source_file": "data/news_recent.json",
+  "source_generated_at": "2026-10-21T07:22:47.793025+00:00",
+  "source_days_back": 30,
+  "source_total_items": 64752,
+  "total_items_in_window_all": 3884,
+  "total_items_in_window_curated": 12,
+  "total_items_in_window_selected": 44,
+  "context_selection_policy": "curated-plus-operational-signal-v1",
+  "morning_call_markdown": "### Executive Summary\n- Active ransomware exploitation of **PAN-OS / Prisma Access auth bypass (CVE-2026-0257)**: treat all exposed Palo Alto VPN edges as at-risk until proven patched/mitigated.\n- Public **unauthenticated RCE PoC for FortiSIEM (CVE-2026-106173)**: prioritize exposure checks; monitor for exploitation attempts against SIEM infrastructure.\n- Emerging supply-chain and trust-chain risk: **eMudhra CA key compromise/revocations** + **AOMEI Backupper supply-chain backdoor**; verify software provenance and certificate trust impacts in endpoints and update pipelines.\n\n### High-priority items (immediate attention)\n**1) PAN-OS / Prisma Access MFA bypass under active ransomware exploitation (CVE-2026-0257)**\n- What happened: Multiple ransomware groups (reported incl. Qilin/INC) are **actively exploiting CVE-2026-0257** to bypass auth/MFA and establish unauthorized VPN access.\n- Why it matters operationally: Direct initial-access path into enterprise networks; likely leads to **rapid privilege escalation + data theft/encryption** in financial environments.\n- Recommended immediate actions for the SOC today: **Confirm patch/mitigation status** for all PAN-OS/Prisma Access VPN endpoints; **hunt for anomalous VPN sessions** (new users/devices/geo, unusual auth flows) and escalate any suspected edge compromise to IR.\n\n**2) Fortinet FortiSIEM unauthenticated RCE now has public PoC (CVE-2026-106173)**\n- What happened: A **public exploit PoC** was released for a critical FortiSIEM path traversal leading to **unauthenticated RCE**.\n- Why it matters operationally: SIEM compromise is high-blast-radius (log tampering, credential access, pivoting); exploitation attempts often spike immediately after PoC release.\n- Recommended immediate actions for the SOC today: **Identify any FortiSIEM internet exposure** (incl. mgmt interfaces) and confirm patch level; **monitor FortiSIEM host/network telemetry** for suspicious process spawning/child shells and unexpected outbound connections.\n\n**3) Certificate authority incident: eMudhra intermediate CA certs revoked due to key compromise**\n- What happened: eMudhra CA private keys were reportedly compromised; **browser vendors revoked impacted intermediate CA certificates**.\n- Why it matters operationally: Can break TLS inspection/decryption chains and software signing trust; increases risk of **MITM/user disruption** and may trigger “cert invalid” outages in client apps.\n- Recommended immediate actions for the SOC today: **Coordinate with PKI/network teams** to validate enterprise TLS interception/proxies aren’t chaining to impacted intermediates; **watch helpdesk/SOC queues** for spikes in TLS/certificate errors and correlate to affected endpoints/apps.\n\n**4) Supply-chain malware: AOMEI Backupper compromise delivering ShinyRoad backdoor loader**\n- What happened: AOMEI Backupper distribution was compromised in short windows and served a downloader for the **ShinyRoad modular backdoor**.\n- Why it matters operationally: Backup tooling is common on admin workstations/servers; compromise can provide stealthy persistence and credential access prior to ransomware.\n- Recommended immediate actions for the SOC today: **Inventory endpoints with AOMEI Backupper** (including golden images) and validate installer provenance/signatures; **hunt for suspicious child processes** spawned by backup software (downloaders, PowerShell, curl/wget, rundll32) and isolate affected hosts.\n\n**5) “Emergency” PHP security release pending (details limited; assume internet exploitation risk once public)**\n- What happened: PHP announced an **accelerated critical security release** for two core vulnerabilities (CVSS v4 ~9.2) with note of early release if details/active exploitation emerges.\n- Why it matters operationally: PHP is ubiquitous in web stacks; once details land, mass scanning/exploitation can follow within hours.\n- Recommended immediate actions for the SOC today: **Pre-identify internet-facing PHP estates** (versions, owners, patch windows) and stage change approvals; **increase WAF/IDS scrutiny** for anomalous PHP endpoint behavior until patches are applied.\n\n### Monitoring & detection recommendations\n- **VPN/edge compromise hunting (PAN-OS/Prisma Access)**: firewall/VPN auth logs + IdP logs; alert on new/rare user-agent/device IDs, atypical geo/time access, repeated failed logins then success (ATT&CK **T1078 Valid Accounts**, **T1133 External Remote Services**).\n- **Post-VPN lateral movement**: Windows security logs + EDR; hunt for remote service creation and admin shares (4624 type 3, 7045, 4688 for `psexec`, `wmic`, `sc.exe`) (ATT&CK **T1021 Remote Services**, **T1569.002 Service Execution**).\n- **FortiSIEM exploitation indicators**: FortiSIEM server EDR + system logs; look for unexpected web service child processes, shell spawns, new binaries in temp dirs, and unusual outbound egress from SIEM subnet (ATT&CK **T1190 Exploit Public-Facing Application**).\n- **CA revocation impact**: proxy/TLS inspection logs + endpoint browser telemetry; monitor increases in TLS handshake failures, cert chain validation errors, and blocked downloads due to signing trust changes.\n- **AOMEI/ShinyRoad supply-chain behavior**: EDR process trees; detect backup agent spawning `powershell`, `cmd`, `mshta`, `rundll32`, or initiating external downloads; correlate with new persistence (scheduled tasks/services) (ATT&CK **T1059 Command and Scripting Interpreter**, **T1543 Create or Modify System Process**).\n- **Web/PHP pre-exploit monitoring**: WAF + web server logs; alert on spikes in 4xx/5xx, unusual query strings to PHP endpoints, unexpected file writes under web roots, and new outbound connections from web servers (ATT&CK **T1505.003 Web Shell**).\n- **Active exploitation of Siemens Software Center (ClickFix/DLL sideloading)**: EDR on engineering/user endpoints; watch for suspicious `rundll32` loads, unsigned DLLs in app directories, and “update” workflows launching from user-writable paths (ATT&CK **T1574.001 DLL Search Order Hijacking**).\n\n### Medium-term follow-ups\n- **Patch governance**: enforce SLA review for edge devices (VPN/firewalls) and SIEM platforms; validate “cannot patch” exceptions have compensating controls (ACLs, mgmt-plane isolation).\n- **Edge hardening**: ensure PAN-OS mgmt interfaces are never internet-exposed; restrict VPN portals to known geos/ASNs where feasible; require device posture checks where supported.\n- **Supply-chain controls**: tighten software acquisition (allowlisted vendors, verified hashes/signatures, controlled update channels); review backup/admin tooling exposure in workstation images.\n- **PKI resilience**: update internal runbooks for CA revocations (browser trust changes), document TLS inspection certificate dependencies, and implement monitoring for revocation-driven outages.\n- **PHP estate management**: build/refresh an inventory of PHP runtime versions across on-prem and cloud; pre-stage rapid rollout procedures for “emergency upstream releases.”\n- **Exploit/P0-day noise triage**: multiple older PoCs are circulating (e.g., Apache 2.4.49 traversal, Confluence-era bugs, EternalBlue labs); confirm external attack surface scans and remediation prioritization focus on **internet-facing** assets first.",
+  "highlights": [
+    {
+      "title": "Threat Brief: Active Exploitation of PAN-OS CVE-2026-0257 (Updated October 20)",
+      "link": "https://unit42.paloaltonetworks.com/active-exploitation-of-pan-os-cve-2026-0257/",
+      "source": "Unit 42",
+      "published": "2026-10-20T20:30:42+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Ransomware",
+        "Vendors / Product Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 90.7,
+      "priority_score": 84.92
+    },
+    {
+      "title": "eMudhra CA compromise, FortiSIEM RCE PoC, PHP emergency patches",
+      "link": "https://defend.network/briefings/emudhra-fortisiem-php-palo-alto-exploit-2026-10-21.html",
+      "source": "defend.network",
+      "published": "2026-10-21T06:30:00+00:00",
+      "smart_groups": [
+        "Exploit / PoC",
+        "Identity / Access",
+        "Ransomware",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 88.12,
+      "priority_score": 88.39
+    },
+    {
+      "title": "Palo Alto's firewall OS has been under attack from multiple ransomware groups since June",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1xazkke/palo_altos_firewall_os_has_been_under_attack_from/",
+      "source": "/r/cybersecurity",
+      "published": "2026-10-20T18:10:06+00:00",
+      "smart_groups": [
+        "Ransomware",
+        "OSINT / Community"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 79.99,
+      "priority_score": 80.48
+    },
+    {
+      "title": "Palo Alto's firewall OS has been under attack from multiple ransomware groups since June",
+      "link": "https://www.theregister.com/cyber-crime/2026/10/20/palo-altos-firewall-os-has-been-under-attack-from-multiple-ransomware-groups-since-june/5304226",
+      "source": "The Register - Security",
+      "published": "2026-10-20T17:33:26+00:00",
+      "smart_groups": [
+        "Ransomware",
+        "General Security"
+      ],
+      "curated": false,
+      "signal_tier": "critical",
+      "signal_score": 79.69,
+      "priority_score": 68.8
+    },
+    {
+      "title": "Qilin and INC Ransomware Groups Exploit Palo Alto Networks Flaw to Bypass MFA",
+      "link": "https://thehackernews.com/2026/10/qilin-and-inc-ransomware-groups-exploit.html",
+      "source": "The Hacker News",
+      "published": "2026-10-20T15:32:27+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Ransomware",
+        "Exploit / PoC",
+        "Identity / Access",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 76.96,
+      "priority_score": 84.99
+    },
+    {
+      "title": "Fake Kernel Threads Are Hiding Backdoors on Linux Servers and Appliances",
+      "link": "https://eclypsium.com/blog/linux-malware-fake-kernel-threads/",
+      "source": "Eclypsium | Supply Chain Security for the Modern Enterprise",
+      "published": "2026-10-20T14:45:00+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Linux / Unix",
+        "Malware / Payloads",
+        "Exploit / PoC",
+        "Vendors / Product Security"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 72.57,
+      "priority_score": 73.44
+    },
+    {
+      "title": "[0day-rubbish] Royal Render 9.1.26b: default-unauthenticated job submission on rrServer TCP 7773 reaches worker-side shell execution as the worker identity, measured root (8.1 High)",
+      "link": "https://seclists.org/fulldisclosure/2026/Oct/33",
+      "source": "Full Disclosure",
+      "published": "2026-10-20T18:50:06+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "OSINT / Community"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 70.47,
+      "priority_score": 88.76
+    },
+    {
+      "title": "AOMEI Backupper Compromised in Short-Burst Supply Chain Campaign",
+      "link": "https://www.securityweek.com/aomei-backupper-compromised-in-short-burst-supply-chain-campaign/",
+      "source": "SecurityWeek",
+      "published": "2026-10-20T13:51:01+00:00",
+      "smart_groups": [
+        "Malware / Payloads",
+        "Windows / Microsoft",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 70.1,
+      "priority_score": 83.44
+    },
+    {
+      "title": "SANS Stormcast Wednesday, October 21st, 2026: eMudhra Intermediate CA Certificates Revoked; Critical PHP Security Release; Oracle CPU E-Business Suite SQLi (CVE-2026-101767); FortiSIEM gRPC RCE PoC",
+      "link": "https://isc.sans.edu/podcastdetail/10144",
+      "source": "SANS Internet Stormcenter Daily Cyber Security Podcast (Stormcast)",
+      "published": "2026-10-21T02:00:02+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Web / API Security",
+        "Exploit / PoC",
+        "Ransomware",
+        "Community / Briefing"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 69.21,
+      "priority_score": 79.61
+    },
+    {
+      "title": "CVE-2021-25641-Proof-of-Concept exploit",
+      "link": "https://sploitus.com/exploit?id=KITPLOIT:TOOLS-GITHUB-DOR-TUMARKIN-CVE-2021-25641-PROOF-OF-CONCEPT&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-10-21T02:59:55+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 68.51,
+      "priority_score": 84.66
+    }
+  ]
+}
