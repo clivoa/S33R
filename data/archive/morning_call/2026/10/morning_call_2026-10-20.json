@@ -1,0 +1,190 @@
+{
+  "generated_at": "2026-10-20T11:34:13.985774+00:00",
+  "analysis_date": "2026-10-20",
+  "provider": "openai",
+  "model": "gpt-5.2",
+  "window_hours": 24,
+  "source_file": "data/news_recent.json",
+  "source_generated_at": "2026-10-20T09:22:16.731815+00:00",
+  "source_days_back": 30,
+  "source_total_items": 62245,
+  "total_items_in_window_all": 2616,
+  "total_items_in_window_curated": 10,
+  "total_items_in_window_selected": 40,
+  "context_selection_policy": "curated-plus-operational-signal-v1",
+  "morning_call_markdown": "### Executive Summary\n- Multiple **internet-facing appliance vulns are actively exploited** (PAN-OS, BeyondTrust RS, NetScaler; plus Fortinet KEV) with **ransomware operators in the mix**—assume scanning and follow-on intrusion attempts today.\n- **Plex “Plex2Shell” RCE chain is being weaponized quickly** for **cryptominers/proxy backdoors**—watch for opportunistic compromise on any exposed Plex instances.\n- **Supply-chain compromises** impacting ops/dev tooling: **Rank Math PRO (WordPress) backdoored packages** and **OVHcloud CLI reported compromised**—treat related environments as potentially tainted until validated.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) PAN-OS management-plane exploitation (CVE-2026-0322 / CVE-2026-0257)**\n- What happened: Palo Alto PAN-OS management interface flaws are **actively exploited**, with reporting tying exploitation to **ransomware operators**.\n- Why it matters operationally: Compromise of perimeter firewalls can enable **credential theft, config tampering, lateral movement, and rapid ransomware staging**.\n- Recommended immediate actions for the SOC today: **Confirm patch level / mitigations + restrict mgmt exposure** (no internet, allowlist admin IPs); **hunt PAN-OS mgmt logs** for suspicious admin auth, unexpected config commits, and command injection indicators; **escalate any anomalies** to IR for containment.\n\n**2) BeyondTrust Remote Support auth bypass (CVE-2026-102764) – in the wild / KEV**\n- What happened: A **critical unauthenticated authentication bypass** in BeyondTrust Remote Support is **exploited in the wild** and listed in **CISA KEV**.\n- Why it matters operationally: Remote support tools are high-trust; exploitation can lead to **file operations, credential access, and direct endpoint control paths**.\n- Recommended immediate actions for the SOC today: **Identify any BeyondTrust RS appliances and validate exposure** (internet-facing vs internal); **review appliance/app logs** for unauthenticated access patterns and suspicious file operations; **prioritize patch/mitigation** and consider temporary isolation if uncertain.\n\n**3) Citrix NetScaler intrusions chaining auth/SAML CVEs (CVE-2026-88771, CVE-2026-88779)**\n- What happened: Investigations show intrusions chaining two NetScaler issues impacting **authentication/SAML deployments**, reaching **root code execution** with persistence.\n- Why it matters operationally: NetScaler often fronts critical banking apps/SSO; compromise can enable **session theft, IdP abuse, and downstream app access**.\n- Recommended immediate actions for the SOC today: **Inventory + confirm affected builds** and whether SAML/AAA features are enabled; **hunt NetScaler logs** for unusual logins, new/unknown config changes, and webshell-like artifacts; **monitor for post-exploitation** (new admin users, outbound C2 from appliance).\n\n**4) Plex2Shell exploit chain weaponized (Plex Media Server)**\n- What happened: A multi-bug Plex RCE chain is **being weaponized shortly after disclosure** to deploy **cryptominers and proxy/backdoor tooling**.\n- Why it matters operationally: Even if “non-core,” exposed Plex can be a **foothold into internal networks** (especially in mixed-use environments) and a source of **egress abuse**.\n- Recommended immediate actions for the SOC today: **Confirm we have zero exposed Plex** (DMZ/cloud/employee-owned segments where monitored); **alert on new Plex-related internet exposure** and suspicious process/network activity on Plex hosts; **contain immediately** if crypto-mining/proxy behavior is detected.\n\n**5) Supply-chain compromises: Rank Math PRO (WordPress) + OVHcloud CLI**\n- What happened: **Rank Math PRO 3.0.123** had a backdoored distribution window; reports also indicate an **infostealer slipped into OVHcloud CLI tooling**.\n- Why it matters operationally: Supply-chain hits can bypass perimeter controls; WordPress backdoors enable **persistent access**, and compromised CLIs can lead to **cloud credential theft**.\n- Recommended immediate actions for the SOC today: **Identify any affected Rank Math PRO installs** and validate plugin integrity/version provenance; **audit developer/admin workstations** for OVHcloud CLI usage and signs of credential access anomalies; **watch for unusual outbound auth** to cloud control planes from new hosts/users.\n\n---\n\n### Monitoring & detection recommendations\n- **Perimeter device exploitation hunts (PAN-OS/NetScaler/BeyondTrust/Fortinet)**: firewall/VPN/appliance audit logs + config change logs; alert on **new admin accounts, unusual geo/IP admin logins, rapid config commits** (ATT&CK: T1078, T1190).\n- **Mgmt-plane exposure monitoring**: continuous ASM (external attack surface) + firewall rulesets; detect **new inbound internet access to admin portals** or newly opened mgmt ports (ATT&CK: T1133).\n- **Post-exploitation from appliances**: NDR/NetFlow + DNS logs; look for **new outbound connections from security appliances** to rare ASNs, high ports, or long-lived sessions (ATT&CK: T1071, T1041).\n- **Webshell / persistence signals on ADC/WAF/WordPress**: WAF/HTTP logs + file integrity monitoring; alert on **new PHP files, atypical POSTs to admin endpoints, spikes in 5xx/4xx around exploit paths** (ATT&CK: T1505.003).\n- **Crypto-mining / proxy deployment (Plex2Shell)**: EDR on Linux/Windows Plex hosts; hunt for **xmrig-like behavior, high CPU + new persistence (cron/systemd), unexpected reverse proxies** (ATT&CK: T1496, T1053.003).\n- **Supply-chain/dev compromise (GhostAction / malicious repos theme)**: CI/CD audit logs (GitHub Actions), endpoint EDR on build agents; alert on **new workflow file changes, unexpected secrets access, outbound to paste/code hosting** (ATT&CK: T1552.001, T1566).\n- **Cloud CLI credential theft (OVHcloud CLI claim)**: IdP + cloud audit logs; watch for **token creation, API key generation, logins from new devices**, especially shortly after CLI installs/updates (ATT&CK: T1528, T1550).\n\n---\n\n### Medium-term follow-ups\n- **Patch governance push**: treat **KEV-listed items (BeyondTrust/Fortinet + exploited PAN-OS/NetScaler)** as emergency change candidates; track to closure with SLAs.\n- **Hardening**: enforce **no-internet management planes**, MFA for admin portals, and admin access via bastions/PAWs; validate logging is forwarded for all appliances.\n- **Supply-chain controls**: tighten plugin/package provenance (hash pinning/signature checks where possible) and require **SBOM/artifact attestation** for critical web properties and CI pipelines.\n- **WordPress hygiene**: review all production CMS sites for **least-privilege plugin use**, disable unused plugins, and add **file integrity monitoring** for web roots.\n- **Exchange stability note (post-October updates)**: if applicable, coordinate with Messaging/Infra teams to **validate patch outcomes** and ensure SOC has runbooks for update-related outages vs intrusion.\n- **Airflow SAML CSRF (CVE-2026-86467)**: if Airflow Amazon provider is used internally, schedule update to fixed version and review SSO flow protections (lower urgency unless exposed to untrusted users).",
+  "highlights": [
+    {
+      "title": "SANS Stormcast Tuesday, October 20th, 2026: Plex2Shell RCE Exploited; Broadcom eCos Wi-Fi RCE; OVHcloud CLI Compromised; Exchange Issues After October Updates; AI Agent Containment; VBA in DWG YARA",
+      "link": "https://isc.sans.edu/podcastdetail/10142",
+      "source": "SANS Internet Stormcenter Daily Cyber Security Podcast (Stormcast)",
+      "published": "2026-10-20T02:00:02+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Windows / Microsoft",
+        "Malware / Payloads",
+        "Detection Engineering",
+        "Cloud / SaaS",
+        "Exploit / PoC",
+        "Web / API Security",
+        "Community / Briefing"
+      ],
+      "curated": false,
+      "signal_tier": "critical",
+      "signal_score": 96.15,
+      "priority_score": 78.77
+    },
+    {
+      "title": "WordPress, Plex, and Microsoft: Supply-chain backdoor and active cryptominer exploits",
+      "link": "https://defend.network/briefings/wordpress-plex-microsoft-supply-chain-cryptominer-2026-10-20.html",
+      "source": "defend.network",
+      "published": "2026-10-20T06:30:00+00:00",
+      "smart_groups": [
+        "Exploit / PoC",
+        "Malware / Payloads",
+        "Supply Chain / Software",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 96.12,
+      "priority_score": 87.48
+    },
+    {
+      "title": "CVE-2026–0322: The PAN-OS Zero-Day That Turns an Admin Login Into Root on the Firewall",
+      "link": "https://systemweakness.com/cve-2026-0322-the-pan-os-zero-day-that-turns-an-admin-login-into-root-on-the-firewall-bc732f4bc81a?source=rss----f20a9840e177---4",
+      "source": "System Weakness - Medium",
+      "published": "2026-10-19T21:16:01+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Identity / Access",
+        "Ransomware",
+        "Threat Actors / APT",
+        "Detection Engineering",
+        "Cloud / SaaS",
+        "Malware / Payloads",
+        "Phishing / Social Engineering",
+        "Windows / Microsoft"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 96.11,
+      "priority_score": 87.37
+    },
+    {
+      "title": "Threat Brief: Active Exploitation of PAN-OS CVE-2026-0257 (Updated October 19)",
+      "link": "https://unit42.paloaltonetworks.com/active-exploitation-of-pan-os-cve-2026-0257/",
+      "source": "Unit 42",
+      "published": "2026-10-19T22:35:42+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Ransomware",
+        "Vendors / Product Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 90.76,
+      "priority_score": 85.23
+    },
+    {
+      "title": "CVE-2026-102764: Critical BeyondTrust Remote Support Authentication Bypass Exploited in the Wild",
+      "link": "https://www.rapid7.com/blog/post/etr-cve-2026-102764-critical-beyondtrust-remote-support-authentication-bypass-exploited-in-the-wild",
+      "source": "Rapid7 Cybersecurity Blog",
+      "published": "2026-10-19T14:34:04+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Detection Engineering",
+        "Cloud / SaaS",
+        "Exploit / PoC",
+        "Data Breaches / Leaks"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 85.45,
+      "priority_score": 87.21
+    },
+    {
+      "title": "Exploit for CVE-2026-111058",
+      "link": "https://sploitus.com/exploit?id=A461949E-561D-5090-96D7-02BE859B10CC&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-10-20T04:38:18+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 70.51,
+      "priority_score": 74.51
+    },
+    {
+      "title": "GhostAction Attackers Plant Credential Stealer Disguised as Font in 94 GitHub Repositories",
+      "link": "https://thehackernews.com/2026/10/ghostaction-attackers-plant-credential.html",
+      "source": "The Hacker News",
+      "published": "2026-10-19T13:05:45+00:00",
+      "smart_groups": [
+        "Malware / Payloads",
+        "Threat Actors / APT",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 69.88,
+      "priority_score": 81.6
+    },
+    {
+      "title": "Supply Chain Zero Days: Closing the Gap Between Publication and Detection",
+      "link": "https://www.wiz.io/blog/detect-supply-chain-zero-days-at-publication",
+      "source": "Wiz Blog | RSS feed",
+      "published": "2026-10-19T14:39:29+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Vendors / Product Security"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 69.78,
+      "priority_score": 82.12
+    },
+    {
+      "title": "Rapid7 Analysis: NetScaler intrusions chaining CVE-2026-88771 and CVE-2026-88779",
+      "link": "https://www.rapid7.com/blog/post/ra-netscaler-intrusions-chaining-cve-2026-88771-and-cve-2026-88779",
+      "source": "Rapid7 Cybersecurity Blog",
+      "published": "2026-10-19T15:11:57+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Identity / Access",
+        "Ransomware",
+        "Detection Engineering",
+        "Windows / Microsoft",
+        "Exploit / PoC",
+        "Linux / Unix",
+        "Malware / Payloads",
+        "Network / OT / ICS",
+        "Data Breaches / Leaks"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 69.45,
+      "priority_score": 77.42
+    },
+    {
+      "title": "Exploit for CVE-2026-99999",
+      "link": "https://sploitus.com/exploit?id=BFF46EF0-58F4-5DDE-88C1-862667808F38&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-10-20T07:06:55+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.51,
+      "priority_score": 75.18
+    }
+  ]
+}
