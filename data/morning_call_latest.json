@@ -1,115 +1,71 @@
 {
-  "generated_at": "2026-10-24T10:55:10.912021+00:00",
-  "analysis_date": "2026-10-24",
+  "generated_at": "2026-10-25T11:21:32.965112+00:00",
+  "analysis_date": "2026-10-25",
   "provider": "openai",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-10-24T10:35:41.038733+00:00",
+  "source_generated_at": "2026-10-25T11:03:11.641018+00:00",
   "source_days_back": 30,
-  "source_total_items": 63629,
-  "total_items_in_window_all": 2930,
-  "total_items_in_window_curated": 10,
-  "total_items_in_window_selected": 73,
+  "source_total_items": 65775,
+  "total_items_in_window_all": 2002,
+  "total_items_in_window_curated": 6,
+  "total_items_in_window_selected": 58,
   "context_selection_policy": "curated-plus-operational-signal-v1",
-  "morning_call_markdown": "### Executive Summary\n- Active, large-scale exploitation of new **critical PHP pre-auth RCEs (CVE-2026-109618/109619 “PHP2Shell”)** with multiple public PoCs now circulating; assume opportunistic scanning against any internet-facing PHP.\n- **CISA KEV additions**: actively exploited **Arista VeloCloud Orchestrator (CVE-2026-114625)** and **Collabora Online Built-in CODE Server (CVE-2026-110444)**; prioritize any exposed instances.\n- Exploit tooling is accelerating for common enterprise app stacks (Spring, Zimbra, Langflow/LLM tooling); expect **initial-access → webshell → credential theft/lateral movement** patterns.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) PHP2Shell: critical PHP pre-auth RCEs (CVE-2026-109618 / CVE-2026-109619) under active exploitation + PoCs**\n- **What happened:** Reporting indicates widespread exploitation and multiple public PoCs/toolkits for PHP2Shell; attackers attempting botnet deployment.\n- **Why it matters operationally:** Any internet-facing PHP app (including vendor portals, legacy apps, and marketing sites) can become an initial access point → webshell → internal pivot in minutes.\n- **Recommended immediate actions for the SOC today:** Triage exposure (ASM/WAF/CMDB) and confirm patch/mitigation status; start targeted hunt for new webshells and anomalous PHP process behavior on exposed hosts.\n\n**2) KEV: Arista VeloCloud Orchestrator (VCO) + Collabora Online CODE Server actively exploited**\n- **What happened:** CISA added **CVE-2026-114625 (VCO)** and **CVE-2026-110444 (Collabora Online Built-in CODE Server)** to KEV based on active exploitation.\n- **Why it matters operationally:** These are perimeter/admin-plane targets; exploitation commonly yields credential access, config theft, or direct footholds into network management paths.\n- **Recommended immediate actions for the SOC today:** Identify any internet-reachable VCO/Collabora and enforce emergency patch/mitigation window; add short-term alerting for exploitation attempts (WAF/proxy/IPS signatures if available) and suspicious admin logins.\n\n**3) Rapid weaponization of “known-good” enterprise app RCEs (Spring / Zimbra)**\n- **What happened:** New tooling writeups released for exploiting multiple Spring RCEs (older CVEs) and renewed attention to **Zimbra CVE-2022-37042 RCE** with exploitation guidance.\n- **Why it matters operationally:** Even if “old,” these CVEs persist in forgotten apps; exploit kits lower attacker skill requirements and increase scanning volume.\n- **Recommended immediate actions for the SOC today:** Validate no externally exposed Spring Gateway/Function/Framework endpoints and no exposed Zimbra admin surfaces; hunt for post-exploitation artifacts on Java mail/web servers (unexpected JSP/war drops, new service accounts, cron persistence).\n\n**4) Metasploit modules for Langflow (LLM workflow builder) chainable auth bypass + RCE**\n- **What happened:** Metasploit added multiple modules targeting Langflow (auth bypass + multiple RCE paths), increasing likelihood of widespread exploitation.\n- **Why it matters operationally:** AI/LLM tooling is often deployed quickly with weak segmentation; compromise can leak prompts/secrets, keys, and downstream connectors (DB, SaaS, queues).\n- **Recommended immediate actions for the SOC today:** Confirm whether Langflow (or similar LLM workflow tooling) exists in dev/ops networks; if present, restrict external access, rotate any connected API keys, and monitor for unusual outbound connections from the service.\n\n---\n\n### Monitoring & detection recommendations\n- **Internet-facing web exploitation (PHP/Spring/Zimbra):** WAF/reverse-proxy + web server logs (nginx/apache) for spikes in 4xx/5xx, unusual POSTs to rarely used endpoints, and new/rare user agents; map to **T1190 (Exploit Public-Facing Application)**.\n- **Webshell / command execution on web tiers:** EDR on web servers for `php`/`php-fpm` spawning shell interpreters (`/bin/sh`, `bash`, `curl`, `wget`) and suspicious child process trees; **T1505.003 (Web Shell)** / **T1059 (Command and Scripting Interpreter)**.\n- **File integrity on web roots:** Monitor creation/modification of `.php`, `.phtml`, `.jsp`, `.war`, unexpected `.so` in web directories; alert on “new executable content” shortly after inbound web requests.\n- **Arista VCO / Collabora exploitation signals:** VPN/edge firewall + appliance/application audit logs for admin-panel access from new geos/ASNs, repeated auth failures, and config export events; **T1078 (Valid Accounts)** for suspicious successful logins after scanning patterns.\n- **Credential theft & lateral movement after initial access:** Windows Security logs + EDR for `rundll32`/`regsvr32` anomalies, LSASS access attempts, and unusual remote service creation; **T1003 (OS Credential Dumping)** / **T1021 (Remote Services)**.\n- **Outbound C2 / botnet staging from DMZ:** NetFlow/DNS/Proxy logs for new destinations from web servers, periodic beaconing, and new TOR/proxy usage; prioritize any outbound from PHP/Java mail hosts to the internet.\n- **AI/LLM tooling abuse:** Cloud logs + host telemetry for Langflow/LLM services: new connector configs, sudden increases in API calls, and unexpected outbound to internal databases; treat as potential **T1552 (Unsecured Credentials)** exposure path.\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** Add the new PHP2Shell CVEs and KEV items (VCO/Collabora) to “emergency patch” policy with explicit SLA and exception handling for internet-facing assets.\n- **Attack surface reduction:** Inventory and formally register “shadow IT” AI/LLM workflow tools (e.g., Langflow); require SSO, network segmentation, and secrets management before production use.\n- **Hardening for web tiers:** Enforce least-privilege on web service accounts, disable risky PHP functions where feasible, and ensure egress filtering from DMZ web servers (default-deny outbound).\n- **Legacy CVE backlog sanity check:** Re-scan for persistent high-impact app CVEs in email/collab stacks (e.g., Zimbra) and Spring frameworks; prioritize any externally reachable management/admin endpoints.\n- **IR readiness:** Validate playbooks for “public-facing app exploited → webshell” including rapid containment steps (isolation, credential resets, web root diffing, log preservation).\n- **Vendor coordination:** If Arista VCO/Collabora are used, confirm vendor hotfix versions and any detection/signature guidance; feed validated patterns into SIEM use-cases.",
+  "morning_call_markdown": "### Executive Summary\n- Multiple **public PoCs dropped for critical RCE/priv-esc bugs** likely to be rapidly weaponized; prioritize internet-facing and high-trust components (edge, CI/CD, orchestration).\n- **Actively exploited KEV items** are in today’s set (notably **MLflow SSRF CVE-2026-64849** and **Collabora Online CODE Server CVE-2026-110447**)—treat as “assume scanning/exploitation.”\n- Broad **Microsoft patch volume** + fresh PoCs increases odds of opportunistic exploitation and phishing-to-exploit chains; tighten monitoring around patch windows and endpoint execution.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) MLflow SSRF (CVE-2026-64849) — KEV / active exploitation**\n- **What happened:** Exploit/PoC published for **critical SSRF in MLflow** model-registry webhook test endpoint (fixed in **MLflow 3.15.0**).\n- **Why it matters operationally:** SSRF in ML/automation stacks can enable **internal service discovery/access** (cloud metadata, internal APIs) and lead to broader compromise in data/analytics environments.\n- **Recommended immediate actions for the SOC today:** Identify any MLflow instances (esp. **3.3.0–3.14.x**) exposed to untrusted networks; block external access to webhook test endpoint / restrict via WAF; prioritize patch/upgrade to **3.15.0** and hunt for unusual outbound calls from MLflow hosts.\n\n**2) Brotli decoder RCE (CVE-2026-111497) — cross-ecosystem (Node.js/Python/Bun/Envoy) + PoCs**\n- **What happened:** Google Brotli decoder flaw enables **RCE** across common runtimes and proxies; multiple PoC references surfaced in feeds.\n- **Why it matters operationally:** High likelihood of **supply-chain and edge impact** where Brotli is embedded (API gateways, Envoy-based service meshes, Node/Python services handling compressed input).\n- **Recommended immediate actions for the SOC today:** Inventory where Brotli is enabled (reverse proxies, API gateways, app stacks); apply vendor updates/mitigations where available; add short-term protections (disable Brotli where feasible, WAF rules for suspicious compressed payload patterns) and watch for crashes/restarts in proxy/app pods.\n\n**3) CitrixBleed-2 (CVE-2025-5777) — PoC available**\n- **What happened:** Public PoC posted for **CitrixBleed-2** (critical disclosure class associated with session/token leakage).\n- **Why it matters operationally:** Citrix/remote access infrastructure is **high-value for financial sector**; PoC availability typically drives scanning, session hijack attempts, and rapid mass exploitation.\n- **Recommended immediate actions for the SOC today:** Confirm patch level and mitigations on any Citrix NetScaler / ADC footprint; review logs for anomalous ICA/AAA activity and unexpected session reuse; be ready to **rotate credentials/tokens** if evidence of session leakage appears.\n\n**4) “Next.js use-cache / React Flight” server-side desync → potential RCE (GHSA advisory; PoC)**\n- **What happened:** PoC published for a **Next.js/React server-side issue** (GHSA-673q-mjm6-r5xr / GHSA-xqc2-xf4c-x3h3); no CVE listed in the item.\n- **Why it matters operationally:** Internet-facing web apps may be exposed; risk includes **remote code execution or server instability** depending on deployment and feature usage (“use cache” / React Flight framing).\n- **Recommended immediate actions for the SOC today:** Identify externally exposed Next.js apps and whether affected features are enabled (assumption: modern SSR/app router usage increases exposure); fast-track upgrade per vendor guidance; monitor for spikes in 5xx errors, unusual routes/headers, and unexpected child process spawns on app servers.\n\n**5) Collabora Online CODE Server RCE (CVE-2026-110447) — KEV / exploited**\n- **What happened:** CISA added **Collabora Online built-in CODE Server** flaw to **KEV** (active exploitation).\n- **Why it matters operationally:** Document collaboration stacks often sit near sensitive content; exploitation can lead to **server compromise** and lateral movement into file stores/SSO.\n- **Recommended immediate actions for the SOC today:** Locate Collabora Online deployments (including vendor-managed appliances/containers); prioritize patching and restrict admin interfaces; hunt for new webshell-like files, abnormal processes, and unexpected outbound connections from the Collabora host/container.\n\n---\n\n### Monitoring & detection recommendations\n- **Edge/app exploitation (Brotli/Next.js/Collabora):** WAF/reverse-proxy logs + app server logs for unusual payload sizes/encodings, spikes in 4xx/5xx, and repeated requests to uncommon endpoints (ATT&CK **T1190** Exploit Public-Facing Application).\n- **SSRF behavior (MLflow):** EDR + network telemetry (proxy/DNS/VPC flow) for MLflow processes making outbound calls to **link-local/metadata ranges** or internal admin services; alert on new egress paths from analytics subnets (ATT&CK **T1557/T1595** as applicable; primary is **T1190** + internal discovery).\n- **Citrix access anomalies:** VPN/ADC auth logs + IdP logs for abnormal session duration, sudden geo/device changes, token reuse, and unexpected admin page hits; correlate with firewall scans to Citrix VIPs (ATT&CK **T1133** External Remote Services).\n- **Post-exploitation on web tiers:** EDR detections for web worker spawning shells/interpreters (e.g., `bash`, `sh`, `powershell`, `cmd`, `python`) from `node`, `envoy`, `collabora`, `php-fpm` processes (ATT&CK **T1059** Command and Scripting Interpreter).\n- **Windows patch-wave abuse:** Microsoft endpoint telemetry for exploitation primitives after patch Tuesday–style drops: suspicious DLL loads, driver/service installs, and LOLBins (`rundll32`, `regsvr32`, `mshta`) (ATT&CK **T1218**, **T1543**).\n- **Linux local priv-esc PoC (OverlayFS CVE-2023-0386):** EDR/auditd for abnormal `unshare`, mount namespace activity, creation of setuid files, and new root shells on servers running containers (ATT&CK **T1068** Exploitation for Privilege Escalation).\n- **Orchestration/admin consoles (Portainer/Traefik PoC mentions):** Audit logs for new users, API key creation, and config changes; alert on external access to management ports and unexpected `docker`/K8s API calls (ATT&CK **T1562** Impair Defenses, **T1609** Container Administration Command).\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** Validate exposure and patch status for MLflow (**>=3.15.0**), Collabora Online (per vendor fix), and any Brotli-embedded components across gateways/proxies/app stacks; track exceptions with compensating controls.\n- **Reduce attack surface:** Ensure admin panels for Citrix/Portainer/Traefik/Collabora are behind VPN + MFA; block direct internet access to management ports at firewall and cloud security groups.\n- **Web hardening:** Standardize WAF rulesets for compression-related evasions and add rate-limiting/bot protections on high-risk endpoints (login, webhook test endpoints, file upload paths).\n- **Detection engineering backlog:** Add/refresh detections for “web server spawning interpreter” patterns and container-escape/priv-esc telemetry (namespaces, mounts, setuid creation).\n- **Asset inventory gaps:** Confirm we have authoritative inventory for “shadow IT” collaboration tools (Collabora-like deployments) and ML/analytics stacks (MLflow/Langflow-type services).\n- **Threat intel watch:** Track weaponization of the newly published PoCs (CitrixBleed-2, Brotli RCE, Next.js GHSA) and be ready to escalate to IR playbooks if scanning → exploitation indicators increase.",
   "highlights": [
     {
-      "title": "PHP Critical RCEs Under Active Exploitation; BlackX UEFI Bootkit Targets Diplomats",
-      "link": "https://defend.network/briefings/php-critical-rce-exploited-70-percent-websites-2026-10-24.html",
-      "source": "defend.network",
-      "published": "2026-10-24T06:30:00+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Data Breaches / Leaks",
-        "Cloud / SaaS",
-        "Exploit / PoC",
-        "Network / OT / ICS",
-        "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 100.0,
-      "priority_score": 88.83
-    },
-    {
-      "title": "SpringExploitGUI",
-      "link": "https://vulners.com/kitploit/KITPLOIT:TOOLS-GITHUB-SUPERNEILCN-SPRINGEXPLOITGUI?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "title": "Exploit for Server-Side Request Forgery in Lfprojects Mlflow",
+      "link": "https://vulners.com/githubexploit/BE6B13F6-2D2B-594A-95F1-DE524270BE62?utm_source=rss&utm_medium=rss&utm_campaign=rss",
       "source": "Vulners.com RSS Feed",
-      "published": "2026-10-24T03:28:57+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": false,
-      "signal_tier": "critical",
-      "signal_score": 92.54,
-      "priority_score": 75.73
-    },
-    {
-      "title": "Zimbra",
-      "link": "https://vulners.com/kitploit/KITPLOIT:TOOLS-GITHUB-JAM620-ZIMBRA?utm_source=rss&utm_medium=rss&utm_campaign=rss",
-      "source": "Vulners.com RSS Feed",
-      "published": "2026-10-23T23:05:48+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "Linux / Unix",
-        "Ransomware"
-      ],
-      "curated": false,
-      "signal_tier": "critical",
-      "signal_score": 82.54,
-      "priority_score": 74.57
-    },
-    {
-      "title": "CVE-2021-45010",
-      "link": "https://vulners.com/kitploit/KITPLOIT:TOOLS-GITHUB-SYD-SYDNEYJR-CVE-2021-45010?utm_source=rss&utm_medium=rss&utm_campaign=rss",
-      "source": "Vulners.com RSS Feed",
-      "published": "2026-10-23T23:06:37+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 70.54,
-      "priority_score": 74.48
-    },
-    {
-      "title": "Exploit for CVE-2026-115560",
-      "link": "https://vulners.com/githubexploit/B7AE4846-596A-5056-B276-75965E59C0B5?utm_source=rss&utm_medium=rss&utm_campaign=rss",
-      "source": "Vulners.com RSS Feed",
-      "published": "2026-10-24T03:38:13+00:00",
+      "published": "2026-10-25T09:15:33+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC",
         "Web / API Security"
       ],
       "curated": false,
-      "signal_tier": "high",
-      "signal_score": 68.54,
-      "priority_score": 75.17
+      "signal_tier": "critical",
+      "signal_score": 82.6,
+      "priority_score": 75.75
     },
     {
-      "title": "CVE-2025-24893-XWiki-unauthenticated-RCE-via-SolrSearch",
-      "link": "https://vulners.com/kitploit/KITPLOIT:TOOLS-GITHUB-IIIEJLYXAKAPTOIIIKU-CVE-2025-24893-XWIKI-UNAUTHENTICATED-RCE-VIA-SOLRSEARCH?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "title": "CVE-2023-0386_POC",
+      "link": "https://vulners.com/kitploit/KITPLOIT:TOOLS-GITHUB-DRAGOSBANICA-CVE-2023-0386_POC?utm_source=rss&utm_medium=rss&utm_campaign=rss",
       "source": "Vulners.com RSS Feed",
-      "published": "2026-10-23T23:05:29+00:00",
+      "published": "2026-10-24T19:00:35+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Exploit / PoC"
+        "Exploit / PoC",
+        "Linux / Unix",
+        "Cloud / SaaS"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 68.54,
-      "priority_score": 74.6
+      "signal_score": 72.6,
+      "priority_score": 73.49
+    },
+    {
+      "title": "Brotli RCE spans Node.js, Python, Bun; Microsoft patches 1,400 flaws; FBI arrests ShinyHunters negotiator",
+      "link": "https://defend.network/briefings/brotli-rce-microsoft-patches-shinyhunters-arrest-2026-10-25.html",
+      "source": "defend.network",
+      "published": "2026-10-25T06:30:00+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Cloud / SaaS",
+        "Ransomware",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 71.12,
+      "priority_score": 88.71
     },
     {
       "title": "Exploit for Improperly Controlled Sequential Memory Allocation in Php",
-      "link": "https://sploitus.com/exploit?id=E5A50296-BC55-5436-86B7-39DBB702050A&utm_source=rss&utm_medium=rss",
+      "link": "https://sploitus.com/exploit?id=5F5D8462-E2C1-5212-8729-016B5271321C&utm_source=rss&utm_medium=rss",
       "source": "Sploitus – Exploits",
-      "published": "2026-10-24T08:36:23+00:00",
+      "published": "2026-10-25T09:51:35+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC"
@@ -117,41 +73,13 @@
       "curated": false,
       "signal_tier": "high",
       "signal_score": 68.47,
-      "priority_score": 75.04
-    },
-    {
-      "title": "Exploit for CVE-2026-59774",
-      "link": "https://sploitus.com/exploit?id=0B3887C1-7D0D-59FA-A5F2-AED42C1D2E12&utm_source=rss&utm_medium=rss",
-      "source": "Sploitus – Exploits",
-      "published": "2026-10-24T08:30:16+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 68.47,
-      "priority_score": 75.01
-    },
-    {
-      "title": "Exploit for CVE-2026-110264",
-      "link": "https://sploitus.com/exploit?id=09B36618-DE9C-5A1B-A27B-5D168F3A7A91&utm_source=rss&utm_medium=rss",
-      "source": "Sploitus – Exploits",
-      "published": "2026-10-24T07:11:16+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 68.47,
-      "priority_score": 74.66
+      "priority_score": 75.26
     },
     {
       "title": "Exploit for CVE-2026-111497",
-      "link": "https://sploitus.com/exploit?id=9AB42808-FA6F-51FA-86FF-FAB6F28F98B2&utm_source=rss&utm_medium=rss",
+      "link": "https://sploitus.com/exploit?id=860F5B7A-127F-501E-A7B3-B6554849BD2D&utm_source=rss&utm_medium=rss",
       "source": "Sploitus – Exploits",
-      "published": "2026-10-24T07:11:16+00:00",
+      "published": "2026-10-25T09:49:21+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC"
@@ -159,7 +87,77 @@
       "curated": false,
       "signal_tier": "high",
       "signal_score": 68.47,
-      "priority_score": 74.66
+      "priority_score": 75.25
+    },
+    {
+      "title": "Exploit for CVE-2026-21627",
+      "link": "https://sploitus.com/exploit?id=58D86FAA-440D-562E-96D5-6EEF3EDFED03&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-10-25T08:13:26+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.47,
+      "priority_score": 74.82
+    },
+    {
+      "title": "php2shell-ioc exploit",
+      "link": "https://sploitus.com/exploit?id=2A259381-AB02-5C31-A20B-293EF9A23690&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-10-25T07:40:38+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.47,
+      "priority_score": 74.67
+    },
+    {
+      "title": "Exploit for Improperly Controlled Sequential Memory Allocation in Php",
+      "link": "https://sploitus.com/exploit?id=5287E8E4-E72C-5ABE-93B9-425DC73B1DE6&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-10-25T07:26:47+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.47,
+      "priority_score": 74.61
+    },
+    {
+      "title": "Exploit for CVE-2026-111497",
+      "link": "https://sploitus.com/exploit?id=26A4DB2E-6304-5A20-8881-42867DE6DA34&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-10-25T04:22:02+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.47,
+      "priority_score": 73.79
+    },
+    {
+      "title": "Exploit for CVE-2026-112900",
+      "link": "https://sploitus.com/exploit?id=C28398BD-5857-5721-818F-FEDA8D643520&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-10-25T00:04:53+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.47,
+      "priority_score": 72.64
     }
   ]
 }
