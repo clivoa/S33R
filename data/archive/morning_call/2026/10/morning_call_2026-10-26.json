@@ -1,0 +1,166 @@
+{
+  "generated_at": "2026-10-26T12:56:09.814982+00:00",
+  "analysis_date": "2026-10-26",
+  "provider": "openai",
+  "model": "gpt-5.2",
+  "window_hours": 24,
+  "source_file": "data/news_recent.json",
+  "source_generated_at": "2026-10-26T09:58:38.149071+00:00",
+  "source_days_back": 30,
+  "source_total_items": 65729,
+  "total_items_in_window_all": 2091,
+  "total_items_in_window_curated": 5,
+  "total_items_in_window_selected": 54,
+  "context_selection_policy": "curated-plus-operational-signal-v1",
+  "morning_call_markdown": "### Executive Summary\n- Active exploitation reported for the **PHP2Shell** pair of critical PHP RCEs (**CVE-2026-109618 / CVE-2026-109619**) with multiple public PoCs circulating—treat as **internet-wide scanning + rapid weaponization** risk.\n- A **critical unauthenticated file upload/RCE** PoC for **SAP NetWeaver AS Java (Visual Composer/VCFRAMEWORK)** (**CVE-2025-31324**) surfaced—high impact for any exposed SAP stacks.\n- Emerging **supply-chain/dev workstation risk**: a malicious file attempted to coerce an **AI coding agent** into installing a known-malicious npm package—relevant for engineering endpoints and CI/CD hygiene.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) PHP2Shell — critical PHP RCEs exploited in the wild (CVE-2026-109618 / CVE-2026-109619)**\n- **What happened:** Reports confirm **successful in-the-wild exploitation**; multiple PoCs published for the PHP2Shell RCEs.\n- **Why it matters operationally:** Likely **mass scanning → webshell drop → credential theft/ransomware** on any internet-facing PHP apps; high risk of rapid compromise in hours.\n- **Recommended immediate actions for the SOC today:** Identify exposed PHP stacks (CMDB/WAF inventory) + prioritize emergency patch/mitigation; hunt WAF/web logs for exploit attempts and **newly written .php files** in web roots.\n\n**2) SAP NetWeaver AS Java (VCFRAMEWORK) unauthenticated file upload PoC (CVE-2025-31324)**\n- **What happened:** A **0-day PoC** was published for **unauthenticated unrestricted file upload** impacting SAP NetWeaver AS Java Visual Composer component.\n- **Why it matters operationally:** Direct path to **remote code execution/persistent implant** on core ERP-adjacent infrastructure; financial orgs are frequent SAP targets.\n- **Recommended immediate actions for the SOC today:** Confirm whether any NetWeaver AS Java/Visual Composer is **internet-reachable**; monitor SAP app/web logs for suspicious upload patterns and unexpected new artifacts; escalate to platform owners for emergency hardening (restrict access, WAF rules).\n\n**3) Fortinet FortiSandbox OS command injection PoC (CVE-2026-106173 / CVE-2026-107656)**\n- **What happened:** Public PoC released for **OS command injection** affecting FortiSandbox (per exploit feed items).\n- **Why it matters operationally:** FortiSandbox is often **privileged and integrated** (email/web detonation, SOC workflows); compromise can enable **lateral movement** and tampering.\n- **Recommended immediate actions for the SOC today:** Inventory FortiSandbox instances and exposure (mgmt interfaces should not be internet-facing); review admin/mgmt access logs for anomalous sessions/commands and apply vendor mitigations/patch ASAP.\n\n**4) AI coding agent “prompt injection” via local file (supply-chain / dev endpoints)**\n- **What happened:** A malicious instruction file in a Downloads folder attempted to trick an **AI coding agent** into installing a known-malicious npm package (blocked in the reported case).\n- **Why it matters operationally:** Highlights a practical path to **developer workstation → dependency compromise → CI/CD or repo poisoning**, especially where agents have broad permissions.\n- **Recommended immediate actions for the SOC today:** Alert engineering/security tooling owners to **restrict agent filesystem scope** and require human approval for package installs; monitor endpoint telemetry for unusual npm installs spawned by agent processes.\n\n---\n\n### Monitoring & detection recommendations\n- **Web/WAF + reverse proxy logs (PHP2Shell):** Spike in requests to PHP endpoints with unusual parameters/encodings; follow with **HTTP 200 + subsequent POSTs** to new paths (ATT&CK **T1190** Exploit Public-Facing Application).\n- **EDR on web servers (PHP/SAP):** Watch for web server process spawning shells/interpreters (e.g., `php-fpm/apache/nginx` → `sh/bash/cmd/powershell`) and new executable/script drops in web roots (ATT&CK **T1505.003** Web Shell).\n- **File integrity monitoring (web roots / SAP directories):** Alert on creation/modification of **.php/.jsp/.war** and unexpected archives in application deployment paths (focus on last 24–48h deltas).\n- **Network telemetry (egress from servers):** New outbound connections from DMZ web/SAP servers to rare destinations, especially shortly after suspicious HTTP requests (ATT&CK **T1071.001** Web protocols).\n- **FortiSandbox admin/mgmt logs:** Failed logins, new admin accounts, config changes, or suspicious task execution; correlate with inbound connections to management ports from non-admin subnets (ATT&CK **T1078** Valid Accounts).\n- **Dev endpoints (AI agent theme):** Endpoint process lineage where IDE/agent processes spawn `npm/yarn/pnpm` and immediately execute postinstall scripts; flag installs outside approved registries (ATT&CK **T1195** Supply Chain Compromise).\n- **IdP/SSO logs (related auth-bypass themes like SSO callback issues):** Monitor for logins to deactivated/dormant accounts and unusual SSO callback patterns; alert on sudden reactivation-like behavior without ticket/change.\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** Add **PHP2Shell** and **SAP NetWeaver AS Java CVE-2025-31324** to “top emergency” patch dashboards; ensure ownership is clearly assigned (app vs platform vs SAP basis).\n- **External attack surface review:** Validate no **SAP/management interfaces** (SAP Java, FortiSandbox mgmt) are directly exposed; enforce VPN/jump-host access and IP allowlisting where feasible.\n- **WAF/virtual patching:** Coordinate with perimeter team to implement temporary WAF signatures/rules for PHP exploit patterns and suspicious upload behavior (until patch rollout completes).\n- **DevSecOps controls for AI agents:** Formalize policy: agents run in **sandboxed workspaces**, no access to Downloads/home by default, mandatory allowlists for package registries, and approval gates for dependency changes.\n- **Threat hunting playbooks:** Create a rapid hunt for “**web exploit → webshell → credential access**” across DMZ hosts (EDR + web logs + IAM correlation) to reuse during mass-exploitation waves.\n- **Tooling validation:** If any OT/edge products appear in the org (e.g., Sierra Wireless ALEOS/ACEManager DoS PoC mentioned in feeds), confirm inventory and exposure—treat as risk-register items even if not internet-facing.",
+  "highlights": [
+    {
+      "title": "CVE-2025-31324",
+      "link": "https://vulners.com/kitploit/KITPLOIT:TOOLS-GITHUB-ARISTOIS913-CVE-2025-31324?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-10-25T17:00:54+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Ransomware",
+        "Identity / Access",
+        "Malware / Payloads"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 100.0,
+      "priority_score": 83.56
+    },
+    {
+      "title": "CVE-2023-40459",
+      "link": "https://vulners.com/kitploit/KITPLOIT:TOOLS-GITHUB-7H3W4LK3R-CVE-2023-40459?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-10-25T17:01:58+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 100.0,
+      "priority_score": 82.85
+    },
+    {
+      "title": "PHP2Shell security flaws now sucessfully exploited in the wild",
+      "link": "https://www.bleepingcomputer.com/news/security/php2shell-security-flaws-now-sucessfully-exploited-in-the-wild/",
+      "source": "BleepingComputer",
+      "published": "2026-10-26T09:19:57+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Cloud / SaaS",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 84.82,
+      "priority_score": 88.68
+    },
+    {
+      "title": "CVE-2025-32433",
+      "link": "https://vulners.com/kitploit/KITPLOIT:TOOLS-GITHUB-LEMIEONE-CVE-2025-32433?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-10-25T17:01:54+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Windows / Microsoft"
+      ],
+      "curated": false,
+      "signal_tier": "critical",
+      "signal_score": 84.61,
+      "priority_score": 73.5
+    },
+    {
+      "title": "cve-2019-9053-py3",
+      "link": "https://vulners.com/kitploit/KITPLOIT:TOOLS-GITHUB-VEDANTRANA73-CVE-2019-9053-PY3?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-10-25T17:01:37+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Web / API Security",
+        "Exploit / PoC",
+        "Linux / Unix"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 70.61,
+      "priority_score": 72.85
+    },
+    {
+      "title": "Exploit for CVE-2026-106173",
+      "link": "https://sploitus.com/exploit?id=F0252FCA-D3FC-5611-A038-03EC1749AF8B&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-10-26T08:45:19+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.44,
+      "priority_score": 75.11
+    },
+    {
+      "title": "php2shell-mitigation exploit",
+      "link": "https://sploitus.com/exploit?id=098F0957-2B12-56D9-9CE2-F13A609813D8&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-10-26T08:26:01+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.44,
+      "priority_score": 75.02
+    },
+    {
+      "title": "Exploit for Improperly Controlled Sequential Memory Allocation in Php",
+      "link": "https://sploitus.com/exploit?id=A160860F-4D38-5033-BAFA-1A5B67F29E7C&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-10-26T08:13:56+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.44,
+      "priority_score": 74.97
+    },
+    {
+      "title": "Exploit for Improperly Controlled Sequential Memory Allocation in Php",
+      "link": "https://sploitus.com/exploit?id=D81B0E04-9233-5D83-954A-65864D6C3518&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-10-26T08:12:34+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.44,
+      "priority_score": 74.96
+    },
+    {
+      "title": "phpwarden exploit",
+      "link": "https://sploitus.com/exploit?id=617F704C-DB86-54E2-92A6-170614EFE471&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-10-26T07:36:31+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.44,
+      "priority_score": 74.8
+    }
+  ]
+}
