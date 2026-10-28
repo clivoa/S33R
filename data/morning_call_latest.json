@@ -1,38 +1,57 @@
 {
-  "generated_at": "2026-10-27T12:07:01.429515+00:00",
-  "analysis_date": "2026-10-27",
+  "generated_at": "2026-10-28T12:47:32.313387+00:00",
+  "analysis_date": "2026-10-28",
   "provider": "openai",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-10-27T07:35:13.506063+00:00",
+  "source_generated_at": "2026-10-28T11:11:17.837107+00:00",
   "source_days_back": 30,
-  "source_total_items": 64058,
-  "total_items_in_window_all": 3083,
-  "total_items_in_window_curated": 5,
-  "total_items_in_window_selected": 45,
+  "source_total_items": 63475,
+  "total_items_in_window_all": 3277,
+  "total_items_in_window_curated": 17,
+  "total_items_in_window_selected": 79,
   "context_selection_policy": "curated-plus-operational-signal-v1",
-  "morning_call_markdown": "### Executive Summary\n- Multiple **actively exploited / KEV-listed unauthenticated RCEs** are in play (notably **PHP2Shell** and **SPIP**); assume internet scanning and opportunistic compromise attempts today.\n- **Nextcloud/Collabora document editing RCE** is being used as an entry point; treat exposed collaboration stacks as high-risk (common in enterprise file-sharing).\n- **Teams external chat “IT support” social engineering** is driving malware/ransomware delivery; tighten monitoring around user-reported Teams contacts and suspicious remote execution.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) PHP2Shell (CVE-2026-109618 / CVE-2026-109619) – active exploitation / CISA KEV**\n- What happened: CISA confirmed **in-the-wild exploitation** of two PHP2Shell flaws enabling **unauthenticated RCE**; public PoCs circulating.\n- Why it matters operationally: High-likelihood initial access against **internet-facing web tiers** (Apache/PHP stacks) leading to webshells, credential theft, then ransomware.\n- Recommended immediate actions for the SOC today: **Identify/expose surface** (scan inventory for PHP versions/configs; prioritize DMZ/web farms) and **fast-track patch/mitigation + WAF rules**; **hunt** for new PHP child processes spawning shells/interpreters on web servers.\n\n**2) SPIP CMS unauth RCE (CVE-2026-77647) – exploit/PoC available**\n- What happened: Public exploit released for **SPIP < 4.4.20** allowing **pre-auth RCE**.\n- Why it matters operationally: SPIP is often forgotten on **marketing/legacy sites**; compromise can become a foothold into internal networks (VPN credentials, SSO cookies, lateral movement).\n- Recommended immediate actions for the SOC today: **Search for SPIP** on external attack surface (domains, subdomains, third-party hosting) and **patch/disable** immediately; **monitor** web server logs for anomalous POSTs to SPIP endpoints and unexpected file writes under web roots.\n\n**3) Nextcloud + Collabora Online (CVE-2026-110447) – actively exploited RCE path**\n- What happened: Reports indicate **active exploitation** of a Collabora/Nextcloud document editing component vulnerability enabling RCE.\n- Why it matters operationally: Collaboration platforms often integrate with **AD/SSO and sensitive file stores**; compromise can lead to data access/exfil and privileged token theft.\n- Recommended immediate actions for the SOC today: **Confirm exposure** (internet-facing Nextcloud/Collabora) and **apply vendor patches/workarounds**; **hunt** for anomalous process launches from Collabora/Nextcloud services and suspicious admin token usage or new apps/plugins installed.\n\n**4) “Brotli2Shell” (CVE-2026-111497) – supply-chain style reach + PoCs**\n- What happened: Tenable notes PoCs for **Brotli decoder OOB write → RCE**, impacting software ecosystems that embed Brotli (e.g., proxies/service mesh/runtime stacks).\n- Why it matters operationally: Broad dependency footprint (reverse proxies, gateways, service mesh) increases chance of **unexpected vulnerable components** in production paths.\n- Recommended immediate actions for the SOC today: **Inventory** Brotli usage in edge/proxy tiers (Envoy/Istio/API gateways) and prioritize patching; **increase alerting** for crashes/restarts or abnormal request patterns hitting compression/decompression paths.\n\n**5) Microsoft Teams external chat IT-support scams → malware/ransomware**\n- What happened: Threat actors are abusing **Teams external chat** to impersonate IT/support and deliver malware, sometimes ending in ransomware.\n- Why it matters operationally: Bypasses email controls; targets helpdesk-like workflows; can lead to **user-assisted execution** (T1204) and remote tool deployment.\n- Recommended immediate actions for the SOC today: **Review Teams external access policy** (where feasible, restrict/allowlist) and **triage user reports** aggressively; **hunt** for Teams-launched downloads followed by execution (Office/HTA/Script/Installer) and new remote access tooling.\n\n---\n\n### Monitoring & detection recommendations\n- **Web tier RCE hunting (PHP2Shell/SPIP/Nextcloud):** Web server logs (Apache/Nginx), EDR on web hosts; alert on **web service spawning shells** (e.g., `php-fpm/httpd/apache` → `sh/bash/powershell/cmd`) (ATT&CK **T1059**).\n- **Webshell / persistence checks post-exploitation:** EDR + file integrity monitoring on DMZ; look for **new/modified files** in web roots, temp dirs, upload dirs; suspicious cron/systemd changes (ATT&CK **T1505.003**, **T1053**).\n- **Exploit-to-lateral movement pivot:** AD logs, IdP, VPN, PAM; detect **unusual service account logons** from web server subnets and new Kerberos tickets patterns (ATT&CK **T1078**, **T1558**).\n- **Nextcloud/Collabora-specific telemetry:** App logs + reverse proxy logs; watch for **new admin sessions**, unexpected app/plugin installs, and unusual document conversion activity spikes (assumption: logging enabled).\n- **Brotli2Shell edge monitoring:** Load balancer/WAF/CDN/proxy logs + container/runtime logs; alert on **segfaults/restarts** of Envoy/Istio/gateway pods plus correlated suspicious request bursts (ATT&CK **T1499** for potential application-layer DoS side-effects).\n- **Teams scam → execution chain:** M365/Teams audit logs + endpoint EDR; correlate **external Teams chat** → file download → execution within short window (ATT&CK **T1566**, **T1204**).\n- **Ransomware early indicators (from Teams or web footholds):** EDR + Windows Security logs; detect **mass process spawning**, `vssadmin/wbadmin/bcdedit` usage, and rapid file rename/write bursts (ATT&CK **T1486**, **T1490**).\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** Add **PHP2Shell, SPIP CVE-2026-77647, Nextcloud/Collabora CVE-2026-110447, Brotli CVE-2026-111497** to “expedite” SLAs; validate patch coverage via authenticated scans.\n- **External exposure review:** Re-validate inventory for **shadow CMS/collaboration instances** (marketing sites, vendor-hosted portals) and ensure ownership/patch responsibility is assigned.\n- **Teams hardening:** Reassess **external chat/federation defaults**, create a documented exception process, and push a short user advisory for “IT support via Teams” lures.\n- **WAF/Reverse proxy baseline:** Ensure WAF has **generic RCE protections** (command injection, suspicious PHP payloads) and confirm logging retention is sufficient for rapid IR.\n- **Supply-chain component tracking:** Improve SBOM/dependency visibility for **shared libraries like Brotli** across gateways/proxies and internal services; pre-stage emergency upgrade paths.\n- **IR readiness:** Pre-stage playbooks for **web server compromise** (containment steps, credential reset scope, log capture), assuming opportunistic RCE leads to fast ransomware escalation.",
+  "morning_call_markdown": "### Executive Summary\n- Multiple **CISA KEV / actively exploited** web-stack issues are driving opportunistic scanning: **PHP2Shell (CVE-2026-109618/109619)** and **Google Brotli via Microsoft .NET OOB fix (CVE-2026-111497)**; PoCs are circulating.\n- **Oracle PeopleSoft SSRF→RCE chain (CVE-2026-35273)** continues mass exploitation by ShinyHunters per reporting; treat any exposed PeopleSoft as high-risk.\n- Social engineering is trending: **external Microsoft Teams chat + “email bombing”** used for rapid malware delivery, potentially linked to **Black Basta**-style ransomware workflows.\n\n### High-priority items (immediate attention)\n\n**1) PHP2Shell (CVE-2026-109618 / CVE-2026-109619) – active exploitation + weaponized PoC**\n- **What happened:** CISA added two critical PHP flaws (“PHP2Shell”) to KEV; weaponized “one-click” PoC tooling is publicly available.\n- **Why it matters operationally:** Unauthenticated **RCE** against common **PHP + Apache mod_php/prefork** deployments → fast webshell footholds and ransomware staging.\n- **Recommended immediate actions for the SOC today:** Confirm internet-facing PHP inventory and patch status; add WAF/IDS rules & block anomalous PHP exploit patterns; prioritize triage of any new webshell/child process alerts on web servers.\n\n**2) Brotli / .NET out-of-band fixes (CVE-2026-111497) – KEV + exploit traffic emerging**\n- **What happened:** Microsoft shipped **out-of-band .NET updates** to address a critical flaw in Google Brotli (CVE-2026-111497); multiple exploit/PoC references are circulating and CISA KEV coverage is referenced in reporting.\n- **Why it matters operationally:** High-risk parsing/decoder bug in a widely used component → potential **RCE/priv-esc paths** in apps/services using affected .NET/Brotli chains; broad attack surface in enterprise middleware.\n- **Recommended immediate actions for the SOC today:** Identify .NET services using Brotli (web gateways, APIs, microservices) and fast-track patching; increase monitoring on servers running updated/older .NET for suspicious crashes + unusual child process spawns from IIS/dotnet.\n\n**3) Oracle PeopleSoft SSRF→RCE (CVE-2026-35273) – ongoing mass exploitation**\n- **What happened:** Reporting reiterates continued exploitation of **CVE-2026-35273**, described as a chain (SSRF reaching internal mgmt interface) leveraged by **ShinyHunters**.\n- **Why it matters operationally:** PeopleSoft often holds HR/finance data; SSRF→RCE enables direct server compromise and credential access, with high blast radius in hybrid environments.\n- **Recommended immediate actions for the SOC today:** Verify PeopleSoft is not internet-exposed beyond required fronts; confirm June patch (and any interim mitigations) applied; hunt for SSRF indicators (unexpected internal URL fetches) and post-exploitation behaviors on PeopleSoft hosts.\n\n**4) Microsoft Teams external-chat social engineering (“email bombing” + Teams) – malware delivery path**\n- **What happened:** Campaign observed using **external Teams chats** combined with notification flooding to drive users into executing payloads; potentially associated with **Black Basta** tradecraft.\n- **Why it matters operationally:** Bypasses email-only controls; increases chance of **initial access** and rapid hands-on-keyboard intrusion in corporate endpoints.\n- **Recommended immediate actions for the SOC today:** Tighten/validate policy for external Teams communications (where feasible); instruct monitoring for unusual Teams-to-browser downloads and execution chains; prioritize user-reported Teams outreach incidents for rapid containment.\n\n### Monitoring & detection recommendations\n- **Web server exploitation (PHP2Shell):** WAF + reverse proxy + Apache access/error logs; alert on spikes in 4xx/5xx + suspicious query strings leading to `.php` endpoints and subsequent process launches (ATT&CK **T1190** Exploit Public-Facing Application, **T1505.003** Web Shell).\n- **Post-exploitation on web tiers:** EDR on web servers; detect `apache/httpd/php-fpm` (or IIS worker) spawning shells, interpreters, or downloaders (`bash`, `sh`, `curl/wget`, `python`, `powershell`) (ATT&CK **T1059**, **T1105**).\n- **.NET/Brotli targeting:** Windows event logs + EDR for IIS/.NET hosts; watch for `w3wp.exe`/`dotnet.exe` abnormal child processes, memory dump creation, or repeated application crashes followed by service restarts.\n- **PeopleSoft SSRF→RCE hunting:** Application logs + proxy egress logs from PeopleSoft subnets; look for PeopleSoft servers making unexpected calls to internal admin interfaces / metadata endpoints (ATT&CK **T1190**, **T1046** Network Service Discovery as follow-on).\n- **Teams-based delivery:** M365 audit logs + Defender for Office/Endpoint; monitor external tenant chat initiation, file-share events, and “Teams → browser → download → execution” chains (ATT&CK **T1566** Phishing, **T1204** User Execution).\n- **Ransomware early warnings:** EDR + Windows Security logs; alert on credential dumping precursors (`lsass` access), remote exec (PsExec/WinRM), and rapid SMB lateral movement from newly compromised web servers (ATT&CK **T1003**, **T1021**).\n- **Edge device exposure check:** Firewall/VPN/proxy logs; flag inbound scanning patterns and repeated auth failures against management paths—especially if you run MikroTik WebFig/RouterOS in any network segments (assumption: only relevant if present).\n\n### Medium-term follow-ups\n- **Patch governance:** Convert KEV-driven items into a 7–14 day burn-down list (PHP2Shell, .NET/Brotli, Adobe Commerce if present, PeopleSoft) with owner + ETA; validate via authenticated scanning.\n- **External collaboration controls:** Reassess Teams external access defaults (allow-list partners, restrict file types, disable anonymous inbound where possible) and update SOC runbooks for “Teams-borne phishing.”\n- **Web app hardening:** Ensure WAF coverage for internet apps, enforce least-privilege for web service accounts, and review file integrity monitoring on web roots (webshell persistence).\n- **ERP/critical app segmentation:** Re-validate PeopleSoft network segmentation (admin interfaces not reachable from app tier; strict egress controls) and ensure logs are forwarded (app + OS + DB).\n- **Mac endpoint risk note (if applicable):** TeamViewer macOS local priv-esc (CVE-2026-92374) is a candidate for internal escalation—track versions in endpoint inventory and schedule updates.\n- **Ransomware preparedness:** Rehearse “webserver foothold → domain escalation” playbook (containment steps, emergency GPO/EDR isolation, backup immutability checks) given current exploitation tempo.",
   "highlights": [
     {
-      "title": "Exploit for CVE-2026-77647",
-      "link": "https://vulners.com/githubexploit/5ADEE920-1433-5E2E-AD72-D37252D935D6?utm_source=rss&utm_medium=rss&utm_campaign=rss",
-      "source": "Vulners.com RSS Feed",
-      "published": "2026-10-26T23:12:44+00:00",
+      "title": "Microsoft Rushes out Fixes for .NET",
+      "link": "https://cybersecuritytoday.libsyn.com/microsoft-rushes-out-fixes-for-net",
+      "source": "Cybersecurity Today",
+      "published": "2026-10-27T22:50:00+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Exploit / PoC"
+        "Exploit / PoC",
+        "Threat Actors / APT",
+        "Malware / Payloads",
+        "Ransomware",
+        "Community / Briefing"
+      ],
+      "curated": false,
+      "signal_tier": "critical",
+      "signal_score": 100.0,
+      "priority_score": 76.55
+    },
+    {
+      "title": "trust-software-supply-chain-poc exploit",
+      "link": "https://sploitus.com/exploit?id=A3E77E6B-4865-551F-8545-44A348A65402&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-10-27T15:40:03+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Supply Chain / Software"
       ],
       "curated": true,
       "signal_tier": "critical",
-      "signal_score": 88.59,
-      "priority_score": 85.69
+      "signal_score": 90.41,
+      "priority_score": 80.07
     },
     {
-      "title": "CISA Confirms Active Exploitation of Two PHP2Shell Flaws Enabling Remote Code Execution",
-      "link": "https://thehackernews.com/2026/10/cisa-confirms-active-exploitation-of.html",
-      "source": "The Hacker News",
-      "published": "2026-10-27T04:37:59+00:00",
+      "title": "CISA Warns of PHP2Shell Vulnerabilities Actively Exploited in Attacks",
+      "link": "https://cybersecuritynews.com/php2shell-vulnerabilities-actively-exploited/",
+      "source": "Cyber Security News",
+      "published": "2026-10-28T09:26:13+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Cloud / SaaS",
@@ -41,120 +60,119 @@
       ],
       "curated": true,
       "signal_tier": "critical",
-      "signal_score": 82.92,
-      "priority_score": 88.66
+      "signal_score": 85.17,
+      "priority_score": 89.72
     },
     {
-      "title": "Nextcloud Document Editing App Becomes an Entry Point: Actively Exploited Collabora RCE Vulnerability",
-      "link": "https://blog.criminalip.io/2026/10/27/nextcloud-cve-2026-110447/",
-      "source": "CIP Blog",
-      "published": "2026-10-27T00:00:10+00:00",
+      "title": "Exploit for Improperly Controlled Sequential Memory Allocation in Php",
+      "link": "https://vulners.com/githubexploit/20B4FEA9-02E3-5942-938F-546620703833?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-10-28T09:35:56+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Exploit / PoC"
+        "Exploit / PoC",
+        "Linux / Unix",
+        "Crypto / Web3"
+      ],
+      "curated": false,
+      "signal_tier": "critical",
+      "signal_score": 84.57,
+      "priority_score": 77.27
+    },
+    {
+      "title": "CVE-2026-35273: SSRF to RCE in Oracle PeopleSoft",
+      "link": "https://www.thezdi.com/blog/2026/10/20/cve-2026-35273-ssrf-to-rce-in-oracle-peoplesoft",
+      "source": "Zero Day Initiative - Blog",
+      "published": "2026-10-27T16:39:07+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Ransomware",
+        "Web / API Security"
       ],
       "curated": true,
       "signal_tier": "critical",
-      "signal_score": 82.63,
-      "priority_score": 86.07
+      "signal_score": 78.75,
+      "priority_score": 83.8
+    },
+    {
+      "title": "CVE-2026-92374",
+      "link": "https://vuldb.com/cve/CVE-2026-92374",
+      "source": "VulDB CVE",
+      "published": "2026-10-27T15:28:22+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Supply Chain / Software",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 73.14,
+      "priority_score": 74.87
+    },
+    {
+      "title": "PHP2Shell: US updates Kev catalogue as exploits spread",
+      "link": "https://www.computerweekly.com/news/366652834/PHP2Shell-US-updates-Kev-catalogue-as-exploits-spread",
+      "source": "ComputerWeekly – IT Security",
+      "published": "2026-10-27T14:15:00+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Threat Actors / APT",
+        "Exploit / PoC",
+        "Ransomware",
+        "Cloud / SaaS",
+        "General Security"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 71.26,
+      "priority_score": 75.7
+    },
+    {
+      "title": "Apple CoreGraphics exploited; PHP RCE hits 70% of sites; HPE critical patches",
+      "link": "https://defend.network/briefings/apple-coreaphics-php-rce-hpe-networking-critical-2026-10-28.html",
+      "source": "defend.network",
+      "published": "2026-10-28T06:30:00+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Cloud / SaaS",
+        "Exploit / PoC",
+        "Network / OT / ICS",
+        "Mobile Security",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 70.12,
+      "priority_score": 88.67
+    },
+    {
+      "title": "Exploit for CVE-2026-116692",
+      "link": "https://sploitus.com/exploit?id=2B17D767-13EA-5740-8475-67F79BE5061C&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-10-28T08:13:25+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.41,
+      "priority_score": 74.5
     },
     {
       "title": "Exploit for CVE-2026-111497",
-      "link": "https://sploitus.com/exploit?id=76640F7B-7D66-5E83-91E8-55CC97D211D4&utm_source=rss&utm_medium=rss",
+      "link": "https://sploitus.com/exploit?id=FDC0246B-8FE9-5AAE-B621-2A3C6365623F&utm_source=rss&utm_medium=rss",
       "source": "Sploitus – Exploits",
-      "published": "2026-10-27T06:35:05+00:00",
+      "published": "2026-10-28T06:45:04+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 68.42,
-      "priority_score": 75.06
-    },
-    {
-      "title": "Exploit for CVE-2026-93328",
-      "link": "https://sploitus.com/exploit?id=28C86AE8-4D06-5565-8F9C-C4AFAEAC97B4&utm_source=rss&utm_medium=rss",
-      "source": "Sploitus – Exploits",
-      "published": "2026-10-27T05:07:58+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 68.42,
-      "priority_score": 74.67
-    },
-    {
-      "title": "Exploit for Improperly Controlled Sequential Memory Allocation in Php",
-      "link": "https://sploitus.com/exploit?id=D7945BEA-6799-587E-871E-C831BFBDF27C&utm_source=rss&utm_medium=rss",
-      "source": "Sploitus – Exploits",
-      "published": "2026-10-27T03:43:55+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 68.42,
-      "priority_score": 74.3
-    },
-    {
-      "title": "Exploit for CVE-2017-0143",
-      "link": "https://sploitus.com/exploit?id=9B6D6089-29E0-5E3C-8ADE-F0D04186C76A&utm_source=rss&utm_medium=rss",
-      "source": "Sploitus – Exploits",
-      "published": "2026-10-26T23:26:20+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 68.42,
-      "priority_score": 73.15
-    },
-    {
-      "title": "Exploit for CVE-2026-77647",
-      "link": "https://sploitus.com/exploit?id=5ADEE920-1433-5E2E-AD72-D37252D935D6&utm_source=rss&utm_medium=rss",
-      "source": "Sploitus – Exploits",
-      "published": "2026-10-26T23:12:44+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 68.42,
-      "priority_score": 73.08
-    },
-    {
-      "title": "Exploit for Improperly Controlled Sequential Memory Allocation in Php",
-      "link": "https://sploitus.com/exploit?id=A10982E2-F473-55F2-9216-F6913857F12B&utm_source=rss&utm_medium=rss",
-      "source": "Sploitus – Exploits",
-      "published": "2026-10-26T20:11:59+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 68.42,
-      "priority_score": 72.28
-    },
-    {
-      "title": "Exploit for Improperly Controlled Sequential Memory Allocation in Php",
-      "link": "https://sploitus.com/exploit?id=6FBB1DC3-CA05-563D-A363-F05B9A697C04&utm_source=rss&utm_medium=rss",
-      "source": "Sploitus – Exploits",
-      "published": "2026-10-26T14:42:47+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 68.42,
-      "priority_score": 70.81
+      "signal_score": 68.41,
+      "priority_score": 74.11
     }
   ]
 }
