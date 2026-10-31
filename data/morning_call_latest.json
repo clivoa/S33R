@@ -1,175 +1,161 @@
 {
-  "generated_at": "2026-10-30T12:52:15.966221+00:00",
-  "analysis_date": "2026-10-30",
+  "generated_at": "2026-10-31T12:23:18.717226+00:00",
+  "analysis_date": "2026-10-31",
   "provider": "openai",
   "model": "gpt-5.2",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-10-30T08:19:21.691022+00:00",
+  "source_generated_at": "2026-10-31T06:50:58.552181+00:00",
   "source_days_back": 30,
-  "source_total_items": 63426,
-  "total_items_in_window_all": 2763,
-  "total_items_in_window_curated": 12,
+  "source_total_items": 61719,
+  "total_items_in_window_all": 2408,
+  "total_items_in_window_curated": 6,
   "total_items_in_window_selected": 40,
   "context_selection_policy": "curated-plus-operational-signal-v1",
-  "morning_call_markdown": "### Executive Summary\n- Multiple **actively exploited / KEV** items that commonly sit on the edge of financial networks: **Cisco Secure Firewall (ASA/FTD) SSL VPN**, **GitLab RCE**, plus **Linux kernel** and **VMware ESX/ESXi** exploitation activity.\n- Internet-facing web stacks are hot: **WordPress core update-process RCE** and **critical PHP RCEs (“PHP2Shell”)** now have public PoCs and broad targeting potential.\n- Supply-chain/dev-tooling risk uptick: reports of a **weaponized “Claude Code” extension** used for developer persistence; treat dev endpoints and CI runners as high-value targets.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Cisco Secure Firewall ASA/FTD SSL VPN zero-day (CVE-2026-76418) – active exploitation / KEV**\n- **What happened:** Cisco patched an **actively exploited** flaw in **Remote Access SSL VPN** that can be triggered **unauthenticated** to crash devices (DoS).\n- **Why it matters operationally:** Edge firewall/VPN disruption can **break remote access and branch connectivity**, and exploitation attempts are a strong indicator of perimeter targeting.\n- **Recommended immediate actions for the SOC today:** Confirm patch status and SSL VPN exposure; monitor for **VPN service crashes/reloads** and spikes in SSL VPN errors, and escalate repeated triggers as potential pre-positioning.\n\n**2) GitLab critical RCE (CVE-2026-97229, CVSS 10.0) – active exploitation / KEV + PoC**\n- **What happened:** CISA added a **GitLab RCE** to KEV; PoC exploit code is circulating.\n- **Why it matters operationally:** GitLab often holds **source, tokens, CI secrets**; compromise can lead to **supply-chain impact** and credential theft into production environments.\n- **Recommended immediate actions for the SOC today:** Identify all GitLab instances (self-managed/edge), verify patched versions; hunt for **unexpected admin actions, runner registration, new PATs**, and abnormal outbound connections from GitLab hosts.\n\n**3) Linux kernel exploitation wave – KEV + new high-severity MPTCP RCE PoCs (CVE-2026-46300, CVE-2026-98432)**\n- **What happened:** CISA warned of **actively exploited** Linux kernel bug (CVE-2026-46300); separate reporting indicates a **Multipath TCP RCE** (CVE-2026-98432) with PoCs.\n- **Why it matters operationally:** Linux underpins **firewalls, appliances, jump boxes, Kubernetes nodes**; kernel exploitation can quickly become **root-level takeover** and lateral movement.\n- **Recommended immediate actions for the SOC today:** Prioritize exposure triage (internet-facing Linux, appliances, kernel versions, MPTCP enabled); add hunts for **kernel exploit behaviors** (sudden privilege jumps, unusual netlink/syscall patterns, unexpected module loads) and isolate suspicious hosts fast.\n\n**4) “Web edge” mass-exploitation risk: WordPress core RCE + critical PHP RCEs (“PHP2Shell”)**\n- **What happened:** Reports of **WordPress RCE exploitation within hours of patch** (WordPress 7.1.4), plus continued focus on **PHP RCEs (CVE-2026-109618/109619)** with PoCs and defensive guidance circulating.\n- **Why it matters operationally:** Internet-facing web assets are routinely used as **initial access**, then leveraged for **credential theft, web shells, and pivoting** into internal networks.\n- **Recommended immediate actions for the SOC today:** Validate patch levels for any WordPress/PHP workloads (including marketing microsites); hunt for **new/modified PHP files, suspicious wp-admin activity, anomalous child processes** from web servers, and unexpected outbound traffic.\n\n**5) VMware ESX/ESXi zero-day exploitation reported + added to KEV (details limited)**\n- **What happened:** Reporting indicates **China-nexus activity** using a **VMware ESX/ESXi zero-day** to hide tracks; KEV includes a Broadcom VMware ESX issue (exact CVE not fully clear in provided context).\n- **Why it matters operationally:** ESXi compromise is a high-risk path to **rapid service disruption and ransomware-style impact** (VM fleet encryption/destruction).\n- **Recommended immediate actions for the SOC today:** Confirm which VMware CVE/KB applies in your environment (assumption: ESXi management plane exposure is the key risk); monitor vCenter/ESXi for **new accounts, SSH enablement, host config changes, datastore file churn** and unexpected management logins.\n\n---\n\n### Monitoring & detection recommendations\n- **Perimeter VPN / firewall (Cisco ASA/FTD):** Monitor device syslogs for **SSL VPN auth anomalies, service restarts/crash signatures, high request rates**; correlate with external scanning (ATT&CK: **T1190** Exploit Public-Facing Application).\n- **GitLab (self-managed):** In GitLab audit/application logs, alert on **new admin users, token/PAT creation, runner registration, CI variable/secret changes**; in network logs, flag **new outbound destinations** from GitLab servers (ATT&CK: **T1552** Unsecured Credentials, **T1078** Valid Accounts).\n- **Linux fleet (servers + appliances):** From EDR/auditd/sysmon-for-linux, hunt for **privilege escalation chains** (new SUID files, suspicious `sudo` patterns, unexpected kernel module loads) and unusual listening ports (ATT&CK: **T1068** Exploitation for Privilege Escalation, **T1547** Boot/Logon Autostart).\n- **VMware vSphere/ESXi:** Centralize and watch **vCenter + ESXi auth logs** for **new local users, role changes, SSH enablement, DCUI access**, and bursts of API calls from unusual IPs (ATT&CK: **T1078**, **T1098** Account Manipulation).\n- **Web servers (WordPress/PHP):** From WAF/web access logs, alert on **wp-admin POST spikes, plugin/theme editor usage, suspicious update endpoints**, and anomalous `php-fpm` child processes spawning shells; from FIM/EDR, alert on **new PHP files in web roots** (ATT&CK: **T1505.003** Web Shell).\n- **Developer endpoints / extensions (Claude Code extension report):** From EDR + endpoint management, flag **new persistence artifacts** (startup scripts, cron/launch agents) and **unexpected SSH key writes**; monitor outbound tunnels (ATT&CK: **T1098.004** SSH Authorized Keys, **T1572** Protocol Tunneling).\n- **Oracle EBS (CVE-2026-101767) if present:** In reverse-proxy/WAF logs, look for **SQLi probing** on EBS servlet endpoints and unusual error patterns; correlate with new webshell-like files on app servers (ATT&CK: **T1190**, **T1505.003**).\n\n---\n\n### Medium-term follow-ups\n- **Patching governance:** Enforce a 72-hour SLA for **KEV-listed** items on internet-facing systems (Cisco ASA/FTD SSL VPN, GitLab, Linux kernel, VMware ESXi) with verified post-patch validation.\n- **Reduce exposure:** Reconfirm that **ESXi/vCenter and GitLab admin interfaces** are not internet-exposed; require VPN + MFA + IP allowlists where feasible.\n- **Hardening web estate:** Inventory “shadow IT” WordPress sites and standardize on **managed update + WAF baseline**; disable risky admin features (theme/plugin editor) where possible.\n- **Kernel risk management:** Identify where **MPTCP** is enabled and whether it’s required; consider disabling non-essential kernel features on exposed hosts until patching is complete.\n- **Developer supply-chain controls:** Tighten controls on **IDE/extension marketplaces** (allowlist approved publishers/extensions; block unapproved Open VSX sources if used).\n- **IR readiness:** Validate playbooks for **edge device exploitation and ESXi compromise** (rapid isolation steps, log preservation, and service continuity plans for remote access/virtualization outages).",
+  "morning_call_markdown": "### Executive Summary\n- Active exploitation is confirmed for **GitLab** and **Cisco** vulnerabilities (CISA KEV) and a separate **Ivanti Connect Secure** auth-bypass issue was also added to KEV—treat all as internet-edge compromise risks.\n- Multiple **public PoCs / exploit-checkers** are circulating (incl. WordPress-core update RCE-check tooling and several CVSS 9.8–10.0 PoCs), raising scan-and-exploit volume against exposed services.\n- A **supply-chain style Windows update-package loader (“NetamLoader”)** was reported targeting a specialized Windows 10 build; while gov-focused, the technique is relevant for enterprise update trust/abuse patterns.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) CISA KEV additions: GitLab + Cisco vulnerabilities (actively exploited)**\n- **What happened:** CISA added **GitLab** and **Cisco** flaws to the KEV catalog; reporting indicates **in-the-wild exploitation**.\n- **Why it matters operationally:** Internet-facing DevOps and network platforms are common initial-access targets; compromise can lead to credential theft, code tampering, lateral movement, and ransomware staging.\n- **Recommended immediate actions for the SOC today:** Confirm patch/mitigation status for any exposed GitLab/Cisco assets; pull 7-day logs for suspicious admin/API activity and new tokens/keys; tighten WAF/ACLs to restrict management interfaces to trusted networks.\n\n**2) CISA KEV: Ivanti Connect Secure missing-auth for critical function (actively exploited)**\n- **What happened:** CISA added an **Ivanti Connect Secure** missing-auth vulnerability (CVE referenced by CISA alert) to KEV due to active exploitation.\n- **Why it matters operationally:** VPN/remote-access appliances are high-leverage entry points into financial environments and are frequently used for stealthy persistence and credential access.\n- **Recommended immediate actions for the SOC today:** Validate Ivanti instances are patched/mitigated and not internet-exposed beyond necessity; review VPN appliance auth/session logs for anomalous logins, new admin changes, or unexpected config exports; escalate any signs of appliance tampering to IR immediately.\n\n**3) WordPress targeting surge (RCE “update” check tooling + plugin XSS)**\n- **What happened:** Public tooling for **WordPress core update/RCE checking** is circulating; a WordPress plugin issue (stored XSS in Independent Analytics Pro) was also disclosed.\n- **Why it matters operationally:** Even if core RCE details are unclear from the feed, scanners will aggressively probe WP footprints; compromised WP can become a foothold for phishing, web skimming, or internal pivoting via stolen creds.\n- **Recommended immediate actions for the SOC today:** Identify any externally reachable WordPress in our estate (incl. marketing microsites/third parties); increase alerting on wp-admin access anomalies and file changes; ensure WAF rulesets/blocking for common WP exploit paths are enabled.\n\n**4) “Coop” OSS tool: unauthenticated GraphQL org data leak + SAML cross-tenant auth bypass**\n- **What happened:** Two fresh CVEs reported in **Coop** (ROOST): unauthenticated GraphQL query leaking org data, and a **SAML cross-tenant authentication bypass** (email-only user resolution).\n- **Why it matters operationally:** If deployed internally/externally (often as OSS in side projects), could enable data exposure and identity boundary breaks—useful for targeted recon and account takeover.\n- **Recommended immediate actions for the SOC today:** Rapidly inventory for “Coop” deployments and exposed `/api/v1/graphql` endpoints; restrict access (network/AuthN) pending upgrade; review IdP/SAML logs for unexpected cross-org logins tied to the app.\n\n**5) Public PoCs for critical CVEs (CVSS 9.8–10) increasing opportunistic exploitation**\n- **What happened:** Multiple high-severity PoCs were posted (several CVEs with CVSS 9.8–10.0) plus renewed Log4Shell PoC tooling resurfaced.\n- **Why it matters operationally:** Expect increased scanning/noise; any forgotten legacy apps/services can be hit, especially on internet-exposed hosts and dev/test environments.\n- **Recommended immediate actions for the SOC today:** Raise threshold monitoring for sudden spikes in inbound exploit patterns on edge WAF/IDS; run a quick exposure check for high-risk services (web admin panels, CI/CD, VPN, remote management); prioritize patching on anything externally reachable.\n\n---\n\n### Monitoring & detection recommendations\n- **Internet edge/VPN (Ivanti, Cisco):** Monitor VPN logs + firewall for new/rare source countries, abnormal session creation, and config changes; hunt for post-auth pivoting (ATT&CK **T1078**, **T1021**).\n- **GitLab:** Review GitLab audit logs for new PATs/SSH keys, runner registration changes, and unusual project export/import; correlate with EDR for new processes spawned by GitLab services (ATT&CK **T1190**, **T1552**).\n- **Web/WAF for WordPress scanning:** Alert on spikes to `/wp-login.php`, `/xmlrpc.php`, `/wp-json/`, plugin/theme upload endpoints; block/ratelimit abusive IPs; validate file-integrity alerts for `wp-content/` changes (ATT&CK **T1190**).\n- **SAML/IdP monitoring (Coop SAML bypass risk):** In IdP logs, hunt for repeated SAML assertions to the app with mismatched org identifiers, first-time user provisioning anomalies, and unusual login velocity (ATT&CK **T1078.004**).\n- **GraphQL data scraping:** On API gateway/app logs, look for unauthenticated POSTs to `/api/v1/graphql` with high-volume enumeration-style queries; alert on large response sizes/data egress patterns.\n- **Linux local privilege escalation (kernel CVEs):** For Linux fleets, watch EDR/auditd for unusual module loads, kernel crash patterns, and privilege boundary breaks (sudden sudo/root without expected parent processes) (ATT&CK **T1068**).\n- **Supply-chain/update abuse patterns (NetamLoader-like):** Monitor endpoint telemetry for unexpected execution chains from update/installer contexts (signed binary abuse / LOLBins); flag new scheduled tasks/services created shortly after “update” events (ATT&CK **T1218**, **T1053**).\n\n---\n\n### Medium-term follow-ups\n- **Patch governance:** Ensure KEV-driven SLAs cover GitLab/Cisco/Ivanti across prod + DR + dev/test; require validation evidence (version checks + exploit-mitigation verification).\n- **External attack surface review:** Reconfirm which web apps (WordPress, OSS tools like Coop) are owned vs vendor/marketing; enforce WAF, MFA, and management-plane allowlisting.\n- **SAML hardening:** Validate SAML integrations enforce tenant/org binding and immutable identifiers; add detections for cross-tenant attribute mismatches and unusual JIT provisioning.\n- **WordPress baseline:** Standardize WP hardening (disable xmlrpc if unused, restrict admin paths, mandatory plugin update cadence, file integrity monitoring).\n- **Linux kernel update strategy:** For critical server tiers, confirm kernel update windows; where immediate patching isn’t feasible, reduce local attack surface (restrict interactive shells, tighten sudoers, container isolation review).\n- **PoC validation process:** Given ongoing PoC quality issues in the ecosystem, ensure engineering validates exploitability before deprioritizing—but keep “internet-facing == patch first” as the default.",
   "highlights": [
     {
-      "title": "New Cisco firewall zero-day being actively exploited",
-      "link": "https://www.csoonline.com/article/4242420/new-cisco-firewall-zero-day-being-actively-exploited.html",
-      "source": "CSO Online",
-      "published": "2026-10-29T19:31:38+00:00",
+      "title": "APT Hackers Use NetamLoader Malware to Target Windows 10 Systems in Asian Governments",
+      "link": "https://cybersecuritynews.com/netamloader-malware/",
+      "source": "Cyber Security News (FeedBurner)",
+      "published": "2026-10-30T15:02:03+00:00",
       "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Cloud / SaaS",
-        "Exploit / PoC",
-        "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 100.0,
-      "priority_score": 87.76
-    },
-    {
-      "title": "CVE-2026-76418: Cisco Secure Firewall Zero-Day Exploited in SSL VPN Attacks",
-      "link": "https://socprime.com/blog/cve-2026-76418-cisco-secure-firewall-zero-day/",
-      "source": "SOC Prime Blog",
-      "published": "2026-10-29T12:53:27+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "Vendors / Product Security"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 100.0,
-      "priority_score": 85.9
-    },
-    {
-      "title": "CISA Adds Actively Exploited GitLab RCE and Cisco Firewall DoS Flaws to KEV",
-      "link": "https://thehackernews.com/2026/10/cisa-adds-actively-exploited-gitlab-rce.html",
-      "source": "The Hacker News",
-      "published": "2026-10-30T07:27:05+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Cloud / SaaS",
-        "Exploit / PoC",
-        "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 82.99,
-      "priority_score": 89.66
-    },
-    {
-      "title": "CISA Adds Actively Exploited GitLab RCE and Cisco Firewall DoS Flaws to KEV",
-      "link": "https://vulners.com/thn/THN:5246E5BCEC06C2699D5E8F565A88EBC9?utm_source=rss&utm_medium=rss&utm_campaign=rss",
-      "source": "Vulners.com RSS Feed",
-      "published": "2026-10-30T07:27:00+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Threat Actors / APT",
-        "Cloud / SaaS",
-        "Exploit / PoC",
-        "Linux / Unix"
-      ],
-      "curated": false,
-      "signal_tier": "critical",
-      "signal_score": 82.58,
-      "priority_score": 77.59
-    },
-    {
-      "title": "pillow-uaf-research",
-      "link": "https://vulners.com/githubexploit/9AB17B96-7757-5D0C-BCCC-8653A3784F0E?utm_source=rss&utm_medium=rss&utm_campaign=rss",
-      "source": "Vulners.com RSS Feed",
-      "published": "2026-10-29T23:06:32+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "Malware / Payloads"
-      ],
-      "curated": false,
-      "signal_tier": "critical",
-      "signal_score": 78.58,
-      "priority_score": 75.19
-    },
-    {
-      "title": "Hackers Actively Exploiting WordPress Remote Code Execution Flaw Just Hours After Patch Release",
-      "link": "https://cybersecuritynews.com/wordpress-rce-exploited/",
-      "source": "Cyber Security News",
-      "published": "2026-10-30T06:05:35+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "high",
-      "signal_score": 76.32,
-      "priority_score": 90.35
-    },
-    {
-      "title": "Linux kernel, PHP, Cisco, GitLab critical flaws under active exploitation",
-      "link": "https://defend.network/briefings/linux-php-cisco-gitlab-critical-exploits-2026-10-30.html",
-      "source": "defend.network",
-      "published": "2026-10-30T06:30:00+00:00",
-      "smart_groups": [
-        "Linux / Unix",
-        "Cloud / SaaS",
-        "Exploit / PoC",
-        "Vulnerabilities / CVEs",
-        "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "high",
-      "signal_score": 76.14,
-      "priority_score": 87.86
-    },
-    {
-      "title": "SANS Stormcast Friday, October 30th, 2026: Local Ghidra Server for Malware Analysis Labs; Claude Finds Linux Kernel Multipath TCP RCE (CVE-2026-98432); Hugging Face Cryptomining Malware Campaign",
-      "link": "https://isc.sans.edu/podcastdetail/10158",
-      "source": "SANS Internet Stormcenter Daily Cyber Security Podcast (Stormcast)",
-      "published": "2026-10-30T03:30:17+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Linux / Unix",
-        "Crypto / Web3",
-        "Exploit / PoC",
         "Malware / Payloads",
-        "Community / Briefing"
+        "Threat Actors / APT",
+        "Supply Chain / Software",
+        "Windows / Microsoft",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 72.17,
+      "priority_score": 84.25
+    },
+    {
+      "title": "Exploit for CVE-2026-109566",
+      "link": "https://sploitus.com/exploit?id=A65D9437-B507-56F5-911C-E31A8707CC4C&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-10-30T17:13:27+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 71.33,
-      "priority_score": 80.35
+      "signal_score": 70.38,
+      "priority_score": 71.51
     },
     {
       "title": "Exploit for CVE-2026-98432",
-      "link": "https://sploitus.com/exploit?id=6C12A15A-5404-55DE-B32B-956673CD2539&utm_source=rss&utm_medium=rss",
+      "link": "https://sploitus.com/exploit?id=AFEB1B02-16FD-5B8A-B5D6-CC80BCAC9773&utm_source=rss&utm_medium=rss",
       "source": "Sploitus – Exploits",
-      "published": "2026-10-30T05:47:01+00:00",
+      "published": "2026-10-31T06:13:59+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 68.39,
-      "priority_score": 74.52
+      "signal_score": 68.38,
+      "priority_score": 75.0
     },
     {
-      "title": "gitlab-onigmo-scanner exploit",
-      "link": "https://sploitus.com/exploit?id=D881F663-EE52-5FAB-B535-00D3C714061E&utm_source=rss&utm_medium=rss",
+      "title": "Exploit for CVE-2026-98432",
+      "link": "https://sploitus.com/exploit?id=C21670BA-F7DD-58F2-9343-B8DDDBAEC8D9&utm_source=rss&utm_medium=rss",
       "source": "Sploitus – Exploits",
-      "published": "2026-10-30T04:21:38+00:00",
+      "published": "2026-10-31T01:52:16+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 68.39,
-      "priority_score": 74.14
+      "signal_score": 68.38,
+      "priority_score": 73.83
+    },
+    {
+      "title": "Exploit for CVE-2026-98432",
+      "link": "https://sploitus.com/exploit?id=320FE90D-8390-56A7-92D5-716B2E0951D5&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-10-31T01:26:38+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.38,
+      "priority_score": 73.72
+    },
+    {
+      "title": "Exploit for CVE-2026-98432",
+      "link": "https://sploitus.com/exploit?id=F51BEF20-6463-5716-AA79-C4A99820FBE8&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-10-30T19:27:40+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.38,
+      "priority_score": 72.11
+    },
+    {
+      "title": "Exploit for CVE-2026-6516",
+      "link": "https://sploitus.com/exploit?id=A0C3FAF0-71CD-5B13-8AE7-A9250EE3C5CC&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-10-30T18:19:11+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.38,
+      "priority_score": 71.81
+    },
+    {
+      "title": "Exploit for CVE-2026-103056",
+      "link": "https://sploitus.com/exploit?id=B65330C0-4365-562E-B1BC-F0CC46296BD3&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-10-30T17:44:12+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.38,
+      "priority_score": 71.65
+    },
+    {
+      "title": "Exploit for CVE-2014-8361",
+      "link": "https://sploitus.com/exploit?id=6315DB47-9BF5-53AD-ACA1-EDD5CE5AA761&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-10-30T17:14:04+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.38,
+      "priority_score": 71.52
+    },
+    {
+      "title": "Exploit for CVE-2026-109566",
+      "link": "https://sploitus.com/exploit?id=F043B2B6-8F4D-5695-9C8E-3F750E8D0520&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-10-30T17:13:27+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.38,
+      "priority_score": 71.51
     }
   ]
 }
