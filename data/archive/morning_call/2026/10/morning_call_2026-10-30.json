@@ -1,0 +1,175 @@
+{
+  "generated_at": "2026-10-30T12:52:15.966221+00:00",
+  "analysis_date": "2026-10-30",
+  "provider": "openai",
+  "model": "gpt-5.2",
+  "window_hours": 24,
+  "source_file": "data/news_recent.json",
+  "source_generated_at": "2026-10-30T08:19:21.691022+00:00",
+  "source_days_back": 30,
+  "source_total_items": 63426,
+  "total_items_in_window_all": 2763,
+  "total_items_in_window_curated": 12,
+  "total_items_in_window_selected": 40,
+  "context_selection_policy": "curated-plus-operational-signal-v1",
+  "morning_call_markdown": "### Executive Summary\n- Multiple **actively exploited / KEV** items that commonly sit on the edge of financial networks: **Cisco Secure Firewall (ASA/FTD) SSL VPN**, **GitLab RCE**, plus **Linux kernel** and **VMware ESX/ESXi** exploitation activity.\n- Internet-facing web stacks are hot: **WordPress core update-process RCE** and **critical PHP RCEs (“PHP2Shell”)** now have public PoCs and broad targeting potential.\n- Supply-chain/dev-tooling risk uptick: reports of a **weaponized “Claude Code” extension** used for developer persistence; treat dev endpoints and CI runners as high-value targets.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Cisco Secure Firewall ASA/FTD SSL VPN zero-day (CVE-2026-76418) – active exploitation / KEV**\n- **What happened:** Cisco patched an **actively exploited** flaw in **Remote Access SSL VPN** that can be triggered **unauthenticated** to crash devices (DoS).\n- **Why it matters operationally:** Edge firewall/VPN disruption can **break remote access and branch connectivity**, and exploitation attempts are a strong indicator of perimeter targeting.\n- **Recommended immediate actions for the SOC today:** Confirm patch status and SSL VPN exposure; monitor for **VPN service crashes/reloads** and spikes in SSL VPN errors, and escalate repeated triggers as potential pre-positioning.\n\n**2) GitLab critical RCE (CVE-2026-97229, CVSS 10.0) – active exploitation / KEV + PoC**\n- **What happened:** CISA added a **GitLab RCE** to KEV; PoC exploit code is circulating.\n- **Why it matters operationally:** GitLab often holds **source, tokens, CI secrets**; compromise can lead to **supply-chain impact** and credential theft into production environments.\n- **Recommended immediate actions for the SOC today:** Identify all GitLab instances (self-managed/edge), verify patched versions; hunt for **unexpected admin actions, runner registration, new PATs**, and abnormal outbound connections from GitLab hosts.\n\n**3) Linux kernel exploitation wave – KEV + new high-severity MPTCP RCE PoCs (CVE-2026-46300, CVE-2026-98432)**\n- **What happened:** CISA warned of **actively exploited** Linux kernel bug (CVE-2026-46300); separate reporting indicates a **Multipath TCP RCE** (CVE-2026-98432) with PoCs.\n- **Why it matters operationally:** Linux underpins **firewalls, appliances, jump boxes, Kubernetes nodes**; kernel exploitation can quickly become **root-level takeover** and lateral movement.\n- **Recommended immediate actions for the SOC today:** Prioritize exposure triage (internet-facing Linux, appliances, kernel versions, MPTCP enabled); add hunts for **kernel exploit behaviors** (sudden privilege jumps, unusual netlink/syscall patterns, unexpected module loads) and isolate suspicious hosts fast.\n\n**4) “Web edge” mass-exploitation risk: WordPress core RCE + critical PHP RCEs (“PHP2Shell”)**\n- **What happened:** Reports of **WordPress RCE exploitation within hours of patch** (WordPress 7.1.4), plus continued focus on **PHP RCEs (CVE-2026-109618/109619)** with PoCs and defensive guidance circulating.\n- **Why it matters operationally:** Internet-facing web assets are routinely used as **initial access**, then leveraged for **credential theft, web shells, and pivoting** into internal networks.\n- **Recommended immediate actions for the SOC today:** Validate patch levels for any WordPress/PHP workloads (including marketing microsites); hunt for **new/modified PHP files, suspicious wp-admin activity, anomalous child processes** from web servers, and unexpected outbound traffic.\n\n**5) VMware ESX/ESXi zero-day exploitation reported + added to KEV (details limited)**\n- **What happened:** Reporting indicates **China-nexus activity** using a **VMware ESX/ESXi zero-day** to hide tracks; KEV includes a Broadcom VMware ESX issue (exact CVE not fully clear in provided context).\n- **Why it matters operationally:** ESXi compromise is a high-risk path to **rapid service disruption and ransomware-style impact** (VM fleet encryption/destruction).\n- **Recommended immediate actions for the SOC today:** Confirm which VMware CVE/KB applies in your environment (assumption: ESXi management plane exposure is the key risk); monitor vCenter/ESXi for **new accounts, SSH enablement, host config changes, datastore file churn** and unexpected management logins.\n\n---\n\n### Monitoring & detection recommendations\n- **Perimeter VPN / firewall (Cisco ASA/FTD):** Monitor device syslogs for **SSL VPN auth anomalies, service restarts/crash signatures, high request rates**; correlate with external scanning (ATT&CK: **T1190** Exploit Public-Facing Application).\n- **GitLab (self-managed):** In GitLab audit/application logs, alert on **new admin users, token/PAT creation, runner registration, CI variable/secret changes**; in network logs, flag **new outbound destinations** from GitLab servers (ATT&CK: **T1552** Unsecured Credentials, **T1078** Valid Accounts).\n- **Linux fleet (servers + appliances):** From EDR/auditd/sysmon-for-linux, hunt for **privilege escalation chains** (new SUID files, suspicious `sudo` patterns, unexpected kernel module loads) and unusual listening ports (ATT&CK: **T1068** Exploitation for Privilege Escalation, **T1547** Boot/Logon Autostart).\n- **VMware vSphere/ESXi:** Centralize and watch **vCenter + ESXi auth logs** for **new local users, role changes, SSH enablement, DCUI access**, and bursts of API calls from unusual IPs (ATT&CK: **T1078**, **T1098** Account Manipulation).\n- **Web servers (WordPress/PHP):** From WAF/web access logs, alert on **wp-admin POST spikes, plugin/theme editor usage, suspicious update endpoints**, and anomalous `php-fpm` child processes spawning shells; from FIM/EDR, alert on **new PHP files in web roots** (ATT&CK: **T1505.003** Web Shell).\n- **Developer endpoints / extensions (Claude Code extension report):** From EDR + endpoint management, flag **new persistence artifacts** (startup scripts, cron/launch agents) and **unexpected SSH key writes**; monitor outbound tunnels (ATT&CK: **T1098.004** SSH Authorized Keys, **T1572** Protocol Tunneling).\n- **Oracle EBS (CVE-2026-101767) if present:** In reverse-proxy/WAF logs, look for **SQLi probing** on EBS servlet endpoints and unusual error patterns; correlate with new webshell-like files on app servers (ATT&CK: **T1190**, **T1505.003**).\n\n---\n\n### Medium-term follow-ups\n- **Patching governance:** Enforce a 72-hour SLA for **KEV-listed** items on internet-facing systems (Cisco ASA/FTD SSL VPN, GitLab, Linux kernel, VMware ESXi) with verified post-patch validation.\n- **Reduce exposure:** Reconfirm that **ESXi/vCenter and GitLab admin interfaces** are not internet-exposed; require VPN + MFA + IP allowlists where feasible.\n- **Hardening web estate:** Inventory “shadow IT” WordPress sites and standardize on **managed update + WAF baseline**; disable risky admin features (theme/plugin editor) where possible.\n- **Kernel risk management:** Identify where **MPTCP** is enabled and whether it’s required; consider disabling non-essential kernel features on exposed hosts until patching is complete.\n- **Developer supply-chain controls:** Tighten controls on **IDE/extension marketplaces** (allowlist approved publishers/extensions; block unapproved Open VSX sources if used).\n- **IR readiness:** Validate playbooks for **edge device exploitation and ESXi compromise** (rapid isolation steps, log preservation, and service continuity plans for remote access/virtualization outages).",
+  "highlights": [
+    {
+      "title": "New Cisco firewall zero-day being actively exploited",
+      "link": "https://www.csoonline.com/article/4242420/new-cisco-firewall-zero-day-being-actively-exploited.html",
+      "source": "CSO Online",
+      "published": "2026-10-29T19:31:38+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Cloud / SaaS",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 100.0,
+      "priority_score": 87.76
+    },
+    {
+      "title": "CVE-2026-76418: Cisco Secure Firewall Zero-Day Exploited in SSL VPN Attacks",
+      "link": "https://socprime.com/blog/cve-2026-76418-cisco-secure-firewall-zero-day/",
+      "source": "SOC Prime Blog",
+      "published": "2026-10-29T12:53:27+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Vendors / Product Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 100.0,
+      "priority_score": 85.9
+    },
+    {
+      "title": "CISA Adds Actively Exploited GitLab RCE and Cisco Firewall DoS Flaws to KEV",
+      "link": "https://thehackernews.com/2026/10/cisa-adds-actively-exploited-gitlab-rce.html",
+      "source": "The Hacker News",
+      "published": "2026-10-30T07:27:05+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Cloud / SaaS",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 82.99,
+      "priority_score": 89.66
+    },
+    {
+      "title": "CISA Adds Actively Exploited GitLab RCE and Cisco Firewall DoS Flaws to KEV",
+      "link": "https://vulners.com/thn/THN:5246E5BCEC06C2699D5E8F565A88EBC9?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-10-30T07:27:00+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Threat Actors / APT",
+        "Cloud / SaaS",
+        "Exploit / PoC",
+        "Linux / Unix"
+      ],
+      "curated": false,
+      "signal_tier": "critical",
+      "signal_score": 82.58,
+      "priority_score": 77.59
+    },
+    {
+      "title": "pillow-uaf-research",
+      "link": "https://vulners.com/githubexploit/9AB17B96-7757-5D0C-BCCC-8653A3784F0E?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-10-29T23:06:32+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Malware / Payloads"
+      ],
+      "curated": false,
+      "signal_tier": "critical",
+      "signal_score": 78.58,
+      "priority_score": 75.19
+    },
+    {
+      "title": "Hackers Actively Exploiting WordPress Remote Code Execution Flaw Just Hours After Patch Release",
+      "link": "https://cybersecuritynews.com/wordpress-rce-exploited/",
+      "source": "Cyber Security News",
+      "published": "2026-10-30T06:05:35+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 76.32,
+      "priority_score": 90.35
+    },
+    {
+      "title": "Linux kernel, PHP, Cisco, GitLab critical flaws under active exploitation",
+      "link": "https://defend.network/briefings/linux-php-cisco-gitlab-critical-exploits-2026-10-30.html",
+      "source": "defend.network",
+      "published": "2026-10-30T06:30:00+00:00",
+      "smart_groups": [
+        "Linux / Unix",
+        "Cloud / SaaS",
+        "Exploit / PoC",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 76.14,
+      "priority_score": 87.86
+    },
+    {
+      "title": "SANS Stormcast Friday, October 30th, 2026: Local Ghidra Server for Malware Analysis Labs; Claude Finds Linux Kernel Multipath TCP RCE (CVE-2026-98432); Hugging Face Cryptomining Malware Campaign",
+      "link": "https://isc.sans.edu/podcastdetail/10158",
+      "source": "SANS Internet Stormcenter Daily Cyber Security Podcast (Stormcast)",
+      "published": "2026-10-30T03:30:17+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Linux / Unix",
+        "Crypto / Web3",
+        "Exploit / PoC",
+        "Malware / Payloads",
+        "Community / Briefing"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 71.33,
+      "priority_score": 80.35
+    },
+    {
+      "title": "Exploit for CVE-2026-98432",
+      "link": "https://sploitus.com/exploit?id=6C12A15A-5404-55DE-B32B-956673CD2539&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-10-30T05:47:01+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.39,
+      "priority_score": 74.52
+    },
+    {
+      "title": "gitlab-onigmo-scanner exploit",
+      "link": "https://sploitus.com/exploit?id=D881F663-EE52-5FAB-B535-00D3C714061E&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-10-30T04:21:38+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.39,
+      "priority_score": 74.14
+    }
+  ]
+}
