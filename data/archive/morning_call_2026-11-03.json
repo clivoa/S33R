@@ -1,0 +1,177 @@
+{
+  "generated_at": "2026-11-03T14:09:54.177857+00:00",
+  "analysis_date": "2026-11-03",
+  "provider": "openai",
+  "model": "gpt-5.2",
+  "window_hours": 24,
+  "source_file": "data/news_recent.json",
+  "source_generated_at": "2026-11-03T07:51:26.598262+00:00",
+  "source_days_back": 30,
+  "source_total_items": 63845,
+  "total_items_in_window_all": 1813,
+  "total_items_in_window_curated": 2,
+  "total_items_in_window_selected": 40,
+  "context_selection_policy": "curated-plus-operational-signal-v1",
+  "morning_call_markdown": "### Executive Summary\n- Active exploitation is reported for multiple **internet-facing foothold vectors**: Siemens SIMATIC IoT2050 (CVE-2026-58115) and **Ivanti Connect Secure** CVEs newly added to CISA KEV—treat as **current intrusion risk**.  \n- **Software supply chain exposure** risk: >1,000 **GitLab** instances remain exposed to an exploited critical RCE; compromise can cascade into CI/CD and downstream artifacts.  \n- New/continuing **credential + malware tradecraft**: AI-assisted infostealer victim triage, “LLMjacking” (abuse of stolen LLM/cloud creds), and phishing chains delivering RATs via **VHDX/WebDAV**.\n\n---\n\n### High-priority items (immediate attention)\n\n**1) Ivanti Connect Secure – exploited CVEs added to CISA KEV (CVE-2026-111357, CVE-2026-118527)**\n- **What happened:** CISA added newly disclosed Ivanti Connect Secure vulnerabilities to the **Known Exploited Vulnerabilities** catalog.  \n- **Why it matters operationally:** VPN/appliance exploitation is a common **initial access** path into financial networks and often leads to rapid lateral movement and data theft.  \n- **Recommended immediate actions for the SOC today:** Verify patch/mitigation status for all Ivanti ICS; prioritize internet-facing nodes; hunt for new admin accounts/config changes and suspicious VPN sessions since last patch window.\n\n**2) Siemens SIMATIC IoT2050 Advanced – active exploitation, auth bypass to RCE (CVE-2026-58115, CVSS 10.0)**\n- **What happened:** VulnCheck/TheHackerNews report **active exploitation** of an unauthenticated critical function enabling **remote code execution** and backdoor planting.  \n- **Why it matters operationally:** If any OT/edge devices bridge into corporate networks (vendor remote access, telemetry, jump hosts), they can become **stealthy persistence** and pivot points.  \n- **Recommended immediate actions for the SOC today:** Confirm whether any IoT2050 devices exist (asset + network scan); if present, isolate from internet, restrict management access, and review outbound connections from those subnets for anomalies.\n\n**3) GitLab – large-scale exposure to exploited critical RCE (supply-chain risk)**\n- **What happened:** Reporting indicates **1,000+ unpatched GitLab servers** remain exposed to an **exploited** critical RCE.  \n- **Why it matters operationally:** GitLab compromise enables repo tampering, CI runner abuse, secret theft, and poisoned builds—high impact to banking SDLC and third-party integrations.  \n- **Recommended immediate actions for the SOC today:** Inventory all GitLab (self-hosted and edge proxies), validate version/patch state, and review recent admin token creation, runner registration, new webhooks, and unusual project export/import activity.\n\n**4) Windows phishing delivering RATs via VHDX/WebDAV + AI-assisted infostealer triage**\n- **What happened:** Multiple reports describe campaigns using **malicious VHDX/shortcut/WebDAV** delivery for a custom RAT (PapRAT) and a Windows infostealer using **AI to prioritize stolen data**.  \n- **Why it matters operationally:** This aligns with common financial-sector intrusion chains: phishing → credential theft → mailbox access → internal pivot; VHDX/WebDAV can reduce macro reliance and evade basic controls.  \n- **Recommended immediate actions for the SOC today:** Tighten monitoring for disk image mounts and WebDAV access; triage any new “meeting invite/diplomatic invite” themed emails; fast-track containment on infostealer signs (browser credential access, token theft, unusual outbound).\n\n**5) Canonical LXD/MicroCloud – critical auth bypass (CVE-2026-112816, CVSS 10.0)**\n- **What happened:** A critical authentication bypass in LXD/MicroCloud could allow **cluster takeover** by impersonating a trusted TLS client.  \n- **Why it matters operationally:** If used in dev/private cloud, compromise can expose workloads, images, secrets, and internal network paths (often under-monitored vs. traditional servers).  \n- **Recommended immediate actions for the SOC today:** Identify LXD/MicroCloud management endpoints; ensure patches applied; review LXD API access logs for anomalous client identities and unexpected instance creation/snapshots.\n\n---\n\n### Monitoring & detection recommendations\n- **VPN/appliance exploitation (Ivanti):** Monitor VPN logs + firewall for unusual auth patterns, new device fingerprints, and post-auth admin actions; hunt for **valid accounts** abuse (T1078) and **external remote services** (T1133).  \n- **GitLab compromise / CI abuse:** In GitLab audit logs, alert on new PATs, runner registrations, webhook changes, project exports, and unusual “pipeline trigger” sources; map to **Supply Chain Compromise** (T1195) / **Valid Accounts** (T1078).  \n- **Phishing → VHDX/WebDAV execution:** From EDR + Windows Security logs, hunt for `explorer.exe` mounting VHD/VHDX, `rundll32`, `mshta`, `wscript/cscript`, and LNK-driven execution; watch SMB/WebDAV access in proxy logs; map to **User Execution** (T1204) and **Command and Scripting Interpreter** (T1059).  \n- **Infostealer behaviors:** EDR detections/hunts for browser data access (Chrome/Edge credential stores), unusual LSASS access attempts, mass file discovery, and suspicious outbound to newly seen hosts; map to **Credential Dumping** (T1003) / **Browser Information Discovery** (T1217).  \n- **OT/edge device beaconing (Siemens IoT2050):** NetFlow/DNS/Proxy for new outbound from OT/IoT VLANs, unexpected SSH/reverse shells, and persistence-like periodic callbacks; map to **Command and Control** (TA0011).  \n- **LXD/MicroCloud control-plane misuse:** Centralize LXD daemon logs and cloud audit where available; alert on new instances, image imports, snapshot exports, and certificate/client changes; map to **Create Account** (T1136) / **Remote Services** (T1021) (as applicable).  \n- **Cloud/IdP “LLMjacking” (assumption: stolen API keys/SSO tokens used):** Monitor IdP sign-ins for impossible travel/new ASNs, OAuth consent grants, and anomalous API usage/spend alerts in cloud/LLM service billing; map to **Cloud Account** abuse (T1528/T1538 family—use what your framework supports).\n\n---\n\n### Medium-term follow-ups\n- **Patch/hardening backlog:** Validate exposure and patch plans for other critical items referenced (e.g., PHP2Shell, HTTP2Shell/Brotli ecosystem, Barracuda ESG CVEs) based on your tech stack—prioritize internet-facing services first.  \n- **Asset discovery gaps:** Ensure accurate inventory for OT/edge (Siemens), virtualization control planes (LXD), and dev platforms (GitLab); tag “internet-exposed” assets with owners and patch SLAs.  \n- **Email security tuning:** Add/validate controls for archive/disk-image delivery (VHD/VHDX/ISO), LNK-based execution, and WebDAV links; reinforce sandboxing and attachment detonation coverage.  \n- **CI/CD security controls:** Rotate GitLab secrets/tokens where risk exists; enforce protected branches, runner restrictions, and signing/attestation for build artifacts.  \n- **Credential protection:** Review SSO/SAML configurations and monitoring (noting new SAML bypass issue in a key management product ecosystem); expand detection for token theft and anomalous OAuth grants.  \n- **Ransomware readiness (context signal):** Re-check restore testing cadence, EDR isolation playbooks, and “rapid initial access” runbooks for VPN/appliance compromises (time-to-contain KPI).",
+  "highlights": [
+    {
+      "title": "Attackers Exploit Critical Siemens IoT2050 Flaw to Plant Remote Command Backdoors",
+      "link": "https://vulners.com/thn/THN:35B001EE2209970F635839D1230D196F?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-11-03T05:34:00+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Identity / Access",
+        "Exploit / PoC",
+        "Linux / Unix",
+        "Malware / Payloads"
+      ],
+      "curated": false,
+      "signal_tier": "critical",
+      "signal_score": 88.55,
+      "priority_score": 76.48
+    },
+    {
+      "title": "Attackers Exploit Critical Siemens IoT2050 Flaw to Plant Remote Command Backdoors",
+      "link": "https://thehackernews.com/2026/11/attackers-exploit-critical-siemens.html",
+      "source": "The Hacker News",
+      "published": "2026-11-03T05:34:41+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Malware / Payloads",
+        "General Security"
+      ],
+      "curated": false,
+      "signal_tier": "critical",
+      "signal_score": 82.84,
+      "priority_score": 77.92
+    },
+    {
+      "title": "CISA to federal agencies: Remediate exploited Ivanti Connect Secure vulnerabilities (CVE-2026-111357, CVE-2026-118527)",
+      "link": "https://www.helpnetsecurity.com/2026/11/02/cisa-to-federal-agencies-remediate-exploited-ivanti-connect-secure-vulnerabilities-cve-2026-111357-cve-2026-118527/",
+      "source": "Help Net Security",
+      "published": "2026-11-02T15:58:08+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Cloud / SaaS",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 66.14,
+      "priority_score": 76.24
+    },
+    {
+      "title": "CVE-2022-48353 | Huawei Smart Phone Configuration Local Privilege Escalation (EUVD-2022-51052)",
+      "link": "https://vuldb.com/vuln/224165",
+      "source": "VulDB Updates",
+      "published": "2026-11-02T23:11:28+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 63.33,
+      "priority_score": 79.14
+    },
+    {
+      "title": "Over 1,000 GitLab servers exposed to exploited critical RCE flaw",
+      "link": "https://www.scworld.com/news/over-1000-gitlab-servers-exposed-to-exploited-critical-rce-flaw",
+      "source": "SCM feed for Latest",
+      "published": "2026-11-02T21:27:36+00:00",
+      "smart_groups": [
+        "Supply Chain / Software",
+        "Exploit / PoC",
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 60.01,
+      "priority_score": 83.12
+    },
+    {
+      "title": "AI-powered malware ‘highly likely’ to be used to hack UK infrastructure by 2028",
+      "link": "https://www.theguardian.com/technology/2026/nov/03/ai-powered-malware-artificial-intelligence-hacking-critical-uk-infrastructure",
+      "source": "Data and computer security | The Guardian",
+      "published": "2026-11-03T00:01:32+00:00",
+      "smart_groups": [
+        "Ransomware",
+        "Crypto / Web3",
+        "Malware / Payloads",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 59.36,
+      "priority_score": 82.36
+    },
+    {
+      "title": "SANS Stormcast Tuesday, November 3rd, 2026: Multipath TCP (MPTCP) Detection; BTCPay Server 2.4.1 Hot Wallet Thefts; Barracuda ESG Flaws (CVE-2026-116606, CVE-2026-111560); Synology DSM Ransomware",
+      "link": "https://isc.sans.edu/podcastdetail/10162",
+      "source": "SANS Internet Stormcenter Daily Cyber Security Podcast (Stormcast)",
+      "published": "2026-11-03T02:00:02+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Ransomware",
+        "Detection Engineering",
+        "Email Security / BEC",
+        "Cloud / SaaS",
+        "Exploit / PoC",
+        "Linux / Unix",
+        "Mobile Security",
+        "Community / Briefing"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 57.33,
+      "priority_score": 79.86
+    },
+    {
+      "title": "Product showcase: Sweet Virtual Patching stops HTTP2Shell while fixes catch up",
+      "link": "https://www.helpnetsecurity.com/2026/11/03/product-showcase-sweet-security-virtual-patching/",
+      "source": "Help Net Security",
+      "published": "2026-11-03T06:00:18+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 57.14,
+      "priority_score": 79.77
+    },
+    {
+      "title": "CVE-2026-105606",
+      "link": "https://vuldb.com/cve/CVE-2026-105606",
+      "source": "VulDB CVE",
+      "published": "2026-11-02T19:08:45+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Malware / Payloads",
+        "Phishing / Social Engineering"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 57.07,
+      "priority_score": 75.23
+    },
+    {
+      "title": "CVE-2026-120449",
+      "link": "https://vuldb.com/cve/CVE-2026-120449",
+      "source": "VulDB CVE",
+      "published": "2026-11-02T14:37:55+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Malware / Payloads"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 57.07,
+      "priority_score": 75.1
+    }
+  ]
+}
