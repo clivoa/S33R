@@ -183,9 +183,14 @@
     $("#threat-bars").innerHTML = Array.from({ length: 5 }, (_, i) => `<i class="${i < levels[idx][1] ? "a" : ""}"></i>`).join("");
 
     if (state.generatedAt) {
-      const diff = Math.floor((Date.now() - new Date(state.generatedAt).getTime()) / 60000);
-      const lab = diff < 60 ? diff + "m ago" : Math.floor(diff / 60) + "h ago";
-      document.querySelectorAll(".js-updated").forEach((e) => (e.textContent = lab));
+      const generated = new Date(state.generatedAt);
+      const diff = Math.max(0, Math.floor((Date.now() - generated.getTime()) / 60000));
+      const lab = diff < 1 ? "just now"
+        : diff < 60 ? diff + "m ago"
+          : diff < 1440 ? Math.floor(diff / 60) + "h ago"
+            : Math.floor(diff / 1440) + "d ago";
+      const exact = generated.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+      document.querySelectorAll(".js-updated").forEach((e) => { e.textContent = lab; e.title = `Generated ${exact}`; });
     }
   }
 
