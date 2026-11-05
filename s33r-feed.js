@@ -4,6 +4,9 @@
    ============================================================ */
 (function () {
   const DATA_URL = (window.S33R && window.S33R.feed) || "feed_data.json";
+  const FEED_72_URL = window.S33R && window.S33R.feed72;
+  const FEED_7D_URL = window.S33R && window.S33R.feed7d;
+  const FULL_DATA_URL = (window.S33R && window.S33R.fullFeed) || DATA_URL;
 
   const CATS = [
     ["all", "All"], ["curated", "Curated"], ["crypto", "Crypto"],
@@ -75,8 +78,50 @@
   const state = {
     all: [], filtered: [], visible: 0, batch: 30,
     category: "all", search: "", sort: "priority", windowHours: 24, highOnly: false,
-    generatedAt: null,
+    generatedAt: null, feedStats: null,
+    loadedSegments: new Set(), fullFeedLoaded: false,
   };
+
+  function normalizeItems(items) {
+    return (items || []).map((it) => {
+      if (!it.type && it.type_label) it.type = it.type_label.toLowerCase().replace(/\s+/g, "_");
+      return it;
+    });
+  }
+
+  async function fetchData(url) {
+    if (!url) throw new Error("Feed segment URL is not configured");
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`HTTP ${response.status} loading ${url}`);
+    return response.json();
+  }
+
+  function mergeItems(items) {
+    const merged = new Map(state.all.map((item) => [item.link || `${item.title}|${item.published_ts}`, item]));
+    normalizeItems(items).forEach((item) => merged.set(item.link || `${item.title}|${item.published_ts}`, item));
+    state.all = [...merged.values()];
+  }
+
+  async function ensureWindowLoaded(hours) {
+    if (state.fullFeedLoaded) return;
+    if (hours === 0) {
+      const data = await fetchData(FULL_DATA_URL);
+      state.all = normalizeItems(data.items);
+      state.fullFeedLoaded = true;
+      return;
+    }
+
+    const needed = [];
+    if (hours > 24 && !state.loadedSegments.has("72h")) needed.push(["72h", FEED_72_URL]);
+    if (hours > 72 && !state.loadedSegments.has("7d")) needed.push(["7d", FEED_7D_URL]);
+    if (!needed.length) return;
+
+    const loaded = await Promise.all(needed.map(async ([key, url]) => [key, await fetchData(url)]));
+    loaded.forEach(([key, data]) => {
+      mergeItems(data.items);
+      state.loadedSegments.add(key);
+    });
+  }
 
   /* ---------- matching ---------- */
   function matchCat(it, cat) {
@@ -108,21 +153,25 @@
   /* ---------- war room ---------- */
   function renderWarRoom() {
     const now = Date.now() / 1000;
-    const items24 = state.all.filter((i) => (i.published_ts || 0) > now - 86400).length;
-    const items7 = state.all.filter((i) => (i.published_ts || 0) > now - 7 * 86400).length;
-    const hot = state.all.filter(isHighSignal).length;
-    const cveSet = new Set(); state.all.forEach((i) => cvesItem(i).forEach((c) => cveSet.add(c)));
+    const stats = state.feedStats || {};
+    const items24 = stats.items_24h ?? state.all.filter((i) => (i.published_ts || 0) > now - 86400).length;
+    const items7 = stats.items_7d ?? state.all.filter((i) => (i.published_ts || 0) > now - 7 * 86400).length;
+    const hot = stats.high_signal_items ?? state.all.filter(isHighSignal).length;
+    const cveSet = new Set();
+    if (stats.unique_cves == null) state.all.forEach((i) => cvesItem(i).forEach((c) => cveSet.add(c)));
+    const cveCount = stats.unique_cves ?? cveSet.size;
+    const totalItems = stats.total_items ?? state.all.length;
 
     const hour = new Date().getHours();
     const greet = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
     $("#wr-title").innerHTML = `${greet}, <span>Analyst.</span>`;
 
     const set = (id, v) => { const e = $(id); e.textContent = Number(v).toLocaleString(); e.classList.remove("is-loading"); };
-    set("#m-24h", items24); set("#m-7d", items7); set("#m-hot", hot); set("#m-cve", cveSet.size);
-    $("#m-24h-sub").textContent = `of ${state.all.length.toLocaleString()} total`;
+    set("#m-24h", items24); set("#m-7d", items7); set("#m-hot", hot); set("#m-cve", cveCount);
+    $("#m-24h-sub").textContent = `of ${totalItems.toLocaleString()} total`;
 
     /* threat level from hot ratio */
-    const ratio = state.all.length ? hot / state.all.length : 0;
+    const ratio = totalItems ? hot / totalItems : 0;
     const levels = [["GUARDED", 2], ["ELEVATED", 3], ["HIGH", 4], ["SEVERE", 5]];
     const idx = ratio > 0.45 ? 3 : ratio > 0.3 ? 2 : ratio > 0.15 ? 1 : 0;
     $("#threat-lvl").textContent = levels[idx][0];
@@ -295,7 +344,26 @@
     input.addEventListener("keydown", (e) => { if (e.key === "Escape" && input.value) { input.value = ""; doSearch(); } });
     clear.addEventListener("click", () => { input.value = ""; input.focus(); doSearch(); });
 
-    $("#twin").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; document.querySelectorAll("#twin button").forEach((x) => x.classList.toggle("on", x === b)); state.windowHours = parseInt(b.dataset.h, 10) || 0; applyFilters(true); });
+    $("#twin").addEventListener("click", async (e) => {
+      const b = e.target.closest("button"); if (!b) return;
+      const hours = parseInt(b.dataset.h, 10) || 0;
+      if (hours === state.windowHours) return;
+      const buttons = [...document.querySelectorAll("#twin button")];
+      buttons.forEach((button) => { button.disabled = true; });
+      $("#status-count").textContent = hours === 0 ? "Loading full feed…" : `Loading ${hours}h feed…`;
+      try {
+        await ensureWindowLoaded(hours);
+        state.windowHours = hours;
+        buttons.forEach((button) => button.classList.toggle("on", button === b));
+        renderCategories(); renderIntel(); applyFilters(true);
+      } catch (err) {
+        console.error("feed segment load failed", err);
+        S33R_UI.toast("Could not load the selected time window");
+        updateStatus();
+      } finally {
+        buttons.forEach((button) => { button.disabled = false; });
+      }
+    });
     $("#sort").addEventListener("change", (e) => { state.sort = e.target.value; applyFilters(true); });
     $("#high").addEventListener("change", (e) => { state.highOnly = !!e.target.checked; applyFilters(true); });
 
@@ -340,14 +408,17 @@
   async function init() {
     bind();
     try {
-      const data = await (await fetch(DATA_URL)).json();
-      state.all = (data.items || []).map((it) => { if (!it.type && it.type_label) it.type = it.type_label.toLowerCase().replace(/\s+/g, "_"); return it; });
+      const p = new URLSearchParams(location.search);
+      const hasQuery = !!p.get("q");
+      const data = await fetchData(hasQuery ? FULL_DATA_URL : DATA_URL);
+      state.all = normalizeItems(data.items);
       state.generatedAt = data.generated_at || null;
+      state.feedStats = data.feed_stats || null;
+      state.fullFeedLoaded = hasQuery;
 
       const feedCount = (data.source_catalog && data.source_catalog.active_feeds) || (data.feed_attempts && data.feed_attempts.length) || null;
       if (feedCount) document.querySelectorAll(".js-feed-count").forEach((el) => (el.textContent = feedCount.toLocaleString()));
 
-      const p = new URLSearchParams(location.search);
       if (p.get("q")) { state.search = p.get("q"); state.windowHours = 0; $("#search-input").value = state.search; document.querySelectorAll("#twin button").forEach((b) => b.classList.toggle("on", b.dataset.h === "0")); }
 
       renderCategories(); renderWarRoom(); renderIntel();
