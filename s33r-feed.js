@@ -82,6 +82,11 @@
     loadedSegments: new Set(), fullFeedLoaded: false,
   };
 
+  function feedNow() {
+    const generated = state.generatedAt ? new Date(state.generatedAt).getTime() / 1000 : NaN;
+    return Number.isFinite(generated) ? generated : Date.now() / 1000;
+  }
+
   function normalizeItems(items) {
     return (items || []).map((it) => {
       if (!it.type && it.type_label) it.type = it.type_label.toLowerCase().replace(/\s+/g, "_");
@@ -152,7 +157,7 @@
 
   /* ---------- war room ---------- */
   function renderWarRoom() {
-    const now = Date.now() / 1000;
+    const now = feedNow();
     const stats = state.feedStats || {};
     const items24 = stats.items_24h ?? state.all.filter((i) => (i.published_ts || 0) > now - 86400).length;
     const items7 = stats.items_7d ?? state.all.filter((i) => (i.published_ts || 0) > now - 7 * 86400).length;
@@ -254,7 +259,7 @@
   /* ---------- filtering ---------- */
   function applyFilters(reset) {
     const s = state.search.trim().toLowerCase();
-    const now = Date.now() / 1000;
+    const now = feedNow();
     const cutoff = state.windowHours > 0 ? now - state.windowHours * 3600 : 0;
     let r = state.all.filter((it) => {
       if (!matchCat(it, state.category)) return false;
