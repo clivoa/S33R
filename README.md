@@ -65,8 +65,12 @@ build_news_json.py
      ↓  ── source_quality (feeds with collected items, graded A–D)
      ↓  ── feed_attempts (ingested active feeds + synthetic inactive catalog records)
 data/news_recent.json
-     ├── index.html         (War Room dashboard)
-     ├── sources.html       (Source Health Monitor, full upstream catalog)
+     ├── build_client_data.py → progressive browser payloads
+     │        ├── news_feed.json (initial 24h)
+     │        ├── news_feed_72h.json + news_feed_7d.json (lazy segments)
+     │        └── source_health.json (metadata only)
+     ├── index.html         (War Room dashboard, progressive loading)
+     ├── sources.html       (Source Health Monitor, metadata only)
      │
      ├── build_news_archive.py → data/archive/monthly + yearly
      │        ↓
@@ -125,6 +129,10 @@ Primary data file, rebuilt hourly. Contains:
 | `source_catalog` | Metadata about the upstream feed catalog consumed by `sync_feed_catalog.py` |
 | `classification_stats` | Smart group coverage and confidence ratios |
 | `source_quality_model` | Weights used for each quality component |
+
+### Browser-optimized datasets
+
+`scripts/build_client_data.py` derives compact client payloads after each feed build. The War Room initially downloads only `news_feed.json` (the latest 24 hours), then loads non-overlapping 72-hour and 7-day segments when the user expands the time window. The full `news_recent.json` is fetched only for “ALL”. `source_health.json` lets the Source Health Monitor load quality metadata without downloading every news item.
 
 #### `feed_attempts` status values
 
@@ -333,6 +341,10 @@ S33R/
 │
 ├── data/
 │   ├── news_recent.json        # Primary feed (rebuilt hourly)
+│   ├── news_feed.json          # Compact initial 24-hour browser payload
+│   ├── news_feed_72h.json      # Lazy 24–72-hour browser segment
+│   ├── news_feed_7d.json       # Lazy 72-hour–7-day browser segment
+│   ├── source_health.json      # Source quality metadata without news items
 │   ├── source_catalog.json     # Full upstream feed roster + status
 │   ├── trends.json             # Analytics data
 │   ├── morning_call_latest.json
@@ -348,6 +360,7 @@ S33R/
 ├── scripts/
 │   ├── sync_feed_catalog.py        # Sync upstream active OPML + full source catalog
 │   ├── build_news_json.py          # Main ETL: fetch, classify, score, write JSON
+│   ├── build_client_data.py        # Build progressive browser datasets
 │   ├── build_news_archive.py       # Archive builder
 │   ├── build_trends_json.py        # Trend analytics builder
 │   ├── build_morning_call.py       # Provider-configurable briefing generator (optional)
