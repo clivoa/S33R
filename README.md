@@ -273,7 +273,7 @@ Provider configuration examples:
 # OpenAI (default)
 # MORNING_CALL_PROVIDER: "openai"
 # OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-# MORNING_CALL_MODEL: "gpt-5.2"
+# MORNING_CALL_MODEL: "gpt-6.1-sol"
 
 # Claude / Anthropic
 # MORNING_CALL_PROVIDER: "anthropic"

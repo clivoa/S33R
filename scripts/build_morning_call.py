@@ -38,7 +38,7 @@ PROVIDER_ALIASES = {
     "google": "gemini",
 }
 DEFAULT_MODELS = {
-    "openai": "gpt-5.2",
+    "openai": "gpt-6.1-sol",
     "anthropic": "claude-sonnet-4-5",
     "gemini": "gemini-2.5-pro",
 }
