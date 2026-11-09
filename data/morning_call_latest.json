@@ -1,163 +1,160 @@
 {
-  "generated_at": "2026-11-08T13:20:00.190482+00:00",
-  "analysis_date": "2026-11-08",
+  "generated_at": "2026-11-09T16:11:11.899888+00:00",
+  "analysis_date": "2026-11-09",
   "provider": "openai",
   "model": "gpt-6.1-sol",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-11-08T11:54:03.837710+00:00",
+  "source_generated_at": "2026-11-09T09:26:15.034450+00:00",
   "source_days_back": 30,
-  "source_total_items": 62026,
-  "total_items_in_window_all": 1794,
-  "total_items_in_window_curated": 1,
+  "source_total_items": 61944,
+  "total_items_in_window_all": 1476,
+  "total_items_in_window_curated": 5,
   "total_items_in_window_selected": 40,
   "context_selection_policy": "curated-plus-operational-signal-v1",
-  "morning_call_markdown": "### Executive Summary\n- **Prioritize software supply chain, identity and perimeter access:** reported Artifactory token escalation, OpenAM authentication bypass and SonicWall exploitation could expose privileged enterprise access.\n- **Check public-facing applications today:** Craft CMS and WordPress reports describe unauthenticated SQL injection, administrator creation and arbitrary uploads; imgproxy flaws threaten image-processing services.\n- **Confidence caveat:** this briefing uses supplied reports, mostly secondary feeds. PoC publication does **not** establish active exploitation; independently confirm vendor advisories, affected versions and KEV status.\n\n### High-priority items (immediate attention)\n\n**1. Artifactory token escalation — CVE-2026-42016**\n- **What happened:** A reported self-hosted Artifactory authorization flaw lets low-privileged token holders obtain elevated access; a public PoC is reported.\n- **Operational impact:** Compromised developer or CI/CD credentials could enable repository changes and potentially compromise downstream software delivery.\n- **Today:** Identify affected deployments and obtain vendor remediation guidance; review token privilege changes and unexpected artifact publication or replacement.\n\n**2. Identity-plane bypass — OpenAM and related advisories**\n- **What happened:** OpenAM before 16.1.4 reportedly accepts unsigned SAML assertions under specific binding/configuration conditions; Keycloak and Fortinet authorization reports also require validation.\n- **Operational impact:** Forged sessions could impersonate mapped users, including administrators; exposure depends on the precise product, version and configuration.\n- **Today:** Have IAM validate OpenIdentityPlatform OpenAM exposure and signed-assertion enforcement; confirm applicable Keycloak and Fortinet vendor advisories before selecting mitigations.\n\n**3. SonicWall SSLVPN exploitation claim**\n- **What happened:** A secondary briefing reports an actively exploited SSLVPN bypass, but the supplied summary omits the CVE, affected releases and remediation deadline.\n- **Operational impact:** If applicable, VPN compromise could provide enterprise entry and access to sensitive financial-service environments; exploitation details remain unverified.\n- **Today:** Confirm the claim against SonicWall PSIRT and CISA KEV; inventory exposed appliances and review anomalous VPN sessions while validating remediation.\n\n**4. Public web applications — CMS and WordPress**\n- **What happened:** Reports cover Craft CMS SQL injection, WordPress administrator creation, Contact Form 7 arbitrary uploads and Productive Commerce SQL injection.\n- **Operational impact:** Exposed marketing, customer-support or supplier portals could suffer account takeover, data theft or malicious file placement; upload does not automatically imply execution.\n- **Today:** Match the web inventory against affected products and validate fixes; restrict vulnerable functionality where feasible and investigate new administrators or suspicious uploads.\n\n**5. imgproxy ICO parsing — CVE-2026-123614/123615/123616**\n- **What happened:** Reported ICO-loader flaws include memory corruption, integer overflow and uncontrolled allocation; CVE-2026-123615 reportedly affects versions before 4.0.17.\n- **Operational impact:** Attacker-supplied images could disrupt customer-facing processing services; the supplied reports do not establish successful code execution.\n- **Today:** Identify exposed image-processing paths and verify vendor-fixed releases; temporarily reject ICO input where practical and investigate crashes or memory spikes.\n\n### Monitoring & detection recommendations\n- **Artifactory audit + CI/CD logs:** Hunt unexpected administrative actions by low-privileged identities, permission changes, token creation and artifact replacement; correlate with build activity.\n- **IdP/SP authentication + application logs:** Correlate privileged application sessions with trusted IdP issuance, allowing for logging gaps; investigate unsigned-assertion acceptance and unexpected SAML configuration changes.\n- **VPN + firewall + identity logs:** Review unfamiliar source networks, concurrent sessions and unusual privileged access; correlate VPN logins with subsequent administrative connections or lateral movement.\n- **WAF/reverse proxy + CMS/database audit:** Hunt unusual search requests, SQL errors and administrator creation on affected CMS platforms; correlate request timing with database or account changes.\n- **Web-server EDR + file-integrity logs:** Investigate unexpected files in upload/temp directories, executable content and web-worker child processes; these may indicate post-upload abuse or web shells.\n- **Container/runtime + image-service logs:** Correlate ICO submissions with process crashes, OOM kills, repeated restarts or abnormal outbound connections; preserve request metadata and affected workload evidence.\n- **Endpoint EDR + cloud authentication:** Monitor unusual processes accessing browser credential/cookie stores and subsequent session reuse; browser-secret tooling publication is a hunting prompt, not proof of a campaign.\n\n### Medium-term follow-ups\n- **Validate Linux claims with distribution vendors:** Determine applicability of the reported TCP-stack and privilege-escalation issues; do not derive emergency kernel changes solely from aggregator severity labels.\n- **Close legacy exposure:** Recheck Salt CVE-2020-11651/11652 remediation and management-plane restrictions; refreshed PoCs and old Chrome entries are not evidence of newly disclosed vulnerabilities.\n- **Reduce build-system blast radius:** Enforce narrowly scoped, short-lived CI/CD credentials, segregate artifact administration and baseline repository-integrity monitoring.\n- **Review developer-secret handling:** Validate the reported Claude Code repository exposure; scope secret scanning to relevant repositories and rotate credentials only where exposure is established.\n- **Before next handover:** Record asset applicability, vendor-confirmed fixes, compensating controls and named owners; escalate confirmed compromise or exposed critical systems through existing incident procedures.",
+  "morning_call_markdown": "### Executive Summary\n- **Prioritize internet-facing VPNs:** reporting links SonicWall SAML/MFA bypass and an Ivanti exploit chain to exploitation concerns. Validate exposure and vendor guidance; MFA alone is not sufficient protection.\n- **Check public websites and software pipelines:** actively exploited WordPress file-upload RCE and compromised npm releases create potential paths into web servers, developer endpoints, and CI/CD secrets.\n- **Confidence caveat:** this briefing uses supplied reporting, not independently verified advisories. SonicWall exploitation wording is inconsistent; React RCE is a PoC claim. Confirm affected versions and fixes before changes.\n\n### High-priority items (immediate attention)\n\n**1. VPN perimeter: SonicWall and Ivanti**\n- **What happened:** Reports describe SonicWall CVE-2026-19868 SAML/MFA bypass and an Ivanti three-CVE chain reportedly used before the October authentication-bypass fix.\n- **Operational impact:** VPN compromise could provide trusted internal access; patching only Ivanti’s initial bypass may not address the complete reported chain or existing persistence.\n- **Today:** Network/security engineering must validate deployed builds against current vendor advisories; restrict affected access pending remediation and have L2 correlate VPN sessions with IdP authentication.\n\n**2. WordPress: exploited RCE plus account and payment exposure**\n- **What happened:** [WP Duplicate ≤1.1.11](https://vuldb.com/cve/CVE-2026-123751) reportedly permits actively exploited unauthenticated upload/RCE; other plugins expose account takeover, MFA bypass, and customer data.\n- **Operational impact:** Public marketing, recruitment, or merchant sites could become footholds; WooCommerce flaws may additionally expose customer information or enable unauthorized price changes.\n- **Today:** Identify affected plugins across owned and managed sites; prioritize removing/disabling WP Duplicate pending a verified fix and investigate exposed hosts for web shells and unauthorized accounts.\n\n**3. Software supply chain: npm and PyPI**\n- **What happened:** [PolinRider reporting](https://gbhackers.com/polinrider-malware-attack/) describes 12 malicious releases across 10 hijacked npm packages; separate notices flag PyPI packages `extrahtml` and `parseyaml`.\n- **Operational impact:** Malicious dependency execution could expose repository credentials, cloud tokens, signing material, or build artifacts; package presence alone does not establish execution.\n- **Today:** Obtain affected npm names/versions from the underlying advisory and search lockfiles/build histories; quarantine execution-confirmed runners or endpoints and revoke potentially exposed credentials.\n\n**4. React Server Components: public RCE PoC claim**\n- **What happened:** An exploit-feed entry claims unauthenticated React Server Components RCE under GHSA-xqc2-xf4c-x3h3; supplied context does not identify affected versions or confirmed exploitation.\n- **Operational impact:** If validated and applicable, internet-facing server-side applications could face code execution; a public PoC raises urgency but does not prove production exploitability.\n- **Today:** AppSec should verify the advisory and map affected dependencies/deployments; prioritize exposed matches for vendor remediation, without executing untrusted PoCs on production.\n\n### Monitoring & detection recommendations\n- **VPN + IdP logs:** Correlate successful SonicWall sessions with expected SAML/MFA events; investigate unexplained gaps, unfamiliar sources, privileged users, and unusual concurrent sessions.\n- **VPN appliances + internal firewalls:** Hunt unexpected configuration changes, administrative access, and new connections from VPN infrastructure into sensitive segments; review Ivanti history back to October 3 where retained.\n- **Web access logs + file-integrity/EDR:** On exposed WordPress hosts, correlate suspicious upload requests with new executable files, web-worker child shells, and outbound connections. Prioritize combined signals (T1190, T1505.003).\n- **WordPress audit + commerce logs:** Alert on unexpected administrator creation, password resets, XML-RPC authentication, order enumeration, and price changes; reconcile suspicious activity with authorized maintenance.\n- **CI/CD logs + endpoint telemetry:** Correlate npm/pip installations with unexpected shell execution, credential-file access, and outbound downloads; inspect affected build jobs before restoring runners.\n- **Proxy/DNS + developer EDR:** Investigate unusual Ethereum RPC access from build/developer systems followed by payload downloads or execution; blockchain traffic alone is not sufficient evidence of PolinRider.\n- **Application/WAF logs + runtime EDR:** For potentially affected React services, correlate unusual requests or error spikes with application-process child shells and unexpected egress; use vendor-validated detection patterns when available.\n\n### Medium-term follow-ups\n- **Close the exposure inventory gap:** Record VPN builds, SAML configurations, WordPress plugins, and application dependency owners; include outsourced web properties and ephemeral build runners.\n- **Harden dependency intake:** Require approved registries, locked versions, provenance checks where available, and isolated builds with short-lived, least-privilege credentials.\n- **Review identity and commerce fixes:** Validate updates for Limit Login Attempts before 3.4.1, UniPAY before 2.4, and other installed affected plugins; assess customer-data exposure where indicated.\n- **Triage remaining advisories by applicability:** Validate Linux kernel findings through distribution advisories and IBM Bob CVE-2026-9764 through vendor guidance; do not emergency-patch unidentified exploit-feed entries solely on scores.\n- **Strengthen handover evidence:** Track exposed assets, confirmed fixes, hunt coverage, telemetry gaps, and incident decisions. Escalate suspicious sessions, web shells, or malicious dependency execution to IR immediately.",
   "highlights": [
     {
-      "title": "Exploit for CVE-2026-98260",
-      "link": "https://vulners.com/githubexploit/53327E15-99AC-5086-B067-45181CD0BF18?utm_source=rss&utm_medium=rss&utm_campaign=rss",
-      "source": "Vulners.com RSS Feed",
-      "published": "2026-11-08T08:40:28+00:00",
+      "title": "CVE-2026-123751 - WP Duplicate <= 1.1.11 - Unauthenticated Arbitrary File Upload via Authentication Bypass",
+      "link": "https://cvefeed.io/vuln/detail/CVE-2026-123751",
+      "source": "CVEfeed.io - Latest Vulnerabilities",
+      "published": "2026-11-09T06:00:29+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Linux / Unix",
-        "Exploit / PoC",
-        "Mobile Security"
+        "Exploit / PoC"
       ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 70.56,
-      "priority_score": 76.73
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 85.09,
+      "priority_score": 89.49
     },
     {
-      "title": "Exploit for CVE-2020-11651",
-      "link": "https://sploitus.com/exploit?id=87D66C0D-2FAC-5BC6-8AD4-62E526B9B190&utm_source=rss&utm_medium=rss",
-      "source": "Sploitus – Exploits",
-      "published": "2026-11-07T19:55:56+00:00",
+      "title": "Analysis of the Ivanti Connect Secure Triple Zero-Day Chain (CVE-2026-104935, CVE-2026-111357, and CVE-2026-118527)",
+      "link": "https://blog.criminalip.io/2026/11/09/analysis-of-the-ivanti-connect-secure-triple-zero-day-chain-cve-2026-104935-cve-2026-111357-and-cve-2026-118527/",
+      "source": "CIP Blog",
+      "published": "2026-11-09T08:39:51+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Network / OT / ICS"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 83.91,
+      "priority_score": 89.4
+    },
+    {
+      "title": "CVE-2026-123751",
+      "link": "https://vuldb.com/cve/CVE-2026-123751",
+      "source": "VulDB CVE",
+      "published": "2026-11-09T06:33:25+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC"
       ],
       "curated": false,
-      "signal_tier": "high",
-      "signal_score": 70.26,
-      "priority_score": 70.27
+      "signal_tier": "critical",
+      "signal_score": 83.07,
+      "priority_score": 79.44
+    },
+    {
+      "title": "CVE-2026-123751",
+      "link": "https://vulners.com/nvd/NVD:CVE-2026-123751?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-11-09T07:17:30+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "critical",
+      "signal_score": 82.56,
+      "priority_score": 77.06
+    },
+    {
+      "title": "SonicWall Warns of Actively Exploited SSL-VPN Vulnerability That Bypasses SAML and MFA Protection",
+      "link": "https://gbhackers.com/sonicwall-warns-of-actively-exploited-ssl-vpn-vulnerability/",
+      "source": "GBHackers News",
+      "published": "2026-11-09T06:20:55+00:00",
+      "smart_groups": [
+        "Identity / Access",
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 79.38,
+      "priority_score": 90.88
     },
     {
       "title": "Exploit for CVE-2026-123488",
-      "link": "https://sploitus.com/exploit?id=BECFA4B0-A9E7-58BC-ABDE-77E27BE98D61&utm_source=rss&utm_medium=rss",
+      "link": "https://sploitus.com/exploit?id=F24299C8-8DEB-5DEF-B3F1-3AF915660C54&utm_source=rss&utm_medium=rss",
       "source": "Sploitus – Exploits",
-      "published": "2026-11-08T09:42:10+00:00",
+      "published": "2026-11-09T04:22:44+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 68.26,
-      "priority_score": 73.95
+      "signal_score": 70.25,
+      "priority_score": 73.16
+    },
+    {
+      "title": "Exploit for CVE-2026-98432",
+      "link": "https://sploitus.com/exploit?id=81375FBD-41F8-5966-B3FF-9AA3FC54848E&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-11-09T04:59:02+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.25,
+      "priority_score": 73.32
+    },
+    {
+      "title": "tryhackme-php2shell exploit",
+      "link": "https://sploitus.com/exploit?id=80164FC0-3355-5D31-B2FD-77974307FD71&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-11-09T00:35:42+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.25,
+      "priority_score": 72.15
     },
     {
       "title": "Exploit for Improperly Controlled Sequential Memory Allocation in Php",
-      "link": "https://sploitus.com/exploit?id=ED4DF36C-9D03-5A14-985E-2ABD9D3CED15&utm_source=rss&utm_medium=rss",
+      "link": "https://sploitus.com/exploit?id=841A1BAA-4AC6-57AB-B42B-D3F1C9BE16BB&utm_source=rss&utm_medium=rss",
       "source": "Sploitus – Exploits",
-      "published": "2026-11-07T23:40:49+00:00",
+      "published": "2026-11-08T19:12:36+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 66.26,
-      "priority_score": 71.27
+      "signal_score": 68.25,
+      "priority_score": 70.71
     },
     {
-      "title": "Exploit for CVE-2026-123488",
-      "link": "https://vulners.com/githubexploit/BECFA4B0-A9E7-58BC-ABDE-77E27BE98D61?utm_source=rss&utm_medium=rss&utm_campaign=rss",
-      "source": "Vulners.com RSS Feed",
-      "published": "2026-11-08T09:42:10+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Web / API Security",
-        "Exploit / PoC"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 64.56,
-      "priority_score": 76.52
-    },
-    {
-      "title": "CVE-2026-53353 | Linux Kernel up to 6.6.142/6.12.93/6.18.35/7.0.12 hsr net/hsr/hsr_framereg.c hsr_addr_is_self self_node privilege escalation (EUVD-2026-40987 / WID-SEC-2026-2175)",
-      "link": "https://vuldb.com/vuln/375525",
-      "source": "VulDB Updates",
-      "published": "2026-11-08T10:19:52+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Linux / Unix",
-        "Exploit / PoC"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 63.32,
-      "priority_score": 80.97
-    },
-    {
-      "title": "CVE-2026-53351 | Linux Kernel up to 7.0.12 riscv fs/binfmt_elf.c privilege escalation (EUVD-2026-40985 / WID-SEC-2026-2175)",
-      "link": "https://vuldb.com/vuln/375527",
-      "source": "VulDB Updates",
-      "published": "2026-11-08T10:19:51+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Linux / Unix",
-        "Exploit / PoC"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 63.32,
-      "priority_score": 80.97
-    },
-    {
-      "title": "CVE-2022-4182 | Google Chrome up to 107.0.5304.121 Fenced Frames Remote Code Execution (EUVD-2022-51543)",
-      "link": "https://vuldb.com/vuln/214532",
-      "source": "VulDB Updates",
-      "published": "2026-11-08T04:26:11+00:00",
+      "title": "Exploit for Improperly Controlled Sequential Memory Allocation in Php",
+      "link": "https://sploitus.com/exploit?id=8E5F7EFA-D570-5697-840E-DBDFE6A53A43&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-11-08T19:18:46+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 63.32,
-      "priority_score": 79.43
-    },
-    {
-      "title": "CVE-2026-53333 | Linux Kernel up to 6.18.35/7.0.12 mm mincore_swap privilege escalation (Nessus ID 327383 / WID-SEC-2026-2175)",
-      "link": "https://vuldb.com/vuln/375500",
-      "source": "VulDB Updates",
-      "published": "2026-11-07T21:40:58+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Linux / Unix",
-        "Exploit / PoC"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 63.32,
-      "priority_score": 77.58
-    },
-    {
-      "title": "CVE-2026-42016: Incorrect authorization validation of user token in JFrog Artifactory allows Privilege Escalation (Update: proof of concept on GitHub published)",
-      "link": "https://cve.now/CVE-2026-42016",
-      "source": "cve.now - CISA Known Exploited Vulnerabilities",
-      "published": "2026-11-08T01:56:34+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs"
-      ],
-      "curated": true,
-      "signal_tier": "high",
-      "signal_score": 61.53,
-      "priority_score": 89.44
+      "signal_score": 66.25,
+      "priority_score": 70.73
     }
   ]
 }
