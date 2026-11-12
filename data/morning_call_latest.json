@@ -1,176 +1,164 @@
 {
-  "generated_at": "2026-11-11T14:14:10.018289+00:00",
-  "analysis_date": "2026-11-11",
+  "generated_at": "2026-11-12T15:08:58.657474+00:00",
+  "analysis_date": "2026-11-12",
   "provider": "openai",
   "model": "gpt-6.1-sol",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-11-11T09:06:48.487927+00:00",
+  "source_generated_at": "2026-11-12T06:11:43.145208+00:00",
   "source_days_back": 30,
-  "source_total_items": 63888,
-  "total_items_in_window_all": 4018,
-  "total_items_in_window_curated": 23,
-  "total_items_in_window_selected": 49,
+  "source_total_items": 64793,
+  "total_items_in_window_all": 1862,
+  "total_items_in_window_curated": 7,
+  "total_items_in_window_selected": 40,
   "context_selection_policy": "curated-plus-operational-signal-v1",
-  "morning_call_markdown": "### Executive Summary\n- **Prioritize exploited entry points:** Outlook, Chrome, Barracuda ESG and Xen Orchestra warrant exposure checks and emergency remediation—not routine patch queues.\n- **Protect privileged infrastructure:** N-central exploit publication and virtualization threats raise the risk of fleet-wide compromise, credential theft and disruption to critical banking services.\n- **Evidence caveat:** This briefing uses the supplied reporting; validate affected versions and fixes against vendor advisories. Patch totals conflict, and public PoC publication alone does not establish exploitation.\n\n### High-priority items (immediate attention)\n\n**1. Endpoint exposure: exploited Outlook and Chrome vulnerabilities**\n- **What happened:** Outlook CVE-2026-124194 reportedly exposes NTLMv2 authentication material; Chrome CVE-2026-125350 enables code execution inside the browser sandbox. Both are reportedly exploited.\n- **Operational impact:** Outlook creates credential-relay risk; Chrome exposes browsing endpoints, although the supplied evidence does not establish a sandbox escape.\n- **Today:** Expedite vendor updates and verify browser relaunch/compliance; validate outbound SMB blocking and investigate external NTLM authentication from affected endpoints. [Reporting](https://www.csoonline.com/article/4247015/november-2026-patch-tuesday-63-critical-microsoft-fixes-plus-an-outlook-zero-day-that-allows-theft-of-hashed-credentials.html)\n\n**2. Barracuda ESG: exploited chain to root access**\n- **What happened:** Reported active exploitation combines authentication bypass CVE-2026-116606 with privileged command injection CVE-2026-111560.\n- **Operational impact:** Gateway compromise threatens sensitive correspondence, email-routing integrity and credentials; patching alone cannot establish that an exposed appliance is clean.\n- **Today:** Confirm deployment/exposure and apply vendor remediation; preserve logs and inspect configuration changes before closing potentially compromised appliances as “patched.” [Reporting](https://cybersecuritynews.com/barracuda-email-gateway-flaws/)\n\n**3. Virtualization control planes: Xen exploitation and ESXi tooling**\n- **What happened:** Xen Orchestra advisory VSA-2026-062 describes an actively exploited authentication bypass; separate GhostFrame reporting describes ESXi/VM takeover and Windows credential theft.\n- **Operational impact:** Management-plane compromise could affect many workloads simultaneously, including payment dependencies; the reports do not establish a shared campaign.\n- **Today:** Restrict management access to approved administration paths and remediate Xen per vendor guidance; hunt unauthorized administrative sessions and VM operations. [Xen reporting](https://www.bleepingcomputer.com/news/security/critical-xen-orchestra-auth-bypass-flaw-exploited-to-hijack-vm-servers/)\n\n**4. N-able N-central: public exploits against privileged RMM**\n- **What happened:** “Able2Shell” alleges 33 vulnerabilities with public PoCs; N-able released a hotfix addressing seven CVEs, with hosted-service disruption also reported.\n- **Operational impact:** RMM compromise could distribute commands across managed endpoints; supplied reporting does not establish active exploitation or that every allegation is resolved.\n- **Today:** Identify internal/MSP dependencies and obtain hotfix coverage confirmation; restrict console access and review recent scripts, jobs and administrator changes. [Tenable](https://www.tenable.com/blog/able2shell-frequently-asked-questions-for-reported-n-able-n-central-zero-day-vulnerabilities)\n\n**5. Internet-facing applications: Craft CMS and conditional React RCE**\n- **What happened:** Craft CMS CVE-2025-32432 is reported exploited with public PoC availability; React Server Components CVE-2026-126187 has a reported PoC with incompletely described prerequisites.\n- **Operational impact:** Vulnerable public applications could expose customer data and application secrets; do not assume all React applications meet the reported exploitation conditions.\n- **Today:** Map deployed packages/configurations to vendor advisories and prioritize exposed affected systems; investigate web-service child processes and unexpected application-file changes. [Craft](https://cve.now/CVE-2025-32432) · [React](https://cve.now/CVE-2026-126187)\n\n### Monitoring & detection recommendations\n- **Outlook — email, EDR, DNS and firewall logs:** Correlate suspicious attachment activity with external SMB/NTLM connections; prioritize privileged, treasury and payment-operations users.\n- **Chrome — browser inventory and EDR:** Identify outdated or not-restarted browsers; investigate browser-linked payload execution, persistence and unusual outbound connections—not crashes alone.\n- **Barracuda — appliance audit, configuration backups and network logs:** Hunt unexpected configuration restores, timezone changes, administrative activity and new egress destinations; compare against approved changes.\n- **Xen/ESXi — management API, hypervisor, vCenter and bastion logs:** Hunt unexpected admin access, VM exports, snapshots, console sessions and host configuration changes outside maintenance windows.\n- **N-central — RMM audit and endpoint EDR:** Correlate new administrators or scripts with fan-out execution across devices; urgently escalate unapproved security-tool disabling or mass task deployment.\n- **Web applications — reverse-proxy/WAF, application and EDR logs:** Hunt request bursts followed by service-account shell execution, new executable files or secret access; baseline legitimate deployment activity.\n- **Other KEVs — BroadWorks/Openwave application, access and egress logs:** Check deployed exposure; investigate anomalous XML requests, unexpected outbound resolution and unusual transcoding activity. Validate the complete list against [CISA](https://www.cisa.gov/news-events/alerts/2026/11/10/cisa-adds-six-known-exploited-vulnerabilities-catalog).\n- **Escalation — SIEM case correlation:** L1 preserves evidence; L2 validates identity/asset scope; L3/IR coordinates containment for unauthorized privileged access, root execution or multi-host RMM activity.\n\n### Medium-term follow-ups\n- Reconcile conflicting Microsoft patch counts against MSRC; build a risk-ranked backlog for Exchange, SharePoint, LDAP and other critical services after today’s exploited exposures.\n- Reduce NTLM dependencies, assess SMB-signing coverage and tighten management-network segmentation through tested changes that protect service availability.\n- Obtain MSP/vendor attestations covering N-central remediation, incident scope, retained audit logs and contingency access during hosted-service outages.\n- Validate Git recursive-clone RCE reporting and fixed versions with upstream advisories; inventory developer endpoints, CI runners and build images before scheduling updates.\n- Retest hypervisor recovery and immutable backups. Keep unverified ransomware claims and recycled exploit-feed entries on watchlists—not treated as confirmed financial-sector incidents.",
+  "morning_call_markdown": "### Executive Summary\n- **Prioritize Outlook credential exposure and exposed infrastructure:** reported active exploitation of an Outlook flaw warrants accelerated patching; Apache, FortiMail and Ivanti reports require immediate asset matching.\n- **Protect software delivery and privileged access:** Jenkins file disclosure and Artifactory token-scope failures could expose secrets or enable repository compromise. Contractor access remains a ransomware concern.\n- **Confidence caveat:** this briefing uses supplied reporting, not independently verified advisories. Confirm affected versions, fixes and KEV status with vendors/CISA; a new feed entry or scanner is not proof of exploitation.\n\n### High-priority items (immediate attention)\n\n**1. Outlook: reported exploited credential-exposure flaw**\n- **What happened:** Reporting identifies CVE-2026-124194 as actively exploited; crafted message files can trigger connections to attacker-controlled locations and potentially expose NTLM authentication material.\n- **Operational impact:** Stolen authentication material could support credential abuse or relay, particularly where external NTLM authentication and permissive workstation egress remain possible.\n- **Today:** Endpoint engineering should validate Microsoft’s advisory and accelerate affected Outlook updates; SOC/network teams should verify outbound SMB blocking and investigate unusual external authentication.\n\n**2. Internet-facing and management infrastructure: critical vulnerability cluster**\n- **What happened:** Reports flag Apache mod_http2 RCE, FortiMail critical flaws and Ivanti Endpoint Manager CVE-2026-121653, described as unauthenticated RCE in an [NHS alert](https://digital.nhs.uk/cyber-alerts/2026/cc-4890).\n- **Operational impact:** Public web services, email gateways and endpoint-management servers are high-value entry points; management-plane compromise could provide broad access across financial-service environments.\n- **Today:** Vulnerability management should identify deployed versions and exposure, then obtain vendor-confirmed fixes; restrict vulnerable management/HA interfaces to explicitly authorized systems while remediation is coordinated.\n\n**3. CI/CD: Jenkins file disclosure and Artifactory privilege escalation**\n- **What happened:** Renewed PoC reporting covers Jenkins CVE-2024-23897; Artifactory CVE-2026-42016 reportedly permits low-privileged tokens to exceed their intended scope.\n- **Operational impact:** Exposed controller files or elevated repository access could compromise build credentials, release artifacts and downstream deployments; these are potential impacts, not reported institutional findings.\n- **Today:** DevSecOps should validate versions and restrict unnecessary CLI/API exposure; SOC should review token privileges and artifact changes, rotating secrets where exposure is suspected or confirmed.\n\n**4. Ransomware and third-party access: legacy systems and contractor credentials**\n- **What happened:** Maersk confirmed extraction from an acquired legacy system; separate Citrus reporting describes compromised contractors and stolen VPN credentials. Qilin university claims remain less substantiated.\n- **Operational impact:** The relevant financial-sector risk is unmanaged inherited infrastructure and trusted external identities enabling intrusion, exfiltration or extortion—not evidence of direct targeting of this institution.\n- **Today:** IAM and SOC should review contractor VPN activity and dormant legacy accounts; escalate suspicious access paired with discovery, bulk reads or unusual outbound transfers.\n\n**5. Additional reported KEV entries: establish applicability urgently**\n- **What happened:** Secondary reporting describes KEV additions affecting IBM, SignalWire, OpenSSH, GPUStack and Cisco BroadWorks; supplied summaries lack exact CVEs and affected versions.\n- **Operational impact:** Confirmed exploitation would elevate matching exposed assets above unvalidated PoC-only findings; product names alone are insufficient to determine whether systems are vulnerable.\n- **Today:** Threat intelligence should retrieve exact entries from CISA and map them to inventory; assign urgent remediation only after confirming applicability, exposure and available mitigations.\n\n### Monitoring & detection recommendations\n- **Outlook — EDR, email and firewall:** correlate message-file access with unexpected external SMB or NTLM activity; inspect process/network telemetry, including system-mediated connections, not just Outlook child processes.\n- **Infrastructure RCE — reverse-proxy, appliance and EDR logs:** hunt unusual requests followed by worker crashes, unexpected shell execution or new outbound sessions; compare with normal service behavior.\n- **Jenkins/Artifactory — application audit, API and CI logs:** investigate unusual CLI access, token creation, privilege changes, artifact replacement and unexpected downloads of sensitive configurations.\n- **Contractor access — VPN, IdP and endpoint logs:** correlate unfamiliar devices, atypical login times and MFA anomalies with remote administration or lateral movement; prioritize privileged external identities. *(T1078)*\n- **Exfiltration/tunneling — proxy, DNS and flow telemetry:** investigate new long-lived encrypted sessions, rare destinations and abnormal upload volumes; HTTPS or port 443 alone does not establish legitimate traffic.\n- **Ransomware — EDR, file-server and backup logs:** correlate bulk file modification with recovery-service tampering, backup deletion or security-tool impairment; isolate affected hosts when evidence supports active compromise.\n- **SignDrop claims — EDR and Windows security logs:** monitor unexplained SYSTEM-level execution and suspicious driver activity; escalate corroborated behavior, but do not label events as this exploit without validation.\n\n### Medium-term follow-ups\n- **Reduce authentication exposure:** review NTLM dependencies, SMB egress controls and relay protections; test changes with payment, trading and other legacy application owners before enforcement.\n- **Harden software delivery:** minimize repository-token scope, segregate build infrastructure and monitor release integrity; document secret-rotation procedures for controller or repository compromise.\n- **Address lower-confidence vulnerability reports:** validate Metabase, PHP, Brotli and Linux findings against vendor advisories; account for distribution backports rather than relying on version strings alone.\n- **Review public web and facilities assets:** identify obsolete Simple File List deployments, assess OWASP CRS updates and check for FUXA; coordinate any OT testing with facilities owners.\n- **Close third-party visibility gaps:** inventory acquired systems and contractor access; if Fireworks AI or affected integrations are used, request exposure details and assess sensitive data or secrets in transcripts.",
   "highlights": [
     {
-      "title": "Microsoft Outlook zero-day exploited; Git RCE in recursive clones; Xen auth bypass active",
-      "link": "https://defend.network/briefings/microsoft-outlook-zero-day-git-rce-xen-auth-bypass-2026-11-11.html",
-      "source": "defend.network",
-      "published": "2026-11-11T06:30:00+00:00",
+      "title": "Microsoft patches actively exploited Outlook zero-day",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1xtlgeg/microsoft_patches_actively_exploited_outlook/",
+      "source": "/r/cybersecurity",
+      "published": "2026-11-11T15:59:42+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC",
-        "Cloud / SaaS",
-        "General Security"
+        "OSINT / Community"
       ],
       "curated": true,
       "signal_tier": "critical",
-      "signal_score": 100.0,
-      "priority_score": 90.32
+      "signal_score": 92.98,
+      "priority_score": 86.1
     },
     {
-      "title": "Able2Shell: Frequently asked questions for reported N-able N-central zero-day vulnerabilities",
-      "link": "https://www.tenable.com/blog/able2shell-frequently-asked-questions-for-reported-n-able-n-central-zero-day-vulnerabilities",
-      "source": "Tenable Blog",
-      "published": "2026-11-11T05:55:43+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Web / API Security",
-        "Mobile Security",
-        "Exploit / PoC",
-        "Threat Actors / APT",
-        "Cloud / SaaS",
-        "Identity / Access",
-        "Ransomware",
-        "Vendors / Product Security"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 96.13,
-      "priority_score": 89.84
-    },
-    {
-      "title": "Exploited Outlook Zero-Day Among 1,094 Flaws Patched by Microsoft",
-      "link": "https://www.securityweek.com/exploited-outlook-zero-day-among-1094-flaws-patched-by-microsoft/",
-      "source": "SecurityWeek",
-      "published": "2026-11-10T19:19:46+00:00",
+      "title": "Microsoft Patches 1,235 Security Flaws: Outlook Zero-Day Already Under Attack",
+      "link": "https://www.techrepublic.com/article/news-microsoft-november-2026-patch-tuesday/",
+      "source": "Security on TechRepublic",
+      "published": "2026-11-11T19:55:23+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Cloud / SaaS",
         "Exploit / PoC",
-        "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 93.27,
-      "priority_score": 87.51
-    },
-    {
-      "title": "Newly tracked by ICHI: Barracuda Email Security Gateway unauthenticated remote code execution vulnerabilities actively exploited",
-      "link": "https://ichi.global/alert?id=ichi-adv-202611-a07687215152abaf",
-      "source": "ICHI — Internet Cyber Health Index",
-      "published": "2026-11-10T19:57:05+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Email Security / BEC",
-        "Exploit / PoC"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 89.63,
-      "priority_score": 89.61
-    },
-    {
-      "title": "New advisory: Google Chromium unauthenticated remote code execution vulnerability actively exploited",
-      "link": "https://ichi.global/alert?id=ichi-adv-202611-18f0754a851753f7",
-      "source": "ICHI — Internet Cyber Health Index",
-      "published": "2026-11-10T20:57:04+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 87.63,
-      "priority_score": 89.92
-    },
-    {
-      "title": "Microsoft November 2026 Patch Tuesday Fixes 1,093 Vulnerabilities, Including Outlook Zero-Day",
-      "link": "https://cybersecuritynews.com/microsoft-november-2026-patch-tuesday/",
-      "source": "Cyber Security News",
-      "published": "2026-11-10T19:01:53+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
         "Windows / Microsoft",
-        "Cloud / SaaS",
-        "Exploit / PoC",
-        "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 86.25,
-      "priority_score": 86.79
-    },
-    {
-      "title": "Microsoft November 2026 Patch Tuesday fixes 1,235 flaws, Outlook zero-day",
-      "link": "https://www.bleepingcomputer.com/news/microsoft/microsoft-november-2026-patch-tuesday-fixes-1-235-flaws-outlook-zero-day/",
-      "source": "BleepingComputer",
-      "published": "2026-11-10T19:07:36+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Cloud / SaaS",
-        "Exploit / PoC",
         "General Security"
       ],
       "curated": true,
       "signal_tier": "critical",
       "signal_score": 86.17,
-      "priority_score": 86.43
+      "priority_score": 86.33
     },
     {
-      "title": "CVE-2026-116606: Authentication Bypass Allows Global Configuration Restore in Barracuda Email Security Gateway (Update: added to CISA KEV)",
-      "link": "https://cve.now/CVE-2026-116606",
-      "source": "cve.now - CISA Known Exploited Vulnerabilities",
-      "published": "2026-11-10T20:36:34+00:00",
+      "title": "Maersk confirms data breach as WhiteArmor ransomware demands $5 million",
+      "link": "https://www.bleepingcomputer.com/news/security/maersk-confirms-data-breach-as-whitearmor-ransomware-demands-5-million/",
+      "source": "BleepingComputer",
+      "published": "2026-11-11T16:24:18+00:00",
       "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Email Security / BEC"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 83.45,
-      "priority_score": 88.32
-    },
-    {
-      "title": "CVE-2026-20320: A vulnerability in the Open Client Interface (OCI) XML Parser of Cisco BroadWorks could allow an unauthenticated, remote attacker to read… (Update: added to CISA KEV)",
-      "link": "https://cve.now/CVE-2026-20320",
-      "source": "cve.now - CISA Known Exploited Vulnerabilities",
-      "published": "2026-11-10T20:36:34+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 83.45,
-      "priority_score": 88.21
-    },
-    {
-      "title": "Critical authentication bypass vulnerability in Xen Orchestra under active exploitation",
-      "link": "https://www.scworld.com/brief/critical-authentication-bypass-vulnerability-in-xen-orchestra-under-active-exploitation",
-      "source": "SCM feed for Latest",
-      "published": "2026-11-10T22:54:21+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
+        "Data Breaches / Leaks",
+        "Threat Actors / APT",
+        "Ransomware",
         "General Security"
       ],
       "curated": true,
       "signal_tier": "high",
-      "signal_score": 76.09,
-      "priority_score": 85.71
+      "signal_score": 76.14,
+      "priority_score": 81.95
+    },
+    {
+      "title": "Exploit for CVE-2026-126170",
+      "link": "https://sploitus.com/exploit?id=46C078BC-491D-5D7F-9DBC-E9CADAE8846F&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-11-12T03:55:58+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.23,
+      "priority_score": 73.78
+    },
+    {
+      "title": "Exploit for CVE-2026-126148",
+      "link": "https://sploitus.com/exploit?id=ABA3C315-B9D0-5B37-97A7-D86B18ED78D8&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-11-12T03:41:26+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.23,
+      "priority_score": 73.71
+    },
+    {
+      "title": "Exploit for CVE-2026-126147",
+      "link": "https://sploitus.com/exploit?id=EABB303B-940C-5811-9DC5-94F19472E7CA&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-11-12T03:22:16+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.23,
+      "priority_score": 73.63
+    },
+    {
+      "title": "Exploit for Improperly Controlled Sequential Memory Allocation in Php",
+      "link": "https://sploitus.com/exploit?id=AF3ECCB8-CA98-5422-BF9E-AFB080A70BFB&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-11-11T21:20:29+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.23,
+      "priority_score": 72.01
+    },
+    {
+      "title": "Exploit for CVE-2026-126187",
+      "link": "https://sploitus.com/exploit?id=198D0076-AF12-50FD-977F-A72535264ADC&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-11-11T20:40:34+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.23,
+      "priority_score": 71.83
+    },
+    {
+      "title": "Exploit for CVE-2026-105016",
+      "link": "https://sploitus.com/exploit?id=40849DD6-FF94-565E-A851-AA116FEE1EB7&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-11-11T20:32:01+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.23,
+      "priority_score": 71.8
+    },
+    {
+      "title": "Exploit for CVE-2026-112174",
+      "link": "https://sploitus.com/exploit?id=A98222B4-DB57-5F48-8AC4-DD4B6C6BAA00&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-11-11T19:57:05+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.23,
+      "priority_score": 71.64
     }
   ]
 }
