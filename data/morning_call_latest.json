@@ -1,165 +1,159 @@
 {
-  "generated_at": "2026-11-15T13:57:08.102223+00:00",
-  "analysis_date": "2026-11-15",
+  "generated_at": "2026-11-16T15:39:39.934746+00:00",
+  "analysis_date": "2026-11-16",
   "provider": "openai",
   "model": "gpt-6.1-sol",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-11-15T13:41:26.549091+00:00",
+  "source_generated_at": "2026-11-16T15:10:40.080153+00:00",
   "source_days_back": 30,
-  "source_total_items": 62240,
-  "total_items_in_window_all": 1471,
-  "total_items_in_window_curated": 6,
+  "source_total_items": 62243,
+  "total_items_in_window_all": 1714,
+  "total_items_in_window_curated": 8,
   "total_items_in_window_selected": 40,
   "context_selection_policy": "curated-plus-operational-signal-v1",
-  "morning_call_markdown": "### Executive Summary\n- **Prioritize exposed applications and developer access:** reports flag server-side RCE tooling and possible developer supply-chain compromise; identify affected assets before initiating emergency changes.\n- **Validate Chrome exposure today:** secondary feeds report public PoCs for two browser RCEs. Confirm vendor advisories, deployed versions and update completion, particularly on privileged workstations.\n- **Separate fresh reporting from fresh vulnerabilities:** much of this window is recycled exploit content. Active exploitation, affected versions and several CVE mappings remain unverified; no institution-specific compromise is established.\n\n### High-priority items (immediate attention)\n\n**1. Internet-facing RCE exposure: NGINX, React/Next.js and UnrealIRCd**\n- **What happened:** feeds circulate NGINX/React RCE PoCs; one secondary briefing alleges active UnrealIRCd exploitation. [1, 2, 9, 15]\n- **Operational impact:** if validated and applicable, exposed gateways or application servers could provide initial access to customer-facing services and backend credentials.\n- **Today:** map public deployments and validate vendor advisories; restrict confirmed vulnerable services and inspect their recent process/network activity.\n\n**2. Developer supply chain and repository credentials**\n- **What happened:** a secondary briefing alleges a Cursor/Fireworks compromise and GitHub “wfx-loot” credential theft; reported scope is unverified. [2]\n- **Operational impact:** compromised developer endpoints or CI credentials could permit source theft, malicious releases and access to financial-service cloud environments.\n- **Today:** identify relevant editor/integration use and obtain primary advisories; investigate anomalous repository access and revoke credentials with credible exposure evidence.\n\n**3. Chrome RCE reports**\n- **What happened:** feeds report PoCs for CVE-2026-126912 and CVE-2026-126909, involving Skia and Passwords respectively. [19, 20]\n- **Operational impact:** malicious pages could threaten browser-heavy operations; the claimed sandbox escape and affected versions require vendor confirmation.\n- **Today:** endpoint engineering should validate Chrome advisories and update compliance; prioritize privileged, payment-operations and developer workstations if affected.\n\n**4. Application exploitation: Metabase and Laravel file manager**\n- **What happened:** curated feeds surface PoCs for Metabase CVE-2023-38646 and a Laravel file-manager issue identified as CVE-2025-56399. [11, 23]\n- **Operational impact:** reporting describes pre-authentication/unauthenticated execution paths; affected deployments could expose reporting data, application secrets and database access.\n- **Today:** confirm exact packages, versions and authentication prerequisites; remove unnecessary public access and hunt for unexpected application-spawned processes or file changes.\n\n**5. Linux privilege escalation: legacy Sudo exposure**\n- **What happened:** a feed update highlights a GitHub PoC for CVE-2021-3156; this is an established vulnerability, not a new disclosure. [18]\n- **Operational impact:** residual vulnerable Linux hosts could let an attacker turn an existing low-privilege foothold into root access.\n- **Today:** verify distro package/backport status on critical servers; investigate unexplained root execution following activity by service or other low-privilege accounts.\n\n### Monitoring & detection recommendations\n- **Web RCE — reverse-proxy/WAF, application logs and EDR:** correlate unusual requests or error spikes with web-worker shell execution, new executables and outbound connections; prioritize exposed services. **T1190**.\n- **Metabase/Laravel — application audit, file-integrity and database logs:** hunt unexpected setup/admin changes, uploaded scripts, changed application files and unusual database access by application identities.\n- **Developer compromise — EDR, DNS and proxy logs:** inspect editor-spawned shells, unexpected downloads and new persistence; correlate with installation/update times rather than treating editor use alone as malicious.\n- **Repository theft — GitHub audit, CI/CD and cloud/IdP logs:** flag unusual token use, workflow edits, runner registrations, bulk cloning and subsequent cloud activity from unfamiliar sources. **T1552**.\n- **Chrome — browser inventory, EDR and web-proxy telemetry:** identify outdated endpoints; correlate suspicious browsing with unusual browser child processes, downloaded executables or persistence. Avoid CVE-specific signatures without validation.\n- **Sudo — Linux auditd, authentication logs and EDR:** review anomalous `sudoedit` execution, crashes and unexpected root-owned processes; correlate with the originating user and preceding session activity. **T1068**.\n- **WebDAV delivery — email, proxy and Windows EDR:** monitor `.url` attachments leading to external WebDAV access and unexpected executable launches; this feed item is PoC reporting, not confirmed campaigning. [5]\n\n### Medium-term follow-ups\n- **Exposure management:** reconcile CMDB, external discovery and software inventories for NGINX, React/Next.js, Metabase, Laravel components and developer tools; assign owners to unidentified deployments.\n- **Legacy patch debt:** review Struts, Nexus, Exchange, Zabbix, WSO2 and Erlang/OTP against authoritative advisories. Reposted exploits justify coverage checks, not automatic emergency reprioritization.\n- **Developer hardening:** enforce approved editor extensions, least-privilege repository tokens, protected workflows and isolated CI runners; assess short-lived workload credentials instead of persistent secrets.\n- **Intelligence validation:** obtain vendor confirmation for the Chrome/NGINX claims and product attribution for CVE-2026-58048; do not operationalize exploit-feed severity scores alone.\n- **Handover discipline:** record exposure, evidence, owner and next checkpoint for each priority. Escalate confirmed exploitation immediately through incident response, preserving endpoint, application and identity evidence.",
+  "morning_call_markdown": "### Executive Summary\n- **Prioritize exposed security appliances and remote management:** reported Check Point exploitation, FortiSandbox RCE, and an unverified N-central bypass could provide privileged access into financial infrastructure.\n- **Check internet-facing applications and developer tooling:** LiteLLM/Starlette scanning is observed; Magento exploitation and a compromised Claude Code extension warrant targeted exposure checks.\n- **Evidence caveat:** this briefing uses the supplied reporting, not independently verified advisories. Confirm affected versions, KEV status, and mitigations with vendors; fresh PoCs do not necessarily indicate fresh exploitation.\n\n### High-priority items (immediate attention)\n\n**1. Security appliances: Check Point exploitation and FortiSandbox RCE**\n- **What happened:** reporting describes Check Point PHP2Shell attacks; FortiSandbox CVE-2026-39808 reportedly has public exploit code and KEV status. [Sources](https://isc.sans.edu/podcastdetail/10180), [FortiSandbox](https://cve.now/CVE-2026-39808).\n- **Operational impact:** compromise could expose inspection infrastructure and enable lateral movement; Check Point reporting also describes backdoors, destructive activity, and ESXi pivots.\n- **Today:** identify affected deployments and restrict management/API access; validate vendor fixes and review compromise evidence before treating patching as sufficient containment.\n\n**2. N-central: reported unauthenticated root chain**\n- **What happened:** a community report claims CVE-2026-90436 exploits the Legacy API despite Hotfix 2; vendor confirmation is absent from the supplied context. [Source](https://www.reddit.com/r/cybersecurity/comments/1xxfzn2/new_ncentral_chain_cve202690436_gives/).\n- **Operational impact:** an RMM compromise could propagate privileged commands across managed endpoints, including systems operated through an MSP.\n- **Today:** verify exposure with internal and outsourced administrators; restrict API access and disable Legacy API if vendor-supported and operationally safe, pending authoritative guidance.\n\n**3. LiteLLM/Starlette: observed scanning for an RCE chain**\n- **What happened:** SANS observed requests to `/mcp-rest/test/tools/list`, associated with attempts to exploit CVE-2026-42271 and CVE-2026-48710. [Source](https://isc.sans.edu/diary/rss/33522).\n- **Operational impact:** vulnerable AI gateways could expose application credentials and connected services; scanning is observed, but successful compromise is not established by the summary.\n- **Today:** inventory LiteLLM/Starlette services and validate affected configurations; restrict unnecessary external access and hunt for matching requests with subsequent execution or outbound connections.\n\n**4. Magento extensions: reported exploited deserialization**\n- **What happened:** Mirasvit Cache Warmer CVE-2026-45247 reportedly permits unauthenticated RCE through the `CacheWarmer` cookie; a Nuclei template is newly available. [Source](https://cve.now/CVE-2026-45247).\n- **Operational impact:** exposed merchant, rewards, or subsidiary storefronts could become entry points for server compromise and payment-data theft; applicability depends on extension deployment.\n- **Today:** confirm installations with digital-commerce owners and apply vendor remediation; review suspicious cookie requests, web-root changes, and payment-page modifications.\n\n**5. Developer supply chain: compromised Claude Code extension**\n- **What happened:** reporting links a trojanized Cursor extension to stolen vendor credentials; precise affected versions and scope are missing from the supplied summaries. [Source](https://isc.sans.edu/podcastdetail/10180).\n- **Operational impact:** affected developer workstations could expose source code, cloud tokens, signing material, or CI/CD access; do not assume all Cursor installations are compromised.\n- **Today:** obtain vendor incident details and inventory extension versions; isolate confirmed affected endpoints and revoke exposed credentials using a clean administrative environment.\n\n### Monitoring & detection recommendations\n- **Appliance exploitation — firewall/API, appliance audit, and network logs:** correlate unusual management requests with configuration changes, new administrators, unexpected egress, or access toward ESXi management networks.\n- **RMM abuse — N-central audit logs and endpoint EDR:** hunt for new API clients, privileged logins, mass script execution, security-tool disabling, and unexpected remote commands; escalate broad deployment activity immediately.\n- **AI gateway exploitation — reverse-proxy/WAF, application, and EDR logs:** search `/mcp-rest/test/tools/list`; correlate requests with errors, child processes, file creation, and new destinations. A path match alone is not proof.\n- **Magento compromise — HTTP/WAF, file-integrity, and EDR telemetry:** inspect anomalous `CacheWarmer` cookies and PHP worker shell execution; compare checkout scripts against approved baselines (T1190, T1505.003).\n- **Developer compromise — extension inventory, EDR, Git, cloud, and IdP logs:** correlate extension installation with unusual IDE child processes, secret access, repository changes, and first-seen token use.\n- **Outage-themed phishing — email security and Entra ID logs:** review Microsoft 365 “restore access” lures, credential submissions, suspicious consent grants, and sign-ins following user clicks; revoke sessions where compromise is confirmed.\n- **macOS ClickFix — email/browser telemetry and EDR:** hunt for browser-associated Terminal execution, pasted download commands, and subsequent credential-store access, reflecting reported DownTheDRAIN delivery (T1204.002).\n- **Legacy exposure — vulnerability inventory and server EDR:** prioritize reachable WebLogic, OrientDB, phpMyAdmin, and Confluence instances; investigate service-to-shell execution rather than treating newly published templates as new incidents.\n\n### Medium-term follow-ups\n- **Exposure ownership:** reconcile asset inventories with MSPs and subsidiaries; record product versions, management-plane reachability, accountable owners, and verified remediation evidence.\n- **Validate emerging advisories:** assess Traefik, Nexus Repository, musl-based OpenSSH, and SamWaf reports against vendor guidance before setting emergency patch priorities.\n- **Developer hardening:** enforce approved extension sources, version inventory, least-privilege tokens, and rapid secret revocation across workstations and CI/CD.\n- **Resilience:** test appliance recovery procedures, offline configurations, and ESXi management segmentation; verify backup administration is isolated from potentially compromised RMM credentials.\n- **Shift handover:** track each priority as **not deployed / exposed / mitigated / investigating**; preserve relevant logs and give unresolved cases an owner and next-update time.",
   "highlights": [
     {
-      "title": "react2shell",
-      "link": "https://vulners.com/kitploit/KITPLOIT:TOOLS-GITHUB-RANDARTS-REACT-RCE?utm_source=rss&utm_medium=rss&utm_campaign=rss",
-      "source": "Vulners.com RSS Feed",
-      "published": "2026-11-14T17:06:23+00:00",
+      "title": "CVE-2026-45247: Mirasvit Full Page Cache Warmer for Magento 2 remote code execution via unsafe cookie deserialization (Update: Nuclei template published)",
+      "link": "https://cve.now/CVE-2026-45247",
+      "source": "cve.now - CISA Known Exploited Vulnerabilities",
+      "published": "2026-11-16T04:28:34+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC"
       ],
-      "curated": false,
+      "curated": true,
       "signal_tier": "critical",
-      "signal_score": 100.0,
-      "priority_score": 72.18
+      "signal_score": 83.47,
+      "priority_score": 89.33
     },
     {
-      "title": "UnrealIRCd flaw, Cursor breach, GitHub wfx-loot target 61K repos",
-      "link": "https://defend.network/briefings/unrealircd-cursor-breach-github-wfx-loot-2026-11-15.html",
-      "source": "defend.network",
-      "published": "2026-11-15T06:30:00+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "Malware / Payloads",
-        "General Security"
-      ],
-      "curated": false,
-      "signal_tier": "critical",
-      "signal_score": 87.18,
-      "priority_score": 77.22
-    },
-    {
-      "title": "CVE-2026-5118",
-      "link": "https://vulners.com/kitploit/KITPLOIT:TOOLS-GITHUB-ZYCODER0DAY-CVE-2026-5118?utm_source=rss&utm_medium=rss&utm_campaign=rss",
-      "source": "Vulners.com RSS Feed",
-      "published": "2026-11-14T17:07:44+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Data Breaches / Leaks",
-        "Data Protection / Privacy",
-        "Malware / Payloads"
-      ],
-      "curated": false,
-      "signal_tier": "critical",
-      "signal_score": 80.55,
-      "priority_score": 72.19
-    },
-    {
-      "title": "Apache-Struts-0Day-Exploit",
-      "link": "https://vulners.com/kitploit/KITPLOIT:TOOLS-GITHUB-ARLYONE-APACHE-STRUTS-0DAY-EXPLOIT?utm_source=rss&utm_medium=rss&utm_campaign=rss",
-      "source": "Vulners.com RSS Feed",
-      "published": "2026-11-14T20:50:52+00:00",
+      "title": "CVE-2026-39808: Fortinet FortiSandbox remote command execution in HTTP API (Update: proof of concept on GitHub published)",
+      "link": "https://cve.now/CVE-2026-39808",
+      "source": "cve.now - CISA Known Exploited Vulnerabilities",
+      "published": "2026-11-16T08:01:34+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC"
       ],
-      "curated": false,
+      "curated": true,
       "signal_tier": "high",
-      "signal_score": 76.55,
-      "priority_score": 73.23
+      "signal_score": 77.47,
+      "priority_score": 89.76
     },
     {
-      "title": "CVE-2025-33053-WebDAV-RCE-PoC-and-C2-Concept",
-      "link": "https://vulners.com/kitploit/KITPLOIT:TOOLS-GITHUB-KRA1T0-CVE-2025-33053-WEBDAV-RCE-POC-AND-C2-CONCEPT?utm_source=rss&utm_medium=rss&utm_campaign=rss",
-      "source": "Vulners.com RSS Feed",
-      "published": "2026-11-15T10:47:26+00:00",
+      "title": "New N-central chain (CVE-2026-90436) gives unauthenticated root through the Legacy API, and Hotfix 2 doesn't stop it. Check if yours is switched on",
+      "link": "https://www.reddit.com/r/cybersecurity/comments/1xxfzn2/new_ncentral_chain_cve202690436_gives/",
+      "source": "/r/cybersecurity",
+      "published": "2026-11-16T04:20:10+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "Ransomware",
-        "Windows / Microsoft"
+        "OSINT / Community"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 76.87,
+      "priority_score": 86.3
+    },
+    {
+      "title": "CVE-2025-8018",
+      "link": "https://vulners.com/kitploit/KITPLOIT:TOOLS-GITHUB-DRACKYJR-CVE-2025-8018?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-11-15T16:46:44+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Web / API Security",
+        "Exploit / PoC"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 70.55,
-      "priority_score": 76.92
+      "signal_score": 72.57,
+      "priority_score": 71.19
     },
     {
-      "title": "Exploit for CVE-2026-123751",
-      "link": "https://sploitus.com/exploit?id=293BB77B-ED5E-5DAF-B7D2-C0052084B7C2&utm_source=rss&utm_medium=rss",
+      "title": "Exploit for CVE-2026-23693",
+      "link": "https://sploitus.com/exploit?id=8DF7AD98-4929-55F2-A358-59E133654FB7&utm_source=rss&utm_medium=rss",
       "source": "Sploitus – Exploits",
-      "published": "2026-11-15T01:58:02+00:00",
+      "published": "2026-11-16T11:28:49+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 70.27,
-      "priority_score": 71.45
+      "signal_score": 70.28,
+      "priority_score": 73.65
     },
     {
-      "title": "Exploit for CVE-2026-115934",
-      "link": "https://sploitus.com/exploit?id=1404AF5B-7FA4-5353-8882-530CEDCD1E7E&utm_source=rss&utm_medium=rss",
+      "title": "Exploit for CVE-2026-106173",
+      "link": "https://sploitus.com/exploit?id=A73D54E5-EA89-5F3A-8E41-BE01CE85AA8F&utm_source=rss&utm_medium=rss",
       "source": "Sploitus – Exploits",
-      "published": "2026-11-14T15:38:37+00:00",
+      "published": "2026-11-16T04:51:20+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 70.27,
-      "priority_score": 68.69
+      "signal_score": 70.28,
+      "priority_score": 71.88
     },
     {
-      "title": "CVE-2020-10199",
-      "link": "https://vulners.com/kitploit/KITPLOIT:TOOLS-GITHUB-JAS502N-CVE-2020-10199?utm_source=rss&utm_medium=rss&utm_campaign=rss",
-      "source": "Vulners.com RSS Feed",
-      "published": "2026-11-14T17:07:40+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 67.55,
-      "priority_score": 72.19
-    },
-    {
-      "title": "Nginx-Rift",
-      "link": "https://vulners.com/kitploit/KITPLOIT:TOOLS-GITHUB-SEC-SYS-CVE-2026-42945-REVERSE-SHELL-POC?utm_source=rss&utm_medium=rss&utm_campaign=rss",
-      "source": "Vulners.com RSS Feed",
-      "published": "2026-11-14T20:49:55+00:00",
+      "title": "Exploit for CVE-2026-129349",
+      "link": "https://sploitus.com/exploit?id=8E89ECB9-A87C-5C2E-B069-36E2AE7329DA&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-11-15T17:14:29+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 66.55,
-      "priority_score": 73.23
+      "signal_score": 68.28,
+      "priority_score": 68.77
     },
     {
-      "title": "CVE-2021-43609-POC",
-      "link": "https://vulners.com/kitploit/KITPLOIT:TOOLS-GITHUB-D5SEC-CVE-2021-43609-POC?utm_source=rss&utm_medium=rss&utm_campaign=rss",
-      "source": "Vulners.com RSS Feed",
-      "published": "2026-11-14T20:51:00+00:00",
+      "title": "CVE-2015-4852: Oracle WebLogic Server remote code execution via unsafe deserialization in T3 (Update: Nuclei template published)",
+      "link": "https://cve.now/CVE-2015-4852",
+      "source": "cve.now - CISA Known Exploited Vulnerabilities",
+      "published": "2026-11-16T00:26:34+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Threat Actors / APT",
-        "Exploit / PoC",
-        "Web / API Security"
+        "Exploit / PoC"
       ],
-      "curated": false,
+      "curated": true,
       "signal_tier": "high",
-      "signal_score": 66.55,
-      "priority_score": 72.54
+      "signal_score": 67.47,
+      "priority_score": 87.94
+    },
+    {
+      "title": "CVE-2017-16562: Authentication bypass in login enables admin access (Update: Nuclei template published)",
+      "link": "https://cve.now/CVE-2017-16562",
+      "source": "cve.now - Critical vulnerabilities",
+      "published": "2026-11-16T05:42:34+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 67.43,
+      "priority_score": 89.03
+    },
+    {
+      "title": "CVE-2017-11467: Orient Technologies OrientDB Core remote code execution in query clauses (Update: Nuclei template published)",
+      "link": "https://cve.now/CVE-2017-11467",
+      "source": "cve.now - Critical vulnerabilities",
+      "published": "2026-11-16T00:26:34+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 67.43,
+      "priority_score": 88.04
     }
   ]
 }
