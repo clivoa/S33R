@@ -1,167 +1,162 @@
 {
-  "generated_at": "2026-11-19T15:46:56.682323+00:00",
-  "analysis_date": "2026-11-19",
+  "generated_at": "2026-11-20T15:27:33.081570+00:00",
+  "analysis_date": "2026-11-20",
   "provider": "openai",
   "model": "gpt-6.1-sol",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-11-19T06:25:02.584254+00:00",
+  "source_generated_at": "2026-11-20T06:08:44.144059+00:00",
   "source_days_back": 30,
-  "source_total_items": 64935,
-  "total_items_in_window_all": 1848,
-  "total_items_in_window_curated": 14,
+  "source_total_items": 63587,
+  "total_items_in_window_all": 2069,
+  "total_items_in_window_curated": 15,
   "total_items_in_window_selected": 40,
   "context_selection_policy": "curated-plus-operational-signal-v1",
-  "morning_call_markdown": "### Executive Summary\n- **Prioritize exposed infrastructure:** critical NGINX HTTP/2 RCE disclosures and reported exploitation of management platforms and server applications require immediate asset matching, exposure reduction and patch coordination.\n- **Treat the Python supply-chain alert as potential credential compromise:** reported malicious `agent-framework` versions **1.26.1/1.26.2** put developer, CI/CD and cloud identities at risk.\n- **Correct the feed before acting:** CVE-2026-90436 concerns **Apache Axis, not N-able**. This briefing uses supplied reporting; affected versions, fixes and exploitation claims require authoritative validation.\n\n### High-priority items (immediate attention)\n\n#### 1. NGINX internet-facing RCE exposure\n- **What happened:** F5 reportedly issued emergency fixes for multiple NGINX flaws, including HTTP/2 RCEs **CVE-2026-123007/123633**; exploit listings have appeared.\n- **Operational impact:** Vulnerable reverse proxies could expose customer-facing banking services; the context does **not** establish active exploitation of these flaws.\n- **Today:** Inventory internet-facing NGINX and HTTP/2 configurations; coordinate emergency remediation against [F5’s advisory](https://my.f5.com/manage/s/article/K000164058), validating mitigations before production changes.\n\n#### 2. Python package compromise and cloud credential theft\n- **What happened:** [Orca reports](https://orca.security/resources/research/microsoft-agent-framework-pypi-supply-chain-attack-versions-1-26-1-and-1-26-2-steal-cloud-credentials/) credential-stealing code in Microsoft’s `agent-framework` PyPI package, versions **1.26.1/1.26.2**.\n- **Operational impact:** Developer endpoints and build runners may expose cloud tokens, API keys and deployment credentials; simply uninstalling the package would not invalidate stolen secrets.\n- **Today:** Block these versions and identify downloads, installations and execution; isolate affected systems as warranted, then revoke exposed credentials and investigate their use.\n\n#### 3. Exploited infrastructure-management platforms\n- **What happened:** Reporting identifies exploited **Puppet Enterprise CVE-2026-115731** and **Xen Orchestra/XOA VSA-2026-062**; a [Belgian CERT warning](https://ccb.belgium.be/advisories/warning-deserialization-untrusted-data-puppet-server-can-be-exploited-execute-arbitrary) also flags Puppet Server exploitation.\n- **Operational impact:** Configuration-management and virtualization access could enable broad downstream compromise, unauthorized VM operations and disruption of critical workloads.\n- **Today:** Confirm product/version exposure and restrict management access to approved administration paths; urgently patch while reviewing privileged activity for signs predating remediation.\n\n#### 4. Exploited Java applications, NAS and AI gateways\n- **What happened:** Reports flag Axis **CVE-2026-90436**, Roller **CVE-2026-129448**, Synology **CVE-2024-10441**, LiteLLM **CVE-2026-40217** and REDCap **CVE-2026-90817** as exploited.\n- **Operational impact:** These offer server execution paths; LiteLLM requires low privilege, while REDCap requires a valid public survey hash. NAS compromise may threaten shared data and recovery assets.\n- **Today:** Match inventories against [CISA KEV](https://www.cisa.gov/known-exploited-vulnerabilities-catalog) and vendor advisories; remediate confirmed exposure and restrict unnecessary application endpoints pending fixes.\n\n#### 5. Ransomware defense evasion and user-driven entry\n- **What happened:** Reporting describes AuditTeam’s OpsAgent disabling endpoint defenses, alongside Gootloader distribution through compromised WordPress sites targeting legal-document searches.\n- **Operational impact:** Legal teams are a relevant exposure group; endpoint protection loss followed by lateral movement warrants urgent investigation. Neither report establishes targeting of this institution.\n- **Today:** Hunt for defense tampering followed by remote execution or encryption; remind legal staff to report unexpected script downloads without opening them.\n\n### Monitoring & detection recommendations\n- **NGINX — proxy/error logs, EDR, network telemetry:** correlate HTTP/2 crashes or worker restarts with unexpected child processes, file writes or outbound connections; crashes alone are not proof.\n- **Package compromise — artifact-proxy logs, lockfiles, CI logs, EDR:** search for the two affected package versions and correlate installation times with unexpected egress; preserve runners and build artifacts.\n- **Credential misuse — cloud audit and IdP logs:** investigate exposed principals creating keys, assuming unusual roles, changing permissions or reading secrets from unfamiliar sources.\n- **Puppet/XOA — management audit logs, hypervisor events, firewall logs:** review new administrators, authentication anomalies, mass configuration jobs, VM export/deletion and connections from non-administration networks.\n- **Application RCE — WAF/access logs and EDR:** inspect unusual requests to `/roller-services/xmlrpc` and `/guardrails/test_custom_code`; correlate with server-process execution or outbound traffic (**T1190**).\n- **Ransomware — EDR, Windows Security/System and backup logs:** correlate security-service stops or exclusions with remote-service creation, recovery impairment and mass file changes (**T1562.001**, **T1490**).\n- **Gootloader — web proxy, browser-download and EDR logs:** hunt document-search downloads followed by archive extraction and `wscript`, `cscript` or PowerShell execution, especially on legal endpoints.\n\n### Medium-term follow-ups\n- Replace end-of-life **Axis 1.x** and identify embedded copies through application-owner attestations and dependency inventories, not perimeter scanning alone.\n- Harden management planes with segmentation, privileged-access controls and centralized audit retention; verify recovery paths remain available if virtualization administration is compromised.\n- Introduce package-version quarantine, controlled internal mirrors and short-lived CI credentials; require rebuilds from trusted dependencies after confirmed package compromise.\n- Review secondary exposures: Dell PowerStore command-injection reporting, BIG-IP APM/SAML availability flaws and Fleet SSO bypass; validate vendor details before scheduling remediation.\n- Improve intelligence hygiene: retract the N-able misattribution, deduplicate PoC listings and distinguish exploit availability from confirmed exploitation. Do not treat a federal KEV deadline as the institution’s automatically binding deadline.",
+  "morning_call_markdown": "### Executive Summary\n- **Prioritize vCenter immediately:** reported exploitation since September creates a retrospective compromise-assessment requirement—not just an emergency patching task.\n- **Check exposed application infrastructure:** Roller and Kestra have reported exploitation/KEV signals; new NGINX, PHP and Ruby disclosures increase patching urgency where applicable.\n- **Financial-sector exposure includes suppliers:** reported customer-data leaks originated at third parties, not the named institutions’ own systems. Validate our exposure before escalating breach assumptions.\n\n### High-priority items (immediate attention)\n\n**1. VMware vCenter: exploited authentication bypass**\n- **What happened:** CVE-2026-123890 reportedly enabled China-linked ARMORY CASTLE intrusions before patching, with administrator access and VM-file theft.\n- **Operational impact:** Virtualization management compromise threatens multiple workloads; related reporting identifies BeyondTrust Remote Support as an initial-access route.\n- **Today:** Infrastructure owners should validate/apply [Broadcom advisory guidance](https://www.rapid7.com/blog/post/etr-cve-2026-123890-critical-authentication-bypass-vmware-vcenter); SOC should restrict management access and scope historical review back to September, subject to retention.\n\n**2. Apache Roller and Kestra: remote execution exposure**\n- **What happened:** Roller CVE-2026-129448 has reported active exploitation; Kestra CVE-2026-49869 reportedly enables unauthenticated workflow execution, with KEV listing claimed.\n- **Operational impact:** Public-facing applications and orchestration workers offer execution paths; compromised Kestra workflows could expose connected secrets and downstream services.\n- **Today:** Locate deployments and verify vendor/CISA advisories; patch or restrict vulnerable endpoints pending remediation, prioritizing internet-facing instances and workers with privileged integrations.\n\n**3. NGINX, PHP and Ruby: coordinated web-stack triage**\n- **What happened:** Reports describe five critical NGINX flaws plus PHP/Ruby security releases; public PoCs exist for some runtime vulnerabilities.\n- **Operational impact:** Customer portals, APIs and container images may carry affected components; exploitability depends on configuration, and PoC availability alone does not establish active exploitation.\n- **Today:** Map deployed versions/configurations against vendor advisories; have application owners prioritize applicable internet-facing fixes and rolling restarts/redeployments under change control.\n\n**4. Financial-services supplier data exposure**\n- **What happened:** [Reporting](https://decrypt.co/383663/hackers-leak-visa-mastercard-jpmorgan-data) attributes leaked Visa, Mastercard and JPMorgan-related data to breached suppliers; Visa says no card data was affected.\n- **Operational impact:** Potential consequences include targeted phishing, impersonation and customer fraud; this does not establish compromise of our institution or payment infrastructure.\n- **Today:** Engage third-party risk and fraud teams to identify shared suppliers and request exposure confirmation; preserve relevant supplier-access logs while scope remains uncertain.\n\n**5. Safetica driver abuse: endpoint-defense impairment**\n- **What happened:** A CVE-2026-0828 PoC reportedly abuses ProcessMonitorDriver.sys to terminate arbitrary processes, including protected processes.\n- **Operational impact:** Attackers with an execution foothold could use the vulnerable driver to impair endpoint protection; the supplied reporting does not establish active campaign use.\n- **Today:** Hunt for driver presence/loading and unexplained security-agent termination; evaluate vendor updates and compatible vulnerable-driver blocking through endpoint engineering.\n\n### Monitoring & detection recommendations\n- **vCenter/BeyondTrust — appliance audit, SSO and firewall logs:** investigate new administrators, unusual management-source addresses and remote-support sessions followed by virtualization access; escalate correlated activity.\n- **VM data access — vCenter tasks/events and datastore-access logs:** hunt unusual exports, snapshots and file downloads, especially after account changes or from unfamiliar administrators.\n- **Roller/Kestra — reverse-proxy, application and container logs:** correlate unusual XML-RPC requests or workflow creation/execution with missing authentication context, shell launches or new outbound connections. Endpoint access alone is not proof.\n- **Web stack — WAF/access logs, PHP-FPM logs and EDR/runtime telemetry:** correlate request anomalies and worker crashes with web-service child processes or unexpected egress; avoid relying solely on crash alerts.\n- **Driver abuse — EDR driver-load/process events and Windows System logs:** flag unexpected ProcessMonitorDriver.sys loading followed by agent exits, service failures or telemetry gaps; correlate with deployment records.\n- **Supplier exposure — IdP, VPN and vendor-access logs:** review affected supplier identities for new devices, unusual authentication and abnormal downloads; route customer impersonation reports to fraud operations.\n- **Detection handling:** L1 should capture asset, identity and timeline; L2/L3 should validate correlated evidence before containment. Do not run unreviewed exploit repositories against production.\n\n### Medium-term follow-ups\n- **Close asset visibility gaps:** include virtualization appliances, orchestration workers, PHP/Ruby container layers and supplier integrations; assign an owner and remediation evidence to each affected deployment.\n- **Reconcile source uncertainty:** this briefing uses supplied summaries, not independently validated advisories. Confirm exact affected/fixed versions; vCenter identifiers are inconsistent, and the reported CISA additions contain conflicting product lists.\n- **Strengthen management-plane isolation:** review privileged access, remote-support pathways and service-account permissions; ensure appliance logs reach central storage with sufficient retention for delayed discovery.\n- **Review CI/CD trust boundaries:** the reportedly patched WinGet supply-chain issue warrants checking pull-request workflows, token scope and secret exposure—not assuming endpoint compromise.\n- **Track lower-priority disclosures:** validate applicability of Welcart, WSS4J and older resurfaced PoCs. Assess FastUnlock for physically accessible Windows devices; reported limited-account execution does not establish a BitLocker cryptographic break.",
   "highlights": [
     {
-      "title": "New advisory: N-able N-central unauthenticated remote code execution vulnerability actively exploited",
-      "link": "https://ichi.global/alert?id=ichi-adv-202611-7ae400b550b4a872",
-      "source": "ICHI — Internet Cyber Health Index",
-      "published": "2026-11-18T19:57:06+00:00",
+      "title": "Exploit for CVE-2026-129448",
+      "link": "https://vulners.com/githubexploit/BB0E1DC0-D82C-5FC2-8274-8B566E9FF6EE?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-11-20T04:17:15+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC"
       ],
       "curated": true,
       "signal_tier": "critical",
-      "signal_score": 89.41,
-      "priority_score": 89.28
+      "signal_score": 86.52,
+      "priority_score": 86.44
     },
     {
-      "title": "CVE-2024-10441: Synology DiskStation Manager remote code execution in system plugin daemon (Update: added to CISA KEV)",
-      "link": "https://cve.now/CVE-2024-10441",
-      "source": "cve.now - CISA Known Exploited Vulnerabilities",
-      "published": "2026-11-18T19:44:34+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 83.5,
-      "priority_score": 89.19
-    },
-    {
-      "title": "CVE-2026-90817: Vanderbilt University REDCap remote code execution in survey routing (Update: added to CISA KEV)",
-      "link": "https://cve.now/CVE-2026-90817",
-      "source": "cve.now - CISA Known Exploited Vulnerabilities",
-      "published": "2026-11-18T19:44:34+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 83.5,
-      "priority_score": 89.19
-    },
-    {
-      "title": "CVE-2026-40217: LiteLLM remote code execution via guardrails test endpoint (Update: added to CISA KEV)",
-      "link": "https://cve.now/CVE-2026-40217",
-      "source": "cve.now - CISA Known Exploited Vulnerabilities",
-      "published": "2026-11-18T19:44:34+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 83.5,
-      "priority_score": 89.19
-    },
-    {
-      "title": "Critical Apache Roller RCE Flaw Under Active Exploitation, No Authentication Required",
-      "link": "https://thehackernews.com/2026/11/critical-apache-roller-rce-flaw-under.html",
-      "source": "The Hacker News",
-      "published": "2026-11-18T17:10:45+00:00",
+      "title": "NGINX2Root: F5 patches five critical NGINX vulnerabilities",
+      "link": "https://www.helpnetsecurity.com/2026/11/19/nginx2root-nginx-vulnerabilities/",
+      "source": "Help Net Security",
+      "published": "2026-11-19T18:25:50+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC",
         "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 82.88,
-      "priority_score": 85.83
-    },
-    {
-      "title": "CISA adds critical Perforce Puppet Enterprise vulnerability to known exploited list",
-      "link": "https://www.scworld.com/brief/cisa-adds-critical-perforce-puppet-enterprise-vulnerability-to-known-exploited-list",
-      "source": "SCM feed for Latest",
-      "published": "2026-11-18T23:45:44+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 82.83,
-      "priority_score": 87.31
-    },
-    {
-      "title": "Xen Orchestra Authentication Bypass: Technical Analysis of VSA-2026-062",
-      "link": "https://blog.criminalip.io/2026/11/19/xen-orchestra-authentication-bypass-technical-analysis-of-vsa-2026-062/",
-      "source": "CIP Blog",
-      "published": "2026-11-19T02:07:49+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": true,
-      "signal_tier": "high",
-      "signal_score": 75.96,
-      "priority_score": 86.66
-    },
-    {
-      "title": "Hackers Use OpsAgent Malware to Disable Antivirus Protection and Launch Ransomware Attacks",
-      "link": "https://gbhackers.com/opsagent-malware-attack/",
-      "source": "GBHackers News",
-      "published": "2026-11-19T05:11:11+00:00",
-      "smart_groups": [
-        "Ransomware",
-        "Malware / Payloads",
-        "Windows / Microsoft",
-        "General Security"
-      ],
-      "curated": true,
-      "signal_tier": "high",
-      "signal_score": 74.01,
-      "priority_score": 87.36
-    },
-    {
-      "title": "Exploit for CVE-2026-113425",
-      "link": "https://sploitus.com/exploit?id=3558C5E6-D645-5F69-9687-424D8675E5D6&utm_source=rss&utm_medium=rss",
-      "source": "Sploitus – Exploits",
-      "published": "2026-11-19T04:33:48+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
       ],
       "curated": false,
-      "signal_tier": "high",
-      "signal_score": 70.25,
-      "priority_score": 73.99
+      "signal_tier": "critical",
+      "signal_score": 85.05,
+      "priority_score": 77.06
     },
     {
-      "title": "NGINX2Root (CVE-2026-123007): Frequently asked questions about five critical NGINX vulnerabilities",
-      "link": "https://www.tenable.com/blog/nginx2root-cve-2026-123007-frequently-asked-questions-about-five-critical-nginx",
-      "source": "Tenable Blog",
-      "published": "2026-11-19T00:18:05+00:00",
+      "title": "CVE-2026-49869: Kestra code execution via auth bypass in AuthenticationFilter (Update: Nuclei template published)",
+      "link": "https://cve.now/CVE-2026-49869",
+      "source": "cve.now - CISA Known Exploited Vulnerabilities",
+      "published": "2026-11-20T04:55:34+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "Linux / Unix",
+        "Exploit / PoC"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 83.4,
+      "priority_score": 91.69
+    },
+    {
+      "title": "Newly Patched VMware vCenter Flaw Exploited as Zero-Day by Chinese APT",
+      "link": "https://www.securityweek.com/newly-patched-vmware-vcenter-flaw-exploited-as-zero-day-by-chinese-apt/",
+      "source": "SecurityWeek",
+      "published": "2026-11-19T19:21:06+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
         "Threat Actors / APT",
-        "Cloud / SaaS",
-        "Identity / Access",
-        "Vendors / Product Security"
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 76.12,
+      "priority_score": 87.15
+    },
+    {
+      "title": "Exploit for CVE-2026-129448",
+      "link": "https://sploitus.com/exploit?id=BB0E1DC0-D82C-5FC2-8274-8B566E9FF6EE&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-11-20T04:17:15+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
       ],
       "curated": false,
       "signal_tier": "high",
-      "signal_score": 69.21,
-      "priority_score": 79.47
+      "signal_score": 70.26,
+      "priority_score": 74.07
+    },
+    {
+      "title": "VMware patches vCenter zero-day exploited in attacks since September",
+      "link": "https://www.bleepingcomputer.com/news/security/vmware-patches-vcenter-zero-day-exploited-in-attacks-since-september/",
+      "source": "BleepingComputer",
+      "published": "2026-11-20T00:26:25+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 69.99,
+      "priority_score": 88.23
+    },
+    {
+      "title": "Chinese espionage group targets critical flaw in VMware vCenter",
+      "link": "https://www.cybersecuritydive.com/news/chinese-espionage-zero-day-flaw-vmware-vcenter/875273/",
+      "source": "Cybersecurity Dive - Latest News",
+      "published": "2026-11-19T21:36:46+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 69.9,
+      "priority_score": 85.45
+    },
+    {
+      "title": "Exploit for CVE-2026-115560",
+      "link": "https://sploitus.com/exploit?id=CAFA449B-4BF7-5EA9-A583-08AB20045802&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-11-19T22:03:44+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.26,
+      "priority_score": 72.4
+    },
+    {
+      "title": "POC-CVE-2024-38820",
+      "link": "https://vulners.com/kitploit/KITPLOIT:TOOLS-GITHUB-KADAMNAYAN-POC-CVE-2024-38820?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-11-20T03:24:39+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 67.52,
+      "priority_score": 76.82
+    },
+    {
+      "title": "CVE-2022-4140: Welcart e-Commerce unauthenticated arbitrary file read in file output handler (Update: now rated critical)",
+      "link": "https://cve.now/CVE-2022-4140",
+      "source": "cve.now - Critical vulnerabilities",
+      "published": "2026-11-19T17:03:34+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 67.51,
+      "priority_score": 88.38
     }
   ]
 }
