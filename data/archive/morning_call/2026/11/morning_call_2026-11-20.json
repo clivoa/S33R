@@ -1,0 +1,162 @@
+{
+  "generated_at": "2026-11-20T15:27:33.081570+00:00",
+  "analysis_date": "2026-11-20",
+  "provider": "openai",
+  "model": "gpt-6.1-sol",
+  "window_hours": 24,
+  "source_file": "data/news_recent.json",
+  "source_generated_at": "2026-11-20T06:08:44.144059+00:00",
+  "source_days_back": 30,
+  "source_total_items": 63587,
+  "total_items_in_window_all": 2069,
+  "total_items_in_window_curated": 15,
+  "total_items_in_window_selected": 40,
+  "context_selection_policy": "curated-plus-operational-signal-v1",
+  "morning_call_markdown": "### Executive Summary\n- **Prioritize vCenter immediately:** reported exploitation since September creates a retrospective compromise-assessment requirement—not just an emergency patching task.\n- **Check exposed application infrastructure:** Roller and Kestra have reported exploitation/KEV signals; new NGINX, PHP and Ruby disclosures increase patching urgency where applicable.\n- **Financial-sector exposure includes suppliers:** reported customer-data leaks originated at third parties, not the named institutions’ own systems. Validate our exposure before escalating breach assumptions.\n\n### High-priority items (immediate attention)\n\n**1. VMware vCenter: exploited authentication bypass**\n- **What happened:** CVE-2026-123890 reportedly enabled China-linked ARMORY CASTLE intrusions before patching, with administrator access and VM-file theft.\n- **Operational impact:** Virtualization management compromise threatens multiple workloads; related reporting identifies BeyondTrust Remote Support as an initial-access route.\n- **Today:** Infrastructure owners should validate/apply [Broadcom advisory guidance](https://www.rapid7.com/blog/post/etr-cve-2026-123890-critical-authentication-bypass-vmware-vcenter); SOC should restrict management access and scope historical review back to September, subject to retention.\n\n**2. Apache Roller and Kestra: remote execution exposure**\n- **What happened:** Roller CVE-2026-129448 has reported active exploitation; Kestra CVE-2026-49869 reportedly enables unauthenticated workflow execution, with KEV listing claimed.\n- **Operational impact:** Public-facing applications and orchestration workers offer execution paths; compromised Kestra workflows could expose connected secrets and downstream services.\n- **Today:** Locate deployments and verify vendor/CISA advisories; patch or restrict vulnerable endpoints pending remediation, prioritizing internet-facing instances and workers with privileged integrations.\n\n**3. NGINX, PHP and Ruby: coordinated web-stack triage**\n- **What happened:** Reports describe five critical NGINX flaws plus PHP/Ruby security releases; public PoCs exist for some runtime vulnerabilities.\n- **Operational impact:** Customer portals, APIs and container images may carry affected components; exploitability depends on configuration, and PoC availability alone does not establish active exploitation.\n- **Today:** Map deployed versions/configurations against vendor advisories; have application owners prioritize applicable internet-facing fixes and rolling restarts/redeployments under change control.\n\n**4. Financial-services supplier data exposure**\n- **What happened:** [Reporting](https://decrypt.co/383663/hackers-leak-visa-mastercard-jpmorgan-data) attributes leaked Visa, Mastercard and JPMorgan-related data to breached suppliers; Visa says no card data was affected.\n- **Operational impact:** Potential consequences include targeted phishing, impersonation and customer fraud; this does not establish compromise of our institution or payment infrastructure.\n- **Today:** Engage third-party risk and fraud teams to identify shared suppliers and request exposure confirmation; preserve relevant supplier-access logs while scope remains uncertain.\n\n**5. Safetica driver abuse: endpoint-defense impairment**\n- **What happened:** A CVE-2026-0828 PoC reportedly abuses ProcessMonitorDriver.sys to terminate arbitrary processes, including protected processes.\n- **Operational impact:** Attackers with an execution foothold could use the vulnerable driver to impair endpoint protection; the supplied reporting does not establish active campaign use.\n- **Today:** Hunt for driver presence/loading and unexplained security-agent termination; evaluate vendor updates and compatible vulnerable-driver blocking through endpoint engineering.\n\n### Monitoring & detection recommendations\n- **vCenter/BeyondTrust — appliance audit, SSO and firewall logs:** investigate new administrators, unusual management-source addresses and remote-support sessions followed by virtualization access; escalate correlated activity.\n- **VM data access — vCenter tasks/events and datastore-access logs:** hunt unusual exports, snapshots and file downloads, especially after account changes or from unfamiliar administrators.\n- **Roller/Kestra — reverse-proxy, application and container logs:** correlate unusual XML-RPC requests or workflow creation/execution with missing authentication context, shell launches or new outbound connections. Endpoint access alone is not proof.\n- **Web stack — WAF/access logs, PHP-FPM logs and EDR/runtime telemetry:** correlate request anomalies and worker crashes with web-service child processes or unexpected egress; avoid relying solely on crash alerts.\n- **Driver abuse — EDR driver-load/process events and Windows System logs:** flag unexpected ProcessMonitorDriver.sys loading followed by agent exits, service failures or telemetry gaps; correlate with deployment records.\n- **Supplier exposure — IdP, VPN and vendor-access logs:** review affected supplier identities for new devices, unusual authentication and abnormal downloads; route customer impersonation reports to fraud operations.\n- **Detection handling:** L1 should capture asset, identity and timeline; L2/L3 should validate correlated evidence before containment. Do not run unreviewed exploit repositories against production.\n\n### Medium-term follow-ups\n- **Close asset visibility gaps:** include virtualization appliances, orchestration workers, PHP/Ruby container layers and supplier integrations; assign an owner and remediation evidence to each affected deployment.\n- **Reconcile source uncertainty:** this briefing uses supplied summaries, not independently validated advisories. Confirm exact affected/fixed versions; vCenter identifiers are inconsistent, and the reported CISA additions contain conflicting product lists.\n- **Strengthen management-plane isolation:** review privileged access, remote-support pathways and service-account permissions; ensure appliance logs reach central storage with sufficient retention for delayed discovery.\n- **Review CI/CD trust boundaries:** the reportedly patched WinGet supply-chain issue warrants checking pull-request workflows, token scope and secret exposure—not assuming endpoint compromise.\n- **Track lower-priority disclosures:** validate applicability of Welcart, WSS4J and older resurfaced PoCs. Assess FastUnlock for physically accessible Windows devices; reported limited-account execution does not establish a BitLocker cryptographic break.",
+  "highlights": [
+    {
+      "title": "Exploit for CVE-2026-129448",
+      "link": "https://vulners.com/githubexploit/BB0E1DC0-D82C-5FC2-8274-8B566E9FF6EE?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-11-20T04:17:15+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 86.52,
+      "priority_score": 86.44
+    },
+    {
+      "title": "NGINX2Root: F5 patches five critical NGINX vulnerabilities",
+      "link": "https://www.helpnetsecurity.com/2026/11/19/nginx2root-nginx-vulnerabilities/",
+      "source": "Help Net Security",
+      "published": "2026-11-19T18:25:50+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": false,
+      "signal_tier": "critical",
+      "signal_score": 85.05,
+      "priority_score": 77.06
+    },
+    {
+      "title": "CVE-2026-49869: Kestra code execution via auth bypass in AuthenticationFilter (Update: Nuclei template published)",
+      "link": "https://cve.now/CVE-2026-49869",
+      "source": "cve.now - CISA Known Exploited Vulnerabilities",
+      "published": "2026-11-20T04:55:34+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 83.4,
+      "priority_score": 91.69
+    },
+    {
+      "title": "Newly Patched VMware vCenter Flaw Exploited as Zero-Day by Chinese APT",
+      "link": "https://www.securityweek.com/newly-patched-vmware-vcenter-flaw-exploited-as-zero-day-by-chinese-apt/",
+      "source": "SecurityWeek",
+      "published": "2026-11-19T19:21:06+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Threat Actors / APT",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 76.12,
+      "priority_score": 87.15
+    },
+    {
+      "title": "Exploit for CVE-2026-129448",
+      "link": "https://sploitus.com/exploit?id=BB0E1DC0-D82C-5FC2-8274-8B566E9FF6EE&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-11-20T04:17:15+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 70.26,
+      "priority_score": 74.07
+    },
+    {
+      "title": "VMware patches vCenter zero-day exploited in attacks since September",
+      "link": "https://www.bleepingcomputer.com/news/security/vmware-patches-vcenter-zero-day-exploited-in-attacks-since-september/",
+      "source": "BleepingComputer",
+      "published": "2026-11-20T00:26:25+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 69.99,
+      "priority_score": 88.23
+    },
+    {
+      "title": "Chinese espionage group targets critical flaw in VMware vCenter",
+      "link": "https://www.cybersecuritydive.com/news/chinese-espionage-zero-day-flaw-vmware-vcenter/875273/",
+      "source": "Cybersecurity Dive - Latest News",
+      "published": "2026-11-19T21:36:46+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 69.9,
+      "priority_score": 85.45
+    },
+    {
+      "title": "Exploit for CVE-2026-115560",
+      "link": "https://sploitus.com/exploit?id=CAFA449B-4BF7-5EA9-A583-08AB20045802&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-11-19T22:03:44+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.26,
+      "priority_score": 72.4
+    },
+    {
+      "title": "POC-CVE-2024-38820",
+      "link": "https://vulners.com/kitploit/KITPLOIT:TOOLS-GITHUB-KADAMNAYAN-POC-CVE-2024-38820?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-11-20T03:24:39+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 67.52,
+      "priority_score": 76.82
+    },
+    {
+      "title": "CVE-2022-4140: Welcart e-Commerce unauthenticated arbitrary file read in file output handler (Update: now rated critical)",
+      "link": "https://cve.now/CVE-2022-4140",
+      "source": "cve.now - Critical vulnerabilities",
+      "published": "2026-11-19T17:03:34+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 67.51,
+      "priority_score": 88.38
+    }
+  ]
+}
