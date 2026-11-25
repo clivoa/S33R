@@ -1,24 +1,24 @@
 {
-  "generated_at": "2026-11-24T17:39:50.815677+00:00",
-  "analysis_date": "2026-11-24",
+  "generated_at": "2026-11-25T17:11:02.308979+00:00",
+  "analysis_date": "2026-11-25",
   "provider": "openai",
   "model": "gpt-6.1-sol",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-11-24T08:54:49.070859+00:00",
+  "source_generated_at": "2026-11-25T14:08:20.986334+00:00",
   "source_days_back": 30,
-  "source_total_items": 65166,
-  "total_items_in_window_all": 1406,
-  "total_items_in_window_curated": 11,
-  "total_items_in_window_selected": 40,
+  "source_total_items": 67044,
+  "total_items_in_window_all": 2511,
+  "total_items_in_window_curated": 41,
+  "total_items_in_window_selected": 58,
   "context_selection_policy": "curated-plus-operational-signal-v1",
-  "morning_call_markdown": "### Executive Summary\n- **Prioritize edge appliances and virtualization management:** reported exploitation affects Cisco Expressway, Ivanti Connect Secure and vCenter; compromise could expose remote access and the infrastructure control plane.\n- **New KEV additions require exposure checks:** MONAI Label enables unauthenticated RCE; MailAssure SSRF requires high-level access but can provide a route into internal services.\n- **Assessment basis:** supplied reporting only; deployment is unknown. Validate vendor advisories, affected versions and KEV entries before changes; PoC publication alone does not establish active exploitation.\n\n### High-priority items (immediate attention)\n\n**1. Edge appliances — Cisco Expressway / Ivanti Connect Secure**\n- **What happened:** Expressway CVE-2026-76466 is reportedly exploited for root command execution; Ivanti CVE-2026-111357 has a public privilege-escalation PoC.\n- **Why it matters:** These are high-trust access platforms; the Ivanti flaw requires an existing foothold, making exploitation evidence a potential indicator of an earlier compromise.\n- **Today:** Identify affected appliances and initiate vendor-approved emergency remediation; investigate suspicious systems before rebooting or rebuilding, preserving available forensic evidence.\n\n**2. vCenter — authentication bypass and potential persistent access**\n- **What happened:** Reporting describes exploited directory-service bypass CVE-2026-123890; a separate feed lists CVE-2026-59309 with a published Nuclei template.\n- **Why it matters:** Management-plane compromise could enable unauthorized administration and disruption across hosted banking services; the relationship between these two CVEs is unclear.\n- **Today:** Reconcile both identifiers against Broadcom advisories and restrict management access; review historical activity from early September where retention permits—patching alone does not exclude compromise.\n\n**3. Newly exploited applications — MONAI Label / N-able MailAssure**\n- **What happened:** CISA’s supplied notice adds MONAI Label CVE-2026-133968 and MailAssure CVE-2026-134624 to KEV for observed exploitation.\n- **Why it matters:** MONAI exposes unauthenticated path-traversal-to-RCE; MailAssure’s privileged SSRF can reach internal destinations, including through a provider-managed deployment.\n- **Today:** Confirm direct and supplier exposure, then patch or isolate affected services; ask MailAssure owners/providers to review privileged access and LDAP synchronization activity.\n\n**4. Shared software exposure — nginx / OpenJDK**\n- **What happened:** Cisco advisories identify nginx RCE vulnerabilities and OpenJDK CVE-2026-114938 exposure; the supplied summaries do not establish active exploitation.\n- **Why it matters:** Embedded copies may affect gateways and appliances outside normal server inventories; customer-facing reverse proxies deserve first review.\n- **Today:** Match exposed services and Cisco products against vendor advisories; prioritize approved fixes, using vendor packages rather than replacing embedded components independently.\n\n**5. Database management trust — EnterpriseDB PEM**\n- **What happened:** Public PoCs are reported for CVE-2026-132660 and CVE-2026-132658, involving privileged database functions and agent-role file access.\n- **Why it matters:** Low-privilege database access or control of a monitored host could threaten the central management server; prerequisites differ between the flaws.\n- **Today:** Confirm PEM versions and restrict backend access to approved systems; review agent credentials and unexpected privileged-function or server-file activity.\n\n### Monitoring & detection recommendations\n- **Edge appliances — VPN/appliance audit, firewall and DNS logs:** hunt unexpected administrative access, configuration changes and new outbound connections; correlate with internal authentication after appliance activity.\n- **vCenter — SSO, vCenter audit and ESXi logs:** flag unusual `administrator@vsphere.local` sessions, new administrators, permission changes, VM exports and snapshot activity outside approved maintenance.\n- **MONAI — reverse-proxy/application logs plus host/container telemetry:** inspect unusual `PUT /datastore/image` requests, traversal indicators and application-spawned shells; correlate requests with file writes. **T1190**.\n- **MailAssure — admin audit and egress/proxy logs:** investigate LDAP-check destination changes, connections to unexpected internal addresses and bursts across internal ports; validate the initiating account.\n- **nginx / Java — access logs, crash telemetry and EDR:** correlate malformed-request bursts or worker/JVM crashes with child processes and unusual egress; treat these as heuristics, not confirmed exploit signatures.\n- **PEM — PostgreSQL audit and server EDR:** review unexpected schema/function changes, agent-role activity and writes outside normal paths; correlate database sessions with operating-system execution.\n- **Azure API Management Classic — Azure Activity, gateway and IdP logs:** validate the reported secrets-leak exposure; hunt unusual configuration reads and subsequent use of associated credentials from unfamiliar sources.\n\n### Medium-term follow-ups\n- **Asset owners:** reconcile CMDB, external exposure and supplier inventories for appliances, vCenter, PEM and embedded nginx/Java; record applicability and remediation evidence, not just ticket closure.\n- **IR / virtualization teams:** develop a vendor-aligned vCenter compromise assessment covering identity changes, persistence, credential exposure and recovery; retain management-plane logs centrally.\n- **Cloud security:** validate the APIM Classic report against Microsoft guidance; if exposure is confirmed, scope affected secrets and coordinate rotation with dependent applications.\n- **Vulnerability management:** validate WordPress, SharePoint and npm `binary-parser` reports against primary advisories; prioritize by deployment, exploit prerequisites and business-service exposure.\n- **Detection engineering:** establish baselines for appliance egress and privileged service accounts; verify log coverage. Deduplicate recycled PoCs and avoid treating generic feed tags as evidence of ransomware or financial-sector targeting.",
+  "morning_call_markdown": "### Executive Summary\n- **Actively exploited web applications lead today’s queue:** CISA added Drupal, Idunno AntiCsrf and Optimizely vulnerabilities to KEV. Prioritize customer-facing services, authentication journeys and pages handling financial data.\n- **Protect the control plane:** a critical vCenter authentication bypass warrants urgent exposure assessment; nginx advisories and a reported Apache HTTP Server exploit module also require infrastructure-owner engagement.\n- **Separate new threats from refreshed feeds:** many older KEVs resurfaced as PoC updates—not evidence of a new campaign. This briefing uses the supplied November 24–25 reporting; validate affected versions and fixes against primary advisories.\n\n### High-priority items (immediate attention)\n\n**1. Exploited Drupal and legacy ASP.NET applications**\n- **What happened:** Drupal CVE-2026-132165 and Idunno AntiCsrf CVE-2026-131914 entered [CISA KEV](https://www.cisa.gov/news-events/alerts/2026/11/24/cisa-adds-three-known-exploited-vulnerabilities-catalog); reporting places Drupal exploitation as early as November 19.\n- **Operational impact:** unauthenticated code execution could compromise public portals and application secrets; Drupal exploitability depends on deployment conditions, while the AntiCsrf library is reportedly abandoned.\n- **Today:** identify affected deployments, including bundled AntiCsrf dependencies; obtain emergency remediation or exposure restriction, with retrospective compromise review from November 19 for Drupal.\n\n**2. Optimizely client-side supply-chain exposure**\n- **What happened:** KEV-listed CVE-2026-132224 reportedly enables malicious JavaScript insertion into certain Optimizely-hosted assets through an account-signup weakness.\n- **Operational impact:** trusted third-party scripts could expose customer sessions or entered data; a clean application server does not rule out browser-side compromise.\n- **Today:** identify financial-service pages loading Optimizely assets; have web owners validate deployed scripts and vendor remediation, suspending suspect integrations through controlled change.\n\n**3. Critical vCenter authentication bypass**\n- **What happened:** [Rapid7 reports](https://www.rapid7.com/blog/post/etr-cve-2026-123903-critical-vmware-directory-service-authentication-bypass-affects-vcenter) CVE-2026-123903 in VMware Directory Service, addressed by Broadcom advisory VMSA-2026-0011.\n- **Operational impact:** reachable vulnerable management infrastructure presents potentially severe virtualization risk; the supplied summary does **not** establish active exploitation.\n- **Today:** confirm affected builds and Directory Service reachability with virtualization owners; restrict access to approved management paths and schedule vendor-supported emergency remediation.\n\n**4. Web infrastructure: nginx advisories and Apache exploit availability**\n- **What happened:** [Cisco published an nginx impact advisory](https://sec.cloudapps.cisco.com/security/center/content/CiscoSecurityAdvisory/cisco-sa-nginx-nov-2026-e8jska2s); a secondary feed reports a Metasploit module for Apache mod_http2 CVE-2026-119618.\n- **Operational impact:** exposed proxies and web servers may offer code-execution paths; exploit availability increases urgency but does not demonstrate attacks against our estate.\n- **Today:** validate product/version applicability against upstream and appliance-vendor advisories; prioritize exposed affected systems for approved fixes or vendor-supported mitigations.\n\n### Monitoring & detection recommendations\n- **Drupal/AntiCsrf — reverse-proxy, WAF and application logs:** hunt unusual installer requests, abnormal CSRF-validation failures and subsequent successful requests; correlate with host execution rather than escalating scanning alone.\n- **Web exploitation — EDR and file-integrity telemetry:** alert on web-worker processes spawning shells, scripting interpreters or download tools, plus unexpected executable files in web roots (T1190, T1505.003).\n- **Optimizely — browser telemetry, CSP reports and synthetic page checks:** compare script content and outbound destinations with approved baselines; investigate unexpected collection endpoints on login, payment and customer-profile pages.\n- **vCenter — appliance audit, SSO and management-firewall logs:** review access from non-management networks, unexpected administrators, permission changes and unusual VM operations; correlate authentication events with administrative activity.\n- **Apache/nginx — access/error logs, process telemetry and service-health monitoring:** investigate crash/restart bursts followed by unusual child processes or outbound connections; distinguish exploitation candidates from ordinary availability incidents.\n- **Refreshed middleware KEVs — ActiveMQ/Jolokia, WSO2 and TeamCity logs:** where deployed, hunt unusual management requests, new administrators, plugins or uploads, paired with Java child processes and unexpected egress.\n- **Privilege escalation — Linux/Windows EDR and audit logs:** on vulnerable hosts, correlate unexpected root/SYSTEM transitions and protected-file changes with preceding web-service or low-privilege execution; prioritize Dirty Pipe and filesystem-parser exposure.\n- **Escalation rule — all themes:** pair suspicious requests with execution, persistence or unauthorized changes for urgent IR review; preserve logs and volatile evidence before coordinated containment.\n\n### Medium-term follow-ups\n- **Reconcile the KEV backlog:** prioritize genuinely exposed ActiveMQ, Joomla/JCE, Openfire, WSO2, TeamCity and edge appliances; do not turn every refreshed PoC entry into a new incident.\n- **Remove unsupported components:** plan replacement of abandoned AntiCsrf dependencies, retire obsolete services and remove publicly reachable development/debug tooling; verify fixes through dependency and exposure inventories.\n- **Strengthen third-party script governance:** assign business owners, baseline approved scripts and establish browser-side integrity monitoring; stage CSP changes to avoid disrupting critical customer journeys.\n- **Review AI infrastructure conditionally:** if LiteLLM or PyTorch model-package loading is present, validate the reported vulnerabilities, restrict administrative/code-testing access and require trusted model-artifact provenance.\n- **Close intelligence gaps:** obtain primary vendor details for the podcast-only ScreenConnect/Azure claims before issuing targeted alerts; record remediation owners, deadlines and compensating controls for unresolved exposures.",
   "highlights": [
     {
-      "title": "CVE-2026-111357: Ivanti Connect Secure local privilege escalation to root in dsinvoked broker (Update: proof of concept on GitHub published)",
-      "link": "https://cve.now/CVE-2026-111357",
+      "title": "CVE-2026-48907: Joomla Content Editor (JCE) extension for Joomla remote code execution in editor profile management (Update: proof of concept on GitHub published)",
+      "link": "https://cve.now/CVE-2026-48907",
       "source": "cve.now - CISA Known Exploited Vulnerabilities",
-      "published": "2026-11-24T02:01:13+00:00",
+      "published": "2026-11-25T08:01:13+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC"
@@ -26,150 +26,146 @@
       "curated": true,
       "signal_tier": "critical",
       "signal_score": 100.0,
-      "priority_score": 90.14
+      "priority_score": 92.19
     },
     {
-      "title": "Critical Cisco remote code execution bug under attack",
-      "link": "https://www.theregister.com/security/2026/11/23/critical-cisco-remote-code-execution-bug-under-attack/5311722",
-      "source": "The Register - Security",
-      "published": "2026-11-23T17:56:56+00:00",
+      "title": "CVE-2026-34197: Apache ActiveMQ Broker remote code execution in Jolokia MBeans (Update: proof of concept on GitHub published)",
+      "link": "https://cve.now/CVE-2026-34197",
+      "source": "cve.now - CISA Known Exploited Vulnerabilities",
+      "published": "2026-11-25T08:01:13+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "General Security"
+        "Exploit / PoC"
       ],
-      "curated": false,
+      "curated": true,
       "signal_tier": "critical",
-      "signal_score": 93.67,
-      "priority_score": 70.21
+      "signal_score": 100.0,
+      "priority_score": 92.07
     },
     {
-      "title": "Hackers Exploit N-able MailAssure Flaw While AI Agents Exploit MONAI Label Zero-Day",
-      "link": "https://thehackernews.com/2026/11/hackers-exploit-n-able-mailassure-flaw.html",
-      "source": "The Hacker News",
-      "published": "2026-11-24T06:02:45+00:00",
+      "title": "CVE-2023-32315: Openfire authentication bypass in admin console via path traversal (Update: proof of concept on GitHub published)",
+      "link": "https://cve.now/CVE-2023-32315",
+      "source": "cve.now - CISA Known Exploited Vulnerabilities",
+      "published": "2026-11-25T08:01:13+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Cloud / SaaS",
+        "Exploit / PoC"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 100.0,
+      "priority_score": 92.02
+    },
+    {
+      "title": "CVE-2022-0185: Linux kernel privilege escalation via heap overflow in filesystem parser (Update: proof of concept on GitHub published)",
+      "link": "https://cve.now/CVE-2022-0185",
+      "source": "cve.now - CISA Known Exploited Vulnerabilities",
+      "published": "2026-11-25T02:01:13+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Linux / Unix",
+        "Exploit / PoC"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 100.0,
+      "priority_score": 90.57
+    },
+    {
+      "title": "CVE-2022-1096: Google Chrome memory corruption in V8 via type confusion (Update: proof of concept on GitHub published)",
+      "link": "https://cve.now/CVE-2022-1096",
+      "source": "cve.now - CISA Known Exploited Vulnerabilities",
+      "published": "2026-11-25T02:01:13+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 100.0,
+      "priority_score": 90.46
+    },
+    {
+      "title": "CVE-2022-0847: Linux kernel root privilege escalation in pipe buffer handling (Update: proof of concept on GitHub published)",
+      "link": "https://cve.now/CVE-2022-0847",
+      "source": "cve.now - CISA Known Exploited Vulnerabilities",
+      "published": "2026-11-25T02:01:13+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Linux / Unix",
+        "Exploit / PoC"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 100.0,
+      "priority_score": 90.42
+    },
+    {
+      "title": "Exploited: Abandoned Idunno.AntiCsrf library opens legacy ASP.NET apps to RCE (CVE-2026-131914)",
+      "link": "https://www.helpnetsecurity.com/2026/11/25/idunno-anticsrf-rce-cve-2026-131914-exploited/",
+      "source": "Help Net Security",
+      "published": "2026-11-25T07:22:32+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
         "Exploit / PoC",
+        "Network / OT / ICS",
         "Web / API Security",
         "General Security"
       ],
       "curated": true,
       "signal_tier": "critical",
-      "signal_score": 92.86,
-      "priority_score": 88.57
+      "signal_score": 89.96,
+      "priority_score": 88.01
     },
     {
-      "title": "Patching vCenter Zero-Day Is Only Step One",
-      "link": "https://cyble.com/blog/cve-2026-123890-vcenter-zero-day-patching/",
-      "source": "Cyble",
-      "published": "2026-11-24T08:06:53+00:00",
+      "title": "CISA Adds Three Known Exploited Vulnerabilities to Catalog",
+      "link": "https://www.cisa.gov/news-events/alerts/2026/11/24/cisa-adds-three-known-exploited-vulnerabilities-catalog",
+      "source": "Cybersecurity and Infrastructure Security Agency CISA",
+      "published": "2026-11-24T20:33:54+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
-        "Identity / Access",
-        "Detection Engineering",
+        "Threat Actors / APT",
         "Exploit / PoC",
-        "Windows / Microsoft",
-        "Linux / Unix",
-        "Cloud / SaaS",
-        "Malware / Payloads",
+        "Network / OT / ICS",
         "Ransomware",
-        "Vendors / Product Security"
+        "Web / API Security",
+        "Government / CERT"
       ],
       "curated": true,
       "signal_tier": "critical",
-      "signal_score": 85.0,
-      "priority_score": 89.85
+      "signal_score": 87.06,
+      "priority_score": 85.6
     },
     {
-      "title": "CVE-2026-133968: Project-MONIA MONAI Label remote code execution via path traversal in datastore API (Update: added to CISA KEV)",
-      "link": "https://cve.now/CVE-2026-133968",
-      "source": "cve.now - CISA Known Exploited Vulnerabilities",
-      "published": "2026-11-23T20:41:13+00:00",
+      "title": "CC-4904 - Active Exploitation of Critical Vulnerability in Drupal Core",
+      "link": "https://digital.nhs.uk/cyber-alerts/2026/cc-4904",
+      "source": "NHS Digital - Cyber Alert Feed",
+      "published": "2026-11-25T11:45:00+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Government / CERT"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 85.38,
+      "priority_score": 91.11
+    },
+    {
+      "title": "CVE-2026-131914: Idunno AntiCsrf remote code execution in ASP.NET CSRF token validation (Update: added to CISA KEV)",
+      "link": "https://cve.now/CVE-2026-131914",
+      "source": "cve.now - CISA Known Exploited Vulnerabilities",
+      "published": "2026-11-24T18:21:13+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Network / OT / ICS",
         "Web / API Security"
       ],
       "curated": true,
       "signal_tier": "critical",
-      "signal_score": 83.51,
-      "priority_score": 88.82
-    },
-    {
-      "title": "Hackers Actively Exploiting Cisco Expressway Vulnerability to Gain Full Root Access",
-      "link": "https://cybersecuritynews.com/cisco-expressway-vulnerability-exploited/",
-      "source": "Cyber Security News (FeedBurner)",
-      "published": "2026-11-24T04:53:16+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "General Security"
-      ],
-      "curated": false,
-      "signal_tier": "critical",
-      "signal_score": 83.21,
-      "priority_score": 79.72
-    },
-    {
-      "title": "Exploit for CVE-2026-110858",
-      "link": "https://sploitus.com/exploit?id=F6FA0128-59FB-53B1-B0CE-B602CB849E00&utm_source=rss&utm_medium=rss",
-      "source": "Sploitus – Exploits",
-      "published": "2026-11-24T06:24:29+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 70.31,
-      "priority_score": 74.14
-    },
-    {
-      "title": "Azure API Management Classic Secrets Leak; iTerm2 Kitty Protocol RCE; binary-parser Code Injection (CVE-2026-134814) (Nov 24th 2026)",
-      "link": "https://isc.sans.edu/podcastdetail/10192",
-      "source": "SANS Internet Stormcenter Daily Cyber Security Podcast (Stormcast)",
-      "published": "2026-11-24T02:00:03+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Supply Chain / Software",
-        "Cloud / SaaS",
-        "Crypto / Web3",
-        "Exploit / PoC",
-        "Community / Briefing"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 69.34,
-      "priority_score": 79.17
-    },
-    {
-      "title": "Exploit for CVE-2026-29204",
-      "link": "https://sploitus.com/exploit?id=59BA11FE-D0A5-5076-95FD-075DEA05515D&utm_source=rss&utm_medium=rss",
-      "source": "Sploitus – Exploits",
-      "published": "2026-11-23T20:53:44+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 68.31,
-      "priority_score": 71.59
-    },
-    {
-      "title": "Exploit for Improperly Controlled Sequential Memory Allocation in Php",
-      "link": "https://sploitus.com/exploit?id=8BF61297-7A05-56E5-818E-2AE77BD9C52C&utm_source=rss&utm_medium=rss",
-      "source": "Sploitus – Exploits",
-      "published": "2026-11-23T20:52:37+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": false,
-      "signal_tier": "high",
-      "signal_score": 68.31,
-      "priority_score": 71.59
+      "signal_score": 83.77,
+      "priority_score": 88.09
     }
   ]
 }
