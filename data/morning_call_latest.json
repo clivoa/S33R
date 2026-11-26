@@ -1,171 +1,157 @@
 {
-  "generated_at": "2026-11-25T17:11:02.308979+00:00",
-  "analysis_date": "2026-11-25",
+  "generated_at": "2026-11-26T16:53:11.433723+00:00",
+  "analysis_date": "2026-11-26",
   "provider": "openai",
   "model": "gpt-6.1-sol",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-11-25T14:08:20.986334+00:00",
+  "source_generated_at": "2026-11-26T14:58:29.383519+00:00",
   "source_days_back": 30,
-  "source_total_items": 67044,
-  "total_items_in_window_all": 2511,
-  "total_items_in_window_curated": 41,
-  "total_items_in_window_selected": 58,
+  "source_total_items": 66976,
+  "total_items_in_window_all": 2476,
+  "total_items_in_window_curated": 24,
+  "total_items_in_window_selected": 50,
   "context_selection_policy": "curated-plus-operational-signal-v1",
-  "morning_call_markdown": "### Executive Summary\n- **Actively exploited web applications lead today’s queue:** CISA added Drupal, Idunno AntiCsrf and Optimizely vulnerabilities to KEV. Prioritize customer-facing services, authentication journeys and pages handling financial data.\n- **Protect the control plane:** a critical vCenter authentication bypass warrants urgent exposure assessment; nginx advisories and a reported Apache HTTP Server exploit module also require infrastructure-owner engagement.\n- **Separate new threats from refreshed feeds:** many older KEVs resurfaced as PoC updates—not evidence of a new campaign. This briefing uses the supplied November 24–25 reporting; validate affected versions and fixes against primary advisories.\n\n### High-priority items (immediate attention)\n\n**1. Exploited Drupal and legacy ASP.NET applications**\n- **What happened:** Drupal CVE-2026-132165 and Idunno AntiCsrf CVE-2026-131914 entered [CISA KEV](https://www.cisa.gov/news-events/alerts/2026/11/24/cisa-adds-three-known-exploited-vulnerabilities-catalog); reporting places Drupal exploitation as early as November 19.\n- **Operational impact:** unauthenticated code execution could compromise public portals and application secrets; Drupal exploitability depends on deployment conditions, while the AntiCsrf library is reportedly abandoned.\n- **Today:** identify affected deployments, including bundled AntiCsrf dependencies; obtain emergency remediation or exposure restriction, with retrospective compromise review from November 19 for Drupal.\n\n**2. Optimizely client-side supply-chain exposure**\n- **What happened:** KEV-listed CVE-2026-132224 reportedly enables malicious JavaScript insertion into certain Optimizely-hosted assets through an account-signup weakness.\n- **Operational impact:** trusted third-party scripts could expose customer sessions or entered data; a clean application server does not rule out browser-side compromise.\n- **Today:** identify financial-service pages loading Optimizely assets; have web owners validate deployed scripts and vendor remediation, suspending suspect integrations through controlled change.\n\n**3. Critical vCenter authentication bypass**\n- **What happened:** [Rapid7 reports](https://www.rapid7.com/blog/post/etr-cve-2026-123903-critical-vmware-directory-service-authentication-bypass-affects-vcenter) CVE-2026-123903 in VMware Directory Service, addressed by Broadcom advisory VMSA-2026-0011.\n- **Operational impact:** reachable vulnerable management infrastructure presents potentially severe virtualization risk; the supplied summary does **not** establish active exploitation.\n- **Today:** confirm affected builds and Directory Service reachability with virtualization owners; restrict access to approved management paths and schedule vendor-supported emergency remediation.\n\n**4. Web infrastructure: nginx advisories and Apache exploit availability**\n- **What happened:** [Cisco published an nginx impact advisory](https://sec.cloudapps.cisco.com/security/center/content/CiscoSecurityAdvisory/cisco-sa-nginx-nov-2026-e8jska2s); a secondary feed reports a Metasploit module for Apache mod_http2 CVE-2026-119618.\n- **Operational impact:** exposed proxies and web servers may offer code-execution paths; exploit availability increases urgency but does not demonstrate attacks against our estate.\n- **Today:** validate product/version applicability against upstream and appliance-vendor advisories; prioritize exposed affected systems for approved fixes or vendor-supported mitigations.\n\n### Monitoring & detection recommendations\n- **Drupal/AntiCsrf — reverse-proxy, WAF and application logs:** hunt unusual installer requests, abnormal CSRF-validation failures and subsequent successful requests; correlate with host execution rather than escalating scanning alone.\n- **Web exploitation — EDR and file-integrity telemetry:** alert on web-worker processes spawning shells, scripting interpreters or download tools, plus unexpected executable files in web roots (T1190, T1505.003).\n- **Optimizely — browser telemetry, CSP reports and synthetic page checks:** compare script content and outbound destinations with approved baselines; investigate unexpected collection endpoints on login, payment and customer-profile pages.\n- **vCenter — appliance audit, SSO and management-firewall logs:** review access from non-management networks, unexpected administrators, permission changes and unusual VM operations; correlate authentication events with administrative activity.\n- **Apache/nginx — access/error logs, process telemetry and service-health monitoring:** investigate crash/restart bursts followed by unusual child processes or outbound connections; distinguish exploitation candidates from ordinary availability incidents.\n- **Refreshed middleware KEVs — ActiveMQ/Jolokia, WSO2 and TeamCity logs:** where deployed, hunt unusual management requests, new administrators, plugins or uploads, paired with Java child processes and unexpected egress.\n- **Privilege escalation — Linux/Windows EDR and audit logs:** on vulnerable hosts, correlate unexpected root/SYSTEM transitions and protected-file changes with preceding web-service or low-privilege execution; prioritize Dirty Pipe and filesystem-parser exposure.\n- **Escalation rule — all themes:** pair suspicious requests with execution, persistence or unauthorized changes for urgent IR review; preserve logs and volatile evidence before coordinated containment.\n\n### Medium-term follow-ups\n- **Reconcile the KEV backlog:** prioritize genuinely exposed ActiveMQ, Joomla/JCE, Openfire, WSO2, TeamCity and edge appliances; do not turn every refreshed PoC entry into a new incident.\n- **Remove unsupported components:** plan replacement of abandoned AntiCsrf dependencies, retire obsolete services and remove publicly reachable development/debug tooling; verify fixes through dependency and exposure inventories.\n- **Strengthen third-party script governance:** assign business owners, baseline approved scripts and establish browser-side integrity monitoring; stage CSP changes to avoid disrupting critical customer journeys.\n- **Review AI infrastructure conditionally:** if LiteLLM or PyTorch model-package loading is present, validate the reported vulnerabilities, restrict administrative/code-testing access and require trusted model-artifact provenance.\n- **Close intelligence gaps:** obtain primary vendor details for the podcast-only ScreenConnect/Azure claims before issuing targeted alerts; record remediation owners, deadlines and compensating controls for unresolved exposures.",
+  "morning_call_markdown": "### Executive Summary\n- **Prioritize public-facing applications and privileged management systems:** active exploitation is reported across Drupal, Mitel, Juniper and Xen Orchestra; VMware and Cisco exploit updates increase urgency.\n- **Today’s objective:** identify affected assets, restrict exposed management interfaces, and correlate exploitation signals with account, configuration and process changes—not just scanning.\n- **Confidence caveat:** this briefing uses supplied summaries. Some CVE mappings and KEV claims are secondary-source reports; confirm vendor advisories and official KEV entries before remediation.\n\n### High-priority items (immediate attention)\n\n**1. Drupal — actively exploited site takeover**\n- **What happened:** CVE-2026-136716 reportedly addresses remaining exposure related to Fail2Install, CVE-2026-132165; both feature in exploitation reporting.\n- **Operational impact:** public websites and customer-facing content could enable account takeover, malicious content delivery or server compromise; an earlier fix may be insufficient.\n- **SOC today:** identify all Drupal deployments and verify the latest vendor remediation; hunt installer access, unexpected administrator creation and PHP changes, looking back to November 19.\n\n**2. Mitel, Juniper and Xen Orchestra — exploited appliance vulnerabilities**\n- **What happened:** [CISA announced ten KEV additions](https://www.cisa.gov/news-events/alerts/2026/11/25/cisa-adds-10-known-exploited-vulnerabilities-catalog); supplied reporting groups Mitel AWV, Juniper Session Smart, Xen Orchestra and Danfoss flaws.\n- **Operational impact:** reported capabilities include unauthenticated command execution and authentication bypass, threatening communications, network administration and virtualization control; affected components differ.\n- **SOC today:** task infrastructure owners to confirm exposure and apply vendor fixes or restrictions; review privileged sessions and configuration changes on matching appliances.\n\n**3. VMware vCenter and Cisco SD-WAN — management-plane compromise risk**\n- **What happened:** supplied reports describe new exploit tooling for vCenter syslog traversal/RCE, CVE-2026-59310, and Cisco SD-WAN authentication bypass, CVE-2026-20182.\n- **Operational impact:** successful exploitation could enable hypervisor-management compromise or unauthorized fabric changes, creating broad payment-service disruption and lateral-movement opportunities.\n- **SOC today:** verify advisories and enforce management-network allowlists; review vCenter administrative activity and SD-WAN NETCONF/configuration changes for unexplained sources or identities.\n\n**4. nginx in Cisco products — critical RCE advisory**\n- **What happened:** a [Cisco advisory](https://sec.cloudapps.cisco.com/security/center/content/CiscoSecurityAdvisory/cisco-sa-nginx-nov-2026-e8jska2s) describes critical upstream nginx vulnerabilities; the supplied context does not establish exploitation.\n- **Operational impact:** embedded nginx may be missed by standard software inventory; actual product exposure and remediation depend on Cisco’s affected-product assessment.\n- **SOC today:** match deployed Cisco products and standalone nginx against vendor guidance; coordinate approved remediation without independently replacing embedded appliance components.\n\n### Monitoring & detection recommendations\n- **Drupal / Mitel — WAF, reverse-proxy and application logs:** hunt unusual installer access, uploads and unauthenticated requests followed by successful privileged activity; correlate with new server-side files.\n- **Web-server execution — EDR, auditd and file-integrity logs:** investigate web-service processes spawning shells, download utilities or unexpected outbound connections, especially on Drupal/Mitel hosts (T1190, T1059).\n- **Juniper / Cisco — management AAA, NETCONF, configuration audit and firewall logs:** flag new administrative sources, unexpected successful sessions and unapproved routing, policy or account changes.\n- **vCenter / Xen Orchestra — platform audit, API and network logs:** correlate unusual administrator/token activity with VM deletion, snapshot removal, bulk exports or new outbound destinations.\n- **Dell driver exposure — Windows EDR and driver-load telemetry:** identify vulnerable dbutil drivers associated with CVE-2021-21551; investigate unexpected loads or privilege changes. This is local escalation, not remote entry.\n- **Ivanti — VPN, appliance-integrity and perimeter logs:** check anomalous requests and administrative changes around CVE-2026-104935 reporting; confirmed scanning alone does not establish compromise.\n- **Ransomware — EDR, backup-console and identity logs:** correlate security-tool tampering, backup changes and rapid file modification; the LostTrust/Eclipse report provides no supplied financial-sector targeting evidence.\n- **Escalation threshold:** L1 should escalate suspicious access paired with execution or privileged changes; L2/L3 should preserve appliance logs before disruptive remediation and coordinate containment with service owners.\n\n### Medium-term follow-ups\n- **Validate exposure closure:** assign an owner and deadline to each affected asset; retain version evidence, external-exposure checks and compensating controls—not merely a “patch deployed” status.\n- **Clear application RCE backlog:** inventory SugarCRM, ICTBroadcast, rConfig and GeoServer; public exploit availability warrants prioritization where deployed, but does not itself prove active exploitation.\n- **Review conditional exposure:** validate LiteLLM guardrail-testing access and musl/no-PAM OpenSSH configurations against vendor guidance; do not assume every installation is vulnerable.\n- **Include facilities technology:** ask facilities and third-party operators about Danfoss controllers; segment management access and arrange vendor-approved maintenance rather than disruptive scanning.\n- **Reduce intelligence noise:** treat reposted PrintNightmare, EternalBlue, Zerologon and Log4Shell exploits as coverage checks, not automatically new campaigns; verify legacy remediation gaps.\n- **Strengthen recovery readiness:** test immutable backups and management-plane isolation; request validated LostTrust/Eclipse indicators before adding campaign-specific blocks or signatures.",
   "highlights": [
     {
-      "title": "CVE-2026-48907: Joomla Content Editor (JCE) extension for Joomla remote code execution in editor profile management (Update: proof of concept on GitHub published)",
-      "link": "https://cve.now/CVE-2026-48907",
+      "title": "CVE-2021-21551: Dell dbutil denial of service and privilege escalation in kernel driver (Update: proof of concept on GitHub published)",
+      "link": "https://cve.now/CVE-2021-21551",
       "source": "cve.now - CISA Known Exploited Vulnerabilities",
-      "published": "2026-11-25T08:01:13+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 100.0,
-      "priority_score": 92.19
-    },
-    {
-      "title": "CVE-2026-34197: Apache ActiveMQ Broker remote code execution in Jolokia MBeans (Update: proof of concept on GitHub published)",
-      "link": "https://cve.now/CVE-2026-34197",
-      "source": "cve.now - CISA Known Exploited Vulnerabilities",
-      "published": "2026-11-25T08:01:13+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 100.0,
-      "priority_score": 92.07
-    },
-    {
-      "title": "CVE-2023-32315: Openfire authentication bypass in admin console via path traversal (Update: proof of concept on GitHub published)",
-      "link": "https://cve.now/CVE-2023-32315",
-      "source": "cve.now - CISA Known Exploited Vulnerabilities",
-      "published": "2026-11-25T08:01:13+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 100.0,
-      "priority_score": 92.02
-    },
-    {
-      "title": "CVE-2022-0185: Linux kernel privilege escalation via heap overflow in filesystem parser (Update: proof of concept on GitHub published)",
-      "link": "https://cve.now/CVE-2022-0185",
-      "source": "cve.now - CISA Known Exploited Vulnerabilities",
-      "published": "2026-11-25T02:01:13+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Linux / Unix",
-        "Exploit / PoC"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 100.0,
-      "priority_score": 90.57
-    },
-    {
-      "title": "CVE-2022-1096: Google Chrome memory corruption in V8 via type confusion (Update: proof of concept on GitHub published)",
-      "link": "https://cve.now/CVE-2022-1096",
-      "source": "cve.now - CISA Known Exploited Vulnerabilities",
-      "published": "2026-11-25T02:01:13+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 100.0,
-      "priority_score": 90.46
-    },
-    {
-      "title": "CVE-2022-0847: Linux kernel root privilege escalation in pipe buffer handling (Update: proof of concept on GitHub published)",
-      "link": "https://cve.now/CVE-2022-0847",
-      "source": "cve.now - CISA Known Exploited Vulnerabilities",
-      "published": "2026-11-25T02:01:13+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Linux / Unix",
-        "Exploit / PoC"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 100.0,
-      "priority_score": 90.42
-    },
-    {
-      "title": "Exploited: Abandoned Idunno.AntiCsrf library opens legacy ASP.NET apps to RCE (CVE-2026-131914)",
-      "link": "https://www.helpnetsecurity.com/2026/11/25/idunno-anticsrf-rce-cve-2026-131914-exploited/",
-      "source": "Help Net Security",
-      "published": "2026-11-25T07:22:32+00:00",
+      "published": "2026-11-26T08:01:14+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC",
-        "Network / OT / ICS",
-        "Web / API Security",
-        "General Security"
+        "Linux / Unix",
+        "Windows / Microsoft"
       ],
       "curated": true,
       "signal_tier": "critical",
-      "signal_score": 89.96,
+      "signal_score": 100.0,
+      "priority_score": 91.66
+    },
+    {
+      "title": "CC-4905 - Active Exploitation of Critical Vulnerability in Drupal Core",
+      "link": "https://digital.nhs.uk/cyber-alerts/2026/cc-4905",
+      "source": "NHS Digital - Cyber Alert Feed",
+      "published": "2026-11-26T13:34:00+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Government / CERT"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 85.26,
+      "priority_score": 90.25
+    },
+    {
+      "title": "Drupal Fail2Install RCE (CVE-2026-132165) Exploited in the Wild",
+      "link": "https://socradar.io/blog/drupal-fail2install-cve-2026-132165-exploited/",
+      "source": "SOCRadar® Cyber Intelligence Inc.",
+      "published": "2026-11-26T11:37:48+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 85.11,
+      "priority_score": 88.97
+    },
+    {
+      "title": "CVE-2026-133311: Mitel MiCollab authentication bypass in AWV conferencing component (Update: added to CISA KEV)",
+      "link": "https://cve.now/CVE-2026-133311",
+      "source": "cve.now - CISA Known Exploited Vulnerabilities",
+      "published": "2026-11-25T20:11:13+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 83.74,
+      "priority_score": 88.49
+    },
+    {
+      "title": "CVE-2026-133324: Mitel MiCollab authentication bypass in AWV conferencing (Update: added to CISA KEV)",
+      "link": "https://cve.now/CVE-2026-133324",
+      "source": "cve.now - CISA Known Exploited Vulnerabilities",
+      "published": "2026-11-25T20:11:13+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 83.74,
+      "priority_score": 88.49
+    },
+    {
+      "title": "CVE-2026-59310: VMware remote code execution via path traversal in syslog server (Update: Nuclei template published)",
+      "link": "https://cve.now/CVE-2026-59310",
+      "source": "cve.now - CISA Known Exploited Vulnerabilities",
+      "published": "2026-11-25T19:21:13+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Web / API Security",
+        "Exploit / PoC"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 83.74,
+      "priority_score": 88.32
+    },
+    {
+      "title": "CVE-2025-41450: Danfoss AK-SM 8xxA Series authentication bypass in login grants privileged access (Update: added to CISA KEV)",
+      "link": "https://cve.now/CVE-2025-41450",
+      "source": "cve.now - CISA Known Exploited Vulnerabilities",
+      "published": "2026-11-25T20:11:13+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 83.74,
+      "priority_score": 88.12
+    },
+    {
+      "title": "CVE-2026-133469: Xen Orchestra remote authentication bypass in REST API login tokens (Update: added to CISA KEV)",
+      "link": "https://cve.now/CVE-2026-133469",
+      "source": "cve.now - CISA Known Exploited Vulnerabilities",
+      "published": "2026-11-25T20:11:13+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 83.74,
+      "priority_score": 88.12
+    },
+    {
+      "title": "CVE-2026-133323: Mitel MiCollab unauthenticated command execution in AWV component (Update: added to CISA KEV)",
+      "link": "https://cve.now/CVE-2026-133323",
+      "source": "cve.now - CISA Known Exploited Vulnerabilities",
+      "published": "2026-11-25T20:11:13+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 83.74,
       "priority_score": 88.01
     },
     {
-      "title": "CISA Adds Three Known Exploited Vulnerabilities to Catalog",
-      "link": "https://www.cisa.gov/news-events/alerts/2026/11/24/cisa-adds-three-known-exploited-vulnerabilities-catalog",
-      "source": "Cybersecurity and Infrastructure Security Agency CISA",
-      "published": "2026-11-24T20:33:54+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Threat Actors / APT",
-        "Exploit / PoC",
-        "Network / OT / ICS",
-        "Ransomware",
-        "Web / API Security",
-        "Government / CERT"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 87.06,
-      "priority_score": 85.6
-    },
-    {
-      "title": "CC-4904 - Active Exploitation of Critical Vulnerability in Drupal Core",
-      "link": "https://digital.nhs.uk/cyber-alerts/2026/cc-4904",
-      "source": "NHS Digital - Cyber Alert Feed",
-      "published": "2026-11-25T11:45:00+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "Government / CERT"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 85.38,
-      "priority_score": 91.11
-    },
-    {
-      "title": "CVE-2026-131914: Idunno AntiCsrf remote code execution in ASP.NET CSRF token validation (Update: added to CISA KEV)",
-      "link": "https://cve.now/CVE-2026-131914",
+      "title": "CVE-2026-133275: Mitel MiCollab unauthenticated file upload in AWV conferencing (Update: added to CISA KEV)",
+      "link": "https://cve.now/CVE-2026-133275",
       "source": "cve.now - CISA Known Exploited Vulnerabilities",
-      "published": "2026-11-24T18:21:13+00:00",
+      "published": "2026-11-25T20:11:13+00:00",
       "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC",
-        "Network / OT / ICS",
-        "Web / API Security"
+        "Vulnerabilities / CVEs"
       ],
       "curated": true,
       "signal_tier": "critical",
-      "signal_score": 83.77,
-      "priority_score": 88.09
+      "signal_score": 83.74,
+      "priority_score": 86.93
     }
   ]
 }
