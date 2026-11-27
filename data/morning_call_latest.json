@@ -1,157 +1,166 @@
 {
-  "generated_at": "2026-11-26T16:53:11.433723+00:00",
-  "analysis_date": "2026-11-26",
+  "generated_at": "2026-11-27T16:37:20.330840+00:00",
+  "analysis_date": "2026-11-27",
   "provider": "openai",
   "model": "gpt-6.1-sol",
   "window_hours": 24,
   "source_file": "data/news_recent.json",
-  "source_generated_at": "2026-11-26T14:58:29.383519+00:00",
+  "source_generated_at": "2026-11-27T07:14:23.589774+00:00",
   "source_days_back": 30,
-  "source_total_items": 66976,
-  "total_items_in_window_all": 2476,
-  "total_items_in_window_curated": 24,
-  "total_items_in_window_selected": 50,
+  "source_total_items": 66894,
+  "total_items_in_window_all": 1205,
+  "total_items_in_window_curated": 7,
+  "total_items_in_window_selected": 40,
   "context_selection_policy": "curated-plus-operational-signal-v1",
-  "morning_call_markdown": "### Executive Summary\n- **Prioritize public-facing applications and privileged management systems:** active exploitation is reported across Drupal, Mitel, Juniper and Xen Orchestra; VMware and Cisco exploit updates increase urgency.\n- **Today’s objective:** identify affected assets, restrict exposed management interfaces, and correlate exploitation signals with account, configuration and process changes—not just scanning.\n- **Confidence caveat:** this briefing uses supplied summaries. Some CVE mappings and KEV claims are secondary-source reports; confirm vendor advisories and official KEV entries before remediation.\n\n### High-priority items (immediate attention)\n\n**1. Drupal — actively exploited site takeover**\n- **What happened:** CVE-2026-136716 reportedly addresses remaining exposure related to Fail2Install, CVE-2026-132165; both feature in exploitation reporting.\n- **Operational impact:** public websites and customer-facing content could enable account takeover, malicious content delivery or server compromise; an earlier fix may be insufficient.\n- **SOC today:** identify all Drupal deployments and verify the latest vendor remediation; hunt installer access, unexpected administrator creation and PHP changes, looking back to November 19.\n\n**2. Mitel, Juniper and Xen Orchestra — exploited appliance vulnerabilities**\n- **What happened:** [CISA announced ten KEV additions](https://www.cisa.gov/news-events/alerts/2026/11/25/cisa-adds-10-known-exploited-vulnerabilities-catalog); supplied reporting groups Mitel AWV, Juniper Session Smart, Xen Orchestra and Danfoss flaws.\n- **Operational impact:** reported capabilities include unauthenticated command execution and authentication bypass, threatening communications, network administration and virtualization control; affected components differ.\n- **SOC today:** task infrastructure owners to confirm exposure and apply vendor fixes or restrictions; review privileged sessions and configuration changes on matching appliances.\n\n**3. VMware vCenter and Cisco SD-WAN — management-plane compromise risk**\n- **What happened:** supplied reports describe new exploit tooling for vCenter syslog traversal/RCE, CVE-2026-59310, and Cisco SD-WAN authentication bypass, CVE-2026-20182.\n- **Operational impact:** successful exploitation could enable hypervisor-management compromise or unauthorized fabric changes, creating broad payment-service disruption and lateral-movement opportunities.\n- **SOC today:** verify advisories and enforce management-network allowlists; review vCenter administrative activity and SD-WAN NETCONF/configuration changes for unexplained sources or identities.\n\n**4. nginx in Cisco products — critical RCE advisory**\n- **What happened:** a [Cisco advisory](https://sec.cloudapps.cisco.com/security/center/content/CiscoSecurityAdvisory/cisco-sa-nginx-nov-2026-e8jska2s) describes critical upstream nginx vulnerabilities; the supplied context does not establish exploitation.\n- **Operational impact:** embedded nginx may be missed by standard software inventory; actual product exposure and remediation depend on Cisco’s affected-product assessment.\n- **SOC today:** match deployed Cisco products and standalone nginx against vendor guidance; coordinate approved remediation without independently replacing embedded appliance components.\n\n### Monitoring & detection recommendations\n- **Drupal / Mitel — WAF, reverse-proxy and application logs:** hunt unusual installer access, uploads and unauthenticated requests followed by successful privileged activity; correlate with new server-side files.\n- **Web-server execution — EDR, auditd and file-integrity logs:** investigate web-service processes spawning shells, download utilities or unexpected outbound connections, especially on Drupal/Mitel hosts (T1190, T1059).\n- **Juniper / Cisco — management AAA, NETCONF, configuration audit and firewall logs:** flag new administrative sources, unexpected successful sessions and unapproved routing, policy or account changes.\n- **vCenter / Xen Orchestra — platform audit, API and network logs:** correlate unusual administrator/token activity with VM deletion, snapshot removal, bulk exports or new outbound destinations.\n- **Dell driver exposure — Windows EDR and driver-load telemetry:** identify vulnerable dbutil drivers associated with CVE-2021-21551; investigate unexpected loads or privilege changes. This is local escalation, not remote entry.\n- **Ivanti — VPN, appliance-integrity and perimeter logs:** check anomalous requests and administrative changes around CVE-2026-104935 reporting; confirmed scanning alone does not establish compromise.\n- **Ransomware — EDR, backup-console and identity logs:** correlate security-tool tampering, backup changes and rapid file modification; the LostTrust/Eclipse report provides no supplied financial-sector targeting evidence.\n- **Escalation threshold:** L1 should escalate suspicious access paired with execution or privileged changes; L2/L3 should preserve appliance logs before disruptive remediation and coordinate containment with service owners.\n\n### Medium-term follow-ups\n- **Validate exposure closure:** assign an owner and deadline to each affected asset; retain version evidence, external-exposure checks and compensating controls—not merely a “patch deployed” status.\n- **Clear application RCE backlog:** inventory SugarCRM, ICTBroadcast, rConfig and GeoServer; public exploit availability warrants prioritization where deployed, but does not itself prove active exploitation.\n- **Review conditional exposure:** validate LiteLLM guardrail-testing access and musl/no-PAM OpenSSH configurations against vendor guidance; do not assume every installation is vulnerable.\n- **Include facilities technology:** ask facilities and third-party operators about Danfoss controllers; segment management access and arrange vendor-approved maintenance rather than disruptive scanning.\n- **Reduce intelligence noise:** treat reposted PrintNightmare, EternalBlue, Zerologon and Log4Shell exploits as coverage checks, not automatically new campaigns; verify legacy remediation gaps.\n- **Strengthen recovery readiness:** test immutable backups and management-plane isolation; request validated LostTrust/Eclipse indicators before adding campaign-specific blocks or signatures.",
+  "morning_call_markdown": "### Executive Summary\n- **Prioritize exposed management infrastructure:** reported Cacti guest-access RCE has public exploit code and no reported patch; Drupal, Juniper and Mitel exploitation warrants immediate exposure checks.\n- **Protect data and administrative access:** assess GeoTools/PostGIS SQL injection, MongoDB memory disclosure, and RealVNC/Tomcat remote-code-execution exposure before routine vulnerability queues.\n- **Evidence caveat:** this briefing uses supplied reporting, not independently verified advisories. Validate affected versions and fixes with vendors; distinguish active exploitation from PoC publication and resurfaced older vulnerabilities.\n\n### High-priority items (immediate attention)\n\n**1. Cacti monitoring-server zero-day**\n- **What happened:** [Reporting](https://thehackernews.com/2026/11/unpatched-cacti-zero-day-enables-rce-in.html) describes unauthenticated command execution when guest access is enabled; public PoC, no CVE or patch reported.\n- **Operational impact:** monitoring servers may expose infrastructure credentials and privileged network reachability, making compromise a potential route into critical service environments.\n- **Today:** identify Cacti instances and disable guest access/restrict ingress; hunt web-service child processes and unexpected outbound connections before considering containment complete.\n\n**2. Actively exploited web, network and collaboration platforms**\n- **What happened:** reports flag Drupal CVE-2026-136716, Juniper Session Smart Conductor CVE-2026-103406 and [Mitel MiCollab flaws](https://ccb.belgium.be/advisories/warning-actively-exploited-critical-vulnerabilities-mitel-micollab-patch-immediately) as exploited.\n- **Operational impact:** exposed websites, network orchestration and collaboration services offer distinct entry points; Drupal reporting indicates an earlier installer fix left a takeover gap.\n- **Today:** reconcile internet-facing inventory with vendor advisories and initiate emergency remediation; review exposed systems for unauthorized accounts, configuration changes and persistence—not just patch status.\n\n**3. Database exposure: GeoTools and MongoDB**\n- **What happened:** GeoTools CVE-2026-76904 reportedly permits unauthenticated SQL injection against PostGIS layers; MongoDB CVE-2025-14847 memory-disclosure tooling has resurfaced.\n- **Operational impact:** affected services could expose sensitive records or server-memory secrets; GeoTools exposure depends on reachable filter functionality and the PostGIS configuration.\n- **Today:** map affected applications and database versions, restricting unnecessary ingress; apply vendor fixes or documented mitigations, prioritizing services connected to sensitive financial/customer datasets.\n\n**4. Remote administration: RealVNC and legacy Tomcat**\n- **What happened:** [RealVNC reporting](https://cvefeed.io/vuln/detail/CVE-2026-137738) describes unauthenticated UDP RCE before 7.19.1; fresh tooling highlights older Tomcat JMX vulnerability CVE-2016-8735.\n- **Operational impact:** exposed remote-control or JMX interfaces can provide server execution; Tomcat risk requires the affected listener/configuration, not merely a Tomcat installation.\n- **Today:** validate RealVNC vendor guidance and upgrade affected deployments; restrict RealVNC UDP and Tomcat JMX access to approved management paths after checking operational dependencies.\n\n**5. Developer supply-chain compromise**\n- **What happened:** [PolinRider reporting](https://gbhackers.com/hidden-python-loaders/) describes Python loaders hidden in repository utilities or `conftest.py`, retrieving Ethereum-hosted content and executing JavaScript through Node.js.\n- **Operational impact:** importing code or running tests could execute a loader on developer/CI systems holding source access, deployment credentials or signing material.\n- **Today:** review recently imported repositories and unexpected Python-to-Node execution; quarantine suspicious workspaces and investigate credential exposure before restoring affected runners.\n\n### Monitoring & detection recommendations\n- **Cacti/Drupal — reverse-proxy, WAF and application logs:** hunt unusual guest/installer activity, new administrators and webroot changes; correlate with host execution rather than treating HTTP errors alone as compromise.\n- **Web exploitation — EDR/Linux audit:** alert on web or Java services spawning shells, download utilities or unexpected interpreters; review new scheduled tasks and services (T1190, T1505.003).\n- **Juniper/Mitel — appliance audit, firewall and identity logs:** investigate unfamiliar management sources, account creation, configuration exports and unexpected outbound sessions; preserve logs before disruptive maintenance.\n- **GeoTools/MongoDB — application, database audit and network logs:** inspect unusual filter requests, SQL errors, anomalous query volume and unexpected client access; network metadata alone cannot establish memory disclosure.\n- **RealVNC/Tomcat — firewall, flow and EDR:** identify unapproved sources reaching configured UDP/JMX listeners; investigate associated Java or remote-access-service process anomalies.\n- **PolinRider — CI audit, EDR, DNS and proxy:** correlate Python/pytest execution with Ethereum API/RPC access and subsequent Node.js launches; baseline legitimate blockchain-related development first.\n- **Ransomware evasion — Defender/EDR plus identity and network telemetry:** hunt suspicious execution chains, credential access and lateral movement despite absent malware alerts; the supplied report does not establish universal Defender bypass.\n\n### Medium-term follow-ups\n- **Asset owners:** record exposure, version, remediation owner and deadline for each applicable priority item; require evidence for “not affected,” including managed-service deployments.\n- **Engineering:** review Apache Shiro `ActiveDirectoryRealm` deployments before 3.0.2 and relevant authentication-library advisories; validate exploit prerequisites before assigning emergency severity.\n- **Platform teams:** assess applicable OpenShift, ACS, Keycloak and NetBird reports against vendor guidance; aggregator severity labels alone should not determine change priority.\n- **Web teams:** consolidate WordPress theme/plugin findings into one remediation campaign; include administrator-session protection and password-reset cache exclusions.\n- **SOC engineering:** retain sufficient application, appliance and CI telemetry for retrospective hunting; test cross-source detections and document containment dependencies for critical financial services.",
   "highlights": [
     {
-      "title": "CVE-2021-21551: Dell dbutil denial of service and privilege escalation in kernel driver (Update: proof of concept on GitHub published)",
-      "link": "https://cve.now/CVE-2021-21551",
-      "source": "cve.now - CISA Known Exploited Vulnerabilities",
-      "published": "2026-11-26T08:01:14+00:00",
+      "title": "Unpatched Cacti Zero-Day Enables RCE in Just Four HTTP Requests via Guest Access",
+      "link": "https://thehackernews.com/2026/11/unpatched-cacti-zero-day-enables-rce-in.html",
+      "source": "The Hacker News",
+      "published": "2026-11-27T05:48:20+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC",
-        "Linux / Unix",
-        "Windows / Microsoft"
+        "General Security"
       ],
       "curated": true,
       "signal_tier": "critical",
-      "signal_score": 100.0,
-      "priority_score": 91.66
+      "signal_score": 93.87,
+      "priority_score": 88.95
     },
     {
-      "title": "CC-4905 - Active Exploitation of Critical Vulnerability in Drupal Core",
-      "link": "https://digital.nhs.uk/cyber-alerts/2026/cc-4905",
-      "source": "NHS Digital - Cyber Alert Feed",
-      "published": "2026-11-26T13:34:00+00:00",
+      "title": "Unpatched Cacti Zero-Day Enables RCE in Just Four HTTP Requests via Guest Access",
+      "link": "https://vulners.com/thn/THN:2C58DFF3B663255AE4653845DFE985C6?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-11-27T05:48:00+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC",
-        "Government / CERT"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 85.26,
-      "priority_score": 90.25
-    },
-    {
-      "title": "Drupal Fail2Install RCE (CVE-2026-132165) Exploited in the Wild",
-      "link": "https://socradar.io/blog/drupal-fail2install-cve-2026-132165-exploited/",
-      "source": "SOCRadar® Cyber Intelligence Inc.",
-      "published": "2026-11-26T11:37:48+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
-        "Exploit / PoC"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 85.11,
-      "priority_score": 88.97
-    },
-    {
-      "title": "CVE-2026-133311: Mitel MiCollab authentication bypass in AWV conferencing component (Update: added to CISA KEV)",
-      "link": "https://cve.now/CVE-2026-133311",
-      "source": "cve.now - CISA Known Exploited Vulnerabilities",
-      "published": "2026-11-25T20:11:13+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 83.74,
-      "priority_score": 88.49
-    },
-    {
-      "title": "CVE-2026-133324: Mitel MiCollab authentication bypass in AWV conferencing (Update: added to CISA KEV)",
-      "link": "https://cve.now/CVE-2026-133324",
-      "source": "cve.now - CISA Known Exploited Vulnerabilities",
-      "published": "2026-11-25T20:11:13+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 83.74,
-      "priority_score": 88.49
-    },
-    {
-      "title": "CVE-2026-59310: VMware remote code execution via path traversal in syslog server (Update: Nuclei template published)",
-      "link": "https://cve.now/CVE-2026-59310",
-      "source": "cve.now - CISA Known Exploited Vulnerabilities",
-      "published": "2026-11-25T19:21:13+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs",
         "Web / API Security",
-        "Exploit / PoC"
+        "Phishing / Social Engineering"
       ],
       "curated": true,
       "signal_tier": "critical",
-      "signal_score": 83.74,
-      "priority_score": 88.32
+      "signal_score": 93.46,
+      "priority_score": 86.87
     },
     {
-      "title": "CVE-2025-41450: Danfoss AK-SM 8xxA Series authentication bypass in login grants privileged access (Update: added to CISA KEV)",
-      "link": "https://cve.now/CVE-2025-41450",
+      "title": "Drupal Warns of New Critical Flaw Exploited in the Wild",
+      "link": "https://securityaffairs.com/204085/security/drupal-warns-of-new-critical-flaw-exploited-in-the-wild.html",
+      "source": "Security Affairs",
+      "published": "2026-11-26T19:45:57+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 83.0,
+      "priority_score": 86.28
+    },
+    {
+      "title": "cve-watch exploit",
+      "link": "https://sploitus.com/exploit?id=4AC1041E-0388-59D1-AB3C-159A7E95C5E1&utm_source=rss&utm_medium=rss",
+      "source": "Sploitus – Exploits",
+      "published": "2026-11-26T22:31:55+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 68.23,
+      "priority_score": 72.09
+    },
+    {
+      "title": "CVE-2026-76904: GeoTools unauthenticated SQL injection in jsonArrayContains filter (Update: now rated critical)",
+      "link": "https://cve.now/CVE-2026-76904",
+      "source": "cve.now - Critical vulnerabilities",
+      "published": "2026-11-26T18:51:13+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Web / API Security"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 67.57,
+      "priority_score": 87.78
+    },
+    {
+      "title": "mongobleed",
+      "link": "https://vulners.com/kitploit/KITPLOIT:TOOLS-GITHUB-JOSHUAVANDERPOLL-CVE-2025-14847?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-11-26T20:47:22+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Data Breaches / Leaks"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 66.46,
+      "priority_score": 73.81
+    },
+    {
+      "title": "Cacti 4HTTP2ROOT Zero-Day Lets Hackers Execute Commands on Network Monitoring Servers Without Login",
+      "link": "https://cybersecuritynews.com/cacti-4http2root-zero-day/",
+      "source": "Cyber Security News",
+      "published": "2026-11-27T05:47:56+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 63.96,
+      "priority_score": 89.19
+    },
+    {
+      "title": "deepin-linux_reader_RCE-exploit",
+      "link": "https://vulners.com/kitploit/KITPLOIT:TOOLS-GITHUB-FEBINREV-DEEPIN-LINUX_READER_RCE-EXPLOIT?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-11-27T05:18:51+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Linux / Unix"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 62.46,
+      "priority_score": 76.53
+    },
+    {
+      "title": "CVE-2024-3806",
+      "link": "https://vulners.com/kitploit/KITPLOIT:TOOLS-GITHUB-RANDOMROBBIEBF-CVE-2024-3806?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-11-26T20:48:21+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Data Protection / Privacy",
+        "Cloud / SaaS"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 62.46,
+      "priority_score": 72.74
+    },
+    {
+      "title": "CVE-2016-8735: Apache Tomcat remote code execution in JmxRemoteLifecycleListener (Update: proof of concept on GitHub published)",
+      "link": "https://cve.now/CVE-2016-8735",
       "source": "cve.now - CISA Known Exploited Vulnerabilities",
-      "published": "2026-11-25T20:11:13+00:00",
+      "published": "2026-11-26T20:01:13+00:00",
       "smart_groups": [
         "Vulnerabilities / CVEs",
         "Exploit / PoC"
       ],
       "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 83.74,
-      "priority_score": 88.12
-    },
-    {
-      "title": "CVE-2026-133469: Xen Orchestra remote authentication bypass in REST API login tokens (Update: added to CISA KEV)",
-      "link": "https://cve.now/CVE-2026-133469",
-      "source": "cve.now - CISA Known Exploited Vulnerabilities",
-      "published": "2026-11-25T20:11:13+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 83.74,
-      "priority_score": 88.12
-    },
-    {
-      "title": "CVE-2026-133323: Mitel MiCollab unauthenticated command execution in AWV component (Update: added to CISA KEV)",
-      "link": "https://cve.now/CVE-2026-133323",
-      "source": "cve.now - CISA Known Exploited Vulnerabilities",
-      "published": "2026-11-25T20:11:13+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 83.74,
-      "priority_score": 88.01
-    },
-    {
-      "title": "CVE-2026-133275: Mitel MiCollab unauthenticated file upload in AWV conferencing (Update: added to CISA KEV)",
-      "link": "https://cve.now/CVE-2026-133275",
-      "source": "cve.now - CISA Known Exploited Vulnerabilities",
-      "published": "2026-11-25T20:11:13+00:00",
-      "smart_groups": [
-        "Vulnerabilities / CVEs"
-      ],
-      "curated": true,
-      "signal_tier": "critical",
-      "signal_score": 83.74,
-      "priority_score": 86.93
+      "signal_tier": "high",
+      "signal_score": 61.6,
+      "priority_score": 89.86
     }
   ]
 }
