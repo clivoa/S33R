@@ -1,0 +1,170 @@
+{
+  "generated_at": "2026-11-28T15:31:05.564534+00:00",
+  "analysis_date": "2026-11-28",
+  "provider": "openai",
+  "model": "gpt-6.1-sol",
+  "window_hours": 24,
+  "source_file": "data/news_recent.json",
+  "source_generated_at": "2026-11-28T10:02:10.819118+00:00",
+  "source_days_back": 30,
+  "source_total_items": 66104,
+  "total_items_in_window_all": 1297,
+  "total_items_in_window_curated": 5,
+  "total_items_in_window_selected": 40,
+  "context_selection_policy": "curated-plus-operational-signal-v1",
+  "morning_call_markdown": "### Executive Summary\n- **Prioritize exposed management and web platforms:** Cacti has a reported unpatched, unauthenticated RCE with public PoC; CISA reports active exploitation affecting GeoServer and Drupal.\n- **Check supply-chain and automation exposure:** reported SAP GitHub token theft warrants vendor follow-up; newly reported MCP authentication gaps could expose privileged integrations.\n- **Evidence boundary:** based on supplied summaries, not independently verified advisories. A fresh exploit-feed timestamp does **not** establish a new vulnerability or active campaign; validate applicability before emergency changes.\n\n### High-priority items (immediate attention)\n\n**1. Cacti monitoring-platform zero-day — containment first** ([source](https://www.bleepingcomputer.com/news/security/unpatched-cacti-zero-day-with-public-poc-gives-remote-code-execution/))\n- **What happened:** An unpatched Cacti vulnerability reportedly enables unauthenticated command execution; public exploit code is available.\n- **Operational impact:** A monitoring-server compromise could expose stored credentials and network visibility, providing a foothold toward sensitive infrastructure.\n- **Actions today:** Identify instances and restrict access to trusted administration networks; review web/EDR telemetry for compromise rather than waiting for a patch.\n\n**2. GeoServer / Drupal — confirmed exploitation signal** ([CISA](https://www.cisa.gov/news-events/alerts/2026/11/27/cisa-adds-three-known-exploited-vulnerabilities-catalog), [Drupal summary](https://cve.now/CVE-2026-136716))\n- **What happened:** CISA added three KEVs; supplied reporting identifies two GeoServer flaws and a conditional Drupal access-bypass/site-takeover vulnerability.\n- **Operational impact:** Exposed deployments need urgent assessment; Drupal exploitation requires an accessible installer and an unusual or incomplete installation state.\n- **Actions today:** Validate complete KEV entries and affected configurations with owners; patch or restrict vulnerable services, including Drupal installer access.\n\n**3. nginx vulnerabilities in Cisco products — vendor applicability check** ([advisory](https://sec.cloudapps.cisco.com/security/center/content/CiscoSecurityAdvisory/cisco-sa-nginx-nov-2026-e8jska2s))\n- **What happened:** Cisco updated guidance on critical nginx vulnerabilities with potential RCE; the summary lists upstream fixes in 1.31.9 and 1.30.7.\n- **Operational impact:** Embedded nginx may be missed by ordinary package inventories; appliance remediation must follow Cisco’s product-specific affected-status and upgrade guidance.\n- **Actions today:** Match deployed Cisco products against the advisory; restrict exposed administration interfaces while owners validate vendor-supported remediation.\n\n**4. SAP GitHub incident — token and source-integrity risk** ([secondary report](https://defend.network/briefings/sap-github-breach-cacti-zero-day-hexpm-rce-2026-11-28.html))\n- **What happened:** Secondary reporting says SAP confirmed an incident after stolen employee tokens allegedly enabled source-code copying and modification.\n- **Operational impact:** Potential supplier integrity risk warrants investigation, but the supplied material does not establish compromised customer releases or affected bank systems.\n- **Actions today:** Request SAP’s affected-repository/product guidance through vendor management; review bank-controlled SAP integrations and GitHub audit logs for anomalous token use.\n\n**5. MCP servers — missing authentication on tool interfaces** ([Crypto APIs](https://cvefeed.io/vuln/detail/CVE-2026-138026), [BigCommerce](https://cvefeed.io/vuln/detail/CVE-2026-138034))\n- **What happened:** Newly reported flaws affect Crypto APIs MCP packages and bigcommerce-api-mcp, allowing unauthenticated access through HTTP/SSE transports.\n- **Operational impact:** If deployed, exposed tools could permit unauthorized operations within configured service-account permissions; transaction-related integrations deserve priority.\n- **Actions today:** Inventory these packages and reachable endpoints; disable external access or enforce authenticated gateway controls pending validated package updates.\n\n### Monitoring & detection recommendations\n- **Cacti / GeoServer / nginx — reverse-proxy, WAF and application logs:** hunt unusual requests, new source networks and error bursts; correlate with host activity before declaring exploitation.\n- **Internet-facing RCE — EDR and Linux audit logs:** alert on web-service processes spawning shells, download utilities or unexpected interpreters, especially with new outbound connections (T1190, T1059).\n- **Drupal — web access logs, file-integrity monitoring and CMS audit trails:** review installer access, unexpected configuration changes, new administrators and executable files appearing in web directories.\n- **SAP / GitHub — organization audit logs, IdP and CI/CD telemetry:** investigate unusual repository cloning, token creation, workflow edits and branch-protection changes; correlate against approved developer activity.\n- **MCP — API gateway, application and downstream provider logs:** inspect unauthenticated `/sse` and `/messages` access where applicable; correlate tool invocations with unusual transaction or configuration activity.\n- **Management-plane compromise — firewall, DNS and privileged-access logs:** hunt new monitoring-server connections into backup, virtualization or identity infrastructure; escalate unexpected privileged authentication.\n- **Retrospective hunting:** start with the last 24 hours, then expand to retained history if anomalies emerge; preserve request, process and authentication timelines before disruptive remediation.\n\n### Medium-term follow-ups\n- **Close inventory gaps:** reconcile external discovery with CMDB records for monitoring platforms, geospatial services, CMS installations, embedded nginx and experimental MCP deployments.\n- **Validate historical remediation:** review Commvault, vCenter, F5 and Log4j patch evidence. Reposted PoCs justify exposure checks, not an assumption of renewed exploitation.\n- **Harden supplier access:** shorten token lifetimes where supported, enforce least privilege and protected branches, and audit CI/CD secrets and release-integrity controls.\n- **Reduce web-estate risk:** review WordPress plugins, installer exposure and stale staging sites; prioritize confirmed deployment and exploitability over feed severity labels.\n- **Improve handover accountability:** record affected assets, owners, compensating controls and remediation deadlines; route suspected exploitation to incident response without waiting for patch completion.",
+  "highlights": [
+    {
+      "title": "Unpatched Cacti zero-day with public PoC gives remote code execution",
+      "link": "https://www.bleepingcomputer.com/news/security/unpatched-cacti-zero-day-with-public-poc-gives-remote-code-execution/",
+      "source": "BleepingComputer",
+      "published": "2026-11-27T17:06:13+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 93.89,
+      "priority_score": 84.75
+    },
+    {
+      "title": "SAP GitHub breach, Cacti zero-day PoC, Hex.pm RCE exploited",
+      "link": "https://defend.network/briefings/sap-github-breach-cacti-zero-day-hexpm-rce-2026-11-28.html",
+      "source": "defend.network",
+      "published": "2026-11-28T06:30:00+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "General Security"
+      ],
+      "curated": true,
+      "signal_tier": "critical",
+      "signal_score": 88.2,
+      "priority_score": 89.38
+    },
+    {
+      "title": "CVE-2023-36874",
+      "link": "https://vulners.com/kitploit/KITPLOIT:TOOLS-GITHUB-WH04M1001-CVE-2023-36874?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-11-27T17:03:04+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Windows / Microsoft"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 77.45,
+      "priority_score": 72.73
+    },
+    {
+      "title": "CVE-2026-2472-Vertex-AI-SDK-Google-Cloud",
+      "link": "https://vulners.com/kitploit/KITPLOIT:TOOLS-GITHUB-MEGAFART1-CVE-2026-2472-VERTEX-AI-SDK-GOOGLE-CLOUD?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-11-28T08:47:51+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Web / API Security",
+        "Cloud / SaaS",
+        "Identity / Access",
+        "Windows / Microsoft"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 70.45,
+      "priority_score": 76.26
+    },
+    {
+      "title": "CVE-2026-91136",
+      "link": "https://vulners.com/kitploit/KITPLOIT:TOOLS-GITHUB-FL0YDSEC-CVE-2026-91136?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-11-27T17:03:07+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Cloud / SaaS",
+        "Crypto / Web3",
+        "Web / API Security"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 70.45,
+      "priority_score": 72.04
+    },
+    {
+      "title": "CVE-2025-34028-PoC-Commvault-RCE",
+      "link": "https://vulners.com/kitploit/KITPLOIT:TOOLS-GITHUB-MATTB709-CVE-2025-34028-POC-COMMVAULT-RCE?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-11-27T17:03:31+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 67.45,
+      "priority_score": 72.69
+    },
+    {
+      "title": "CVE-2024-4898",
+      "link": "https://vulners.com/kitploit/KITPLOIT:TOOLS-GITHUB-GH-OST00-CVE-2024-4898?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-11-28T08:48:44+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 64.45,
+      "priority_score": 76.26
+    },
+    {
+      "title": "CVE-2021-21972",
+      "link": "https://vulners.com/kitploit/KITPLOIT:TOOLS-GITHUB-HORIZON3AI-CVE-2021-21972?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-11-28T08:47:14+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC",
+        "Linux / Unix",
+        "Windows / Microsoft"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 64.45,
+      "priority_score": 76.25
+    },
+    {
+      "title": "CISA Adds Three Known Exploited Vulnerabilities to Catalog",
+      "link": "https://www.cisa.gov/news-events/alerts/2026/11/27/cisa-adds-three-known-exploited-vulnerabilities-catalog",
+      "source": "Cybersecurity and Infrastructure Security Agency CISA",
+      "published": "2026-11-27T18:53:13+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Threat Actors / APT",
+        "Exploit / PoC",
+        "Ransomware",
+        "Government / CERT"
+      ],
+      "curated": true,
+      "signal_tier": "high",
+      "signal_score": 62.94,
+      "priority_score": 85.57
+    },
+    {
+      "title": "HW10-PoC",
+      "link": "https://vulners.com/githubexploit/86B3DD72-F7F8-5724-9EAF-DAC4DBE37305?utm_source=rss&utm_medium=rss&utm_campaign=rss",
+      "source": "Vulners.com RSS Feed",
+      "published": "2026-11-28T09:44:03+00:00",
+      "smart_groups": [
+        "Vulnerabilities / CVEs",
+        "Exploit / PoC"
+      ],
+      "curated": false,
+      "signal_tier": "high",
+      "signal_score": 62.45,
+      "priority_score": 76.51
+    }
+  ]
+}
